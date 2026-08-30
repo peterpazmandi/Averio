@@ -1,0 +1,6 @@
+@Averio.Api_HostAddress = http://localhost:5085
+
+GET {{Averio.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/Averio.Api/Averio.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Averio.Application/Averio.Application.csproj" />
+    <Project Path="src/Averio.Contracts/Averio.Contracts.csproj" />
+    <Project Path="src/Averio.Domain/Averio.Domain.csproj" />
+    <Project Path="src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
+  </Folder>
+</Solution>

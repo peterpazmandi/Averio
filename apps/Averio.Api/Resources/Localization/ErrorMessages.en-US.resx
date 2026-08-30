@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+
+  <data name="Title_NotFound" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+
+  <data name="Title_Conflict" xml:space="preserve">
+    <value>Conflict</value>
+  </data>
+
+  <data name="Title_BusinessRule" xml:space="preserve">
+    <value>Request cannot be processed</value>
+  </data>
+
+  <data name="Title_Unexpected" xml:space="preserve">
+    <value>Unexpected error</value>
+  </data>
+
+  <data name="Error_NotFound" xml:space="preserve">
+    <value>The requested {0} with identifier '{1}' was not found.</value>
+  </data>
+
+  <data name="Error_Conflict" xml:space="preserve">
+    <value>The request conflicts with the current state of the application.</value>
+  </data>
+
+  <data name="Error_BusinessRule" xml:space="preserve">
+    <value>The requested operation violates a business rule.</value>
+  </data>
+
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>An unexpected error occurred.</value>
+  </data>
+</root>

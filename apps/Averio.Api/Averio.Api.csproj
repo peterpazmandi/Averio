@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Averio.Api</RootNamespace>
+    <UserSecretsId>43131ee1-3c24-4633-9c17-66a97f65b898</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Averio.Application\Averio.Application.csproj" />
+    <ProjectReference Include="..\..\src\Averio.Contracts\Averio.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Averio.Infrastructure\Averio.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
