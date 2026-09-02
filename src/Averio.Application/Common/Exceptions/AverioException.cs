@@ -36,10 +36,14 @@ public sealed class NotFoundException : AverioException
 
 public sealed class ConflictException : AverioException
 {
-    public ConflictException()
+    public ConflictException(
+        string code,
+        string resourceKey,
+        params object[] arguments)
         : base(
-            "conflict",
-            ErrorResourceKeys.Conflict)
+            code,
+            resourceKey,
+            arguments)
     {
     }
 }
@@ -50,16 +54,95 @@ public sealed class BusinessRuleException : AverioException
         string code,
         string resourceKey,
         params object[] arguments)
-        : base(code, resourceKey, arguments)
+        : base(
+            code,
+            resourceKey,
+            arguments)
+    {
+    }
+}
+
+public sealed class AuthenticationFailedException
+    : AverioException
+{
+    public AuthenticationFailedException()
+        : base(
+            "invalid_credentials",
+            ErrorResourceKeys.InvalidCredentials)
+    {
+    }
+}
+
+public sealed class EmailNotVerifiedException
+    : AverioException
+{
+    public EmailNotVerifiedException()
+        : base(
+            "email_not_verified",
+            ErrorResourceKeys.EmailNotVerified)
+    {
+    }
+}
+
+public sealed class AccountLockedException
+    : AverioException
+{
+    public AccountLockedException()
+        : base(
+            "account_locked",
+            ErrorResourceKeys.AccountLocked)
+    {
+    }
+}
+
+public sealed class InvalidEmailVerificationTokenException
+    : AverioException
+{
+    public InvalidEmailVerificationTokenException()
+        : base(
+            "invalid_email_verification_token",
+            ErrorResourceKeys.InvalidEmailVerificationToken)
+    {
+    }
+}
+
+public sealed class HouseholdRequiredException
+    : AverioException
+{
+    public HouseholdRequiredException()
+        : base(
+            "household_required",
+            ErrorResourceKeys.HouseholdRequired)
     {
     }
 }
 
 public static class ErrorResourceKeys
 {
-    public const string NotFound = "Error_NotFound";
+    public const string NotFound =
+        "Error_NotFound";
 
-    public const string Conflict = "Error_Conflict";
+    public const string BusinessRule =
+        "Error_BusinessRule";
 
-    public const string BusinessRule = "Error_BusinessRule";
+    public const string InvalidCredentials =
+        "Error_InvalidCredentials";
+
+    public const string EmailNotVerified =
+        "Error_EmailNotVerified";
+
+    public const string AccountLocked =
+        "Error_AccountLocked";
+
+    public const string InvalidEmailVerificationToken =
+        "Error_InvalidEmailVerificationToken";
+
+    public const string EmailAlreadyRegistered =
+        "Error_EmailAlreadyRegistered";
+
+    public const string HouseholdRequired =
+        "Error_HouseholdRequired";
+
+    public const string IdentityCreationFailed =
+        "Error_IdentityCreationFailed";
 }
