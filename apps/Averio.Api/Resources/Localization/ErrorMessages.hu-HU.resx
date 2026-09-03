@@ -39,4 +39,92 @@
   <data name="Error_Unexpected" xml:space="preserve">
     <value>Váratlan hiba történt.</value>
   </data>
+
+  <data name="Title_Validation" xml:space="preserve">
+    <value>Sikertelen ellenőrzés</value>
+  </data>
+
+  <data name="Title_Unauthorized" xml:space="preserve">
+    <value>Sikertelen bejelentkezés</value>
+  </data>
+
+  <data name="Title_Forbidden" xml:space="preserve">
+    <value>A művelet nem engedélyezett</value>
+  </data>
+
+  <data name="Title_Locked" xml:space="preserve">
+    <value>A fiók zárolva van</value>
+  </data>
+
+  <data name="Title_InvalidRequest" xml:space="preserve">
+    <value>Érvénytelen kérés</value>
+  </data>
+
+  <data name="Title_HouseholdRequired" xml:space="preserve">
+    <value>A háztartás beállítása szükséges</value>
+  </data>
+
+  <data name="Error_InvalidCredentials" xml:space="preserve">
+    <value>Az e-mail-cím vagy a jelszó hibás.</value>
+  </data>
+
+  <data name="Error_EmailNotVerified" xml:space="preserve">
+    <value>Bejelentkezés előtt erősítsd meg az e-mail-címedet.</value>
+  </data>
+
+  <data name="Error_AccountLocked" xml:space="preserve">
+    <value>Túl sok sikertelen bejelentkezési kísérlet történt. Próbáld újra később.</value>
+  </data>
+
+  <data name="Error_InvalidEmailVerificationToken" xml:space="preserve">
+    <value>Az e-mail-megerősítő hivatkozás érvénytelen vagy lejárt.</value>
+  </data>
+
+  <data name="Error_EmailAlreadyRegistered" xml:space="preserve">
+    <value>Ezzel az e-mail-címmel már létezik fiók.</value>
+  </data>
+
+  <data name="Error_HouseholdRequired" xml:space="preserve">
+    <value>A fiókod nincs háztartáshoz kapcsolva.</value>
+  </data>
+
+  <data name="Error_IdentityCreationFailed" xml:space="preserve">
+    <value>A fiókot nem sikerült létrehozni.</value>
+  </data>
+
+  <data name="Error_InvalidCsrf" xml:space="preserve">
+    <value>A biztonsági token hiányzik vagy érvénytelen. Frissítsd az oldalt, majd próbáld újra.</value>
+  </data>
+
+  <data name="Validation_EmailRequired" xml:space="preserve">
+    <value>Az e-mail-cím megadása kötelező.</value>
+  </data>
+
+  <data name="Validation_EmailInvalid" xml:space="preserve">
+    <value>Adj meg egy érvényes e-mail-címet.</value>
+  </data>
+
+  <data name="Validation_EmailTooLong" xml:space="preserve">
+    <value>Az e-mail-cím túl hosszú.</value>
+  </data>
+
+  <data name="Validation_PasswordRequired" xml:space="preserve">
+    <value>A jelszó megadása kötelező.</value>
+  </data>
+
+  <data name="Validation_PasswordTooShort" xml:space="preserve">
+    <value>A jelszónak legalább 12 karakterből kell állnia.</value>
+  </data>
+
+  <data name="Validation_PasswordTooLong" xml:space="preserve">
+    <value>A jelszó legfeljebb 128 karakterből állhat.</value>
+  </data>
+
+  <data name="Validation_UserIdRequired" xml:space="preserve">
+    <value>A felhasználói azonosító megadása kötelező.</value>
+  </data>
+
+  <data name="Validation_TokenRequired" xml:space="preserve">
+    <value>A megerősítő token megadása kötelező.</value>
+  </data>
 </root>

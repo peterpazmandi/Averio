@@ -1,7 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
+using Averio.Api.Authentication;
 using Averio.Api.ErrorHandling;
+using Averio.Api.Security;
+using Averio.Application;
+using Averio.Application.Common.Abstractions;
 using Averio.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Scalar.AspNetCore;
 
@@ -9,84 +14,207 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
+builder.Services.AddProblemDetails(
+    options =>
     {
-        context.ProblemDetails.Extensions["traceId"] =
-            Activity.Current?.Id
-            ?? context.HttpContext.TraceIdentifier;
-    };
-});
+        options.CustomizeProblemDetails =
+            context =>
+            {
+                context.ProblemDetails
+                    .Extensions["traceId"] =
+                    Activity.Current?.Id
+                    ?? context.HttpContext
+                        .TraceIdentifier;
+            };
+    });
 
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services
+    .AddExceptionHandler<
+        GlobalExceptionHandler>();
 
-builder.Services.AddLocalization(options =>
-{
-    options.ResourcesPath = "Resources";
-});
+builder.Services.AddLocalization(
+    options =>
+    {
+        options.ResourcesPath =
+            "Resources";
+    });
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    var supportedCultures = new[]
     {
-        new CultureInfo("en-US"),
-        new CultureInfo("de-DE"),
-        new CultureInfo("hu-HU")
-    };
+        var supportedCultures =
+            new[]
+            {
+                new CultureInfo("en-US"),
+                new CultureInfo("de-DE"),
+                new CultureInfo("hu-HU")
+            };
 
-    options.DefaultRequestCulture =
-        new RequestCulture("en-US");
+        options.DefaultRequestCulture =
+            new RequestCulture("en-US");
 
-    options.SupportedCultures =
-        supportedCultures;
+        options.SupportedCultures =
+            supportedCultures;
 
-    options.SupportedUICultures =
-        supportedCultures;
+        options.SupportedUICultures =
+            supportedCultures;
 
-    options.ApplyCurrentCultureToResponseHeaders = true;
+        options.ApplyCurrentCultureToResponseHeaders =
+            true;
 
-    // API language is explicitly controlled via Accept-Language.
-    options.RequestCultureProviders =
-    [
-        new AcceptLanguageHeaderRequestCultureProvider()
-    ];
-});
+        options.RequestCultureProviders =
+        [
+            new AcceptLanguageHeaderRequestCultureProvider()
+        ];
+    });
 
-builder.Services.AddOpenApi(options =>
-{
-    // Keep the generated client on OpenAPI 3.0 for maximum
-    // compatibility with client generators.
-    options.OpenApiVersion =
-        Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
-});
+builder.Services.AddApplication();
 
-var allowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .GetChildren()
-    .Select(section => section.Value)
-    .Where(value => !string.IsNullOrWhiteSpace(value))
-    .Cast<string>()
-    .ToArray();
+builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "Frontend",
-        policy =>
+/*
+ * Identity cookie authentication.
+ */
+builder.Services
+    .AddAuthentication(
+        options =>
         {
-            policy
-                .WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
+            options.DefaultAuthenticateScheme =
+                IdentityConstants.ApplicationScheme;
 
-builder.Services.AddInfrastructure(
-    builder.Configuration);
+            options.DefaultChallengeScheme =
+                IdentityConstants.ApplicationScheme;
 
-var app = builder.Build();
+            options.DefaultSignInScheme =
+                IdentityConstants.ApplicationScheme;
+        })
+    .AddIdentityCookies();
+
+builder.Services.ConfigureApplicationCookie(
+    options =>
+    {
+        options.Cookie.Name =
+            builder.Environment.IsDevelopment()
+                ? "averio.auth"
+                : "__Host-averio.auth";
+
+        options.Cookie.HttpOnly =
+            true;
+
+        options.Cookie.IsEssential =
+            true;
+
+        options.Cookie.Path =
+            "/";
+
+        /*
+         * averioapp.com and api.averioapp.com
+         * are different origins but the same site.
+         */
+        options.Cookie.SameSite =
+            SameSiteMode.Lax;
+
+        options.Cookie.SecurePolicy =
+            builder.Environment.IsDevelopment()
+                ? CookieSecurePolicy.SameAsRequest
+                : CookieSecurePolicy.Always;
+
+        options.ExpireTimeSpan =
+            TimeSpan.FromDays(14);
+
+        options.SlidingExpiration =
+            true;
+
+        options.Events.OnRedirectToLogin =
+            context =>
+            {
+                context.Response.StatusCode =
+                    StatusCodes.Status401Unauthorized;
+
+                return Task.CompletedTask;
+            };
+
+        options.Events.OnRedirectToAccessDenied =
+            context =>
+            {
+                context.Response.StatusCode =
+                    StatusCodes.Status403Forbidden;
+
+                return Task.CompletedTask;
+            };
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddAntiforgery(
+    options =>
+    {
+        options.HeaderName =
+            "X-CSRF-TOKEN";
+
+        options.Cookie.Name =
+            builder.Environment.IsDevelopment()
+                ? "averio.csrf"
+                : "__Host-averio.csrf";
+
+        options.Cookie.HttpOnly =
+            true;
+
+        options.Cookie.Path =
+            "/";
+
+        options.Cookie.SameSite =
+            SameSiteMode.Strict;
+
+        options.Cookie.SecurePolicy =
+            builder.Environment.IsDevelopment()
+                ? CookieSecurePolicy.SameAsRequest
+                : CookieSecurePolicy.Always;
+    });
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<
+    ICurrentUser,
+    CurrentUser>();
+
+builder.Services.AddOpenApi(
+    options =>
+    {
+        options.OpenApiVersion =
+            Microsoft.OpenApi
+                .OpenApiSpecVersion
+                .OpenApi3_0;
+    });
+
+var allowedOrigins =
+    builder.Configuration
+        .GetSection(
+            "Cors:AllowedOrigins")
+        .GetChildren()
+        .Select(x => x.Value)
+        .Where(x =>
+            !string.IsNullOrWhiteSpace(x))
+        .Cast<string>()
+        .ToArray();
+
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy(
+            "Frontend",
+            policy =>
+            {
+                policy
+                    .WithOrigins(
+                        allowedOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+    });
+
+var app =
+    builder.Build();
 
 app.UseRequestLocalization();
 
@@ -96,16 +224,24 @@ app.UseStatusCodePages();
 
 app.UseCors("Frontend");
 
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+app.UseMiddleware<
+    CsrfProtectionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
-    app.MapScalarApiReference(options =>
-    {
-        options
-            .WithTitle("Averio API")
-            .DisableAgent();
-    });
+    app.MapScalarApiReference(
+        options =>
+        {
+            options
+                .WithTitle("Averio API")
+                .DisableAgent();
+        });
 }
 
 app.MapControllers();
