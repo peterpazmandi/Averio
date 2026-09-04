@@ -1,6 +1,9 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Averio.Api.Localization;
 using Averio.Application.Common.Exceptions;
+using FluentValidation;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -17,99 +20,291 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        var response = MapException(exception);
+        switch (exception)
+        {
+            case ValidationException validation:
+                return await HandleValidationAsync(
+                    httpContext,
+                    validation);
+
+            case AntiforgeryValidationException:
+                return await HandleAntiforgeryAsync(
+                    httpContext);
+        }
+
+        var response =
+            MapException(exception);
 
         if (exception is AverioException)
         {
             logger.LogWarning(
                 exception,
-                "Handled application exception {ErrorCode}",
+                "Handled application error {ErrorCode}",
                 response.Code);
         }
         else
         {
             logger.LogError(
                 exception,
-                "Unhandled exception while processing request");
+                "Unhandled API exception");
         }
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = response.StatusCode,
-            Title = localizer[response.TitleResourceKey],
-            Detail = response.Detail,
-            Instance = httpContext.Request.Path,
-            Type = $"https://httpstatuses.com/{response.StatusCode}"
-        };
-
-        problemDetails.Extensions["code"] = response.Code;
-
-        problemDetails.Extensions["traceId"] =
-            Activity.Current?.Id
-            ?? httpContext.TraceIdentifier;
-
-        httpContext.Response.StatusCode = response.StatusCode;
-
-        var problemDetailsService =
-            httpContext.RequestServices
-                .GetRequiredService<IProblemDetailsService>();
-
-        var written = await problemDetailsService.TryWriteAsync(
-            new ProblemDetailsContext
+        var problemDetails =
+            new ProblemDetails
             {
-                HttpContext = httpContext,
-                ProblemDetails = problemDetails
-            });
+                Status =
+                    response.StatusCode,
 
-        if (!written)
-        {
-            await httpContext.Response.WriteAsJsonAsync(
-                problemDetails,
-                cancellationToken);
-        }
+                Title =
+                    localizer[
+                        response.TitleResourceKey
+                    ],
 
-        return true;
+                Detail =
+                    response.Detail,
+
+                Instance =
+                    httpContext.Request.Path,
+
+                Type =
+                    $"https://httpstatuses.com/{response.StatusCode}"
+            };
+
+        problemDetails.Extensions["code"] =
+            response.Code;
+
+        AddTraceId(
+            httpContext,
+            problemDetails);
+
+        httpContext.Response.StatusCode =
+            response.StatusCode;
+
+        return await WriteAsync(
+            httpContext,
+            problemDetails);
     }
 
-    private ExceptionResponse MapException(Exception exception)
+    private async ValueTask<bool>
+        HandleValidationAsync(
+            HttpContext httpContext,
+            ValidationException exception)
+    {
+        var errors =
+            exception.Errors
+                .GroupBy(
+                    failure =>
+                        JsonNamingPolicy.CamelCase
+                            .ConvertName(
+                                failure.PropertyName))
+                .ToDictionary(
+                    group =>
+                        group.Key,
+
+                    group =>
+                        group
+                            .Select(
+                                failure =>
+                                    localizer[
+                                        failure.ErrorCode
+                                    ].Value)
+                            .Distinct()
+                            .ToArray());
+
+        var problem =
+            new ValidationProblemDetails(
+                errors)
+            {
+                Status =
+                    StatusCodes.Status400BadRequest,
+
+                Title =
+                    localizer[
+                        "Title_Validation"
+                    ],
+
+                Instance =
+                    httpContext.Request.Path,
+
+                Type =
+                    "https://httpstatuses.com/400"
+            };
+
+        problem.Extensions["code"] =
+            "validation_failed";
+
+        AddTraceId(
+            httpContext,
+            problem);
+
+        httpContext.Response.StatusCode =
+            StatusCodes.Status400BadRequest;
+
+        return await WriteAsync(
+            httpContext,
+            problem);
+    }
+
+    private async ValueTask<bool>
+        HandleAntiforgeryAsync(
+            HttpContext httpContext)
+    {
+        var problem =
+            new ProblemDetails
+            {
+                Status =
+                    StatusCodes.Status400BadRequest,
+
+                Title =
+                    localizer[
+                        "Title_InvalidRequest"
+                    ],
+
+                Detail =
+                    localizer[
+                        "Error_InvalidCsrf"
+                    ],
+
+                Instance =
+                    httpContext.Request.Path,
+
+                Type =
+                    "https://httpstatuses.com/400"
+            };
+
+        problem.Extensions["code"] =
+            "invalid_csrf_token";
+
+        AddTraceId(
+            httpContext,
+            problem);
+
+        httpContext.Response.StatusCode =
+            StatusCodes.Status400BadRequest;
+
+        return await WriteAsync(
+            httpContext,
+            problem);
+    }
+
+    private ExceptionResponse MapException(
+        Exception exception)
     {
         return exception switch
         {
-            NotFoundException notFound =>
+            NotFoundException error =>
                 new ExceptionResponse(
                     StatusCodes.Status404NotFound,
                     "Title_NotFound",
-                    notFound.Code,
-                    Localize(notFound)),
+                    error.Code,
+                    Localize(error)),
 
-            ConflictException conflict =>
+            AuthenticationFailedException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status401Unauthorized,
+                    "Title_Unauthorized",
+                    error.Code,
+                    Localize(error)),
+
+            EmailNotVerifiedException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status403Forbidden,
+                    "Title_Forbidden",
+                    error.Code,
+                    Localize(error)),
+
+            AccountLockedException error =>
+                new ExceptionResponse(
+                    423,
+                    "Title_Locked",
+                    error.Code,
+                    Localize(error)),
+
+            InvalidEmailVerificationTokenException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status400BadRequest,
+                    "Title_InvalidRequest",
+                    error.Code,
+                    Localize(error)),
+
+            ConflictException error =>
                 new ExceptionResponse(
                     StatusCodes.Status409Conflict,
                     "Title_Conflict",
-                    conflict.Code,
-                    Localize(conflict)),
+                    error.Code,
+                    Localize(error)),
 
-            BusinessRuleException businessRule =>
+            HouseholdRequiredException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status409Conflict,
+                    "Title_HouseholdRequired",
+                    error.Code,
+                    Localize(error)),
+
+            BusinessRuleException error =>
                 new ExceptionResponse(
                     StatusCodes.Status422UnprocessableEntity,
                     "Title_BusinessRule",
-                    businessRule.Code,
-                    Localize(businessRule)),
+                    error.Code,
+                    Localize(error)),
 
             _ =>
                 new ExceptionResponse(
                     StatusCodes.Status500InternalServerError,
                     "Title_Unexpected",
                     "unexpected_error",
-                    localizer["Error_Unexpected"])
+                    localizer[
+                        "Error_Unexpected"
+                    ])
         };
     }
 
-    private string Localize(AverioException exception)
+    private string Localize(
+        AverioException exception)
     {
         return localizer[
             exception.ResourceKey,
             exception.Arguments];
+    }
+
+    private static void AddTraceId(
+        HttpContext context,
+        ProblemDetails problemDetails)
+    {
+        problemDetails.Extensions["traceId"] =
+            Activity.Current?.Id
+            ?? context.TraceIdentifier;
+    }
+
+    private static async ValueTask<bool>
+        WriteAsync(
+            HttpContext httpContext,
+            ProblemDetails problemDetails)
+    {
+        var service =
+            httpContext.RequestServices
+                .GetRequiredService<
+                    IProblemDetailsService>();
+
+        var written =
+            await service.TryWriteAsync(
+                new ProblemDetailsContext
+                {
+                    HttpContext =
+                        httpContext,
+
+                    ProblemDetails =
+                        problemDetails
+                });
+
+        if (!written)
+        {
+            await httpContext.Response
+                .WriteAsJsonAsync(
+                    problemDetails);
+        }
+
+        return true;
     }
 
     private sealed record ExceptionResponse(

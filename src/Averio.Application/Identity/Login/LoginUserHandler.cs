@@ -11,8 +11,7 @@ public sealed class LoginUserHandler(
     {
         await validator.ValidateAndThrowAsync(command,cancellationToken);
 
-        var result =
-            await userSessionService.SignInAsync(
+        var result = await userSessionService.SignInAsync(
                 command.Email.Trim(),
                 command.Password,
                 command.RememberMe,

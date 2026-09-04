@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Title_NotFound" xml:space="preserve">
+    <value>Nicht gefunden</value>
+  </data>
+
+  <data name="Title_Conflict" xml:space="preserve">
+    <value>Konflikt</value>
+  </data>
+
+  <data name="Title_BusinessRule" xml:space="preserve">
+    <value>Anfrage kann nicht verarbeitet werden</value>
+  </data>
+
+  <data name="Title_Unexpected" xml:space="preserve">
+    <value>Unerwarteter Fehler</value>
+  </data>
+
+  <data name="Error_NotFound" xml:space="preserve">
+    <value>Die angeforderte Ressource {0} mit der Kennung '{1}' wurde nicht gefunden.</value>
+  </data>
+
+  <data name="Error_Conflict" xml:space="preserve">
+    <value>Die Anfrage steht im Konflikt mit dem aktuellen Zustand der Anwendung.</value>
+  </data>
+
+  <data name="Error_BusinessRule" xml:space="preserve">
+    <value>Der angeforderte Vorgang verletzt eine Geschäftsregel.</value>
+  </data>
+
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>Ein unerwarteter Fehler ist aufgetreten.</value>
+  </data>
+
+  <data name="Title_Validation" xml:space="preserve">
+    <value>Validierung fehlgeschlagen</value>
+  </data>
+
+  <data name="Title_Unauthorized" xml:space="preserve">
+    <value>Anmeldung fehlgeschlagen</value>
+  </data>
+
+  <data name="Title_Forbidden" xml:space="preserve">
+    <value>Aktion nicht erlaubt</value>
+  </data>
+
+  <data name="Title_Locked" xml:space="preserve">
+    <value>Konto gesperrt</value>
+  </data>
+
+  <data name="Title_InvalidRequest" xml:space="preserve">
+    <value>Ungültige Anfrage</value>
+  </data>
+
+  <data name="Title_HouseholdRequired" xml:space="preserve">
+    <value>Haushaltseinrichtung erforderlich</value>
+  </data>
+
+  <data name="Error_InvalidCredentials" xml:space="preserve">
+    <value>Die E-Mail-Adresse oder das Passwort ist falsch.</value>
+  </data>
+
+  <data name="Error_EmailNotVerified" xml:space="preserve">
+    <value>Bestätige deine E-Mail-Adresse, bevor du dich anmeldest.</value>
+  </data>
+
+  <data name="Error_AccountLocked" xml:space="preserve">
+    <value>Zu viele fehlgeschlagene Anmeldeversuche. Versuche es später erneut.</value>
+  </data>
+
+  <data name="Error_InvalidEmailVerificationToken" xml:space="preserve">
+    <value>Der Bestätigungslink ist ungültig oder abgelaufen.</value>
+  </data>
+
+  <data name="Error_EmailAlreadyRegistered" xml:space="preserve">
+    <value>Für diese E-Mail-Adresse existiert bereits ein Konto.</value>
+  </data>
+
+  <data name="Error_HouseholdRequired" xml:space="preserve">
+    <value>Dein Konto ist keinem Haushalt zugeordnet.</value>
+  </data>
+
+  <data name="Error_IdentityCreationFailed" xml:space="preserve">
+    <value>Das Konto konnte nicht erstellt werden.</value>
+  </data>
+
+  <data name="Error_InvalidCsrf" xml:space="preserve">
+    <value>Das Sicherheitstoken fehlt oder ist ungültig. Aktualisiere die Seite und versuche es erneut.</value>
+  </data>
+
+  <data name="Validation_EmailRequired" xml:space="preserve">
+    <value>E-Mail-Adresse ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_EmailInvalid" xml:space="preserve">
+    <value>Gib eine gültige E-Mail-Adresse ein.</value>
+  </data>
+
+  <data name="Validation_EmailTooLong" xml:space="preserve">
+    <value>Die E-Mail-Adresse ist zu lang.</value>
+  </data>
+
+  <data name="Validation_PasswordRequired" xml:space="preserve">
+    <value>Passwort ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_PasswordTooShort" xml:space="preserve">
+    <value>Das Passwort muss mindestens 12 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_PasswordTooLong" xml:space="preserve">
+    <value>Das Passwort darf höchstens 128 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_UserIdRequired" xml:space="preserve">
+    <value>Benutzerkennung ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_TokenRequired" xml:space="preserve">
+    <value>Bestätigungstoken ist erforderlich.</value>
+  </data>
+</root>
