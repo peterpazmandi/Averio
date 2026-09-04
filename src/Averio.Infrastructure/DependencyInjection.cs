@@ -28,15 +28,7 @@ public static class DependencyInjection
 
         services.AddDbContextPool<AverioDbContext>(options =>
         {
-            options.UseNpgsql(
-                connectionString,
-                npgsqlOptions =>
-                {
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(5),
-                        errorCodesToAdd: null);
-                });
+            options.UseNpgsql(connectionString);
         });
 
         services

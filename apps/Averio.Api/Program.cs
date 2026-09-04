@@ -35,8 +35,7 @@ builder.Services
 builder.Services.AddLocalization(
     options =>
     {
-        options.ResourcesPath =
-            "Resources";
+        options.ResourcesPath = "Resources";
     });
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
@@ -49,18 +48,10 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
                 new CultureInfo("hu-HU")
             };
 
-        options.DefaultRequestCulture =
-            new RequestCulture("en-US");
-
-        options.SupportedCultures =
-            supportedCultures;
-
-        options.SupportedUICultures =
-            supportedCultures;
-
-        options.ApplyCurrentCultureToResponseHeaders =
-            true;
-
+        options.DefaultRequestCulture = new RequestCulture("en-US");
+        options.SupportedCultures = supportedCultures;
+        options.SupportedUICultures = supportedCultures;
+        options.ApplyCurrentCultureToResponseHeaders = true;
         options.RequestCultureProviders =
         [
             new AcceptLanguageHeaderRequestCultureProvider()
@@ -78,14 +69,9 @@ builder.Services
     .AddAuthentication(
         options =>
         {
-            options.DefaultAuthenticateScheme =
-                IdentityConstants.ApplicationScheme;
-
-            options.DefaultChallengeScheme =
-                IdentityConstants.ApplicationScheme;
-
-            options.DefaultSignInScheme =
-                IdentityConstants.ApplicationScheme;
+            options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+            options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+            options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
         })
     .AddIdentityCookies();
 
@@ -97,48 +83,33 @@ builder.Services.ConfigureApplicationCookie(
                 ? "averio.auth"
                 : "__Host-averio.auth";
 
-        options.Cookie.HttpOnly =
-            true;
-
-        options.Cookie.IsEssential =
-            true;
-
-        options.Cookie.Path =
-            "/";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.Path = "/";
 
         /*
          * averioapp.com and api.averioapp.com
          * are different origins but the same site.
          */
-        options.Cookie.SameSite =
-            SameSiteMode.Lax;
+        options.Cookie.SameSite = SameSiteMode.Lax;
 
-        options.Cookie.SecurePolicy =
-            builder.Environment.IsDevelopment()
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
                 ? CookieSecurePolicy.SameAsRequest
                 : CookieSecurePolicy.Always;
 
-        options.ExpireTimeSpan =
-            TimeSpan.FromDays(14);
-
-        options.SlidingExpiration =
-            true;
-
+        options.ExpireTimeSpan = TimeSpan.FromDays(14);
+        options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin =
             context =>
             {
-                context.Response.StatusCode =
-                    StatusCodes.Status401Unauthorized;
-
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             };
 
         options.Events.OnRedirectToAccessDenied =
             context =>
             {
-                context.Response.StatusCode =
-                    StatusCodes.Status403Forbidden;
-
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             };
     });
@@ -148,25 +119,16 @@ builder.Services.AddAuthorization();
 builder.Services.AddAntiforgery(
     options =>
     {
-        options.HeaderName =
-            "X-CSRF-TOKEN";
+        options.HeaderName = "X-CSRF-TOKEN";
 
-        options.Cookie.Name =
-            builder.Environment.IsDevelopment()
+        options.Cookie.Name = builder.Environment.IsDevelopment()
                 ? "averio.csrf"
                 : "__Host-averio.csrf";
 
-        options.Cookie.HttpOnly =
-            true;
-
-        options.Cookie.Path =
-            "/";
-
-        options.Cookie.SameSite =
-            SameSiteMode.Strict;
-
-        options.Cookie.SecurePolicy =
-            builder.Environment.IsDevelopment()
+        options.Cookie.HttpOnly = true;
+        options.Cookie.Path = "/";
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
                 ? CookieSecurePolicy.SameAsRequest
                 : CookieSecurePolicy.Always;
     });
