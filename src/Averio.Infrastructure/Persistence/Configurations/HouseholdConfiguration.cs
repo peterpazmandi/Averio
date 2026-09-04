@@ -9,11 +9,38 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
 {
     public void Configure(EntityTypeBuilder<Household> builder)
     {
-        builder.ToTable("households");
+        builder.ToTable(
+            "households",
+            table =>
+        {
+            table.HasCheckConstraint(
+                "ck_households_country_code",
+                """
+                country_code IS NULL
+                OR country_code ~ '^[A-Z]{2}$'
+                """);
+
+            table.HasCheckConstraint(
+                "ck_households_preferred_currency",
+                """
+                preferred_currency IS NULL
+                OR preferred_currency IN ('HUF', 'EUR', 'USD')
+                """);
+        });
         builder.HasKey(x => x.Id).HasName("pk_households");
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(120);
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+
+        builder.Property(x => x.CountryCode).HasColumnName("country_code").HasColumnType("char(2)");
+
+        builder.Property(x => x.PreferredCurrency)
+            .HasColumnName("preferred_currency")
+            .HasConversion<string>()
+            .HasMaxLength(3);
+
+        builder.Property(x => x.OnboardingCompletedAtUtc)
+            .HasColumnName("onboarding_completed_at_utc");
 
         builder.Navigation(x => x.Members)
             .UsePropertyAccessMode(PropertyAccessMode.Field);

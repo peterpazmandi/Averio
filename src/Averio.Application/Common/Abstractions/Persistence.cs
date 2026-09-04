@@ -15,10 +15,3 @@ public interface IApplicationTransaction : IAsyncDisposable
 
     Task RollbackAsync(CancellationToken cancellationToken);
 }
-
-public interface IHouseholdRepository
-{
-    void Add(Household household);
-
-    Task<HouseholdMember?> GetMembershipByUserIdAsync(Guid userId, CancellationToken cancellationToken);
-}

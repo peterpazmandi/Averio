@@ -135,4 +135,12 @@
   <data name="Validation_TokenRequired" xml:space="preserve">
     <value>Verification token is required.</value>
   </data>
+
+  <data name="Title_OnboardingRequired" xml:space="preserve">
+    <value>Complete setup</value>
+  </data>
+
+  <data name="Error_OnboardingRequired" xml:space="preserve">
+    <value>Complete your household setup before using this feature.</value>
+  </data>
 </root>

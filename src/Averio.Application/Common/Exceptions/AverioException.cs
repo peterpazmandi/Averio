@@ -117,6 +117,15 @@ public sealed class HouseholdRequiredException
     }
 }
 
+public sealed class OnboardingRequiredException : AverioException
+{
+    public OnboardingRequiredException() : base(
+            "onboarding_required",
+            ErrorResourceKeys.OnboardingRequired)
+    {
+    }
+}
+
 public static class ErrorResourceKeys
 {
     public const string NotFound =
@@ -145,4 +154,7 @@ public static class ErrorResourceKeys
 
     public const string IdentityCreationFailed =
         "Error_IdentityCreationFailed";
+
+    public const string OnboardingRequired =
+        "Error_OnboardingRequired";
 }

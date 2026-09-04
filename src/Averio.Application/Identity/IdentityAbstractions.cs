@@ -3,14 +3,11 @@ namespace Averio.Application.Identity;
 public interface IIdentityService
 {
     Task<IdentityUserInfo?> FindByEmailAsync(string email, CancellationToken cancellationToken);
-
     Task<IdentityUserInfo?> FindByIdAsync(Guid userId, CancellationToken cancellationToken);
-
     Task<IdentityUserCreationResult> CreateUserAsync(string email, string password, string preferredCulture, CancellationToken cancellationToken);
-
     Task<string?> GenerateEmailVerificationTokenAsync(Guid userId, CancellationToken cancellationToken);
-
     Task<EmailConfirmationStatus> ConfirmEmailAsync(Guid userId, string token, CancellationToken cancellationToken);
+    Task<bool> UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken cancellationToken);
 }
 
 public interface IUserSessionService
@@ -25,7 +22,12 @@ public interface IEmailVerificationSender
     Task<bool> TrySendAsync(Guid userId, string email, string verificationToken, string culture, CancellationToken cancellationToken);
 }
 
-public sealed record IdentityUserInfo(Guid Id, string Email, bool EmailConfirmed, string PreferredCulture);
+public sealed record IdentityUserInfo(
+    Guid Id,
+    string Email,
+    string? DisplayName,
+    bool EmailConfirmed,
+    string PreferredCulture);
 
 public sealed record IdentityUserCreationResult(bool Succeeded, Guid? UserId, IReadOnlyCollection<string> ErrorCodes);
 

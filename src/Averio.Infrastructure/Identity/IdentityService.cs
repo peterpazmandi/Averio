@@ -98,8 +98,36 @@ internal sealed class IdentityService(UserManager<ApplicationUser> userManager, 
             : EmailConfirmationStatus.InvalidToken;
     }
 
+    public async Task<bool> UpdateDisplayNameAsync(
+        Guid userId,
+        string displayName,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await userManager.FindByIdAsync(userId.ToString());
+
+        if (user is null)
+        {
+            return false;
+        }
+
+        user.DisplayName =displayName.Trim();
+
+        var result =await userManager.UpdateAsync(user);
+
+        return result.Succeeded;
+    }
+
     private static IdentityUserInfo Map(ApplicationUser user)
-        => new(user.Id, user.Email!, user.EmailConfirmed, user.PreferredCulture);
+    {
+        return new IdentityUserInfo(
+            user.Id,
+            user.Email!,
+            user.DisplayName,
+            user.EmailConfirmed,
+            user.PreferredCulture);
+    }
 
     private static string MapIdentityError(IdentityError error)
     {
