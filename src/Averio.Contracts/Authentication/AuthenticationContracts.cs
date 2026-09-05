@@ -24,7 +24,9 @@ public sealed record ResendEmailVerificationRequest(
 public sealed record CurrentUserResponse(
     Guid UserId,
     string Email,
+    string? DisplayName,
     bool EmailVerified,
+    bool OnboardingRequired,
     HouseholdMembershipResponse Household);
 
 public sealed record HouseholdMembershipResponse(

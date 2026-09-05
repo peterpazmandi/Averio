@@ -5,7 +5,9 @@ namespace Averio.Application.Identity.GetCurrentUser
     public sealed record CurrentUserResult(
         Guid UserId,
         string Email,
+        string? DisplayName,
         bool EmailVerified,
         Guid HouseholdId,
-        HouseholdRole HouseholdRole);
+        HouseholdRole HouseholdRole,
+        bool OnboardingRequired);
 }

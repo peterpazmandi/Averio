@@ -7,6 +7,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Averio.Application.Onboarding.CompleteOnboarding;
 using Averio.Application.Onboarding.GetOnboardingStatus;
+using Averio.Application.Households.UpdateHousehold;
 
 namespace Averio.Application;
 
@@ -25,6 +26,9 @@ public static class DependencyInjection
         services.AddScoped<GetOnboardingStatusHandler>();
 
         services.AddScoped<CompleteOnboardingHandler>();
+
+        services.AddScoped<UpdateHouseholdHandler>();
+        services.AddScoped<UpdateHouseholdValidator>();
 
         return services;
     }

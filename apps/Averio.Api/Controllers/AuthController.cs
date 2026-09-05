@@ -112,11 +112,12 @@ public sealed class AuthController(
     {
         var result = await currentUserHandler.HandleAsync(cancellationToken);
 
-        return Ok(
-            new CurrentUserResponse(
+        return Ok(new CurrentUserResponse(
                 result.UserId,
                 result.Email,
+                result.DisplayName,
                 result.EmailVerified,
+                result.OnboardingRequired,
                 new HouseholdMembershipResponse(
                     result.HouseholdId,
                     result.HouseholdRole

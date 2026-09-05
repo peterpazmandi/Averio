@@ -29,6 +29,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CountryCode")
+                        .HasColumnType("char(2)")
+                        .HasColumnName("country_code");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
@@ -38,10 +42,24 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("name");
 
+                    b.Property<DateTimeOffset?>("OnboardingCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("onboarding_completed_at_utc");
+
+                    b.Property<string>("PreferredCurrency")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("preferred_currency");
+
                     b.HasKey("Id")
                         .HasName("pk_households");
 
-                    b.ToTable("households", (string)null);
+                    b.ToTable("households", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\r\nOR country_code ~ '^[A-Z]{2}$'");
+
+                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\r\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
+                        });
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>
@@ -106,6 +124,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("display_name");
 
                     b.Property<string>("Email")
                         .IsRequired()
