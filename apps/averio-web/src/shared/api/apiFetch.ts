@@ -17,7 +17,7 @@ export async function apiFetch<T>(
     const method = (init?.method ?? 'GET').toUpperCase();
 
     const headers = new Headers(init?.headers);
-    headers.set('Accept', 'application/json' );
+    headers.set('Accept', 'application/json');
     headers.set('Accept-Language', getApiCulture());
 
     if (
@@ -58,13 +58,22 @@ export async function apiFetch<T>(
             // No ProblemDetails payload.
         }
 
+        const firstValidationMessage =
+            problem?.errors
+                ? Object.values(problem.errors)
+                    .flat()
+                    .at(0)
+                : undefined;
+
         throw new ApiError(
             problem?.detail
-                ?? problem?.title
-                ?? `Request failed with status ${response.status}.`,
+            ?? firstValidationMessage
+            ?? problem?.title
+            ?? `Request failed with status ${response.status}.`,
             response.status,
             problem?.code,
             problem?.traceId,
+            problem?.errors,
         );
     }
 

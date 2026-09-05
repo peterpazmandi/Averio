@@ -10,33 +10,125 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as GuestRouteImport } from './routes/_guest'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
+import { Route as GuestLoginRouteImport } from './routes/_guest.login'
+import { Route as GuestRegisterRouteImport } from './routes/_guest.register'
+import { Route as GuestResendVerificationRouteImport } from './routes/_guest.resend-verification'
+import { Route as GuestVerifyEmailRouteImport } from './routes/_guest.verify-email'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/_guest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const GuestLoginRoute = GuestLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestRegisterRoute = GuestRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestResendVerificationRoute = GuestResendVerificationRouteImport.update({
+  id: '/resend-verification',
+  path: '/resend-verification',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestVerifyEmailRoute = GuestVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => GuestRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/login': typeof GuestLoginRoute
+  '/register': typeof GuestRegisterRoute
+  '/resend-verification': typeof GuestResendVerificationRoute
+  '/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/login': typeof GuestLoginRoute
+  '/register': typeof GuestRegisterRoute
+  '/resend-verification': typeof GuestResendVerificationRoute
+  '/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_guest': typeof GuestRouteWithChildren
+  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_guest/login': typeof GuestLoginRoute
+  '/_guest/register': typeof GuestRegisterRoute
+  '/_guest/resend-verification': typeof GuestResendVerificationRoute
+  '/_guest/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/onboarding'
+    | '/login'
+    | '/register'
+    | '/resend-verification'
+    | '/verify-email'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/app'
+    | '/onboarding'
+    | '/login'
+    | '/register'
+    | '/resend-verification'
+    | '/verify-email'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/_guest'
+    | '/_authenticated/app'
+    | '/_authenticated/onboarding'
+    | '/_guest/login'
+    | '/_guest/register'
+    | '/_guest/resend-verification'
+    | '/_guest/verify-email'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  GuestRoute: typeof GuestRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +140,99 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_guest': {
+      id: '/_guest'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof GuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_guest/login': {
+      id: '/_guest/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof GuestLoginRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/register': {
+      id: '/_guest/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof GuestRegisterRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/resend-verification': {
+      id: '/_guest/resend-verification'
+      path: '/resend-verification'
+      fullPath: '/resend-verification'
+      preLoaderRoute: typeof GuestResendVerificationRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/verify-email': {
+      id: '/_guest/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof GuestVerifyEmailRouteImport
+      parentRoute: typeof GuestRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
+interface GuestRouteChildren {
+  GuestLoginRoute: typeof GuestLoginRoute
+  GuestRegisterRoute: typeof GuestRegisterRoute
+  GuestResendVerificationRoute: typeof GuestResendVerificationRoute
+  GuestVerifyEmailRoute: typeof GuestVerifyEmailRoute
+}
+
+const GuestRouteChildren: GuestRouteChildren = {
+  GuestLoginRoute: GuestLoginRoute,
+  GuestRegisterRoute: GuestRegisterRoute,
+  GuestResendVerificationRoute: GuestResendVerificationRoute,
+  GuestVerifyEmailRoute: GuestVerifyEmailRoute,
+}
+
+const GuestRouteWithChildren = GuestRoute._addFileChildren(GuestRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  GuestRoute: GuestRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
