@@ -36,6 +36,7 @@ import {
 import {
     PrimaryButton,
 } from '../shared/components/PrimaryButton';
+import { PasswordField } from '../shared/components/PasswordField';
 
 export const Route =
     createFileRoute('/_guest/login')({
@@ -177,13 +178,14 @@ function LoginPage() {
                     }
                 />
 
-                <FormField
+                <PasswordField
                     label={t('auth.password')}
-                    type="password"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     required
+                    minLength={12}
+                    maxLength={128}
                     value={password}
-                    onChange={(event) =>
+                    onChange={event =>
                         setPassword(
                             event.target.value,
                         )

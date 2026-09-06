@@ -6,6 +6,8 @@ import { registerUser } from '../features/authentication/api/authApi';
 import { ApiError } from '../shared/api/ApiError';
 import { FormField } from '../shared/components/FormField';
 import { PrimaryButton } from '../shared/components/PrimaryButton';
+import { PasswordField } from '../shared/components/PasswordField';
+import { PasswordStrengthIndicator } from '../shared/components/PasswordStrengthIndicator';
 
 export const Route =
 	createFileRoute('/_guest/register')({
@@ -18,6 +20,9 @@ function RegisterPage() {
 	const navigate = useNavigate();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
+
+	const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
 	const mutation =
 		useMutation({
@@ -27,6 +32,10 @@ function RegisterPage() {
 
 	async function submit(event: FormEvent) {
 		event.preventDefault();
+
+		if (passwordMismatch) {
+			return;
+		}
 
 		try {
 			await mutation.mutateAsync({ email, password });
@@ -86,15 +95,37 @@ function RegisterPage() {
 					}
 				/>
 
-				<FormField
+				<PasswordField
 					label={t('auth.password')}
-					type="password"
 					autoComplete="new-password"
 					required
 					minLength={12}
+					maxLength={128}
 					value={password}
-					onChange={(event) =>
+					onChange={event =>
 						setPassword(
+							event.target.value,
+						)
+					}
+				/>
+				<PasswordStrengthIndicator password={password} />
+
+				<PasswordField
+					label={t(
+						'auth.confirmPassword',
+					)}
+					autoComplete="new-password"
+					required
+					value={confirmPassword}
+					error={
+						passwordMismatch
+							? t(
+								'password.mismatch',
+							)
+							: undefined
+					}
+					onChange={event =>
+						setConfirmPassword(
 							event.target.value,
 						)
 					}
@@ -113,6 +144,7 @@ function RegisterPage() {
 				<PrimaryButton
 					type="submit"
 					loading={mutation.isPending}
+					disabled={passwordMismatch}
 				>
 					{t('auth.register.submit')}
 				</PrimaryButton>
