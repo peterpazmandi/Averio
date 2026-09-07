@@ -98,20 +98,30 @@ export const hu = {
         reset: {
             eyebrow:
                 'Fiók helyreállítása',
+
             title:
                 'Állíts be új jelszót',
+
             description:
                 'Adj meg egy új jelszót az Averio-fiókodhoz.',
+
             submit:
                 'Új jelszó mentése',
+
             successTitle:
                 'A jelszó megváltozott',
+
             successDescription:
                 'A jelszavad frissült. Most már bejelentkezhetsz.',
+
             invalidTitle:
                 'Ez a hivatkozás már nem használható',
+
             invalidDescription:
                 'A jelszó-visszaállítási hivatkozás érvénytelen vagy lejárt.',
+
+            requestAnother:
+                'Új visszaállítási link kérése',
         },
 
         verify: {
@@ -146,20 +156,58 @@ export const hu = {
     },
 
     password: {
-        show: 'Jelszó megjelenítése',
-        hide: 'Jelszó elrejtése',
+        show:
+            'Jelszó megjelenítése',
+
+        hide:
+            'Jelszó elrejtése',
 
         mismatch:
             'A két jelszó nem egyezik.',
 
+        requirements:
+            'Használj legalább 12 karaktert. A hosszabb és kevésbé kiszámítható jelszó biztonságosabb.',
+
+        validation: {
+            minimumLength:
+                'A jelszónak legalább 12 karakterből kell állnia.',
+
+            confirmRequired:
+                'Erősítsd meg a jelszavad.',
+
+            rejected:
+                'Ez a jelszó nem felel meg a szükséges biztonsági követelményeknek.',
+        },
+        
+        strengthLabel:
+            'Jelszó erőssége',
         strength: {
-            empty: '',
-            weak: 'Gyenge jelszó',
-            fair: 'Közepes jelszó',
-            strong: 'Erős jelszó',
+            empty:
+                '',
+
+            weak:
+                'Gyenge jelszó',
+
+            fair:
+                'Közepes jelszó',
+
+            strong:
+                'Erős jelszó',
+
             veryStrong:
                 'Nagyon erős jelszó',
         },
+    },
+
+    common: {
+        unexpectedError:
+            'Valami hiba történt. Próbáld újra.',
+
+        requestFailed:
+            'A kérést nem sikerült végrehajtani.',
+
+        reference:
+            'Hivatkozási azonosító: {{reference}}',
     },
 
     language: {

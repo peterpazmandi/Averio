@@ -1,5 +1,11 @@
 export interface PasswordStrength {
-    score: 0 | 1 | 2 | 3 | 4;
+    score:
+        | 0
+        | 1
+        | 2
+        | 3
+        | 4;
+
     translationKey:
         | 'empty'
         | 'weak'
@@ -14,28 +20,48 @@ export function calculatePasswordStrength(
     if (!password) {
         return {
             score: 0,
-            translationKey: 'empty',
+            translationKey:
+                'empty',
         };
     }
 
     let score = 0;
 
-    if (password.length >= 8) {
+    if (
+        password.length >= 8
+    ) {
         score += 1;
     }
 
-    if (password.length >= 12) {
+    if (
+        password.length >= 12
+    ) {
         score += 1;
     }
 
-    const characterClasses = [
-        /[a-z]/.test(password),
-        /[A-Z]/.test(password),
-        /\d/.test(password),
-        /[^A-Za-z0-9]/.test(password),
-    ].filter(Boolean).length;
+    const characterClasses =
+        [
+            /[a-z]/.test(
+                password,
+            ),
 
-    if (characterClasses >= 3) {
+            /[A-Z]/.test(
+                password,
+            ),
+
+            /\d/.test(
+                password,
+            ),
+
+            /[^A-Za-z0-9]/.test(
+                password,
+            ),
+        ].filter(Boolean)
+            .length;
+
+    if (
+        characterClasses >= 3
+    ) {
         score += 1;
     }
 
@@ -53,19 +79,49 @@ export function calculatePasswordStrength(
         Math.min(
             score,
             4,
-        ) as 0 | 1 | 2 | 3 | 4;
+        ) as PasswordStrength['score'];
 
-    const translationKey =
+    if (
         normalizedScore <= 1
-            ? 'weak'
-            : normalizedScore === 2
-                ? 'fair'
-                : normalizedScore === 3
-                    ? 'strong'
-                    : 'veryStrong';
+    ) {
+        return {
+            score:
+                normalizedScore,
+
+            translationKey:
+                'weak',
+        };
+    }
+
+    if (
+        normalizedScore === 2
+    ) {
+        return {
+            score:
+                normalizedScore,
+
+            translationKey:
+                'fair',
+        };
+    }
+
+    if (
+        normalizedScore === 3
+    ) {
+        return {
+            score:
+                normalizedScore,
+
+            translationKey:
+                'strong',
+        };
+    }
 
     return {
-        score: normalizedScore,
-        translationKey,
+        score:
+            normalizedScore,
+
+        translationKey:
+            'veryStrong',
     };
 }

@@ -14,9 +14,11 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as GuestRouteImport } from './routes/_guest'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
+import { Route as GuestForgotPasswordRouteImport } from './routes/_guest.forgot-password'
 import { Route as GuestLoginRouteImport } from './routes/_guest.login'
 import { Route as GuestRegisterRouteImport } from './routes/_guest.register'
 import { Route as GuestResendVerificationRouteImport } from './routes/_guest.resend-verification'
+import { Route as GuestResetPasswordRouteImport } from './routes/_guest.reset-password'
 import { Route as GuestVerifyEmailRouteImport } from './routes/_guest.verify-email'
 
 const IndexRoute = IndexRouteImport.update({
@@ -42,6 +44,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const GuestForgotPasswordRoute = GuestForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => GuestRoute,
+} as any)
 const GuestLoginRoute = GuestLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -57,6 +64,11 @@ const GuestResendVerificationRoute = GuestResendVerificationRouteImport.update({
   path: '/resend-verification',
   getParentRoute: () => GuestRoute,
 } as any)
+const GuestResetPasswordRoute = GuestResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => GuestRoute,
+} as any)
 const GuestVerifyEmailRoute = GuestVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -67,18 +79,22 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AuthenticatedAppRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/forgot-password': typeof GuestForgotPasswordRoute
   '/login': typeof GuestLoginRoute
   '/register': typeof GuestRegisterRoute
   '/resend-verification': typeof GuestResendVerificationRoute
+  '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AuthenticatedAppRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/forgot-password': typeof GuestForgotPasswordRoute
   '/login': typeof GuestLoginRoute
   '/register': typeof GuestRegisterRoute
   '/resend-verification': typeof GuestResendVerificationRoute
+  '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRoutesById {
@@ -88,9 +104,11 @@ export interface FileRoutesById {
   '/_guest': typeof GuestRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_guest/forgot-password': typeof GuestForgotPasswordRoute
   '/_guest/login': typeof GuestLoginRoute
   '/_guest/register': typeof GuestRegisterRoute
   '/_guest/resend-verification': typeof GuestResendVerificationRoute
+  '/_guest/reset-password': typeof GuestResetPasswordRoute
   '/_guest/verify-email': typeof GuestVerifyEmailRoute
 }
 export interface FileRouteTypes {
@@ -99,18 +117,22 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/onboarding'
+    | '/forgot-password'
     | '/login'
     | '/register'
     | '/resend-verification'
+    | '/reset-password'
     | '/verify-email'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/app'
     | '/onboarding'
+    | '/forgot-password'
     | '/login'
     | '/register'
     | '/resend-verification'
+    | '/reset-password'
     | '/verify-email'
   id:
     | '__root__'
@@ -119,9 +141,11 @@ export interface FileRouteTypes {
     | '/_guest'
     | '/_authenticated/app'
     | '/_authenticated/onboarding'
+    | '/_guest/forgot-password'
     | '/_guest/login'
     | '/_guest/register'
     | '/_guest/resend-verification'
+    | '/_guest/reset-password'
     | '/_guest/verify-email'
   fileRoutesById: FileRoutesById
 }
@@ -168,6 +192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_guest/forgot-password': {
+      id: '/_guest/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof GuestForgotPasswordRouteImport
+      parentRoute: typeof GuestRoute
+    }
     '/_guest/login': {
       id: '/_guest/login'
       path: '/login'
@@ -187,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/resend-verification'
       fullPath: '/resend-verification'
       preLoaderRoute: typeof GuestResendVerificationRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/reset-password': {
+      id: '/_guest/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof GuestResetPasswordRouteImport
       parentRoute: typeof GuestRoute
     }
     '/_guest/verify-email': {
@@ -214,16 +252,20 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface GuestRouteChildren {
+  GuestForgotPasswordRoute: typeof GuestForgotPasswordRoute
   GuestLoginRoute: typeof GuestLoginRoute
   GuestRegisterRoute: typeof GuestRegisterRoute
   GuestResendVerificationRoute: typeof GuestResendVerificationRoute
+  GuestResetPasswordRoute: typeof GuestResetPasswordRoute
   GuestVerifyEmailRoute: typeof GuestVerifyEmailRoute
 }
 
 const GuestRouteChildren: GuestRouteChildren = {
+  GuestForgotPasswordRoute: GuestForgotPasswordRoute,
   GuestLoginRoute: GuestLoginRoute,
   GuestRegisterRoute: GuestRegisterRoute,
   GuestResendVerificationRoute: GuestResendVerificationRoute,
+  GuestResetPasswordRoute: GuestResetPasswordRoute,
   GuestVerifyEmailRoute: GuestVerifyEmailRoute,
 }
 

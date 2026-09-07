@@ -98,20 +98,30 @@ export const de = {
         reset: {
             eyebrow:
                 'Kontowiederherstellung',
+
             title:
                 'Neues Passwort festlegen',
+
             description:
                 'Lege ein neues Passwort für dein Averio-Konto fest.',
+
             submit:
                 'Neues Passwort speichern',
+
             successTitle:
                 'Passwort geändert',
+
             successDescription:
                 'Dein Passwort wurde aktualisiert. Du kannst dich jetzt anmelden.',
+
             invalidTitle:
                 'Dieser Link funktioniert nicht mehr',
+
             invalidDescription:
                 'Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.',
+
+            requestAnother:
+                'Neuen Link anfordern',
         },
 
         verify: {
@@ -144,22 +154,59 @@ export const de = {
                 'Falls für diese E-Mail-Adresse ein unbestätigtes Averio-Konto existiert, wurde ein neuer Link gesendet.',
         },
     },
-
     password: {
-        show: 'Passwort anzeigen',
-        hide: 'Passwort ausblenden',
+        show:
+            'Passwort anzeigen',
+
+        hide:
+            'Passwort ausblenden',
 
         mismatch:
             'Die Passwörter stimmen nicht überein.',
 
+        requirements:
+            'Verwende mindestens 12 Zeichen. Ein längeres und weniger vorhersehbares Passwort ist sicherer.',
+
+        validation: {
+            minimumLength:
+                'Das Passwort muss mindestens 12 Zeichen enthalten.',
+
+            confirmRequired:
+                'Bestätige dein Passwort.',
+
+            rejected:
+                'Dieses Passwort erfüllt die erforderlichen Sicherheitsregeln nicht.',
+        },
+
+        strengthLabel:
+            'Passwortstärke',
         strength: {
-            empty: '',
-            weak: 'Schwaches Passwort',
-            fair: 'Akzeptables Passwort',
-            strong: 'Starkes Passwort',
+            empty:
+                '',
+
+            weak:
+                'Schwaches Passwort',
+
+            fair:
+                'Akzeptables Passwort',
+
+            strong:
+                'Starkes Passwort',
+
             veryStrong:
                 'Sehr starkes Passwort',
         },
+    },
+
+    common: {
+        unexpectedError:
+            'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+
+        requestFailed:
+            'Die Anfrage konnte nicht abgeschlossen werden.',
+
+        reference:
+            'Referenz: {{reference}}',
     },
 
     language: {

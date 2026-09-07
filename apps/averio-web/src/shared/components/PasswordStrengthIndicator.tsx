@@ -13,8 +13,13 @@ interface Props {
 export function PasswordStrengthIndicator({
     password,
 }: Props) {
-    const { t } =
-        useTranslation();
+    const {
+        t,
+    } = useTranslation();
+
+    if (!password) {
+        return null;
+    }
 
     const strength =
         calculatePasswordStrength(
@@ -34,8 +39,11 @@ export function PasswordStrengthIndicator({
         <div className="mt-3">
             <div
                 className="
-                    grid grid-cols-4 gap-1.5
+                    grid
+                    grid-cols-4
+                    gap-1.5
                 "
+                aria-hidden="true"
             >
                 {[1, 2, 3, 4].map(
                     segment => (
@@ -45,10 +53,11 @@ export function PasswordStrengthIndicator({
                                 h-1.5
                                 rounded-full
                                 transition-all
+                                duration-200
 
                                 ${
-                                    segment <=
-                                    strength.score
+                                    segment
+                                        <= strength.score
                                         ? activeClass
                                         : `
                                             bg-slate-200
@@ -61,19 +70,43 @@ export function PasswordStrengthIndicator({
                 )}
             </div>
 
-            {password && (
+            <div
+                className="
+                    mt-2
+                    flex
+                    items-center
+                    justify-between
+                    gap-3
+                "
+            >
                 <p
                     className="
-                        mt-2 text-xs
+                        text-xs
                         text-slate-500
+
                         dark:text-slate-400
                     "
+                >
+                    {t(
+                        'password.strengthLabel',
+                    )}
+                </p>
+
+                <p
+                    className="
+                        text-xs
+                        font-semibold
+                        text-slate-700
+
+                        dark:text-slate-300
+                    "
+                    aria-live="polite"
                 >
                     {t(
                         `password.strength.${strength.translationKey}`,
                     )}
                 </p>
-            )}
+            </div>
         </div>
     );
 }

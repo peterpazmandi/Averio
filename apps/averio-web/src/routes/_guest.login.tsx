@@ -180,10 +180,8 @@ function LoginPage() {
 
                 <PasswordField
                     label={t('auth.password')}
-                    autoComplete="new-password"
+                    autoComplete="current-password"
                     required
-                    minLength={12}
-                    maxLength={128}
                     value={password}
                     onChange={event =>
                         setPassword(
@@ -191,6 +189,23 @@ function LoginPage() {
                         )
                     }
                 />
+
+                <div className="flex justify-end">
+                    <Link
+                        to="/forgot-password"
+                        className="
+                            text-sm font-semibold
+                            text-primary-700
+                            hover:text-primary-800
+                            dark:text-primary-400
+                            dark:hover:text-primary-300
+                        "
+                    >
+                        {t(
+                            'auth.login.forgotPassword',
+                        )}
+                    </Link>
+                </div>
 
                 <label
                     className="

@@ -98,20 +98,30 @@ export const en = {
         reset: {
             eyebrow:
                 'Account recovery',
+
             title:
                 'Choose a new password',
+
             description:
                 'Create a new password for your Averio account.',
+
             submit:
                 'Save new password',
+
             successTitle:
                 'Password changed',
+
             successDescription:
                 'Your password has been updated. You can now sign in.',
+
             invalidTitle:
                 'This link no longer works',
+
             invalidDescription:
                 'The password reset link is invalid or has expired.',
+
+            requestAnother:
+                'Request another reset link',
         },
 
         verify: {
@@ -146,21 +156,44 @@ export const en = {
     },
 
     password: {
-        show: 'Show password',
-        hide: 'Hide password',
+        show:
+            'Show password',
+
+        hide:
+            'Hide password',
 
         mismatch:
             'The passwords do not match.',
 
+        requirements:
+            'Use at least 12 characters. A longer and less predictable password is safer.',
+
+        validation: {
+            minimumLength:
+                'Password must contain at least 12 characters.',
+
+            confirmRequired:
+                'Confirm your password.',
+
+            rejected:
+                'This password does not meet the required security rules.',
+        },
+
+        strengthLabel:
+            'Password strength',
         strength: {
             empty:
                 '',
+
             weak:
                 'Weak password',
+
             fair:
                 'Fair password',
+
             strong:
                 'Strong password',
+
             veryStrong:
                 'Very strong password',
         },
@@ -183,6 +216,12 @@ export const en = {
     common: {
         unexpectedError:
             'Something went wrong. Please try again.',
+
+        requestFailed:
+            'We could not complete that request.',
+
+        reference:
+            'Reference: {{reference}}',
     },
 
     language: {
