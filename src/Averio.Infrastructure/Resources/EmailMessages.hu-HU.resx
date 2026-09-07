@@ -55,4 +55,12 @@
   <data name="PasswordReset_Footer" xml:space="preserve">
     <value>Ha nem te kérted a jelszó visszaállítását, ezt az e-mailt nyugodtan figyelmen kívül hagyhatod.</value>
   </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>A jelszó-visszaállítási hivatkozás érvénytelen vagy lejárt.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>A jelszó nem felel meg a szükséges biztonsági követelményeknek.</value>
+  </data>
 </root>

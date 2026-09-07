@@ -9,6 +9,7 @@ using Averio.Application.Onboarding.CompleteOnboarding;
 using Averio.Application.Onboarding.GetOnboardingStatus;
 using Averio.Application.Households.UpdateHousehold;
 using Averio.Application.Identity.ResetPassword;
+using Averio.Application.Identity.RequestPasswordReset;
 
 namespace Averio.Application;
 
@@ -27,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<GetOnboardingStatusHandler>();
 
         services.AddScoped<CompleteOnboardingHandler>();
+
+        services.AddScoped<RequestPasswordResetHandler>();
 
         services.AddScoped<UpdateHouseholdHandler>();
         services.AddScoped<UpdateHouseholdValidator>();

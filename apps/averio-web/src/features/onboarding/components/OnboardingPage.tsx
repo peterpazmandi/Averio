@@ -47,6 +47,8 @@ import {
     PrimaryButton,
 } from '../../../shared/components/PrimaryButton';
 import { AverioBrand } from '../../../shared/components/branding/AverioBrand';
+import { PreferencesToolbar } from '../../../shared/components/preferences/PreferencesToolbar';
+import { BentoCard } from '../../../shared/components/layout/BentoCard';
 
 export function OnboardingPage() {
     const { t } =
@@ -162,6 +164,7 @@ export function OnboardingPage() {
         <main
             className="
                 min-h-screen
+
                 bg-slate-50
                 px-5
                 py-8
@@ -179,19 +182,12 @@ export function OnboardingPage() {
                     className="
                         flex
                         items-center
-                        gap-3
+                        justify-between
                     "
                 >
                     <AverioBrand />
 
-                    <span
-                        className="
-                            text-xl
-                            font-semibold
-                        "
-                    >
-                        Averio
-                    </span>
+                    <PreferencesToolbar />
                 </header>
 
                 <div
@@ -246,11 +242,18 @@ export function OnboardingPage() {
                             className="
                                 mt-8
                                 rounded-2xl
+                                border
+                                border-primary-200
                                 bg-primary-50
                                 p-5
+
                                 text-sm
                                 leading-6
                                 text-primary-900
+
+                                dark:border-primary-900/60
+                                dark:bg-primary-950/40
+                                dark:text-primary-200
                             "
                         >
                             {t(
@@ -259,93 +262,86 @@ export function OnboardingPage() {
                         </div>
                     </section>
 
-                    <form
-                        onSubmit={submit}
-                        className="
-                            rounded-3xl
-                            border
-                            border-slate-200
-                            bg-white
-                            p-6
-                            shadow-sm
-                            sm:p-8
-                        "
-                    >
-                        <div className="space-y-6">
-                            <FormField
-                                label={t(
-                                    'onboarding.displayName',
-                                )}
-                                value={displayName}
-                                maxLength={80}
-                                required
-                                autoComplete="name"
-                                onChange={(event) =>
-                                    setDisplayName(
-                                        event.target.value,
-                                    )
-                                }
-                            />
-
-                            <FormField
-                                label={t(
-                                    'onboarding.householdName',
-                                )}
-                                value={householdName}
-                                maxLength={120}
-                                required
-                                onChange={(event) =>
-                                    setHouseholdName(
-                                        event.target.value,
-                                    )
-                                }
-                            />
-
-                            <div
-                                className="
-                                    grid
-                                    gap-5
-                                    sm:grid-cols-2
-                                "
-                            >
+                    <BentoCard className="p-6 sm:p-8">
+                        <form
+                            onSubmit={submit}
+                            className="space-y-6"
+                        >
+                            <div className="space-y-6">
                                 <FormField
                                     label={t(
-                                        'onboarding.country',
+                                        'onboarding.displayName',
                                     )}
-                                    value={countryCode}
-                                    maxLength={2}
+                                    value={displayName}
+                                    maxLength={80}
                                     required
+                                    autoComplete="name"
                                     onChange={(event) =>
-                                        setCountryCode(
-                                            event.target.value
-                                                .toUpperCase(),
+                                        setDisplayName(
+                                            event.target.value,
                                         )
                                     }
                                 />
 
-                                <label className="block">
-                                    <span
-                                        className="
+                                <FormField
+                                    label={t(
+                                        'onboarding.householdName',
+                                    )}
+                                    value={householdName}
+                                    maxLength={120}
+                                    required
+                                    onChange={(event) =>
+                                        setHouseholdName(
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+
+                                <div
+                                    className="
+                                    grid
+                                    gap-5
+                                    sm:grid-cols-2
+                                "
+                                >
+                                    <FormField
+                                        label={t(
+                                            'onboarding.country',
+                                        )}
+                                        value={countryCode}
+                                        maxLength={2}
+                                        required
+                                        onChange={(event) =>
+                                            setCountryCode(
+                                                event.target.value
+                                                    .toUpperCase(),
+                                            )
+                                        }
+                                    />
+
+                                    <label className="block">
+                                        <span
+                                            className="
                                             text-sm
                                             font-medium
                                             text-slate-700
                                         "
-                                    >
-                                        {t(
-                                            'onboarding.currency',
-                                        )}
-                                    </span>
+                                        >
+                                            {t(
+                                                'onboarding.currency',
+                                            )}
+                                        </span>
 
-                                    <select
-                                        value={
-                                            preferredCurrency
-                                        }
-                                        onChange={(event) =>
-                                            setPreferredCurrency(
-                                                event.target.value as typeof preferredCurrency,
-                                            )
-                                        }
-                                        className="
+                                        <select
+                                            value={
+                                                preferredCurrency
+                                            }
+                                            onChange={(event) =>
+                                                setPreferredCurrency(
+                                                    event.target.value as typeof preferredCurrency,
+                                                )
+                                            }
+                                            className="
                                             mt-2
                                             w-full
                                             rounded-xl
@@ -359,26 +355,26 @@ export function OnboardingPage() {
                                             focus:ring-4
                                             focus:ring-primary-100
                                         "
-                                    >
-                                        <option value="EUR">
-                                            EUR — €
-                                        </option>
+                                        >
+                                            <option value="EUR">
+                                                EUR — €
+                                            </option>
 
-                                        <option value="HUF">
-                                            HUF — Ft
-                                        </option>
+                                            <option value="HUF">
+                                                HUF — Ft
+                                            </option>
 
-                                        <option value="USD">
-                                            USD — $
-                                        </option>
-                                    </select>
-                                </label>
+                                            <option value="USD">
+                                                USD — $
+                                            </option>
+                                        </select>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
 
-                        {mutation.isError && (
-                            <div
-                                className="
+                            {mutation.isError && (
+                                <div
+                                    className="
                                     mt-6
                                     rounded-xl
                                     bg-red-50
@@ -386,29 +382,30 @@ export function OnboardingPage() {
                                     text-sm
                                     text-red-700
                                 "
-                            >
-                                {mutation.error
-                                    instanceof Error
-                                    ? mutation.error.message
-                                    : t(
-                                        'common.unexpectedError',
-                                    )}
-                            </div>
-                        )}
+                                >
+                                    {mutation.error
+                                        instanceof Error
+                                        ? mutation.error.message
+                                        : t(
+                                            'common.unexpectedError',
+                                        )}
+                                </div>
+                            )}
 
-                        <div className="mt-8">
-                            <PrimaryButton
-                                type="submit"
-                                loading={
-                                    mutation.isPending
-                                }
-                            >
-                                {t(
-                                    'onboarding.continue',
-                                )}
-                            </PrimaryButton>
-                        </div>
-                    </form>
+                            <div className="mt-8">
+                                <PrimaryButton
+                                    type="submit"
+                                    loading={
+                                        mutation.isPending
+                                    }
+                                >
+                                    {t(
+                                        'onboarding.continue',
+                                    )}
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </BentoCard>
                 </div>
             </div>
         </main>

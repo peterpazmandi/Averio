@@ -16,7 +16,7 @@ export function PrimaryButton({
     return (
         <button
             {...props}
-            disabled={ disabled || loading }
+            disabled={disabled || loading}
             className="
                 flex
                 w-full
@@ -35,6 +35,8 @@ export function PrimaryButton({
                 focus:ring-primary-200
                 disabled:cursor-not-allowed
                 disabled:opacity-60
+                dark:hover:bg-primary-400
+                dark:focus:ring-primary-900
             "
         >
             {loading ? '…' : children}
