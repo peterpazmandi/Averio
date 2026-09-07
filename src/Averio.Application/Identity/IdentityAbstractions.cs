@@ -8,6 +8,9 @@ public interface IIdentityService
     Task<string?> GenerateEmailVerificationTokenAsync(Guid userId, CancellationToken cancellationToken);
     Task<EmailConfirmationStatus> ConfirmEmailAsync(Guid userId, string token, CancellationToken cancellationToken);
     Task<bool> UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken cancellationToken);
+    Task<string?> GeneratePasswordResetTokenAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<PasswordResetStatus> ResetPasswordAsync(Guid userId, string token, string password, CancellationToken cancellationToken);
 }
 
 public interface IUserSessionService
@@ -20,6 +23,10 @@ public interface IUserSessionService
 public interface IEmailVerificationSender
 {
     Task<bool> TrySendAsync(Guid userId, string email, string verificationToken, string culture, CancellationToken cancellationToken);
+}
+public interface IPasswordResetSender
+{
+    Task<bool> TrySendAsync(Guid userId, string email, string resetToken, string culture, CancellationToken cancellationToken);
 }
 
 public sealed record IdentityUserInfo(
@@ -52,4 +59,11 @@ public static class IdentityCreationErrorCodes
     public const string DuplicateEmail = "duplicate_email";
 
     public const string Rejected = "identity_rejected";
+}
+public enum PasswordResetStatus
+{
+    Succeeded,
+    UserNotFound,
+    InvalidToken,
+    Rejected
 }

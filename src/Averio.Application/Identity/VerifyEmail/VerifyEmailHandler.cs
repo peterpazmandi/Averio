@@ -7,16 +7,11 @@ public sealed class VerifyEmailHandler(
     IValidator<VerifyEmailCommand> validator,
     IIdentityService identityService)
 {
-    public async Task HandleAsync(
-        VerifyEmailCommand command,
-        CancellationToken cancellationToken)
+    public async Task HandleAsync(VerifyEmailCommand command, CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(
-            command,
-            cancellationToken);
+        await validator.ValidateAndThrowAsync(command, cancellationToken);
 
-        var status =
-            await identityService.ConfirmEmailAsync(
+        var status = await identityService.ConfirmEmailAsync(
                 command.UserId,
                 command.Token,
                 cancellationToken);

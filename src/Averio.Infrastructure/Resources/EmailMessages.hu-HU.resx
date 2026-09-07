@@ -35,4 +35,24 @@
   <data name="Verification_Footer" xml:space="preserve">
     <value>Ha nem te hoztad létre ezt az Averio-fiókot, ezt az e-mailt figyelmen kívül hagyhatod.</value>
   </data>
+
+  <data name="PasswordReset_Subject" xml:space="preserve">
+    <value>Averio-jelszó visszaállítása</value>
+  </data>
+
+  <data name="PasswordReset_Heading" xml:space="preserve">
+    <value>Jelszó visszaállítása</value>
+  </data>
+
+  <data name="PasswordReset_Description" xml:space="preserve">
+    <value>Az alábbi gombbal új jelszót állíthatsz be az Averio-fiókodhoz.</value>
+  </data>
+
+  <data name="PasswordReset_Button" xml:space="preserve">
+    <value>Jelszó visszaállítása</value>
+  </data>
+
+  <data name="PasswordReset_Footer" xml:space="preserve">
+    <value>Ha nem te kérted a jelszó visszaállítását, ezt az e-mailt nyugodtan figyelmen kívül hagyhatod.</value>
+  </data>
 </root>

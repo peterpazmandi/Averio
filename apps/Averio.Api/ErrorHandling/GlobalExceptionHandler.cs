@@ -247,11 +247,18 @@ public sealed class GlobalExceptionHandler(
                     "Title_BusinessRule",
                     error.Code,
                     Localize(error)),
-                    
+
             OnboardingRequiredException error =>
                 new ExceptionResponse(
                     StatusCodes.Status403Forbidden,
                     "Title_OnboardingRequired",
+                    error.Code,
+                    Localize(error)),
+
+            InvalidPasswordResetTokenException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status400BadRequest,
+                    "Title_InvalidRequest",
                     error.Code,
                     Localize(error)),
 

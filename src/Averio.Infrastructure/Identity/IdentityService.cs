@@ -112,11 +112,61 @@ internal sealed class IdentityService(UserManager<ApplicationUser> userManager, 
             return false;
         }
 
-        user.DisplayName =displayName.Trim();
+        user.DisplayName = displayName.Trim();
 
-        var result =await userManager.UpdateAsync(user);
+        var result = await userManager.UpdateAsync(user);
 
         return result.Succeeded;
+    }
+
+    public async Task<string?>
+    GeneratePasswordResetTokenAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        var user =
+            await userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        return await userManager.GeneratePasswordResetTokenAsync(user);
+    }
+
+    public async Task<PasswordResetStatus> ResetPasswordAsync(
+            Guid userId,
+            string token,
+            string password,
+            CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await userManager.FindByIdAsync(userId.ToString());
+
+        if (user is null)
+        {
+            return PasswordResetStatus.UserNotFound;
+        }
+
+        var result = await userManager.ResetPasswordAsync(user, token, password);
+
+        if (result.Succeeded)
+        {
+            return PasswordResetStatus.Succeeded;
+        }
+
+        if (result.Errors.Any(error => error.Code == "InvalidToken"))
+        {
+            return PasswordResetStatus.InvalidToken;
+        }
+
+        return PasswordResetStatus.Rejected;
     }
 
     private static IdentityUserInfo Map(ApplicationUser user)

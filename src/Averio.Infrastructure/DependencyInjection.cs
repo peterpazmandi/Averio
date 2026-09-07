@@ -50,6 +50,15 @@ public static class DependencyInjection
 
                 options.Stores.MaxLengthForKeys = 128;
                 options.Stores.SchemaVersion = IdentitySchemaVersions.Version2;
+
+                const string passwordResetProvider = "AverioPasswordReset";
+
+                options.Tokens.ProviderMap.Add(
+                    passwordResetProvider,
+                    new TokenProviderDescriptor(typeof(PasswordResetTokenProvider<ApplicationUser>)));
+
+                options.Tokens.PasswordResetTokenProvider =
+                    passwordResetProvider;
             })
             .AddEntityFrameworkStores<AverioDbContext>()
             .AddSignInManager()
@@ -59,6 +68,10 @@ public static class DependencyInjection
         {
             options.TokenLifespan = TimeSpan.FromHours(24);
         });
+
+        services.AddOptions<PasswordResetTokenProviderOptions>();
+
+        services.AddTransient<PasswordResetTokenProvider<ApplicationUser>>();
 
         services
             .AddDataProtection()
@@ -100,5 +113,6 @@ public static class DependencyInjection
         }
 
         services.AddScoped<IEmailVerificationSender, EmailVerificationSender>();
+        services.AddScoped<IPasswordResetSender, PasswordResetEmailSender>();
     }
 }
