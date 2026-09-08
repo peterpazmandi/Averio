@@ -143,4 +143,12 @@
   <data name="Error_OnboardingRequired" xml:space="preserve">
     <value>A funkció használata előtt fejezd be a háztartás beállítását.</value>
   </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>A jelszó-visszaállítási hivatkozás érvénytelen vagy lejárt.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>A jelszó nem felel meg a szükséges biztonsági követelményeknek.</value>
+  </data>
 </root>

@@ -143,4 +143,12 @@
   <data name="Error_OnboardingRequired" xml:space="preserve">
     <value>Schließe die Einrichtung deines Haushalts ab, bevor du diese Funktion verwendest.</value>
   </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>Das Passwort erfüllt die erforderlichen Sicherheitsregeln nicht.</value>
+  </data>
 </root>
