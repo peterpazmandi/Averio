@@ -22,8 +22,7 @@ export const Route =
                 }
             },
 
-        component:
-            AppPage,
+        component: AppPage,
     });
 
 function AppPage() {

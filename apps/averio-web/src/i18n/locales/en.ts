@@ -225,6 +225,25 @@ export const en = {
     },
 
     onboarding: {
+        eyebrow: 'Welcome to Averio',
+
+        title: 'Set up your household',
+
+        description:
+            'A few details will help us create your financial home and personalize Averio for you.',
+
+        householdOfOne:
+            'Your household starts with you. You can invite someone later when you are ready to manage finances together.',
+
+        displayName: 'Your name',
+
+        householdName: 'Household name',
+
+        country: 'Country',
+
+        currency: 'Default currency',
+
+        continue: 'Continue',
         common: {
             title: 'Make Averio yours',
 

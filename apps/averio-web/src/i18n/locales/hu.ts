@@ -329,6 +329,27 @@ export const hu = {
     },
 
     onboarding: {
+
+        eyebrow: 'Üdv az Averióban',
+
+        title: 'Állítsd be a háztartásodat',
+
+        description:
+            'Néhány adat segítségével létrehozzuk a pénzügyi otthonodat, és személyre szabjuk számodra az Averiót.',
+
+        householdOfOne:
+            'A háztartásod veled kezdődik. Később meghívhatsz valakit, amikor közösen szeretnétek kezelni a pénzügyeiteket.',
+
+        displayName: 'A neved',
+
+        householdName: 'Háztartás neve',
+
+        country: 'Ország',
+
+        currency: 'Alapértelmezett pénznem',
+
+        continue: 'Folytatás',
+
         common: {
             title:
                 'Tedd személyessé az Averiót',

@@ -301,6 +301,25 @@ export const de = {
     },
 
     onboarding: {
+        eyebrow: 'Willkommen bei Averio',
+
+        title: 'Richte deinen Haushalt ein',
+
+        description:
+            'Mit ein paar Angaben können wir dein finanzielles Zuhause einrichten und Averio auf dich abstimmen.',
+
+        householdOfOne:
+            'Dein Haushalt beginnt mit dir. Du kannst später jemanden einladen, wenn ihr eure Finanzen gemeinsam verwalten möchtet.',
+
+        displayName: 'Dein Name',
+
+        householdName: 'Name des Haushalts',
+
+        country: 'Land',
+
+        currency: 'Standardwährung',
+
+        continue: 'Weiter',
         common: {
             title:
                 'Mach Averio zu deinem Averio',
