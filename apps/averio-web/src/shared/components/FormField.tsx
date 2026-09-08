@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react';
+import { type InputHTMLAttributes, useId } from 'react';
 
 interface FormFieldProps
     extends InputHTMLAttributes<HTMLInputElement> {
@@ -11,6 +11,13 @@ export function FormField({
     error,
     ...props
 }: FormFieldProps) {
+    const generatedId = useId();
+    const inputId = props.id ?? generatedId;
+    const errorId = error ? `${inputId}-error` : undefined;
+    const describedBy = [props['aria-describedby'], errorId]
+        .filter(Boolean)
+        .join(' ') || undefined;
+
     return (
         <label className="block">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300" >
@@ -19,6 +26,9 @@ export function FormField({
 
             <input
                 {...props}
+                id={inputId}
+                aria-invalid={props['aria-invalid'] ?? (error ? true : undefined)}
+                aria-describedby={describedBy}
                 className={`
                     mt-2
                     w-full
@@ -69,6 +79,7 @@ export function FormField({
 
             {error && (
                 <span
+                    id={errorId}
                     className="
                         mt-1.5
                         block
