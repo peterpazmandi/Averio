@@ -199,6 +199,20 @@ export const hu = {
         },
     },
 
+    onboarding: {
+        eyebrow: 'Gyors beállítás',
+        title: 'Tedd Averio-t a magadévá',
+        description:
+            'Mondd el, ki vagy, és válaszd ki a háztartásod alapbeállításait.',
+        householdOfOne:
+            'Egy egyfős háztartással kezded. Később meghívhatsz egy partnert anélkül, hogy újra felépítenéd a pénzügyeidet.',
+        displayName: 'Hogyan szólítsunk?',
+        householdName: 'A háztartás neve',
+        country: 'Országkód',
+        currency: 'Előnyben részesített valuta',
+        continue: 'Tovább az Averio-hoz',
+    },
+
     common: {
         unexpectedError:
             'Valami hiba történt. Próbáld újra.',

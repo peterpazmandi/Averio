@@ -198,6 +198,20 @@ export const de = {
         },
     },
 
+    onboarding: {
+        eyebrow: 'Ein schneller Einrichtungsprozess',
+        title: 'Mache Averio zu deinem',
+        description:
+            'Sag uns, wer du bist, und wähle die Grundeinstellungen für deinen Haushalt.',
+        householdOfOne:
+            'Du startest mit einem Haushalt von einer Person. Später kannst du einen Partner einladen, ohne deine Finanzen neu aufzubauen.',
+        displayName: 'Wie sollen wir dich nennen?',
+        householdName: 'Name des Haushalts',
+        country: 'Ländercode',
+        currency: 'Bevorzugte Währung',
+        continue: 'Weiter zu Averio',
+    },
+
     common: {
         unexpectedError:
             'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
