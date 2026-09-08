@@ -31,6 +31,7 @@ public static class DependencyInjection
 
         services.AddScoped<RequestPasswordResetHandler>();
 
+        services.AddScoped<Averio.Application.Households.GetHousehold.GetHouseholdHandler>();
         services.AddScoped<UpdateHouseholdHandler>();
         services.AddScoped<UpdateHouseholdValidator>();
 
