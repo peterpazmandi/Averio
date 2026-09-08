@@ -21,10 +21,7 @@ export function PasswordStrengthIndicator({
         return null;
     }
 
-    const strength =
-        calculatePasswordStrength(
-            password,
-        );
+    const strength = calculatePasswordStrength(password);
 
     const activeClass =
         strength.score <= 1
