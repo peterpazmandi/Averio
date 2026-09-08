@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading.RateLimiting;
 using Averio.Api.Authentication;
 using Averio.Api.ErrorHandling;
 using Averio.Api.Security;
@@ -116,6 +117,31 @@ builder.Services.ConfigureApplicationCookie(
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddRateLimiter(
+    options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        /*
+         * Anonymous, email-sending endpoints: throttled per client IP to
+         * limit outbound email volume an attacker can trigger. A per-account
+         * cooldown is enforced separately at the application layer.
+         */
+        options.AddPolicy(
+            RateLimiterPolicies.PasswordResetRequests,
+            httpContext =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(15),
+                        SegmentsPerWindow = 3,
+                        QueueLimit = 0
+                    }));
+    });
+
 builder.Services.AddAntiforgery(
     options =>
     {
@@ -189,6 +215,8 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.UseMiddleware<
     CsrfProtectionMiddleware>();

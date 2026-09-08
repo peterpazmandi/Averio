@@ -1,5 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Identity;
+using Averio.Application.Identity.RequestPasswordReset;
 using Averio.Infrastructure.Email;
 using Averio.Infrastructure.Identity;
 using Averio.Infrastructure.Persistence;
@@ -79,10 +80,12 @@ public static class DependencyInjection
             .PersistKeysToDbContext<AverioDbContext>();
 
         services.AddSingleton(TimeProvider.System);
+        services.AddMemoryCache();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IHouseholdRepository, HouseholdRepository>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserSessionService, UserSessionService>();
+        services.AddSingleton<IPasswordResetRequestThrottle, PasswordResetRequestThrottle>();
 
         ConfigureEmail(services, configuration);
 

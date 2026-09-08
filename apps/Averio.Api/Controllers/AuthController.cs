@@ -6,9 +6,11 @@ using Averio.Application.Identity.RequestPasswordReset;
 using Averio.Application.Identity.ResendVerification;
 using Averio.Application.Identity.ResetPassword;
 using Averio.Application.Identity.VerifyEmail;
+using Averio.Api.Security;
 using Averio.Contracts.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Averio.Api.Controllers;
 
@@ -109,6 +111,7 @@ public sealed class AuthController(
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiterPolicies.PasswordResetRequests)]
     [HttpPost("password-reset-requests")]
     [ProducesResponseType(
     StatusCodes.Status204NoContent)]

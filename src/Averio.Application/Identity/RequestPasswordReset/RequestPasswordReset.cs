@@ -5,7 +5,8 @@ namespace Averio.Application.Identity.RequestPasswordReset;
 public sealed class RequestPasswordResetHandler(
     IValidator<RequestPasswordResetCommand> validator,
     IIdentityService identityService,
-    IPasswordResetSender passwordResetSender)
+    IPasswordResetSender passwordResetSender,
+    IPasswordResetRequestThrottle requestThrottle)
 {
     public async Task HandleAsync(RequestPasswordResetCommand command, CancellationToken cancellationToken)
     {
@@ -17,6 +18,15 @@ public sealed class RequestPasswordResetHandler(
          * Never disclose whether an account exists.
          */
         if (user is null || !user.EmailConfirmed)
+        {
+            return;
+        }
+
+        /*
+         * Delivery cooldown: caps re-sends per account regardless of the
+         * requester's IP, on top of the per-IP rate limit at the API layer.
+         */
+        if (!requestThrottle.TryAcquire(user.Email))
         {
             return;
         }
