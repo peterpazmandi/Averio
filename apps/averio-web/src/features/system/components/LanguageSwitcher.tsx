@@ -2,6 +2,10 @@ import {
     useTranslation,
 } from 'react-i18next';
 
+interface LanguageSwitcherProps {
+    fullWidth?: boolean;
+}
+
 const languages = [
     {
         code: 'en',
@@ -17,7 +21,9 @@ const languages = [
     },
 ] as const;
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({
+    fullWidth = false,
+}: LanguageSwitcherProps) {
     const {
         t,
         i18n,
@@ -34,16 +40,40 @@ export function LanguageSwitcher() {
         <div
             role="group"
             aria-label={
-                t('preferences.language.label')
+                t(
+                    'preferences.language.label',
+                )
             }
-            className="
-                flex gap-1 rounded-2xl
-                border border-slate-200
-                bg-white/80 p-1
-                shadow-sm backdrop-blur
+            className={`
+                rounded-2xl
+
+                border
+                border-slate-200
+
+                bg-white/80
+
+                p-1
+
+                shadow-sm
+                backdrop-blur
+
                 dark:border-slate-800
                 dark:bg-slate-900/80
-            "
+
+                ${fullWidth
+                    ? `
+                            grid
+                            w-full
+                            min-w-0
+                            grid-cols-3
+                            gap-1
+                        `
+                    : `
+                            flex
+                            gap-1
+                        `
+                }
+            `}
         >
             {languages.map(
                 language => {
@@ -53,52 +83,48 @@ export function LanguageSwitcher() {
 
                     return (
                         <button
-                            key={
-                                language.code
-                            }
+                            key={language.code}
                             type="button"
-                            aria-pressed={
-                                active
-                            }
-                            title={t(
-                                `preferences.language.${language.code}`,
-                            )}
+                            aria-pressed={active}
                             onClick={() =>
-                                void i18n
-                                    .changeLanguage(
-                                        language.code,
-                                    )
+                                void i18n.changeLanguage(
+                                    language.code,
+                                )
                             }
                             className={`
-                                min-w-10
+                                min-w-0
+
                                 rounded-xl
-                                px-2.5 py-2
+
+                                px-3
+                                py-2
+
+                                text-center
                                 text-xs
                                 font-semibold
+
                                 transition
 
-                                ${
-                                    active
-                                        ? `
-                                            bg-primary-500
-                                            text-slate-950
-                                            shadow-sm
-                                        `
-                                        : `
-                                            text-slate-500
-                                            hover:bg-slate-100
-                                            hover:text-slate-900
+                                ${active
+                                                    ? `
+                                    bg-primary-500
+                                    text-slate-950
+                                    shadow-sm
+                                `
+                                                    : `
+                                    text-slate-500
 
-                                            dark:text-slate-400
-                                            dark:hover:bg-slate-800
-                                            dark:hover:text-white
-                                        `
+                                    hover:bg-slate-100
+                                    hover:text-slate-900
+
+                                    dark:text-slate-400
+                                    dark:hover:bg-slate-800
+                                    dark:hover:text-white
+                                `
                                 }
                             `}
                         >
-                            {
-                                language.label
-                            }
+                            {language.label}
                         </button>
                     );
                 },

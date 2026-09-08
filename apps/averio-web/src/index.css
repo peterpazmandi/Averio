@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    /* Product/UI primary */
+    /* Averio UI primary */
     --color-primary-50: #ecfdf5;
     --color-primary-100: #d1fae5;
     --color-primary-200: #a7f3d0;
@@ -22,9 +22,33 @@
     --color-brand-light: #f3f4f6;
 }
 
+/*
+ * Very important for responsive layout.
+ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+
+    min-height: 100%;
+
+    margin: 0;
+    padding: 0;
+}
+
 html {
     min-height: 100%;
     color-scheme: light;
+
+    overflow-x: hidden;
 }
 
 html.dark {
@@ -32,9 +56,21 @@ html.dark {
 }
 
 body {
-    min-width: 320px;
     min-height: 100vh;
-    margin: 0;
+
+    /*
+     * IMPORTANT:
+     *
+     * Do NOT keep the Vite starter:
+     *
+     * display: flex;
+     * place-items: center;
+     *
+     * here.
+     */
+    display: block;
+
+    overflow-x: hidden;
 
     background: #f8fafc;
     color: #0f172a;
@@ -44,6 +80,10 @@ body {
         ui-sans-serif,
         system-ui,
         sans-serif;
+
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
 }
 
 html.dark body {
@@ -51,9 +91,34 @@ html.dark body {
     color: #f8fafc;
 }
 
+#root {
+    /*
+     * IMPORTANT:
+     *
+     * Do NOT keep:
+     *
+     * max-width: 1280px;
+     * margin: 0 auto;
+     * padding: 2rem;
+     * text-align: center;
+     */
+    width: 100%;
+    min-height: 100vh;
+}
+
 button,
 input,
 select,
 textarea {
     font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+img,
+svg {
+    display: block;
+    max-width: 100%;
 }

@@ -22,6 +22,8 @@ export function FormField({
                 className={`
                     mt-2
                     w-full
+                    min-w-0
+                    max-w-full
 
                     rounded-xl
                     border
@@ -55,13 +57,12 @@ export function FormField({
                     dark:focus:border-primary-500
                     dark:focus:ring-primary-950
 
-                    ${
-                        error
-                            ? `
+                    ${error
+                        ? `
                                 border-red-400
                                 dark:border-red-500
                             `
-                            : ''
+                        : ''
                     }
                 `}
             />

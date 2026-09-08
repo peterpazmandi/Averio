@@ -11,8 +11,12 @@ import {
 } from '../../../shared/components/branding/AverioBrand';
 
 import {
-    PreferencesToolbar,
-} from '../../../shared/components/preferences/PreferencesToolbar';
+    LanguageSwitcher,
+} from '../../system/components/LanguageSwitcher';
+
+import {
+    ThemeToggle,
+} from '../../../shared/components/preferences/ThemeToggle';
 
 export function AuthShell({
     children,
@@ -24,28 +28,26 @@ export function AuthShell({
     return (
         <main
             className="
+                grid
                 min-h-screen
+                w-full
+                min-w-0
 
                 bg-slate-50
                 text-slate-950
 
-                transition-colors
-
                 dark:bg-slate-950
                 dark:text-white
 
-                lg:grid
-                lg:grid-cols-[minmax(380px,0.9fr)_1.1fr]
+                lg:grid-cols-[minmax(380px,0.9fr)_minmax(0,1.1fr)]
             "
         >
-            {/* ------------------------------------------------ */}
-            {/* Left marketing / branding panel                  */}
-            {/* ------------------------------------------------ */}
-
+            {/* Desktop marketing side */}
             <aside
                 className="
                     relative
                     hidden
+                    min-w-0
                     overflow-hidden
 
                     bg-slate-950
@@ -53,27 +55,20 @@ export function AuthShell({
                     text-white
 
                     lg:flex
-                    lg:min-h-screen
                     lg:flex-col
                     lg:justify-between
                 "
             >
-                {/* Decorative background glow */}
                 <div
                     aria-hidden="true"
                     className="
                         pointer-events-none
-
                         absolute
                         -left-28
                         top-32
-
                         size-80
-
                         rounded-full
-
                         bg-primary-500/10
-
                         blur-3xl
                     "
                 />
@@ -82,34 +77,13 @@ export function AuthShell({
                     aria-hidden="true"
                     className="
                         pointer-events-none
-
                         absolute
                         -right-24
                         bottom-20
-
                         size-96
-
                         rounded-full
-
                         bg-primary-500/5
-
                         blur-3xl
-                    "
-                />
-
-                {/* Very subtle grid / bento decoration */}
-                <div
-                    aria-hidden="true"
-                    className="
-                        pointer-events-none
-
-                        absolute
-                        inset-0
-
-                        opacity-[0.035]
-
-                        [background-image:linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)]
-                        [background-size:48px_48px]
                     "
                 />
 
@@ -119,17 +93,6 @@ export function AuthShell({
                         z-10
                     "
                 >
-                    {/*
-                        IMPORTANT:
-
-                        The left panel is ALWAYS dark,
-                        regardless of the application's
-                        light/dark theme.
-
-                        Therefore the brand wordmark must
-                        also always use its dark-surface
-                        variant.
-                    */}
                     <AverioBrand
                         variant="on-dark"
                     />
@@ -143,23 +106,16 @@ export function AuthShell({
                         <div
                             className="
                                 inline-flex
-                                items-center
-
                                 rounded-xl
-
                                 border
                                 border-primary-500/20
-
                                 bg-primary-500/10
-
                                 px-3
                                 py-1.5
-
                                 text-xs
                                 font-semibold
                                 uppercase
                                 tracking-[0.16em]
-
                                 text-primary-300
                             "
                         >
@@ -171,14 +127,11 @@ export function AuthShell({
                         <h1
                             className="
                                 mt-7
-
                                 max-w-xl
-
                                 text-4xl
                                 font-semibold
                                 leading-[1.15]
                                 tracking-tight
-
                                 text-white
 
                                 xl:text-5xl
@@ -192,12 +145,9 @@ export function AuthShell({
                         <p
                             className="
                                 mt-7
-
                                 max-w-md
-
                                 text-lg
                                 leading-8
-
                                 text-slate-400
                             "
                         >
@@ -208,147 +158,117 @@ export function AuthShell({
                     </div>
                 </div>
 
-                {/* Bottom footer */}
-                <div
+                <p
                     className="
                         relative
                         z-10
-
-                        flex
-                        items-center
-                        justify-between
+                        text-sm
+                        text-slate-500
                     "
                 >
-                    <p
-                        className="
-                            text-sm
-                            text-slate-500
-                        "
-                    >
-                        {t(
-                            'authShell.footer',
-                        )}
-                    </p>
-                </div>
+                    {t(
+                        'authShell.footer',
+                    )}
+                </p>
             </aside>
 
-            {/* ------------------------------------------------ */}
-            {/* Right application / authentication panel         */}
-            {/* ------------------------------------------------ */}
-
+            {/* Application/authentication side */}
             <section
                 className="
-                    relative
-
                     flex
                     min-h-screen
+                    min-w-0
                     flex-col
 
                     bg-slate-50
 
-                    px-5
-                    py-5
-
-                    transition-colors
+                    px-4
+                    py-4
 
                     dark:bg-slate-950
 
-                    sm:px-8
+                    sm:px-6
                     sm:py-6
 
                     lg:px-12
-
                     xl:px-16
                 "
             >
-                {/* Header */}
+                {/* Mobile header */}
                 <header
                     className="
-                        relative
-                        z-20
+                        w-full
+                        min-w-0
 
-                        flex
-                        items-center
-                        justify-between
-
-                        gap-4
+                        lg:flex
+                        lg:justify-end
                     "
                 >
-                    {/*
-                        Mobile/tablet logo.
-
-                        Unlike the permanent dark sidebar,
-                        this area follows the current theme.
-
-                        So this uses the default brand variant:
-                        - light theme -> navy wordmark
-                        - dark theme -> white wordmark
-                    */}
                     <div
                         className="
+                            flex
+                            min-w-0
+                            items-center
+                            justify-between
+                            gap-3
+
                             lg:hidden
                         "
                     >
                         <AverioBrand />
+
+                        <div className="shrink-0">
+                            <ThemeToggle />
+                        </div>
                     </div>
 
                     <div
                         className="
-                            ml-auto
+                            mt-3
+                            min-w-0
+
+                            lg:hidden
                         "
                     >
-                        <PreferencesToolbar />
+                        <LanguageSwitcher
+                            fullWidth
+                        />
+                    </div>
+
+                    {/* Desktop preferences */}
+                    <div
+                        className="
+                            hidden
+                            items-center
+                            gap-2
+
+                            lg:flex
+                        "
+                    >
+                        <LanguageSwitcher />
+                        <ThemeToggle />
                     </div>
                 </header>
 
-                {/* Main auth area */}
+                {/* Form area */}
                 <div
                     className="
-                        relative
-
                         flex
+                        min-w-0
                         flex-1
 
                         items-center
                         justify-center
 
-                        py-10
+                        py-8
 
                         sm:py-12
                     "
                 >
-                    {/* Subtle light-mode glow */}
-                    <div
-                        aria-hidden="true"
-                        className="
-                            pointer-events-none
-
-                            absolute
-                            left-1/2
-                            top-1/2
-
-                            size-[34rem]
-
-                            -translate-x-1/2
-                            -translate-y-1/2
-
-                            rounded-full
-
-                            bg-primary-500/[0.035]
-
-                            blur-3xl
-
-                            dark:bg-primary-500/[0.02]
-                        "
-                    />
-
-                    {/* Auth card */}
                     <div
                         className="
-                            relative
-                            z-10
-
                             w-full
+                            min-w-0
                             max-w-md
 
                             rounded-3xl
@@ -358,13 +278,11 @@ export function AuthShell({
 
                             bg-white/95
 
-                            p-6
+                            p-5
 
                             shadow-[0_12px_40px_rgba(15,23,42,0.07)]
 
                             backdrop-blur-xl
-
-                            transition-colors
 
                             dark:border-slate-800
                             dark:bg-slate-900/95

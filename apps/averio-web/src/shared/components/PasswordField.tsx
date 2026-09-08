@@ -41,7 +41,7 @@ export function PasswordField({
                 {label}
             </span>
 
-            <div className="relative mt-2">
+            <div className="relative mt-2 w-full min-w-0- max-w-full">
                 <input
                     {...props}
                     type={
@@ -50,7 +50,7 @@ export function PasswordField({
                             : 'password'
                     }
                     className={`
-                        w-full rounded-xl
+                        w-full min-w-0 max-w-full rounded-xl
                         border bg-white
                         px-4 py-3 pr-12
                         text-slate-950

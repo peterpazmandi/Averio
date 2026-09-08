@@ -273,8 +273,7 @@ public sealed class GlobalExceptionHandler(
         };
     }
 
-    private string Localize(
-        AverioException exception)
+    private string Localize(AverioException exception)
     {
         return localizer[
             exception.ResourceKey,
