@@ -76,6 +76,8 @@ export const de = {
             strong: 'Stark',
             veryStrong: 'Sehr stark',
         },
+        requirements:
+            'Verwende mindestens 8 Zeichen mit einer Mischung aus Buchstaben, Zahlen und Symbolen.',
     },
 
     auth: {
@@ -171,10 +173,10 @@ export const de = {
             backToLogin:
                 'Zurück zur Anmeldung',
 
-            successTitle:
+            sentTitle:
                 'Überprüfe deinen Posteingang',
 
-            successDescription:
+            sentDescription:
                 'Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir dir Anweisungen zum Zurücksetzen des Passworts gesendet.',
         },
 

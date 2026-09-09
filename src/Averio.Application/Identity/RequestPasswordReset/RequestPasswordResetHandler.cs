@@ -5,7 +5,7 @@ namespace Averio.Application.Identity.RequestPasswordReset;
 public sealed class RequestPasswordResetHandler(
     IValidator<RequestPasswordResetCommand> validator,
     IIdentityService identityService,
-    IPasswordResetSender passwordResetSender,
+    IPasswordResetEmailQueue passwordResetEmailQueue,
     IPasswordResetRequestThrottle requestThrottle)
 {
     public async Task HandleAsync(RequestPasswordResetCommand command, CancellationToken cancellationToken)
@@ -38,11 +38,14 @@ public sealed class RequestPasswordResetHandler(
             return;
         }
 
-        await passwordResetSender.TrySendAsync(
+        /*
+         * Queued, not awaited: delivery latency (SMTP/API round-trip)
+         * must never leak into the response time for this endpoint.
+         */
+        passwordResetEmailQueue.Enqueue(new PasswordResetEmailJob(
             user.Id,
             user.Email,
             token,
-            user.PreferredCulture,
-            cancellationToken);
+            user.PreferredCulture));
     }
 }

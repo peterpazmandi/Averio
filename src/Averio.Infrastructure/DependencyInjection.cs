@@ -117,5 +117,9 @@ public static class DependencyInjection
 
         services.AddScoped<IEmailVerificationSender, EmailVerificationSender>();
         services.AddScoped<IPasswordResetSender, PasswordResetEmailSender>();
+
+        services.AddSingleton<PasswordResetEmailQueue>();
+        services.AddSingleton<IPasswordResetEmailQueue>(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
+        services.AddHostedService(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
     }
 }

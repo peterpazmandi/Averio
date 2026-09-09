@@ -86,6 +86,8 @@ export const hu = {
             veryStrong:
                 'Nagyon erős',
         },
+        requirements:
+            'Használj legalább 8 karaktert, betűk, számok és szimbólumok keverékével.',
     },
 
     auth: {
@@ -164,8 +166,11 @@ export const hu = {
             successTitle:
                 'A fiókod elkészült',
 
-            successDescription:
-                'Bejelentkezés előtt ellenőrizd a postaládádat, és erősítsd meg az e-mail-címedet.',
+            sentTitle:
+                'Ellenőrizd a postaládádat',
+
+            sentDescription:
+                'Ha létezik fiók ezzel az e-mail-címmel, küldtünk egy linket a jelszó visszaállításához.',
 
             termsPrefix:
                 'A fiók létrehozásával elfogadod az Averio',

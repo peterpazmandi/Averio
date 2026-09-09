@@ -68,6 +68,8 @@ export const en = {
             strong: 'Strong',
             veryStrong: 'Very strong',
         },
+        requirements:
+            'Use at least 8 characters with a mix of letters, numbers and symbols.',
     },
 
     auth: {
@@ -136,8 +138,8 @@ export const en = {
 
             backToLogin: 'Back to sign in',
 
-            successTitle: 'Check your inbox',
-            successDescription:
+            sentTitle: 'Check your inbox',
+            sentDescription:
                 "If an account exists for this email address, we've sent instructions for resetting the password.",
         },
 
