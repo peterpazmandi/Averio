@@ -21,10 +21,8 @@ namespace Averio.Application.Households.UpdateHousehold
             RuleFor(x => x.PreferredCurrency)
                 .Must(value =>
                     value is null
-                    || Enum.TryParse<CurrencyCode>(
-                        value,
-                        true,
-                        out _))
+                    || Enum.GetNames<CurrencyCode>()
+                         .Contains(value, StringComparer.OrdinalIgnoreCase))
                 .WithErrorCode("Validation_CurrencyInvalid");
         }
     }
