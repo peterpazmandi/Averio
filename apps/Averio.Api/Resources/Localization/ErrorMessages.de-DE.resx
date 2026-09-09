@@ -136,6 +136,22 @@
     <value>Bestätigungstoken ist erforderlich.</value>
   </data>
 
+  <data name="Validation_HouseholdNameTooShort" xml:space="preserve">
+    <value>Der Haushaltsname muss mindestens 2 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
+    <value>Der Haushaltsname darf höchstens 120 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_CountryInvalid" xml:space="preserve">
+    <value>Gib einen gültigen zweistelligen Ländercode ein.</value>
+  </data>
+
+  <data name="Validation_CurrencyInvalid" xml:space="preserve">
+    <value>Gib eine gültige Währung ein.</value>
+  </data>
+
   <data name="Title_OnboardingRequired" xml:space="preserve">
     <value>Einrichtung abschließen</value>
   </data>

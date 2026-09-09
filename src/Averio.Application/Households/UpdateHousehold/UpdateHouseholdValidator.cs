@@ -9,11 +9,14 @@ namespace Averio.Application.Households.UpdateHousehold
         {
             RuleFor(x => x.Name)
                 .MinimumLength(2)
+                .WithErrorCode("Validation_HouseholdNameTooShort")
                 .MaximumLength(120)
+                .WithErrorCode("Validation_HouseholdNameTooLong")
                 .When(x => x.Name is not null);
 
             RuleFor(x => x.CountryCode)
                 .Matches("^[A-Za-z]{2}$")
+                .WithErrorCode("Validation_CountryInvalid")
                 .When(x => x.CountryCode is not null);
 
             RuleFor(x => x.PreferredCurrency)
@@ -22,7 +25,8 @@ namespace Averio.Application.Households.UpdateHousehold
                     || Enum.TryParse<CurrencyCode>(
                         value,
                         true,
-                        out _));
+                        out _))
+                .WithErrorCode("Validation_CurrencyInvalid");
         }
     }
 }

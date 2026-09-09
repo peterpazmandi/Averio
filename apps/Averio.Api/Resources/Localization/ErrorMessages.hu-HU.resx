@@ -136,6 +136,22 @@
     <value>A megerősítő token megadása kötelező.</value>
   </data>
 
+  <data name="Validation_HouseholdNameTooShort" xml:space="preserve">
+    <value>A háztartás nevének legalább 2 karakterből kell állnia.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
+    <value>A háztartás neve legfeljebb 120 karakterből állhat.</value>
+  </data>
+
+  <data name="Validation_CountryInvalid" xml:space="preserve">
+    <value>Adj meg érvényes, kétbetűs országkódot.</value>
+  </data>
+
+  <data name="Validation_CurrencyInvalid" xml:space="preserve">
+    <value>Adj meg érvényes pénznemet.</value>
+  </data>
+
   <data name="Title_OnboardingRequired" xml:space="preserve">
     <value>Fejezd be a beállítást</value>
   </data>
