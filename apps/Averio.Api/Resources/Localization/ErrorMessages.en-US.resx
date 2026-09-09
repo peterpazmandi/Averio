@@ -159,4 +159,12 @@
   <data name="Error_OnboardingRequired" xml:space="preserve">
     <value>Complete your household setup before using this feature.</value>
   </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>The password reset link is invalid or has expired.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>The password does not meet the required security rules.</value>
+  </data>
 </root>
