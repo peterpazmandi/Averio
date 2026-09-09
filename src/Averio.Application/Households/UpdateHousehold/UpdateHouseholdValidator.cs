@@ -8,7 +8,7 @@ namespace Averio.Application.Households.UpdateHousehold
         public UpdateHouseholdValidator()
         {
             RuleFor(x => x.Name)
-                .MinimumLength(2)
+                .Must(value => value is null || value.Trim().Length >= 2)
                 .MaximumLength(120)
                 .When(x => x.Name is not null);
 
