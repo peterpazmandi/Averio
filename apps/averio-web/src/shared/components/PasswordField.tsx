@@ -1,4 +1,5 @@
 import {
+    useId,
     useState,
     type InputHTMLAttributes,
 } from 'react';
@@ -23,6 +24,12 @@ export function PasswordField({
 }: PasswordFieldProps) {
     const { t } =
         useTranslation();
+    const generatedId = useId();
+    const inputId = props.id ?? generatedId;
+    const errorId = error ? `${inputId}-error` : undefined;
+    const describedBy = [props['aria-describedby'], errorId]
+        .filter(Boolean)
+        .join(' ') || undefined;
 
     const [
         visible,
@@ -44,6 +51,9 @@ export function PasswordField({
             <div className="relative mt-2 w-full min-w-0- max-w-full">
                 <input
                     {...props}
+                    id={inputId}
+                    aria-invalid={props['aria-invalid'] ?? (error ? true : undefined)}
+                    aria-describedby={describedBy}
                     type={
                         visible
                             ? 'text'
@@ -119,6 +129,7 @@ export function PasswordField({
 
             {error && (
                 <span
+                    id={errorId}
                     className="
                         mt-1.5 block
                         text-sm text-red-600
