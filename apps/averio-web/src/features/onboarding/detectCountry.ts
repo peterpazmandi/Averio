@@ -6,11 +6,14 @@ export function detectCountryCode():
                 navigator.language,
             );
 
-        return (
+        const region =
             locale.region
             ?? locale.maximize().region
-            ?? ''
-        );
+            ?? '';
+
+        return /^[A-Z]{2}$/.test(region)
+            ? region
+            : '';
     }
     catch {
         return '';
