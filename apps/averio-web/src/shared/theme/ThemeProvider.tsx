@@ -19,16 +19,32 @@ const ThemeContext =
         undefined,
     );
 
+function getStoredTheme():
+    Theme | null {
+    try {
+        const stored =
+            localStorage.getItem(
+                'averio.theme',
+            );
+
+        if (
+            stored === 'light'
+            || stored === 'dark'
+        ) {
+            return stored;
+        }
+    } catch {
+        return null;
+    }
+
+    return null;
+}
+
 function getInitialTheme(): Theme {
     const stored =
-        localStorage.getItem(
-            'averio.theme',
-        );
+        getStoredTheme();
 
-    if (
-        stored === 'light'
-        || stored === 'dark'
-    ) {
+    if (stored) {
         return stored;
     }
 
@@ -75,10 +91,14 @@ export function ThemeProvider({
                 .style.colorScheme =
                     theme;
 
-            localStorage.setItem(
-                'averio.theme',
-                theme,
-            );
+            try {
+                localStorage.setItem(
+                    'averio.theme',
+                    theme,
+                );
+            } catch {
+                return;
+            }
         },
         [theme],
     );
