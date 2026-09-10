@@ -9,6 +9,7 @@ namespace Averio.Application.Households.UpdateHousehold
         {
             RuleFor(x => x.Name)
                 .Must(value => value is null || value.Trim().Length >= 2)
+                .WithErrorCode("Validation_HouseholdNameTooShort")
                 .MaximumLength(120)
                 .WithErrorCode("Validation_HouseholdNameTooLong")
                 .When(x => x.Name is not null);
