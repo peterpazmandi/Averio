@@ -39,7 +39,14 @@ export function PrimaryButton({
                 dark:focus:ring-primary-900
             "
         >
-            {loading ? '…' : children}
+            {loading ? (
+                <>
+                    <span className="sr-only">{children}</span>
+                    <span aria-hidden="true">…</span>
+                </>
+            ) : (
+                children
+            )}
         </button>
     );
 }
