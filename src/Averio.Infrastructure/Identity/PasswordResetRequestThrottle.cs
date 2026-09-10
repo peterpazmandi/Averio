@@ -6,18 +6,21 @@ namespace Averio.Infrastructure.Identity;
 internal sealed class PasswordResetRequestThrottle(IMemoryCache cache) : IPasswordResetRequestThrottle
 {
     private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(2);
+    private readonly object _gate = new();
 
     public bool TryAcquire(string email)
     {
         var key = $"password-reset-cooldown:{email.Trim().ToUpperInvariant()}";
 
-        if (cache.TryGetValue(key, out _))
+        lock (_gate)
         {
-            return false;
+            if (cache.TryGetValue(key, out _))
+            {
+                return false;
+            }
+
+            cache.Set(key, true, Cooldown);
+            return true;
         }
-
-        cache.Set(key, true, Cooldown);
-
-        return true;
     }
 }
