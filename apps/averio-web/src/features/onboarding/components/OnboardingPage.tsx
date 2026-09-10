@@ -166,6 +166,37 @@ export function OnboardingPage() {
         });
     }
 
+    if (statusQuery.isPending) {
+        return (
+            <main
+                className="
+                    min-h-screen
+                    bg-slate-50
+                    text-slate-950
+                    transition-colors
+                    dark:bg-slate-950
+                    dark:text-white
+                    px-5 py-8
+                    sm:px-8
+                    lg:py-14
+                "
+            >
+                <div
+                    className="
+                        mx-auto
+                        max-w-5xl
+                    "
+                >
+                    <p>
+                        {t(
+                            'auth.verify.verifying',
+                        )}
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
     return (
         <main
             className="
