@@ -21,6 +21,10 @@ import {
 } from '../features/authentication/api/authApi';
 
 import {
+    ApiError,
+} from '../shared/api/ApiError';
+
+import {
     FormField,
 } from '../shared/components/FormField';
 
@@ -60,6 +64,13 @@ function ForgotPasswordPage() {
             // Rendered from mutation state.
         }
     }
+
+    const error =
+        mutation.error instanceof ApiError
+            ? mutation.error.message
+            : mutation.error instanceof Error
+                ? mutation.error.message
+                : undefined;
 
     if (mutation.isSuccess) {
         return (
@@ -175,30 +186,37 @@ function ForgotPasswordPage() {
                     required
                     autoComplete="email"
                     value={email}
-                    onChange={event =>
-                        setEmail(
-                            event.target.value,
-                        )
-                    }
+                    onChange={event => setEmail(event.target.value)}
                 />
+
+                {error && (
+                    <div
+                        role="alert"
+                        className="
+                            rounded-xl
+                            bg-red-50
+                            p-4
+                            text-sm
+                            text-red-700
+                            dark:bg-red-950/40
+                            dark:text-red-400
+                        "
+                    >
+                        {error}
+                    </div>
+                )}
 
                 <PrimaryButton
                     type="submit"
-                    loading={
-                        mutation.isPending
-                    }
+                    loading={mutation.isPending}
                 >
-                    {t(
-                        'auth.forgot.submit',
-                    )}
+                    {t('auth.forgot.submit',)}
                 </PrimaryButton>
             </form>
 
             <Link
                 to="/login"
-                search={{
-                    redirect: undefined,
-                }}
+                search={{ redirect: undefined, }}
                 className="
                     mt-6 block
                     text-center
