@@ -96,6 +96,7 @@ public sealed class AuthController(
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiterPolicies.PasswordResetRequests)]
     [HttpPost("email-verification/resend")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ResendVerification(

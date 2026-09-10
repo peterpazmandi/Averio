@@ -1,5 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Identity;
+using Averio.Application.Identity.ResendVerification;
 using Averio.Application.Identity.RequestPasswordReset;
 using Averio.Infrastructure.Email;
 using Averio.Infrastructure.Identity;
@@ -86,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserSessionService, UserSessionService>();
         services.AddSingleton<IPasswordResetRequestThrottle, PasswordResetRequestThrottle>();
+        services.AddSingleton<IResendEmailVerificationThrottle, ResendEmailVerificationThrottle>();
 
         ConfigureEmail(services, configuration);
 
@@ -118,6 +120,9 @@ public static class DependencyInjection
         services.AddScoped<IEmailVerificationSender, EmailVerificationSender>();
         services.AddScoped<IPasswordResetSender, PasswordResetEmailSender>();
 
+        services.AddSingleton<EmailVerificationQueue>();
+        services.AddSingleton<IEmailVerificationQueue>(sp => sp.GetRequiredService<EmailVerificationQueue>());
+        services.AddHostedService(sp => sp.GetRequiredService<EmailVerificationQueue>());
         services.AddSingleton<PasswordResetEmailQueue>();
         services.AddSingleton<IPasswordResetEmailQueue>(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
         services.AddHostedService(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
