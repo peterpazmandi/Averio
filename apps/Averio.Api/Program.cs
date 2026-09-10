@@ -117,8 +117,7 @@ builder.Services.ConfigureApplicationCookie(
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddRateLimiter(
-    options =>
+builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
@@ -129,10 +128,8 @@ builder.Services.AddRateLimiter(
          */
         options.AddPolicy(
             RateLimiterPolicies.PasswordResetRequests,
-            httpContext =>
-                RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
-                        ?? "unknown",
+            httpContext => RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         PermitLimit = 5,
@@ -142,8 +139,7 @@ builder.Services.AddRateLimiter(
                     }));
     });
 
-builder.Services.AddAntiforgery(
-    options =>
+builder.Services.AddAntiforgery(options =>
     {
         options.HeaderName = "X-CSRF-TOKEN";
 
@@ -161,12 +157,9 @@ builder.Services.AddAntiforgery(
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<
-    ICurrentUser,
-    CurrentUser>();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
-builder.Services.AddOpenApi(
-    options =>
+builder.Services.AddOpenApi( options =>
     {
         options.OpenApiVersion =
             Microsoft.OpenApi
@@ -174,8 +167,7 @@ builder.Services.AddOpenApi(
                 .OpenApi3_0;
     });
 
-var allowedOrigins =
-    builder.Configuration
+var allowedOrigins = builder.Configuration
         .GetSection(
             "Cors:AllowedOrigins")
         .GetChildren()
@@ -185,8 +177,7 @@ var allowedOrigins =
         .Cast<string>()
         .ToArray();
 
-builder.Services.AddCors(
-    options =>
+builder.Services.AddCors(options =>
     {
         options.AddPolicy(
             "Frontend",
@@ -201,8 +192,7 @@ builder.Services.AddCors(
             });
     });
 
-var app =
-    builder.Build();
+var app = builder.Build();
 
 app.UseRequestLocalization();
 
