@@ -23,9 +23,10 @@ export async function getAuthenticatedUser(
     redirectTo?: string,
 ): Promise<CurrentUserResponse> {
     try {
-        return await queryClient.ensureQueryData(
-            authQueries.currentUser(),
-        );
+        return await queryClient.fetchQuery({
+            ...authQueries.currentUser(),
+            staleTime: 0,
+        });
     }
     catch (error) {
         if (
