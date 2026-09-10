@@ -46,10 +46,9 @@ namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
                 .WithErrorCode(
                     "Validation_CurrencyRequired")
             .Must(value =>
-                Enum.TryParse<CurrencyCode>(
-                    value,
-                    ignoreCase: true,
-                    out _))
+                value is not null
+                && Enum.GetNames<CurrencyCode>()
+                    .Contains(value, StringComparer.OrdinalIgnoreCase))
                 .WithErrorCode(
                     "Validation_CurrencyInvalid");
     }
