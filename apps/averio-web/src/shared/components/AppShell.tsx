@@ -34,12 +34,20 @@ export function AppShell({
         ?? 'Averio user';
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div
+            className="
+                min-h-screen
+                bg-slate-50
+                dark:bg-slate-950
+            "
+        >
             <header
                 className="
                     border-b
                     border-slate-200
                     bg-white
+                    dark:border-slate-800
+                    dark:bg-slate-950
                 "
             >
                 <div
@@ -56,7 +64,7 @@ export function AppShell({
                     "
                 >
                     <div className="flex items-center gap-3">
-                        <AverioBrand variant="on-dark" />
+                        <AverioBrand />
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -72,6 +80,7 @@ export function AppShell({
                                     text-sm
                                     font-medium
                                     text-slate-900
+                                    dark:text-white
                                 "
                             >
                                 {displayName}
@@ -82,6 +91,7 @@ export function AppShell({
                                     className="
                                         text-xs
                                         text-slate-500
+                                        dark:text-slate-400
                                     "
                                 >
                                     {auth.user.email}
@@ -107,6 +117,10 @@ export function AppShell({
                                 text-slate-700
                                 transition
                                 hover:bg-slate-50
+                                dark:border-slate-700
+                                dark:bg-slate-900
+                                dark:text-slate-200
+                                dark:hover:bg-slate-800
                                 disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
