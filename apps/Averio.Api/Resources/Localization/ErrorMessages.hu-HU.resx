@@ -140,12 +140,36 @@
     <value>A háztartás nevének legalább 2 karakterből kell állnia.</value>
   </data>
 
+  <data name="Validation_DisplayNameRequired" xml:space="preserve">
+    <value>A megjelenítési név megadása kötelező.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooShort" xml:space="preserve">
+    <value>A megjelenítési névnek legalább 2 karakterből kell állnia.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooLong" xml:space="preserve">
+    <value>A megjelenítési név legfeljebb 80 karakterből állhat.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameRequired" xml:space="preserve">
+    <value>A háztartás nevének megadása kötelező.</value>
+  </data>
+
   <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
     <value>A háztartás neve legfeljebb 120 karakterből állhat.</value>
   </data>
 
+  <data name="Validation_CountryRequired" xml:space="preserve">
+    <value>Az ország megadása kötelező.</value>
+  </data>
+
   <data name="Validation_CountryInvalid" xml:space="preserve">
     <value>Adj meg érvényes, kétbetűs országkódot.</value>
+  </data>
+
+  <data name="Validation_CurrencyRequired" xml:space="preserve">
+    <value>A pénznem megadása kötelező.</value>
   </data>
 
   <data name="Validation_CurrencyInvalid" xml:space="preserve">

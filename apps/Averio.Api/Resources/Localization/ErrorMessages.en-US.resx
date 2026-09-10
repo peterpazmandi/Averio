@@ -140,12 +140,36 @@
     <value>Household name must contain at least 2 characters.</value>
   </data>
 
+  <data name="Validation_DisplayNameRequired" xml:space="preserve">
+    <value>Display name is required.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooShort" xml:space="preserve">
+    <value>Display name must contain at least 2 characters.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooLong" xml:space="preserve">
+    <value>Display name must contain at most 80 characters.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameRequired" xml:space="preserve">
+    <value>Household name is required.</value>
+  </data>
+
   <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
     <value>Household name must contain at most 120 characters.</value>
   </data>
 
+  <data name="Validation_CountryRequired" xml:space="preserve">
+    <value>Country is required.</value>
+  </data>
+
   <data name="Validation_CountryInvalid" xml:space="preserve">
     <value>Enter a valid two-letter country code.</value>
+  </data>
+
+  <data name="Validation_CurrencyRequired" xml:space="preserve">
+    <value>Currency is required.</value>
   </data>
 
   <data name="Validation_CurrencyInvalid" xml:space="preserve">
