@@ -17,15 +17,21 @@ internal sealed class PasswordResetEmailQueue(
     : BackgroundService, IPasswordResetEmailQueue
 {
     private readonly Channel<PasswordResetEmailJob> _channel =
-        Channel.CreateUnbounded<PasswordResetEmailJob>(new UnboundedChannelOptions
+        Channel.CreateBounded<PasswordResetEmailJob>(new BoundedChannelOptions(100)
         {
             SingleReader = true,
-            SingleWriter = false
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait
         });
 
     public void Enqueue(PasswordResetEmailJob job)
     {
-        _channel.Writer.TryWrite(job);
+        if (!_channel.Writer.TryWrite(job))
+        {
+            logger.LogWarning(
+                "Dropping queued password reset email for user {UserId} because the queue is full",
+                job.UserId);
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
