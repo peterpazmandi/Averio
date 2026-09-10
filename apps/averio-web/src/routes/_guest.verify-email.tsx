@@ -77,13 +77,13 @@ function VerifyEmailPage() {
 
 			attempted.current = true;
 
-			void mutation.mutateAsync({
-				userId:
-					search.userId,
+            mutation.mutate({
+                userId:
+                    search.userId,
 
-				token:
-					search.token,
-			});
+                token:
+                    search.token,
+            });
 		},
 		[
 			search.userId,
