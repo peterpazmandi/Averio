@@ -26,7 +26,7 @@ namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
             .NotEmpty()
                 .WithErrorCode(
                     "Validation_HouseholdNameRequired")
-            .MinimumLength(2)
+            .Must(value => value is null || value.Trim().Length >= 2)
                 .WithErrorCode(
                     "Validation_HouseholdNameTooShort")
             .MaximumLength(120)
