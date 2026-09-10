@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 
 import { logoutUser } from '../../features/authentication/api/authApi';
 import { useAuth } from '../../features/authentication/context/AuthProvider';
@@ -12,6 +13,7 @@ export function AppShell({
 }: PropsWithChildren) {
     const auth = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const logoutMutation = useMutation({
         mutationFn: logoutUser,
@@ -126,8 +128,8 @@ export function AppShell({
                             "
                         >
                             {logoutMutation.isPending
-                                ? 'Signing out…'
-                                : 'Sign out'}
+                                ? t('common.actions.signingOut')
+                                : t('common.actions.signOut')}
                         </button>
                     </div>
                 </div>

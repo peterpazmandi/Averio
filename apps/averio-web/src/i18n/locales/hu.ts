@@ -18,6 +18,7 @@ export const hu = {
             confirm: 'Megerősítés',
             skip: 'Kihagyás egyelőre',
             signOut: 'Kijelentkezés',
+            signingOut: 'Kijelentkezés...',
         },
 
         status: {

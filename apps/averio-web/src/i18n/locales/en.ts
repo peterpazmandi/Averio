@@ -18,6 +18,7 @@ export const en = {
             confirm: 'Confirm',
             skip: 'Skip for now',
             signOut: 'Sign out',
+            signingOut: 'Signing out...',
         },
 
         status: {

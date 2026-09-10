@@ -18,6 +18,7 @@ export const de = {
             confirm: 'Bestätigen',
             skip: 'Vorerst überspringen',
             signOut: 'Abmelden',
+            signingOut: 'Abmeldung...',
         },
 
         status: {
