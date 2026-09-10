@@ -96,13 +96,12 @@ function LoginPage() {
                 rememberMe,
             });
 
-            const user =
-                await auth.refresh();
+            await auth.clear();
+
+            const user = await auth.refresh();
 
             if (user.onboardingRequired) {
-                await navigate({
-                    to: '/onboarding',
-                });
+                await navigate({ to: '/onboarding' });
 
                 return;
             }

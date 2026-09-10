@@ -8,9 +8,7 @@ import { logoutUser } from '../../features/authentication/api/authApi';
 import { useAuth } from '../../features/authentication/context/AuthProvider';
 import { AverioBrand } from './branding/AverioBrand';
 
-export function AppShell({
-    children,
-}: PropsWithChildren) {
+export function AppShell({ children }: PropsWithChildren) {
     const auth = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -19,7 +17,7 @@ export function AppShell({
         mutationFn: logoutUser,
 
         onSuccess: async () => {
-            auth.clear();
+            await auth.clear();
 
             await navigate({
                 to: '/login',
@@ -36,22 +34,8 @@ export function AppShell({
         ?? 'Averio user';
 
     return (
-        <div
-            className="
-                min-h-screen
-                bg-slate-50
-                dark:bg-slate-950
-            "
-        >
-            <header
-                className="
-                    border-b
-                    border-slate-200
-                    bg-white
-                    dark:border-slate-800
-                    dark:bg-slate-950
-                "
-            >
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+            <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                 <div
                     className="
                         mx-auto
@@ -70,32 +54,13 @@ export function AppShell({
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div
-                            className="
-                                hidden
-                                text-right
-                                sm:block
-                            "
-                        >
-                            <p
-                                className="
-                                    text-sm
-                                    font-medium
-                                    text-slate-900
-                                    dark:text-white
-                                "
-                            >
+                        <div className="hidden text-right sm:block ">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
                                 {displayName}
                             </p>
 
                             {auth.user?.displayName && (
-                                <p
-                                    className="
-                                        text-xs
-                                        text-slate-500
-                                        dark:text-slate-400
-                                    "
-                                >
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
                                     {auth.user.email}
                                 </p>
                             )}
@@ -104,9 +69,7 @@ export function AppShell({
                         <button
                             type="button"
                             disabled={logoutMutation.isPending}
-                            onClick={() => {
-                                logoutMutation.mutate();
-                            }}
+                            onClick={() => { logoutMutation.mutate(); }}
                             className="
                                 rounded-lg
                                 border
@@ -135,16 +98,7 @@ export function AppShell({
                 </div>
             </header>
 
-            <main
-                className="
-                    mx-auto
-                    max-w-7xl
-                    px-4
-                    py-8
-                    sm:px-6
-                    lg:px-8
-                "
-            >
+            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 {children}
             </main>
         </div>

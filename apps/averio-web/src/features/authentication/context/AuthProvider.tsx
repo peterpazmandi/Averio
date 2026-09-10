@@ -1,9 +1,10 @@
-import { createContext, useContext, type PropsWithChildren,} from 'react';
+import { createContext, useContext, type PropsWithChildren, } from 'react';
 import { useQuery, useQueryClient, } from '@tanstack/react-query';
 import type { CurrentUserResponse, } from '../../../shared/api/generated';
 import { ApiError, } from '../../../shared/api/ApiError';
 import { authQueries, } from '../api/authQueries';
 import { authQueryKeys, } from '../api/authQueryKeys';
+import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
 
 type AuthStatus =
     | 'loading'
@@ -16,7 +17,7 @@ interface AuthContextValue {
     user?: CurrentUserResponse;
     error?: Error;
     refresh: () => Promise<CurrentUserResponse>;
-    clear: () => void;
+    clear: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined,);
@@ -46,8 +47,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
     };
 
-    const clear = (): void => {
+    const clear = async (): Promise<void> => {
+        await Promise.all([
+            queryClient.cancelQueries({ queryKey: authQueryKeys.all }),
+            queryClient.cancelQueries({ queryKey: onboardingQueryKeys.all }),
+        ]);
+
         queryClient.removeQueries({ queryKey: authQueryKeys.all });
+        queryClient.removeQueries({ queryKey: onboardingQueryKeys.all });
     };
 
     return (

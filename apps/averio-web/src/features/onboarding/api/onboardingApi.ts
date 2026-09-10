@@ -1,10 +1,10 @@
 import type { CompleteOnboardingRequest, OnboardingStatusResponse } from '../../../shared/api/generated';
 import { apiFetch } from '../../../shared/api/apiFetch';
 
-export async function getOnboardingStatus():
-    Promise<OnboardingStatusResponse> {
+export async function getOnboardingStatus(signal?: AbortSignal): Promise<OnboardingStatusResponse> {
     return await apiFetch<OnboardingStatusResponse>(
         '/api/v1/onboarding',
+        { signal },
     );
 }
 
