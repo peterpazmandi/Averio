@@ -15,7 +15,7 @@ namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
             .NotEmpty()
                 .WithErrorCode(
                     "Validation_DisplayNameRequired")
-            .MinimumLength(2)
+            .Must(value => value is null || value.Trim().Length >= 2)
                 .WithErrorCode(
                     "Validation_DisplayNameTooShort")
             .MaximumLength(80)
