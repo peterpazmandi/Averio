@@ -90,14 +90,15 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_household_members");
 
-                    b.HasIndex("HouseholdId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_household_members_household_owner")
-                        .HasFilter("role = 'owner'");
-
                     b.HasIndex("UserId")
                         .IsUnique()
                         .HasDatabaseName("ux_household_members_user_id");
+
+                    b.HasIndex(new[] { "HouseholdId" }, "ix_household_members_household_id");
+
+                    b.HasIndex(new[] { "HouseholdId" }, "ux_household_members_household_owner")
+                        .IsUnique()
+                        .HasFilter("role = 'owner'");
 
                     b.ToTable("household_members", null, t =>
                         {

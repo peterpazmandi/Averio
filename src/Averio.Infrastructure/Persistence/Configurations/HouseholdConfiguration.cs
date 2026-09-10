@@ -93,12 +93,12 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
             .IsUnique()
             .HasDatabaseName("ux_household_members_user_id");
 
-        builder.HasIndex(x => x.HouseholdId)
-            .HasDatabaseName("ix_household_members_household_id");
+        // Named at creation so EF keeps this distinct from the filtered owner index below
+        // (two HasIndex calls on the same property both defaulting to no name collapse into one index).
+        builder.HasIndex(x => x.HouseholdId, "ix_household_members_household_id");
 
-        builder.HasIndex(x => x.HouseholdId)
+        builder.HasIndex(x => x.HouseholdId, "ux_household_members_household_owner")
             .IsUnique()
-            .HasFilter("role = 'owner'")
-            .HasDatabaseName("ux_household_members_household_owner");
+            .HasFilter("role = 'owner'");
     }
 }

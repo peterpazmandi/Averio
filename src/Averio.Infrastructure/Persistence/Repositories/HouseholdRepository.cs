@@ -26,10 +26,7 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         return dbContext.Households
             .Include(x => x.Members)
             .SingleOrDefaultAsync(
-                household =>
-                    household.Members.Any(
-                        member =>
-                            member.UserId == userId),
+                household => household.Members.Any(member => member.UserId == userId),
                 cancellationToken);
     }
 
