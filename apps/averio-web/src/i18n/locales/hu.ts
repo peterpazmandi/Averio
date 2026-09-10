@@ -1,7 +1,9 @@
 export const hu = {
     common: {
         appName: 'Averio',
-
+        requestFailed: 'A kérés sikertelen',
+        reference: 'Hivatkozás',
+        unexpectedError: 'Valami hiba történt',
         actions: {
             continue: 'Folytatás',
             back: 'Vissza',
@@ -49,6 +51,16 @@ export const hu = {
             switchToDark: 'Váltás sötét módra',
         },
     },
+    preferences: {
+        language: {
+            label: 'Nyelv',
+        },
+
+        theme: {
+            light: 'Világos',
+            dark: 'Sötét',
+        },
+    },
 
     authShell: {
         eyebrow:
@@ -68,8 +80,7 @@ export const hu = {
         mismatch:
             'A két jelszó nem egyezik.',
 
-        strengthLabel:
-            'Jelszó erőssége',
+        strengthLabel: 'Jelszó erőssége',
 
         strength: {
             empty:
@@ -87,8 +98,15 @@ export const hu = {
             veryStrong:
                 'Nagyon erős',
         },
-        requirements:
-            'Használj legalább 8 karaktert, betűk, számok és szimbólumok keverékével.',
+        requirements: 'Használj legalább 8 karaktert, betűk, számok és szimbólumok keverékével.',
+        show: 'Jelszó megjelenítése',
+        hide: 'Jelszó elrejtése',
+
+        validation: {
+            minimumLength: 'A jelszónak legalább {{min}} karakter hosszúnak kell lennie.',
+            confirmRequired: 'Erősítsd meg a jelszavad.',
+            rejected: 'Válassz erősebb jelszót.',
+        },
     },
 
     auth: {
@@ -254,6 +272,11 @@ export const hu = {
 
             requestNewLink:
                 'Új link kérése',
+
+            invalidTitle: 'Érvénytelen link',
+            invalidDescription:
+                'Ez a jelszó-visszaállító link érvénytelen vagy lejárt. A folytatáshoz kérj egy új linket.',
+            requestAnother: 'Új link kérése',
         },
 
         verify: {
@@ -283,6 +306,9 @@ export const hu = {
 
             backToLogin:
                 'Vissza a bejelentkezéshez',
+            failedTitle: 'A megerősítés sikertelen',
+            failedDescription:
+                'Ez a megerősítő link érvénytelen vagy lejárt.',
         },
 
         resend: {

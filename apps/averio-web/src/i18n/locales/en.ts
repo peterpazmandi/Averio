@@ -1,7 +1,9 @@
 export const en = {
     common: {
         appName: 'Averio',
-
+        requestFailed: 'Request failed',
+        reference: 'Reference',
+        unexpectedError: 'Something went wrong',
         actions: {
             continue: 'Continue',
             back: 'Back',
@@ -49,7 +51,16 @@ export const en = {
             switchToDark: 'Switch to dark mode',
         },
     },
+    preferences: {
+        language: {
+            label: 'Language',
+        },
 
+        theme: {
+            light: 'Light',
+            dark: 'Dark',
+        },
+    },
     authShell: {
         eyebrow: 'Household finances made clearer',
         title: 'One place for the money you manage together.',
@@ -69,8 +80,15 @@ export const en = {
             strong: 'Strong',
             veryStrong: 'Very strong',
         },
-        requirements:
-            'Use at least 8 characters with a mix of letters, numbers and symbols.',
+        requirements: 'Use at least 8 characters with a mix of letters, numbers and symbols.',
+        show: 'Show password',
+        hide: 'Hide password',
+
+        validation: {
+            minimumLength: 'Password must contain at least {{min}} characters.',
+            confirmRequired: 'Confirm your password.',
+            rejected: 'Choose a stronger password.',
+        },
     },
 
     auth: {
@@ -168,6 +186,10 @@ export const en = {
                 'This password reset link is invalid or has expired. Request a new one to continue.',
 
             requestNewLink: 'Request a new reset link',
+            invalidTitle: 'Invalid reset link',
+            invalidDescription:
+                'This password reset link is invalid or has expired. Request a new one to continue.',
+            requestAnother: 'Request a new reset link',
         },
 
         verify: {
@@ -188,6 +210,9 @@ export const en = {
 
             continue: 'Continue to Averio',
             backToLogin: 'Back to sign in',
+            failedTitle: 'Verification failed',
+            failedDescription:
+                'This verification link is invalid or has expired.',
         },
 
         resend: {

@@ -578,9 +578,7 @@ function InvalidResetLinkState() {
                     dark:text-white
                 "
             >
-                {t(
-                    'auth.reset.invalidTitle',
-                )}
+                {t('auth.reset.invalidTitle')}
             </h1>
 
             <p
@@ -592,9 +590,7 @@ function InvalidResetLinkState() {
                     dark:text-slate-400
                 "
             >
-                {t(
-                    'auth.reset.invalidDescription',
-                )}
+                {t('auth.reset.invalidDescription')}
             </p>
 
             <Link
@@ -622,9 +618,7 @@ function InvalidResetLinkState() {
                     dark:focus:ring-primary-900
                 "
             >
-                {t(
-                    'auth.reset.requestAnother',
-                )}
+                {t('auth.reset.requestAnother')}
             </Link>
 
             <Link
@@ -646,9 +640,7 @@ function InvalidResetLinkState() {
                     dark:hover:text-primary-300
                 "
             >
-                {t(
-                    'auth.forgot.backToLogin',
-                )}
+                {t('auth.forgot.backToLogin')}
             </Link>
         </div>
     );

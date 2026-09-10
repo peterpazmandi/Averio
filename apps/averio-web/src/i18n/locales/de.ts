@@ -1,7 +1,9 @@
 export const de = {
     common: {
         appName: 'Averio',
-
+        requestFailed: 'Anfrage fehlgeschlagen',
+        reference: 'Referenz',
+        unexpectedError: 'Etwas ist schiefgelaufen',
         actions: {
             continue: 'Weiter',
             back: 'Zurück',
@@ -49,6 +51,16 @@ export const de = {
             switchToDark: 'Zum dunklen Modus wechseln',
         },
     },
+    preferences: {
+        language: {
+            label: 'Sprache',
+        },
+
+        theme: {
+            light: 'Hell',
+            dark: 'Dunkel',
+        },
+    },
 
     authShell: {
         eyebrow: 'Haushaltsfinanzen einfach im Blick',
@@ -77,8 +89,15 @@ export const de = {
             strong: 'Stark',
             veryStrong: 'Sehr stark',
         },
-        requirements:
-            'Verwende mindestens 8 Zeichen mit einer Mischung aus Buchstaben, Zahlen und Symbolen.',
+        requirements: 'Verwende mindestens 8 Zeichen mit einer Mischung aus Buchstaben, Zahlen und Symbolen.',
+        show: 'Passwort anzeigen',
+        hide: 'Passwort verbergen',
+
+        validation: {
+            minimumLength: 'Das Passwort muss mindestens {{min}} Zeichen enthalten.',
+            confirmRequired: 'Bestätige dein Passwort.',
+            rejected: 'Wähle ein stärkeres Passwort.',
+        },
     },
 
     auth: {
@@ -223,6 +242,10 @@ export const de = {
 
             requestNewLink:
                 'Neuen Link anfordern',
+            invalidTitle: 'Ungültiger Link',
+            invalidDescription:
+                'Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Fordere einen neuen Link an, um fortzufahren.',
+            requestAnother: 'Neuen Link anfordern',
         },
 
         verify: {
@@ -252,6 +275,9 @@ export const de = {
 
             backToLogin:
                 'Zurück zur Anmeldung',
+            failedTitle: 'Bestätigung fehlgeschlagen',
+            failedDescription:
+                'Dieser Bestätigungslink ist ungültig oder abgelaufen.',
         },
 
         resend: {
