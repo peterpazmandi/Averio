@@ -58,24 +58,11 @@ export function AverioBrand({
                     shadow-sm
                 "
             >
-                <AverioLogo
-                    className="
-                        h-9
-                        w-auto
-                    "
-                />
+                <AverioLogo className="h-9 w-auto" />
             </div>
 
             {!compact && (
-                <span
-                    className={`
-                        text-xl
-                        font-semibold
-                        tracking-tight
-
-                        ${wordmarkClasses[variant]}
-                    `}
-                >
+                <span className={`text-xl font-semibold tracking-tight ${wordmarkClasses[variant]} `} >
                     Averio
                 </span>
             )}

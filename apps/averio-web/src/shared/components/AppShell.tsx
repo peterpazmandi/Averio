@@ -57,17 +57,6 @@ export function AppShell({
                 >
                     <div className="flex items-center gap-3">
                         <AverioBrand variant="on-dark" />
-
-                        <span
-                            className="
-                                text-lg
-                                font-semibold
-                                tracking-tight
-                                text-slate-950
-                            "
-                        >
-                            Averio
-                        </span>
                     </div>
 
                     <div className="flex items-center gap-4">
