@@ -132,16 +132,22 @@ export function OnboardingPage() {
     ) {
         event.preventDefault();
 
-        await mutation.mutateAsync({
-            displayName,
-            householdName,
-            countryCode:
-                countryCode
-                    .trim()
-                    .toUpperCase(),
+        try {
+            await mutation.mutateAsync({
+                displayName,
+                householdName,
+                countryCode:
+                    countryCode
+                        .trim()
+                        .toUpperCase(),
 
-            preferredCurrency,
-        });
+                preferredCurrency,
+            });
+        }
+        catch {
+            // Mutation state renders the error below.
+            return;
+        }
 
         await Promise.all([
             queryClient.invalidateQueries({
