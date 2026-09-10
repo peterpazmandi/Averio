@@ -309,76 +309,42 @@ export function OnboardingPage() {
                                     }
                                 />
 
-                                <div
-                                    className="
-                                    grid
-                                    gap-5
-                                    sm:grid-cols-2
-                                "
-                                >
+                                <div className="grid gap-5 sm:grid-cols-2">
                                     <FormField
-                                        label={t(
-                                            'onboarding.country',
-                                        )}
+                                        label={t('onboarding.country')}
                                         value={countryCode}
                                         maxLength={2}
                                         required
-                                        onChange={(event) =>
-                                            setCountryCode(
-                                                event.target.value
-                                                    .toUpperCase(),
-                                            )
-                                        }
+                                        layout="horizontal"
+                                        onChange={(event) => setCountryCode(event.target.value.toUpperCase())}
                                     />
 
-                                    <label className="block">
-                                        <span
-                                            className="
-                                            text-sm
-                                            font-medium
-                                            text-slate-700
-                                        "
-                                        >
-                                            {t(
-                                                'onboarding.currency',
-                                            )}
+                                    <label className="grid grid-cols-2 justify-center items-center">
+                                        <span className="w-fit text-sm font-medium text-slate-700 dark:text-slate-300">
+                                            {t('onboarding.currency')}
                                         </span>
 
                                         <select
-                                            value={
-                                                preferredCurrency
-                                            }
-                                            onChange={(event) =>
-                                                setPreferredCurrency(
-                                                    event.target.value as typeof preferredCurrency,
-                                                )
-                                            }
+                                            value={preferredCurrency}
+                                            onChange={(event) => setPreferredCurrency(event.target.value as typeof preferredCurrency) }
                                             className="
-                                            mt-2
-                                            w-full
-                                            rounded-xl
-                                            border
-                                            border-slate-300
+                                            mt-2 w-full
+                                            rounded-xl border border-slate-300 dark:border-slate-700 focus:border-primary-500
                                             bg-white
-                                            px-4
-                                            py-3
-                                            outline-none
-                                            focus:border-primary-500
+                                            text-slate-950
+                                            px-4 py-3
+                                            outline-none                                            
                                             focus:ring-4
-                                            focus:ring-primary-100
+                                            focus:ring-primary-100                                            
+                                            dark:bg-slate-950
+                                            dark:text-white
+                                            dark:focus:border-primary-500
+                                            dark:focus:ring-primary-950
                                         "
                                         >
-                                            <option value="EUR">
-                                                EUR — €
-                                            </option>
-
-                                            <option value="HUF">
-                                                HUF — Ft
-                                            </option>
-
-                                            <option value="USD">
-                                                USD — $
-                                            </option>
+                                            <option value="EUR">EUR — €</option>
+                                            <option value="HUF">HUF — Ft</option>
+                                            <option value="USD">USD — $</option>
                                         </select>
                                     </label>
                                 </div>
