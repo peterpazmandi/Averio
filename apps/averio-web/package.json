@@ -13,6 +13,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-query-devtools": "^5.102.8",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-router-devtools": "^1.167.1",
     "date-fns": "^4.4.0",
     "i18next": "^26.4.0",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -25,6 +27,7 @@
     "@openapitools/openapi-generator-cli": "^2.41.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/eslint-plugin-query": "^5.102.8",
+    "@tanstack/router-plugin": "^1.168.35",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

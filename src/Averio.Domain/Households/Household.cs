@@ -1,3 +1,5 @@
+using Averio.Domain.Common;
+
 namespace Averio.Domain.Households;
 
 public sealed class Household
@@ -20,18 +22,26 @@ public sealed class Household
 
     public string? Name { get; private set; }
 
+    public string? CountryCode { get; private set; }
+
+    public CurrencyCode? PreferredCurrency { get; private set; }
+
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
-    public IReadOnlyCollection<HouseholdMember> Members =>
-        _members;
+    public DateTimeOffset? OnboardingCompletedAtUtc { get; private set; }
+
+    public bool IsOnboardingCompleted => OnboardingCompletedAtUtc.HasValue;
+
+    public IReadOnlyCollection<HouseholdMember> Members =>  _members;
 
     public static Household CreateForUser(
         Guid userId,
         DateTimeOffset now)
     {
-        var household = new Household(
-            Guid.NewGuid(),
-            now);
+        var household =
+            new Household(
+                Guid.NewGuid(),
+                now);
 
         household._members.Add(
             HouseholdMember.CreateOwner(
@@ -40,5 +50,55 @@ public sealed class Household
                 now));
 
         return household;
+    }
+
+    public void CompleteOnboarding(
+        string name,
+        string countryCode,
+        CurrencyCode preferredCurrency,
+        DateTimeOffset now)
+    {
+        UpdateProfile(
+            name,
+            countryCode,
+            preferredCurrency);
+
+        /*
+         * Keep this idempotent.
+         *
+         * A retried PUT /onboarding shouldn't change
+         * the original completion timestamp.
+         */
+        OnboardingCompletedAtUtc ??= now;
+    }
+
+    public void UpdateProfile(
+        string name,
+        string countryCode,
+        CurrencyCode preferredCurrency)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(countryCode);
+
+        var normalizedName = name.Trim();
+
+        var normalizedCountryCode =
+            countryCode
+                .Trim()
+                .ToUpperInvariant();
+
+        if (normalizedName.Length is < 2 or > 120)
+        {
+            throw new ArgumentOutOfRangeException(nameof(name));
+        }
+
+        if (normalizedCountryCode.Length != 2)
+        {
+            throw new ArgumentOutOfRangeException(nameof(countryCode));
+        }
+
+        Name = normalizedName;
+        CountryCode = normalizedCountryCode;
+        PreferredCurrency = preferredCurrency;
     }
 }

@@ -35,4 +35,32 @@
   <data name="Verification_Footer" xml:space="preserve">
     <value>If you didn't create an Averio account, you can ignore this email.</value>
   </data>
+
+  <data name="PasswordReset_Subject" xml:space="preserve">
+    <value>Reset your Averio password</value>
+  </data>
+
+  <data name="PasswordReset_Heading" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+
+  <data name="PasswordReset_Description" xml:space="preserve">
+    <value>Use the button below to choose a new password for your Averio account.</value>
+  </data>
+
+  <data name="PasswordReset_Button" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+
+  <data name="PasswordReset_Footer" xml:space="preserve">
+    <value>If you didn't request a password reset, you can safely ignore this email.</value>
+  </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>The password reset link is invalid or has expired.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>The password does not meet the required security rules.</value>
+  </data>
 </root>

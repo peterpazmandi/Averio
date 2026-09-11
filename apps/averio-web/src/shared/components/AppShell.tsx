@@ -1,0 +1,106 @@
+import type { PropsWithChildren } from 'react';
+
+import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+
+import { logoutUser } from '../../features/authentication/api/authApi';
+import { useAuth } from '../../features/authentication/context/AuthProvider';
+import { AverioBrand } from './branding/AverioBrand';
+
+export function AppShell({ children }: PropsWithChildren) {
+    const auth = useAuth();
+    const navigate = useNavigate();
+    const { t } = useTranslation();
+
+    const logoutMutation = useMutation({
+        mutationFn: logoutUser,
+
+        onSuccess: async () => {
+            await auth.clear();
+
+            await navigate({
+                to: '/login',
+                search: {
+                    redirect: undefined,
+                }
+            });
+        },
+    });
+
+    const displayName =
+        auth.user?.displayName
+        ?? auth.user?.email
+        ?? 'Averio user';
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+            <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                <div
+                    className="
+                        mx-auto
+                        flex
+                        h-16
+                        max-w-7xl
+                        items-center
+                        justify-between
+                        px-4
+                        sm:px-6
+                        lg:px-8
+                    "
+                >
+                    <div className="flex items-center gap-3">
+                        <AverioBrand />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="hidden text-right sm:block ">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                {displayName}
+                            </p>
+
+                            {auth.user?.displayName && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {auth.user.email}
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled={logoutMutation.isPending}
+                            onClick={() => { logoutMutation.mutate(); }}
+                            className="
+                                rounded-lg
+                                border
+                                border-slate-300
+                                bg-white
+                                px-3
+                                py-2
+                                text-sm
+                                font-medium
+                                text-slate-700
+                                transition
+                                hover:bg-slate-50
+                                dark:border-slate-700
+                                dark:bg-slate-900
+                                dark:text-slate-200
+                                dark:hover:bg-slate-800
+                                disabled:cursor-not-allowed
+                                disabled:opacity-50
+                            "
+                        >
+                            {logoutMutation.isPending
+                                ? t('common.actions.signingOut')
+                                : t('common.actions.signOut')}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {children}
+            </main>
+        </div>
+    );
+}

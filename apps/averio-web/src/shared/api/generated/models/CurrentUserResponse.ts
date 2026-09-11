@@ -38,7 +38,15 @@ export interface CurrentUserResponse {
     /**
      * 
      */
+    displayName: string | null;
+    /**
+     * 
+     */
     emailVerified: boolean;
+    /**
+     * 
+     */
+    onboardingRequired: boolean;
     /**
      * 
      */
@@ -51,7 +59,9 @@ export interface CurrentUserResponse {
 export function instanceOfCurrentUserResponse(value: object): value is CurrentUserResponse {
     if (!('userId' in value) || value['userId'] === undefined) return false;
     if (!('email' in value) || value['email'] === undefined) return false;
+    if (!('displayName' in value) || value['displayName'] === undefined) return false;
     if (!('emailVerified' in value) || value['emailVerified'] === undefined) return false;
+    if (!('onboardingRequired' in value) || value['onboardingRequired'] === undefined) return false;
     if (!('household' in value) || value['household'] === undefined) return false;
     return true;
 }
@@ -68,7 +78,9 @@ export function CurrentUserResponseFromJSONTyped(json: any, ignoreDiscriminator:
         
         'userId': json['userId'],
         'email': json['email'],
+        'displayName': json['displayName'],
         'emailVerified': json['emailVerified'],
+        'onboardingRequired': json['onboardingRequired'],
         'household': HouseholdMembershipResponseFromJSON(json['household']),
     };
 }
@@ -86,7 +98,9 @@ export function CurrentUserResponseToJSONTyped(value?: CurrentUserResponse | nul
         
         'userId': value['userId'],
         'email': value['email'],
+        'displayName': value['displayName'],
         'emailVerified': value['emailVerified'],
+        'onboardingRequired': value['onboardingRequired'],
         'household': HouseholdMembershipResponseToJSON(value['household']),
     };
 }

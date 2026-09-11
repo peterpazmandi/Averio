@@ -135,4 +135,60 @@
   <data name="Validation_TokenRequired" xml:space="preserve">
     <value>Verification token is required.</value>
   </data>
+
+  <data name="Validation_HouseholdNameTooShort" xml:space="preserve">
+    <value>Household name must contain at least 2 characters.</value>
+  </data>
+
+  <data name="Validation_DisplayNameRequired" xml:space="preserve">
+    <value>Display name is required.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooShort" xml:space="preserve">
+    <value>Display name must contain at least 2 characters.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooLong" xml:space="preserve">
+    <value>Display name must contain at most 80 characters.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameRequired" xml:space="preserve">
+    <value>Household name is required.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
+    <value>Household name must contain at most 120 characters.</value>
+  </data>
+
+  <data name="Validation_CountryRequired" xml:space="preserve">
+    <value>Country is required.</value>
+  </data>
+
+  <data name="Validation_CountryInvalid" xml:space="preserve">
+    <value>Enter a valid two-letter country code.</value>
+  </data>
+
+  <data name="Validation_CurrencyRequired" xml:space="preserve">
+    <value>Currency is required.</value>
+  </data>
+
+  <data name="Validation_CurrencyInvalid" xml:space="preserve">
+    <value>Enter a valid currency.</value>
+  </data>
+
+  <data name="Title_OnboardingRequired" xml:space="preserve">
+    <value>Complete setup</value>
+  </data>
+
+  <data name="Error_OnboardingRequired" xml:space="preserve">
+    <value>Complete your household setup before using this feature.</value>
+  </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>The password reset link is invalid or has expired.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>The password does not meet the required security rules.</value>
+  </data>
 </root>

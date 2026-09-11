@@ -31,6 +31,7 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
         builder.Property(x => x.PreferredCulture).HasColumnName("preferred_culture").HasMaxLength(10).IsRequired();
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
         builder.Property(x => x.LastLoginAtUtc).HasColumnName("last_login_at_utc");
+        builder.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(80);
 
         builder.HasIndex(x => x.NormalizedUserName)
             .IsUnique()

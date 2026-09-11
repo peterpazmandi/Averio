@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading.RateLimiting;
 using Averio.Api.Authentication;
 using Averio.Api.ErrorHandling;
 using Averio.Api.Security;
@@ -116,8 +117,29 @@ builder.Services.ConfigureApplicationCookie(
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddAntiforgery(
-    options =>
+builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        /*
+         * Anonymous, email-sending endpoints: throttled per client IP to
+         * limit outbound email volume an attacker can trigger. A per-account
+         * cooldown is enforced separately at the application layer.
+         */
+        options.AddPolicy(
+            RateLimiterPolicies.PasswordResetRequests,
+            httpContext => RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(15),
+                        SegmentsPerWindow = 3,
+                        QueueLimit = 0
+                    }));
+    });
+
+builder.Services.AddAntiforgery(options =>
     {
         options.HeaderName = "X-CSRF-TOKEN";
 
@@ -135,12 +157,9 @@ builder.Services.AddAntiforgery(
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<
-    ICurrentUser,
-    CurrentUser>();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
-builder.Services.AddOpenApi(
-    options =>
+builder.Services.AddOpenApi( options =>
     {
         options.OpenApiVersion =
             Microsoft.OpenApi
@@ -148,8 +167,7 @@ builder.Services.AddOpenApi(
                 .OpenApi3_0;
     });
 
-var allowedOrigins =
-    builder.Configuration
+var allowedOrigins = builder.Configuration
         .GetSection(
             "Cors:AllowedOrigins")
         .GetChildren()
@@ -159,8 +177,7 @@ var allowedOrigins =
         .Cast<string>()
         .ToArray();
 
-builder.Services.AddCors(
-    options =>
+builder.Services.AddCors(options =>
     {
         options.AddPolicy(
             "Frontend",
@@ -175,8 +192,7 @@ builder.Services.AddCors(
             });
     });
 
-var app =
-    builder.Build();
+var app = builder.Build();
 
 app.UseRequestLocalization();
 
@@ -189,6 +205,8 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.UseMiddleware<
     CsrfProtectionMiddleware>();

@@ -11,28 +11,24 @@ public sealed class GetCurrentUserHandler(
     public async Task<CurrentUserResult> HandleAsync(
         CancellationToken cancellationToken)
     {
-        var userId =
-            currentUser.UserId
+        var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
-        var user =
-            await identityService.FindByIdAsync(
-                userId,
-                cancellationToken)
+        var user = await identityService.FindByIdAsync(userId, cancellationToken)
             ?? throw new AuthenticationFailedException();
 
-        var membership =
-            await householdRepository
-                .GetMembershipByUserIdAsync(
-                    userId,
-                    cancellationToken)
+        var household = await householdRepository.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new HouseholdRequiredException();
+
+        var membership = household.Members.Single(x => x.UserId == userId);
 
         return new CurrentUserResult(
             user.Id,
             user.Email,
+            user.DisplayName,
             user.EmailConfirmed,
-            membership.HouseholdId,
-            membership.Role);
+            household.Id,
+            membership.Role,
+            !household.IsOnboardingCompleted);
     }
 }

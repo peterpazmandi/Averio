@@ -52,4 +52,16 @@ void i18n
         },
     });
 
+const syncDocumentLang = (language: string) => {
+    document.documentElement.lang = language.split('-')[0];
+};
+
+i18n.on('initialized', () => {
+    syncDocumentLang(
+        i18n.resolvedLanguage ?? i18n.language,
+    );
+});
+
+i18n.on('languageChanged', syncDocumentLang);
+
 export default i18n;

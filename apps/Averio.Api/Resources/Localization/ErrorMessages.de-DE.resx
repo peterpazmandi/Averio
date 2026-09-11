@@ -135,4 +135,60 @@
   <data name="Validation_TokenRequired" xml:space="preserve">
     <value>Bestätigungstoken ist erforderlich.</value>
   </data>
+
+  <data name="Validation_HouseholdNameTooShort" xml:space="preserve">
+    <value>Der Haushaltsname muss mindestens 2 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_DisplayNameRequired" xml:space="preserve">
+    <value>Anzeigename ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooShort" xml:space="preserve">
+    <value>Der Anzeigename muss mindestens 2 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_DisplayNameTooLong" xml:space="preserve">
+    <value>Der Anzeigename darf höchstens 80 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameRequired" xml:space="preserve">
+    <value>Der Haushaltsname ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_HouseholdNameTooLong" xml:space="preserve">
+    <value>Der Haushaltsname darf höchstens 120 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_CountryRequired" xml:space="preserve">
+    <value>Das Land ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_CountryInvalid" xml:space="preserve">
+    <value>Gib einen gültigen zweistelligen Ländercode ein.</value>
+  </data>
+
+  <data name="Validation_CurrencyRequired" xml:space="preserve">
+    <value>Die Währung ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_CurrencyInvalid" xml:space="preserve">
+    <value>Gib eine gültige Währung ein.</value>
+  </data>
+
+  <data name="Title_OnboardingRequired" xml:space="preserve">
+    <value>Einrichtung abschließen</value>
+  </data>
+
+  <data name="Error_OnboardingRequired" xml:space="preserve">
+    <value>Schließe die Einrichtung deines Haushalts ab, bevor du diese Funktion verwendest.</value>
+  </data>
+
+  <data name="Error_InvalidPasswordResetToken" xml:space="preserve">
+    <value>Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.</value>
+  </data>
+
+  <data name="Error_PasswordRejected" xml:space="preserve">
+    <value>Das Passwort erfüllt die erforderlichen Sicherheitsregeln nicht.</value>
+  </data>
 </root>

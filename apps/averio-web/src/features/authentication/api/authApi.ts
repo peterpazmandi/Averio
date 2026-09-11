@@ -5,6 +5,8 @@ import type {
     RegisterUserResponse,
     ResendEmailVerificationRequest,
     VerifyEmailRequest,
+    RequestPasswordResetRequest,
+    ResetPasswordRequest,
 } from '../../../shared/api/generated';
 import {
     apiFetch,
@@ -82,5 +84,31 @@ export async function getCurrentUser():
     Promise<CurrentUserResponse> {
     return await apiFetch<CurrentUserResponse>(
         '/api/v1/auth/me',
+    );
+}
+
+export async function requestPasswordReset(
+    request: RequestPasswordResetRequest,
+): Promise<void> {
+    await apiFetch<void>(
+        '/api/v1/auth/password-reset-requests',
+        {
+            method: 'POST',
+            body:
+                JSON.stringify(
+                    request,
+                ),
+        },
+    );
+}
+
+export async function resetPassword(request: ResetPasswordRequest): Promise<void> {
+    await apiFetch<void>('/api/v1/auth/password-resets', {
+            method: 'POST',
+            body:
+                JSON.stringify(
+                    request,
+                ),
+        },
     );
 }

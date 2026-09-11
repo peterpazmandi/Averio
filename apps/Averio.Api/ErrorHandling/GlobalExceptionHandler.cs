@@ -248,6 +248,20 @@ public sealed class GlobalExceptionHandler(
                     error.Code,
                     Localize(error)),
 
+            OnboardingRequiredException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status403Forbidden,
+                    "Title_OnboardingRequired",
+                    error.Code,
+                    Localize(error)),
+
+            InvalidPasswordResetTokenException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status400BadRequest,
+                    "Title_InvalidRequest",
+                    error.Code,
+                    Localize(error)),
+
             _ =>
                 new ExceptionResponse(
                     StatusCodes.Status500InternalServerError,
@@ -259,8 +273,7 @@ public sealed class GlobalExceptionHandler(
         };
     }
 
-    private string Localize(
-        AverioException exception)
+    private string Localize(AverioException exception)
     {
         return localizer[
             exception.ResourceKey,

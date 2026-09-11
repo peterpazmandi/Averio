@@ -9,16 +9,12 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     {
         get
         {
-            var value =
-                httpContextAccessor
+            var value = httpContextAccessor
                     .HttpContext?
                     .User
-                    .FindFirstValue(
-                        ClaimTypes.NameIdentifier);
+                    .FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return Guid.TryParse(
-                value,
-                out var userId)
+            return Guid.TryParse(value, out var userId)
                 ? userId
                 : null;
         }
