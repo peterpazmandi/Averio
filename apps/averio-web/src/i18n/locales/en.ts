@@ -213,6 +213,8 @@ export const en = {
             failedTitle: 'Verification failed',
             failedDescription:
                 'This verification link is invalid or has expired.',
+            checkEmailDescriptionWithoutEmail:
+                'We sent you a verification email. Open the email and follow the link to verify your account.',
         },
 
         resend: {

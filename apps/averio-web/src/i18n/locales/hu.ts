@@ -309,6 +309,8 @@ export const hu = {
             failedTitle: 'A megerősítés sikertelen',
             failedDescription:
                 'Ez a megerősítő link érvénytelen vagy lejárt.',
+            checkEmailDescriptionWithoutEmail:
+                'Elküldtük az ellenőrző e-mailt. Nyisd meg az e-mailt, és kövesd a linket a fiókod megerősítéséhez.',
         },
 
         resend: {

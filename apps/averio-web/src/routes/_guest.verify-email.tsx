@@ -50,11 +50,13 @@ export const Route =
 	});
 
 function VerifyEmailPage() {
-	const { t } =
-		useTranslation();
+	const { t } = useTranslation();
 
-	const search =
-		Route.useSearch();
+	const search = Route.useSearch();
+
+	const checkEmailDescription = search.email
+		? t('auth.verify.checkEmailDescription', { email: search.email })
+		: t('auth.verify.checkEmailDescriptionWithoutEmail');
 
 	const attempted =
 		useRef(false);
@@ -77,13 +79,13 @@ function VerifyEmailPage() {
 
 			attempted.current = true;
 
-            mutation.mutate({
-                userId:
-                    search.userId,
+			mutation.mutate({
+				userId:
+					search.userId,
 
-                token:
-                    search.token,
-            });
+				token:
+					search.token,
+			});
 		},
 		[
 			search.userId,
@@ -103,34 +105,18 @@ function VerifyEmailPage() {
                         font-semibold
                     "
 				>
-					{t(
-						'auth.verify.checkEmailTitle',
-					)}
+					{t('auth.verify.checkEmailTitle')}
 				</h1>
 
-				<p
-					className="
+				<p className="
                         mt-3
                         leading-7
                         text-slate-600
                     "
 				>
-					{t(
-						'auth.verify.checkEmailDescription',
-					)}
+					{t(checkEmailDescription)}
 				</p>
 
-				{search.email && (
-					<p
-						className="
-                            mt-3
-                            font-medium
-                            text-slate-900
-                        "
-					>
-						{search.email}
-					</p>
-				)}
 
 				<Link
 					to="/resend-verification"

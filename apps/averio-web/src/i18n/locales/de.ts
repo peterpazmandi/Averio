@@ -278,6 +278,8 @@ export const de = {
             failedTitle: 'Bestätigung fehlgeschlagen',
             failedDescription:
                 'Dieser Bestätigungslink ist ungültig oder abgelaufen.',
+            checkEmailDescriptionWithoutEmail:
+                'Wir haben dir eine Bestätigungs-E-Mail gesendet. Öffne die E-Mail und folge dem Link, um dein Konto zu bestätigen.',
         },
 
         resend: {
