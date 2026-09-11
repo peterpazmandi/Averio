@@ -21,6 +21,8 @@ function RegisterPage() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
+	const [submitError, setSubmitError] = useState<unknown>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
@@ -30,12 +32,15 @@ function RegisterPage() {
 				registerUser,
 		});
 
-	async function submit(event: FormEvent) {
+	async function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 
-		if (passwordMismatch) {
+		if (passwordMismatch || isSubmitting) {
 			return;
 		}
+
+		setSubmitError(null);
+		setIsSubmitting(true);
 
 		try {
 			await mutation.mutateAsync({ email, password });
@@ -48,16 +53,20 @@ function RegisterPage() {
 					token: undefined,
 				},
 			});
-		}
-		catch {
-			// Mutation state renders the error.
+		} catch (error) {
+			setSubmitError(error);
+		} finally {
+			setIsSubmitting(false);
 		}
 	}
 
-	const error =
-		mutation.error instanceof ApiError
-			? mutation.error.message
-			: undefined;
+	const apiError = submitError instanceof ApiError
+		? submitError
+		: undefined;
+
+	const errorMessage = submitError
+		? apiError?.message ?? t('errors.genericDescription')
+		: undefined;
 
 	return (
 		<>
@@ -135,18 +144,20 @@ function RegisterPage() {
 					{t('auth.register.passwordHint')}
 				</p>
 
-				{error && (
-					<div className="rounded-xl bg-red-50 p-4 text-sm text-red-700" >
-						{error}
+				{errorMessage && (
+					<div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+						{errorMessage}
 					</div>
 				)}
 
 				<PrimaryButton
 					type="submit"
-					loading={mutation.isPending}
+					loading={isSubmitting}
 					disabled={passwordMismatch}
 				>
-					{t('auth.register.submit')}
+					{isSubmitting
+						? t('auth.register.submitting')
+						: t('auth.register.submit')}
 				</PrimaryButton>
 			</form>
 
