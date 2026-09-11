@@ -1,7 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Identity;
-using Averio.Infrastructure.Onboarding.GetOnboardingStatus;
 
 namespace Averio.Application.Onboarding.GetOnboardingStatus;
 
@@ -32,6 +31,6 @@ public sealed class GetOnboardingStatusHandler(
             household.Id,
             household.Name,
             household.CountryCode,
-            household.PreferredCurrency?.ToString());
+            household.ReportingCurrency?.ToString());
     }
 }

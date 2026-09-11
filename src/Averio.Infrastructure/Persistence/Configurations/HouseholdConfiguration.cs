@@ -34,13 +34,16 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
 
         builder.Property(x => x.CountryCode).HasColumnName("country_code").HasColumnType("char(2)");
 
-        builder.Property(x => x.PreferredCurrency)
+        builder.Property(x => x.ReportingCurrency)
             .HasColumnName("preferred_currency")
             .HasConversion<string>()
             .HasMaxLength(3);
 
         builder.Property(x => x.OnboardingCompletedAtUtc)
-            .HasColumnName("onboarding_completed_at_utc");
+            .HasColumnName("onboarding_completed_at_utc");            
+
+        builder.Property(x => x.FinancialSetupCompletedAtUtc)
+            .HasColumnName("financial_setup_completed_at_utc");
 
         builder.Navigation(x => x.Members)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
@@ -61,6 +64,14 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
             });
 
         builder.HasKey(x => x.Id).HasName("pk_household_members");
+
+        builder.HasAlternateKey(
+        member => new
+        {
+            member.HouseholdId,
+            member.Id
+        })
+        .HasName("ak_household_members_household_id_id");
 
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");

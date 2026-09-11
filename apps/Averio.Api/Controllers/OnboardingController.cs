@@ -1,7 +1,6 @@
 using Averio.Application.Onboarding.CompleteOnboarding;
 using Averio.Application.Onboarding.GetOnboardingStatus;
 using Averio.Contracts.Onboarding;
-using Averio.Infrastructure.Onboarding.CompleteOnboarding;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

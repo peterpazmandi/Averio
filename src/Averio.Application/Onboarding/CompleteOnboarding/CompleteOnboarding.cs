@@ -2,7 +2,6 @@ using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Identity;
 using Averio.Domain.Common;
-using Averio.Infrastructure.Onboarding.CompleteOnboarding;
 using FluentValidation;
 
 namespace Averio.Application.Onboarding.CompleteOnboarding;

@@ -20,10 +20,10 @@ namespace Averio.Application.Households.UpdateHousehold
                 .When(x => x.CountryCode is not null);
 
             RuleFor(x => x.PreferredCurrency)
-                .Must(value =>
-                    value is null
-                    || Enum.GetNames<CurrencyCode>()
-                         .Contains(value, StringComparer.OrdinalIgnoreCase))
+                .Cascade(CascadeMode.Stop)
+                .NotEmpty()
+                .WithErrorCode("Validation_CurrencyRequired")
+                .Must(value => CurrencyCode.IsSupported(value))
                 .WithErrorCode("Validation_CurrencyInvalid");
         }
     }

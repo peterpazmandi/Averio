@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Averio.Domain.Common;
 using FluentValidation;
 
-namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
+namespace Averio.Application.Onboarding.CompleteOnboarding
 {
     public sealed class CompleteOnboardingValidator : AbstractValidator<CompleteOnboardingCommand>
 {
@@ -42,15 +42,11 @@ namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
                     "Validation_CountryInvalid");
 
         RuleFor(x => x.PreferredCurrency)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
-                .WithErrorCode(
-                    "Validation_CurrencyRequired")
-            .Must(value =>
-                value is not null
-                && Enum.GetNames<CurrencyCode>()
-                    .Contains(value, StringComparer.OrdinalIgnoreCase))
-                .WithErrorCode(
-                    "Validation_CurrencyInvalid");
+            .WithErrorCode("Validation_CurrencyRequired")
+            .Must(value => CurrencyCode.IsSupported(value))
+            .WithErrorCode("Validation_CurrencyInvalid");
     }
 }
 }

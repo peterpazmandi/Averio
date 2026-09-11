@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Averio.Infrastructure.Onboarding.CompleteOnboarding
+namespace Averio.Application.Onboarding.CompleteOnboarding
 {
     public sealed record CompleteOnboardingCommand(
         string DisplayName,

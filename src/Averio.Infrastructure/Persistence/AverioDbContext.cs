@@ -1,4 +1,5 @@
 using Averio.Domain.Households;
+using Averio.Domain.Accounts;
 using Averio.Infrastructure.Identity;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public sealed class AverioDbContext(
         get;
         set;
     } = null!;
+    public DbSet<Account> Accounts => Set<Account>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -51,7 +51,7 @@ public sealed class UpdateHouseholdHandler(
 
         var currency =
             command.PreferredCurrency is null
-                ? household.PreferredCurrency!.Value
+                ? household.ReportingCurrency!.Value
                 : Enum.Parse<CurrencyCode>(
                     command.PreferredCurrency,
                     true);
