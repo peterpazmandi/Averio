@@ -1,10 +1,32 @@
-import { createContext, useContext, type PropsWithChildren, } from 'react';
-import { useQuery, useQueryClient, } from '@tanstack/react-query';
-import type { CurrentUserResponse, } from '../../../shared/api/generated';
-import { ApiError, } from '../../../shared/api/ApiError';
-import { authQueries, } from '../api/authQueries';
-import { authQueryKeys, } from '../api/authQueryKeys';
-import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
+    type PropsWithChildren,
+} from 'react';
+
+import {
+    useQuery,
+    useQueryClient,
+} from '@tanstack/react-query';
+
+import type {
+    CurrentUserResponse,
+} from '../../../shared/api/generated';
+
+import {
+    ApiError,
+} from '../../../shared/api/ApiError';
+
+import {
+    authQueries,
+} from '../api/authQueries';
+
+import {
+    clearCachedAuthState,
+} from '../api/authCache';
 
 type AuthStatus =
     | 'loading'
@@ -20,49 +42,114 @@ interface AuthContextValue {
     clear: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined,);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
     const queryClient = useQueryClient();
 
-    const query = useQuery(authQueries.currentUser());
+    const [
+        sessionRejected,
+        setSessionRejected,
+    ] = useState(false);
 
-    const isUnauthorized =
+    const query = useQuery({
+        ...authQueries.currentUser(),
+
+        enabled:
+            !sessionRejected,
+    });
+
+    const queryReturnedUnauthorized =
         query.error instanceof ApiError
         && query.error.status === 401;
 
+    const isUnauthorized =
+        sessionRejected
+        || queryReturnedUnauthorized;
+
+    const clear = useCallback(
+        async (): Promise<void> => {
+            setSessionRejected(true);
+
+            await clearCachedAuthState(
+                queryClient,
+            );
+        },
+        [
+            queryClient,
+        ],
+    );
+
+    useEffect(
+        () => {
+            if (!queryReturnedUnauthorized) {
+                return;
+            }
+
+            void clear();
+        },
+        [
+            clear,
+            queryReturnedUnauthorized,
+        ],
+    );
+
+    const user =
+        !isUnauthorized
+            ? query.data
+            : undefined;
+
     const status: AuthStatus =
-        query.isPending
-            ? 'loading'
-            : query.data
-                ? 'authenticated'
-                : isUnauthorized
-                    ? 'anonymous'
-                    : 'error';
+        isUnauthorized
+            ? 'anonymous'
+            : query.isPending
+                ? 'loading'
+                : user
+                    ? 'authenticated'
+                    : query.error
+                        ? 'error'
+                        : 'anonymous';
 
-    const refresh = async (): Promise<CurrentUserResponse> => {
-        return await queryClient.fetchQuery({
-            ...authQueries.currentUser(),
-            staleTime: 0,
-        });
-    };
+    const refresh = useCallback(
+        async (): Promise<CurrentUserResponse> => {
+            setSessionRejected(false);
 
-    const clear = async (): Promise<void> => {
-        await Promise.all([
-            queryClient.cancelQueries({ queryKey: authQueryKeys.all }),
-            queryClient.cancelQueries({ queryKey: onboardingQueryKeys.all }),
-        ]);
+            try {
+                return await queryClient.fetchQuery({
+                    ...authQueries.currentUser(),
+                    staleTime: 0,
+                });
+            }
+            catch (error) {
+                if (
+                    error instanceof ApiError
+                    && error.status === 401
+                ) {
+                    setSessionRejected(true);
 
-        queryClient.removeQueries({ queryKey: authQueryKeys.all });
-        queryClient.removeQueries({ queryKey: onboardingQueryKeys.all });
-    };
+                    await clearCachedAuthState(
+                        queryClient,
+                    );
+                }
+
+                throw error;
+            }
+        },
+        [
+            queryClient,
+        ],
+    );
 
     return (
         <AuthContext.Provider
             value={{
                 status,
-                user: query.data,
-                error: query.error instanceof Error ? query.error : undefined,
+                user,
+                error:
+                    !isUnauthorized
+                    && query.error instanceof Error
+                        ? query.error
+                        : undefined,
                 refresh,
                 clear,
             }}
@@ -73,10 +160,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 }
 
 export function useAuth(): AuthContextValue {
-    const context = useContext(AuthContext);
+    const context =
+        useContext(AuthContext);
 
     if (!context) {
-        throw new Error('useAuth must be used inside AuthProvider.');
+        throw new Error(
+            'useAuth must be used inside AuthProvider.',
+        );
     }
 
     return context;

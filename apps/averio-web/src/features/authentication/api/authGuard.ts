@@ -1,6 +1,4 @@
-import type {
-    QueryClient,
-} from '@tanstack/react-query';
+import type { QueryClient} from '@tanstack/react-query';
 
 import {
     redirect,
@@ -18,6 +16,10 @@ import {
     authQueries,
 } from './authQueries';
 
+import {
+    clearCachedAuthState,
+} from './authCache';
+
 export async function getAuthenticatedUser(
     queryClient: QueryClient,
     redirectTo?: string,
@@ -33,6 +35,7 @@ export async function getAuthenticatedUser(
             error instanceof ApiError
             && error.status === 401
         ) {
+            await clearCachedAuthState(queryClient);
             throw redirect({
                 to: '/login',
                 search: {
