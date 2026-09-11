@@ -114,7 +114,7 @@ function VerifyEmailPage() {
                         text-slate-600
                     "
 				>
-					{t(checkEmailDescription)}
+					{checkEmailDescription}
 				</p>
 
 

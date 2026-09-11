@@ -2,7 +2,7 @@ export const de = {
     common: {
         appName: 'Averio',
         requestFailed: 'Anfrage fehlgeschlagen',
-        reference: 'Referenz',
+        reference: 'Referenz: {{reference}}',
         unexpectedError: 'Etwas ist schiefgelaufen',
         actions: {
             continue: 'Weiter',

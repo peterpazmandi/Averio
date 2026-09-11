@@ -379,13 +379,10 @@ function ApiErrorMessage({
                             dark:text-red-300
                         "
                     >
-                        {t(
-                            'common.requestFailed',
-                        )}
+                        {t('common.requestFailed')}
                     </p>
 
-                    <p
-                        className="
+                    <p className="
                             mt-1
                             text-sm
                             leading-6
@@ -398,8 +395,7 @@ function ApiErrorMessage({
                     </p>
 
                     {apiError?.traceId && (
-                        <p
-                            className="
+                        <p className="
                                 mt-2
                                 text-xs
                                 text-red-500
@@ -407,13 +403,7 @@ function ApiErrorMessage({
                                 dark:text-red-500
                             "
                         >
-                            {t(
-                                'common.reference',
-                                {
-                                    reference:
-                                        apiError?.traceId,
-                                },
-                            )}
+                            {t('common.reference', { reference: apiError?.traceId } )}
                         </p>
                     )}
                 </div>

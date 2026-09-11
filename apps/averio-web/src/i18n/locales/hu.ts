@@ -2,7 +2,7 @@ export const hu = {
     common: {
         appName: 'Averio',
         requestFailed: 'A kérés sikertelen',
-        reference: 'Hivatkozás',
+        reference: 'Hivatkozás: {{reference}}',
         unexpectedError: 'Valami hiba történt',
         actions: {
             continue: 'Folytatás',
