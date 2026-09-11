@@ -36,12 +36,11 @@ export const Route = createFileRoute('/_guest/reset-password',)({
 
 function ResetPasswordPage() {
     const { t } = useTranslation();
-
     const search = Route.useSearch();
 
     const userId = search.userId;
-
     const token = search.token;
+    const minimumPasswordLength = 12;
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -57,34 +56,33 @@ function ResetPasswordPage() {
 
     const linkIsInvalid = !userId || !token;
     const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
-    const passwordTooShort = submitted && password.length < 12;
+    const passwordTooShort = submitted && password.length < minimumPasswordLength;
     const confirmPasswordRequired = submitted && confirmPassword.length === 0;
 
-    const canSubmit =
-        !linkIsInvalid
-        && password.length >= 12
-        && password.length <= 128
-        && confirmPassword.length > 0
-        && password === confirmPassword
-        && !mutation.isPending;
+    const submitDisabled = isSubmitting;
 
-    async function submit(
-        event: FormEvent<HTMLFormElement>,
-    ) {
+    async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
+        if (isSubmitting) {
+            return;
+        }
+
         setSubmitted(true);
+        setSubmitError(null);
 
         if (
             !userId
             || !token
-            || password.length < 12
+            || password.length < minimumPasswordLength
             || password.length > 128
             || !confirmPassword
             || password !== confirmPassword
         ) {
             return;
         }
+
+        setIsSubmitting(true);
 
         try {
             await mutation.mutateAsync({
@@ -93,23 +91,11 @@ function ResetPasswordPage() {
                 password,
             });
         }
-        catch {
-            setSubmitError(null);
-            setIsSubmitting(true);
-
-            try {
-                await mutation.mutateAsync({
-                    userId,
-                    token,
-                    password,
-                });
-            }
-            catch (error) {
-                setSubmitError(error);
-            }
-            finally {
-                setIsSubmitting(false);
-            }
+        catch (error) {
+            setSubmitError(error);
+        }
+        finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -150,8 +136,11 @@ function ResetPasswordPage() {
 
     const passwordError =
         passwordTooShort
-            ? t(
-                'password.validation.minimumLength',
+            ? t('password.validation.minimumLength',
+                {
+                    min:
+                        minimumPasswordLength,
+                },
             )
             : apiError?.validationErrors
                 ?.password
@@ -230,10 +219,7 @@ function ResetPasswordPage() {
             <form
                 onSubmit={submit}
                 noValidate
-                className="
-                    mt-8
-                    space-y-5
-                "
+                className="mt-8 space-y-5"
             >
                 <div>
                     <PasswordField
@@ -253,21 +239,10 @@ function ResetPasswordPage() {
                         }}
                     />
 
-                    <PasswordStrengthIndicator
-                        password={password}
-                    />
+                    <PasswordStrengthIndicator password={password} />
 
-                    <p
-                        className="
-                            mt-2
-                            text-xs
-                            leading-5
-                            text-slate-500
-
-                            dark:text-slate-400
-                        "
-                    >
-                        {t('password.requirements')}
+                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400" >
+                        {t('password.requirements', { min: minimumPasswordLength })}
                     </p>
                 </div>
 
@@ -294,7 +269,7 @@ function ResetPasswordPage() {
                 <PrimaryButton
                     type="submit"
                     loading={isSubmitting}
-                    disabled={!canSubmit}
+                    disabled={submitDisabled}
                 >
                     {t('auth.reset.submit')}
                 </PrimaryButton>

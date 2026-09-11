@@ -80,7 +80,7 @@ export const en = {
             strong: 'Strong',
             veryStrong: 'Very strong',
         },
-        requirements: 'Use at least 8 characters with a mix of letters, numbers and symbols.',
+        requirements: 'Use at least {{min}} characters with a mix of letters, numbers and symbols.',
         show: 'Show password',
         hide: 'Hide password',
 

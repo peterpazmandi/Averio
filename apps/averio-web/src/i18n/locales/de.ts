@@ -89,7 +89,7 @@ export const de = {
             strong: 'Stark',
             veryStrong: 'Sehr stark',
         },
-        requirements: 'Verwende mindestens 8 Zeichen mit einer Mischung aus Buchstaben, Zahlen und Symbolen.',
+        requirements: 'Verwende mindestens {{min}} Zeichen mit einer Mischung aus Buchstaben, Zahlen und Symbolen.',
         show: 'Passwort anzeigen',
         hide: 'Passwort verbergen',
 

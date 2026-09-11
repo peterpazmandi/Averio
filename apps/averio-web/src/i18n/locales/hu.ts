@@ -98,7 +98,7 @@ export const hu = {
             veryStrong:
                 'Nagyon erős',
         },
-        requirements: 'Használj legalább 8 karaktert, betűk, számok és szimbólumok keverékével.',
+        requirements: 'Használj legalább {{min}} karaktert, betűk, számok és szimbólumok keverékével.',
         show: 'Jelszó megjelenítése',
         hide: 'Jelszó elrejtése',
 
