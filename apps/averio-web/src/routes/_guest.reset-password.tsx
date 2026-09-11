@@ -31,8 +31,7 @@ export const Route = createFileRoute('/_guest/reset-password',)({
                 : undefined,
     }),
 
-    component:
-        ResetPasswordPage,
+    component: ResetPasswordPage,
 });
 
 function ResetPasswordPage() {
@@ -45,10 +44,10 @@ function ResetPasswordPage() {
     const token = search.token;
 
     const [password, setPassword] = useState('');
-
     const [confirmPassword, setConfirmPassword] = useState('');
-
     const [submitted, setSubmitted] = useState(false);
+    const [submitError, setSubmitError] = useState<unknown>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const mutation =
         useMutation({
@@ -95,9 +94,22 @@ function ResetPasswordPage() {
             });
         }
         catch {
-            /*
-             * Error rendered via mutation state.
-             */
+            setSubmitError(null);
+            setIsSubmitting(true);
+
+            try {
+                await mutation.mutateAsync({
+                    userId,
+                    token,
+                    password,
+                });
+            }
+            catch (error) {
+                setSubmitError(error);
+            }
+            finally {
+                setIsSubmitting(false);
+            }
         }
     }
 
@@ -120,11 +132,11 @@ function ResetPasswordPage() {
         );
     }
 
-    const apiError =
-        mutation.error
-            instanceof ApiError
-            ? mutation.error
-            : undefined;
+    const apiError = submitError instanceof ApiError
+        ? submitError
+        : undefined;
+
+    const hasSubmitError = submitError !== null;
 
     const tokenInvalid =
         apiError?.code
@@ -185,9 +197,7 @@ function ResetPasswordPage() {
                         dark:text-primary-400
                     "
                 >
-                    {t(
-                        'auth.reset.eyebrow',
-                    )}
+                    {t('auth.reset.eyebrow')}
                 </p>
 
                 <h1
@@ -201,9 +211,7 @@ function ResetPasswordPage() {
                         dark:text-white
                     "
                 >
-                    {t(
-                        'auth.reset.title',
-                    )}
+                    {t('auth.reset.title')}
                 </h1>
 
                 <p
@@ -215,9 +223,7 @@ function ResetPasswordPage() {
                         dark:text-slate-400
                     "
                 >
-                    {t(
-                        'auth.reset.description',
-                    )}
+                    {t('auth.reset.description')}
                 </p>
             </div>
 
@@ -231,9 +237,7 @@ function ResetPasswordPage() {
             >
                 <div>
                     <PasswordField
-                        label={t(
-                            'auth.password',
-                        )}
+                        label={t('auth.password')}
                         autoComplete="new-password"
                         required
                         minLength={12}
@@ -263,16 +267,12 @@ function ResetPasswordPage() {
                             dark:text-slate-400
                         "
                     >
-                        {t(
-                            'password.requirements',
-                        )}
+                        {t('password.requirements')}
                     </p>
                 </div>
 
                 <PasswordField
-                    label={t(
-                        'auth.confirmPassword',
-                    )}
+                    label={t('auth.confirmPassword')}
                     autoComplete="new-password"
                     required
                     maxLength={128}
@@ -287,24 +287,16 @@ function ResetPasswordPage() {
                     }}
                 />
 
-                {apiError && (
-                    <ApiErrorMessage
-                        error={apiError}
-                    />
+                {hasSubmitError && (
+                    <ApiErrorMessage error={submitError} />
                 )}
 
                 <PrimaryButton
                     type="submit"
-                    loading={
-                        mutation.isPending
-                    }
-                    disabled={
-                        !canSubmit
-                    }
+                    loading={isSubmitting}
+                    disabled={!canSubmit}
                 >
-                    {t(
-                        'auth.reset.submit',
-                    )}
+                    {t('auth.reset.submit')}
                 </PrimaryButton>
             </form>
 
@@ -342,11 +334,14 @@ function ResetPasswordPage() {
 function ApiErrorMessage({
     error,
 }: {
-    error: ApiError;
+    error: unknown;
 }) {
-    const {
-        t,
-    } = useTranslation();
+    const { t } = useTranslation();
+
+    const apiError =
+        error instanceof ApiError
+            ? error
+            : undefined;
 
     /*
      * Password policy rejection can be returned
@@ -354,11 +349,10 @@ function ApiErrorMessage({
      * ValidationProblemDetails response.
      */
     const message =
-        error.code === 'password_rejected'
-            ? t(
-                'password.validation.rejected',
-            )
-            : error.message;
+        apiError?.code === 'password_rejected'
+            ? t('password.validation.rejected')
+            : apiError?.message
+            ?? t('errors.genericDescription');
 
     return (
         <div
@@ -428,7 +422,7 @@ function ApiErrorMessage({
                         {message}
                     </p>
 
-                    {error.traceId && (
+                    {apiError?.traceId && (
                         <p
                             className="
                                 mt-2
@@ -442,7 +436,7 @@ function ApiErrorMessage({
                                 'common.reference',
                                 {
                                     reference:
-                                        error.traceId,
+                                        apiError?.traceId,
                                 },
                             )}
                         </p>

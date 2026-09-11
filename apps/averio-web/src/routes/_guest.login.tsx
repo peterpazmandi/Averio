@@ -57,26 +57,16 @@ export const Route =
     });
 
 function LoginPage() {
-    const { t } =
-        useTranslation();
+    const { t } = useTranslation();
+    const search = Route.useSearch();
+    const navigate = useNavigate();
+    const auth = useAuth();
 
-    const search =
-        Route.useSearch();
-
-    const navigate =
-        useNavigate();
-
-    const auth =
-        useAuth();
-
-    const [email, setEmail] =
-        useState('');
-
-    const [password, setPassword] =
-        useState('');
-
-    const [rememberMe, setRememberMe] =
-        useState(true);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(true);
+    const [submitError, setSubmitError] = useState<unknown>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const mutation =
         useMutation({
@@ -84,10 +74,15 @@ function LoginPage() {
                 loginUser,
         });
 
-    async function submit(
-        event: FormEvent,
-    ) {
+    async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+
+        if (isSubmitting) {
+            return;
+        }
+
+        setSubmitError(null);
+        setIsSubmitting(true);
 
         try {
             await mutation.mutateAsync({
@@ -102,7 +97,6 @@ function LoginPage() {
 
             if (user.onboardingRequired) {
                 await navigate({ to: '/onboarding' });
-
                 return;
             }
 
@@ -111,19 +105,24 @@ function LoginPage() {
                     ? search.redirect
                     : '/app';
 
-            await navigate({
-                to: redirect,
-            });
+            await navigate({ to: redirect });
         }
-        catch {
-            // Mutation state renders error.
+        catch (error) {
+            setSubmitError(error);
+        }
+        finally {
+            setIsSubmitting(false);
         }
     }
 
-    const error =
-        mutation.error instanceof ApiError
-            ? mutation.error
-            : undefined;
+    const apiError = submitError instanceof ApiError
+        ? submitError
+        : undefined;
+
+    const errorMessage = submitError
+        ? apiError?.message
+        ?? t('errors.genericDescription')
+        : undefined;
 
     return (
         <>
@@ -182,40 +181,15 @@ function LoginPage() {
                     autoComplete="current-password"
                     required
                     value={password}
-                    onChange={event =>
-                        setPassword(
-                            event.target.value,
-                        )
-                    }
+                    onChange={event => setPassword(event.target.value)}
                 />
 
-                <div
-                    className="
-                        flex
-                        min-w-0
-                        justify-end
-                    "
-                >
+                <div className="flex min-w-0 justify-end">
                     <Link
                         to="/forgot-password"
-                        className="
-                            min-w-0
-                            text-right
-
-                            text-sm
-                            font-semibold
-
-                            text-primary-700
-
-                            hover:text-primary-800
-
-                            dark:text-primary-400
-                            dark:hover:text-primary-300
-                        "
+                        className="min-w-0 text-right text-sm font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
                     >
-                        {t(
-                            'auth.login.forgotPassword',
-                        )}
+                        {t('auth.login.forgotPassword')}
                     </Link>
                 </div>
 
@@ -236,17 +210,15 @@ function LoginPage() {
                                 event.target.checked,
                             )
                         }
-                        className="
-                            size-4
-                            accent-primary-500
-                        "
+                        className="size-4 accent-primary-500"
                     />
 
                     {t('auth.login.rememberMe')}
                 </label>
 
-                {error && (
+                {errorMessage && (
                     <div
+                        role="alert"
                         className="
                             rounded-xl
                             bg-red-50
@@ -255,31 +227,24 @@ function LoginPage() {
                             text-red-700
                         "
                     >
-                        {error.message}
+                        {errorMessage}
 
-                        {error.code
-                            === 'email_not_verified'
-                            && (
-                                <div className="mt-2">
-                                    <Link
-                                        to="/resend-verification"
-                                        className="
-                                            font-semibold
-                                            underline
-                                        "
-                                    >
-                                        {t(
-                                            'auth.resend.link',
-                                        )}
-                                    </Link>
-                                </div>
-                            )}
+                        {apiError?.code === 'email_not_verified' && (
+                            <div className="mt-2">
+                                <Link
+                                    to="/resend-verification"
+                                    className="font-semibold underline"
+                                >
+                                    {t('auth.resend.link')}
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 <PrimaryButton
                     type="submit"
-                    loading={mutation.isPending}
+                    loading={isSubmitting}
                 >
                     {t('auth.login.submit')}
                 </PrimaryButton>
