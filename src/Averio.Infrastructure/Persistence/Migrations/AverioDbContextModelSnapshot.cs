@@ -22,6 +22,102 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Averio.Domain.Accounts.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<decimal>("BalanceAnchorAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("balance_anchor_amount");
+
+                    b.Property<DateOnly>("BalanceAnchorDate")
+                        .HasColumnType("date")
+                        .HasColumnName("balance_anchor_date");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency_code");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<bool>("IncludeInHouseholdReports")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_in_household_reports");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("OwnerHouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_household_member_id");
+
+                    b.Property<string>("Ownership")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("ownership");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("visibility");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.HasIndex("OwnerHouseholdMemberId");
+
+                    b.HasIndex("HouseholdId", "OwnerHouseholdMemberId");
+
+                    b.HasIndex("HouseholdId", "Status");
+
+                    b.HasIndex("HouseholdId", "Visibility");
+
+                    b.ToTable("accounts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_accounts_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
+
+                            t.HasCheckConstraint("ck_accounts_ownership_visibility", "(\r\n    (\r\n        ownership = 'Household'\r\n        AND owner_household_member_id IS NULL\r\n        AND visibility = 'Household'\r\n        AND include_in_household_reports = true\r\n    )\r\n    OR\r\n    (\r\n        ownership = 'Personal'\r\n        AND owner_household_member_id IS NOT NULL\r\n        AND (\r\n            visibility <> 'Private'\r\n            OR include_in_household_reports = false\r\n        )\r\n    )\r\n)");
+                        });
+                });
+
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>
                 {
                     b.Property<Guid>("Id")
@@ -37,6 +133,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
 
+                    b.Property<DateTimeOffset?>("FinancialSetupCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("financial_setup_completed_at_utc");
+
                     b.Property<string>("Name")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
@@ -46,7 +146,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("onboarding_completed_at_utc");
 
-                    b.Property<string>("PreferredCurrency")
+                    b.Property<string>("ReportingCurrency")
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)")
                         .HasColumnName("preferred_currency");
@@ -89,6 +189,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_household_members");
+
+                    b.HasAlternateKey("HouseholdId", "Id")
+                        .HasName("ak_household_members_household_id_id");
 
                     b.HasIndex("UserId")
                         .IsUnique()
@@ -318,6 +421,15 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasName("pk_user_tokens");
 
                     b.ToTable("user_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Averio.Domain.Accounts.Account", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "OwnerHouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>

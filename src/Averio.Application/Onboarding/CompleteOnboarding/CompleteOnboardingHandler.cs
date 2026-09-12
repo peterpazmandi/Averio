@@ -2,6 +2,7 @@ using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Identity;
 using Averio.Domain.Common;
+using Averio.Domain.Households;
 using FluentValidation;
 
 namespace Averio.Application.Onboarding.CompleteOnboarding;
@@ -32,10 +33,15 @@ public sealed class CompleteOnboardingHandler(
                 cancellationToken)
             ?? throw new HouseholdRequiredException();
 
-        var currency =
-            Enum.Parse<CurrencyCode>(
-                command.PreferredCurrency,
-                ignoreCase: true);
+        var membership = household.Members.Single(
+            member => member.UserId == userId);
+
+        if (membership.Role != HouseholdRole.Owner)
+        {
+            throw new ForbiddenException();
+        }
+
+        var currency = CurrencyCode.From(command.PreferredCurrency);
 
         await using var transaction =
             await unitOfWork.BeginTransactionAsync(
@@ -58,10 +64,8 @@ public sealed class CompleteOnboardingHandler(
             currency,
             timeProvider.GetUtcNow());
 
-        await unitOfWork.SaveChangesAsync(
-            cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await transaction.CommitAsync(
-            cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }

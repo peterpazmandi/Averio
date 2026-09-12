@@ -128,7 +128,18 @@ public sealed class OnboardingRequiredException : AverioException
 
 public sealed class InvalidPasswordResetTokenException  : AverioException
 {
-    public InvalidPasswordResetTokenException() : base("invalid_password_reset_token", ErrorResourceKeys.InvalidPasswordResetToken) {}
+    public InvalidPasswordResetTokenException() : base(
+        "invalid_password_reset_token",
+        ErrorResourceKeys.InvalidPasswordResetToken) {}
+}
+
+public sealed class ForbiddenException : AverioException
+{
+    public ForbiddenException() : base(
+            "operation_forbidden",
+            ErrorResourceKeys.Forbidden)
+    {
+    }
 }
 
 public static class ErrorResourceKeys
@@ -137,6 +148,7 @@ public static class ErrorResourceKeys
     public const string BusinessRule = "Error_BusinessRule";
     public const string InvalidCredentials = "Error_InvalidCredentials";
     public const string EmailNotVerified = "Error_EmailNotVerified";
+    public const string Forbidden = "Error_OperationForbidden";
     public const string AccountLocked = "Error_AccountLocked";
     public const string InvalidEmailVerificationToken = "Error_InvalidEmailVerificationToken";
     public const string EmailAlreadyRegistered = "Error_EmailAlreadyRegistered";

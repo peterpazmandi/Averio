@@ -36,12 +36,11 @@ export function OnboardingForUser({
             "
         >
             <div className="mx-auto max-w-5xl">
-                <header
-                    className="
-                        flex flex-wrap
-                        items-center justify-between
-                        gap-4
-                    "
+                <header className="
+                            flex flex-wrap
+                            items-center justify-between
+                            gap-4
+                        "
                 >
                     <AverioBrand />
                     <PreferencesToolbar />
@@ -107,6 +106,7 @@ export function OnboardingForUser({
                     <BentoCard className="p-6 sm:p-8">
                         {statusQuery.data ? (
                             <OnboardingForm
+                                key={userId}
                                 userId={userId}
                                 initialData={statusQuery.data}
                             />

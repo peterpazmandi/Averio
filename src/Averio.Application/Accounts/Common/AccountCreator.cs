@@ -25,9 +25,7 @@ public sealed class AccountCreator(
             throw new NotFoundException("household", command.HouseholdId);
         }
 
-        var currency = Enum.Parse<CurrencyCode>(
-            command.Currency.Trim(),
-            ignoreCase: true);
+        var currency = CurrencyCode.From(command.Currency);
 
         var account = Account.Create(
             command.HouseholdId,

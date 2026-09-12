@@ -10,6 +10,12 @@ using Averio.Application.Onboarding.GetOnboardingStatus;
 using Averio.Application.Households.UpdateHousehold;
 using Averio.Application.Identity.ResetPassword;
 using Averio.Application.Identity.RequestPasswordReset;
+using Averio.Application.Onboarding.SaveOnboardingHousehold;
+using Averio.Application.Onboarding.CompleteFirstAccount;
+using Averio.Application.Accounts.Common;
+using Averio.Application.Accounts.ArchiveAccount;
+using Averio.Application.Accounts.RestoreAccount;
+using Averio.Application.Dashboard.GetDashboard;
 
 namespace Averio.Application;
 
@@ -31,12 +37,24 @@ public static class DependencyInjection
 
         services.AddScoped<RequestPasswordResetHandler>();
 
-        services.AddScoped<Averio.Application.Households.GetHousehold.GetHouseholdHandler>();
+        services.AddScoped<SaveOnboardingHouseholdHandler>();
+        services.AddScoped<SaveOnboardingHouseholdValidator>();
+
+        services.AddScoped<Households.GetHousehold.GetHouseholdHandler>();
         services.AddScoped<UpdateHouseholdHandler>();
         services.AddScoped<UpdateHouseholdValidator>();
 
+        services.AddScoped<AccountCreator>();
+
+        services.AddScoped<CompleteFirstAccountHandler>();
+
         services.AddScoped<ResetPasswordHandler>();
         services.AddScoped<ResetPasswordValidator>();
+
+        services.AddScoped<ArchiveAccountHandler>();
+        services.AddScoped<RestoreAccountHandler>();
+
+        services.AddScoped<GetDashboardHandler>();
 
         return services;
     }

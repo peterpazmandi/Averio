@@ -191,4 +191,8 @@
   <data name="Error_PasswordRejected" xml:space="preserve">
     <value>A jelszó nem felel meg a szükséges biztonsági követelményeknek.</value>
   </data>
+
+  <data name="Error_OperationForbidden" xml:space="preserve">
+    <value>Nincs jogosultságod ehhez a művelethez.</value>
+  </data>
 </root>

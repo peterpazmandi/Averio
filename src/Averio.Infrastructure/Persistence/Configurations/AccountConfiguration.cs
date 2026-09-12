@@ -3,6 +3,7 @@ using Averio.Domain.Common;
 using Averio.Domain.Households;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Averio.Infrastructure.Persistence.Converters;
 
 namespace Averio.Infrastructure.Persistence.Configurations;
 
@@ -79,10 +80,9 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
         builder.Property(x => x.Currency)
             .HasColumnName("currency_code")
-            .HasConversion(
-                value => value.Value,
-                value => CurrencyCode.From(value))
-            .HasMaxLength(3);
+            .HasConversion<CurrencyCodeConverter>()
+            .HasMaxLength(3)
+            .IsRequired();
 
         builder.Property(x => x.BalanceAnchorAmount)
             .HasColumnName("balance_anchor_amount")

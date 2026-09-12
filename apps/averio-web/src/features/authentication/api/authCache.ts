@@ -1,6 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
 import { authQueryKeys } from './authQueryKeys';
+import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
+import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
 
 export async function clearCachedAuthState(queryClient: QueryClient): Promise<void> {
     await Promise.all([
@@ -11,6 +13,13 @@ export async function clearCachedAuthState(queryClient: QueryClient): Promise<vo
         queryClient.cancelQueries({
             queryKey: onboardingQueryKeys.all,
         }),
+
+        queryClient.cancelQueries({
+            queryKey: accountsQueryKeys.all,
+        }),
+        queryClient.cancelQueries({
+            queryKey: dashboardQueryKeys.all,
+        }),
     ]);
 
     queryClient.removeQueries({
@@ -19,5 +28,13 @@ export async function clearCachedAuthState(queryClient: QueryClient): Promise<vo
 
     queryClient.removeQueries({
         queryKey: onboardingQueryKeys.all,
+    });
+
+    queryClient.removeQueries({
+        queryKey: accountsQueryKeys.all,
+    });
+
+    queryClient.removeQueries({
+        queryKey: dashboardQueryKeys.all,
     });
 }

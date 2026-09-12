@@ -16,21 +16,42 @@ public sealed class GetOnboardingStatusHandler(
             ?? throw new AuthenticationFailedException();
 
         var user = await identityService.FindByIdAsync(
-                    userId,
-                    cancellationToken)
+            userId,
+            cancellationToken)
             ?? throw new AuthenticationFailedException();
 
-        var household = await householdRepository.GetByUserIdAsync(
-                        userId,
-                        cancellationToken)
+        var household =
+            await householdRepository.GetByUserIdAsync(
+                userId,
+                cancellationToken)
             ?? throw new HouseholdRequiredException();
 
+        string currentStep;
+
+        if (household.IsFinancialSetupCompleted)
+        {
+            currentStep = "completed";
+        }
+        else if (string.IsNullOrWhiteSpace(user.DisplayName))
+        {
+            currentStep = "profile";
+        }
+        else if (!household.IsOnboardingCompleted)
+        {
+            currentStep = "household";
+        }
+        else
+        {
+            currentStep = "firstAccount";
+        }
+
         return new OnboardingStatusResult(
-            household.IsOnboardingCompleted,
+            household.IsFinancialSetupCompleted,
+            currentStep,
             user.DisplayName,
             household.Id,
             household.Name,
             household.CountryCode,
-            household.ReportingCurrency?.ToString());
+            household.ReportingCurrency?.Value);
     }
 }

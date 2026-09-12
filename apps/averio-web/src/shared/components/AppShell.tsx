@@ -1,9 +1,8 @@
 import type { PropsWithChildren } from 'react';
-
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-
+import { AppNavigation } from './AppNavigation';
 import { logoutUser } from '../../features/authentication/api/authApi';
 import { useAuth } from '../../features/authentication/context/AuthProvider';
 import { AverioBrand } from './branding/AverioBrand';
@@ -98,9 +97,27 @@ export function AppShell({ children }: PropsWithChildren) {
                 </div>
             </header>
 
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {children}
-            </main>
+            <div
+                className="
+                    mx-auto grid max-w-7xl gap-6
+                    px-4 py-6
+                    sm:px-6
+                    lg:grid-cols-[220px_minmax(0,1fr)]
+                    lg:gap-8 lg:px-8 lg:py-8
+                "
+            >
+                <AppNavigation />
+
+                <main
+                    id="main-content"
+                    className="
+                        min-w-0
+                        text-slate-950 dark:text-white
+                    "
+                >
+                    {children}
+                </main>
+            </div>
         </div>
     );
 }

@@ -34,6 +34,10 @@ export interface OnboardingStatusResponse {
     /**
      * 
      */
+    currentStep: string;
+    /**
+     * 
+     */
     displayName: string | null;
     /**
      * 
@@ -46,6 +50,7 @@ export interface OnboardingStatusResponse {
  */
 export function instanceOfOnboardingStatusResponse(value: object): value is OnboardingStatusResponse {
     if (!('completed' in value) || value['completed'] === undefined) return false;
+    if (!('currentStep' in value) || value['currentStep'] === undefined) return false;
     if (!('displayName' in value) || value['displayName'] === undefined) return false;
     if (!('household' in value) || value['household'] === undefined) return false;
     return true;
@@ -62,6 +67,7 @@ export function OnboardingStatusResponseFromJSONTyped(json: any, ignoreDiscrimin
     return {
         
         'completed': json['completed'],
+        'currentStep': json['currentStep'],
         'displayName': json['displayName'],
         'household': HouseholdSetupResponseFromJSON(json['household']),
     };
@@ -79,6 +85,7 @@ export function OnboardingStatusResponseToJSONTyped(value?: OnboardingStatusResp
     return {
         
         'completed': value['completed'],
+        'currentStep': value['currentStep'],
         'displayName': value['displayName'],
         'household': HouseholdSetupResponseToJSON(value['household']),
     };

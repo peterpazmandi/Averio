@@ -2,6 +2,7 @@ using Averio.Domain.Households;
 using Averio.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Averio.Infrastructure.Persistence.Converters;
 
 namespace Averio.Infrastructure.Persistence.Configurations;
 
@@ -9,15 +10,20 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
 {
     public void Configure(EntityTypeBuilder<Household> builder)
     {
-        builder.ToTable(
-            "households",
-            table =>
+        builder.ToTable("households", table =>
         {
             table.HasCheckConstraint(
                 "ck_households_country_code",
                 """
                 country_code IS NULL
                 OR country_code ~ '^[A-Z]{2}$'
+                """);
+
+            table.HasCheckConstraint(
+                "ck_households_preferred_currency",
+                """
+                preferred_currency IS NULL
+                OR preferred_currency IN ('HUF', 'EUR', 'USD')
                 """);
 
             table.HasCheckConstraint(
@@ -36,11 +42,12 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
 
         builder.Property(x => x.ReportingCurrency)
             .HasColumnName("preferred_currency")
-            .HasConversion<string>()
-            .HasMaxLength(3);
+            .HasConversion<CurrencyCodeConverter>()
+            .HasMaxLength(3)
+            .IsRequired(false);
 
         builder.Property(x => x.OnboardingCompletedAtUtc)
-            .HasColumnName("onboarding_completed_at_utc");            
+            .HasColumnName("onboarding_completed_at_utc");
 
         builder.Property(x => x.FinancialSetupCompletedAtUtc)
             .HasColumnName("financial_setup_completed_at_utc");

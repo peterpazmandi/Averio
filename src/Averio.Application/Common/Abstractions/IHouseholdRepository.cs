@@ -18,4 +18,9 @@ public interface IHouseholdRepository
         Guid householdId,
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<Household?> GetByIdForUserForUpdateAsync(
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken);
 }
