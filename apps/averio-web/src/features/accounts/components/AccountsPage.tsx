@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
+import { AccountOwnershipSummary } from './AccountOwnershipSummary';
 import { accountsQueries } from '../api/accountsQueries';
 
 interface AccountsPageProps {
@@ -97,6 +98,8 @@ export function AccountsPage({
                             <h2 className="font-semibold">
                                 {account.name}
                             </h2>
+
+                            <AccountOwnershipSummary account={account} />
 
                             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                                 {t('app.accounts.recordedBalance')}

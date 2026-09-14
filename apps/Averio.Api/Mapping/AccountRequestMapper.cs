@@ -17,10 +17,11 @@ internal static class AccountRequestMapper
                 request.Type,
                 nameof(request.Type),
                 "Validation_AccountTypeInvalid"),
-            EnumParser.Parse<AccountOwnership>(
-                request.Ownership,
-                nameof(request.Ownership),
-                "Validation_AccountOwnershipInvalid"),
+            EnumParser.Parse<AccountScope>(
+                request.Scope,
+                nameof(request.Scope),
+                "Validation_AccountScopeInvalid"),
+            request.OwnerHouseholdMemberIds,
             EnumParser.Parse<AccountVisibility>(
                 request.Visibility,
                 nameof(request.Visibility),

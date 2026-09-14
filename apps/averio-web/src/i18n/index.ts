@@ -6,19 +6,25 @@ import { en } from './locales/en';
 import { de } from './locales/de';
 import { hu } from './locales/hu';
 
+import {
+    accountOwnershipEN,
+    accountOwnershipDE,
+    accountOwnershipHU,
+} from './locales/accountOwnership';
+
 void i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
         resources: {
             en: {
-                translation: en,
+                translation: { ...en, accountOwnership: accountOwnershipEN },
             },
             de: {
-                translation: de,
+                translation: { ...de, accountOwnership: accountOwnershipDE },
             },
             hu: {
-                translation: hu,
+                translation: { ...hu, accountOwnership: accountOwnershipHU },
             },
         },
 

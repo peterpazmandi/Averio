@@ -30,7 +30,11 @@ export interface CreateAccountRequest {
     /**
      * 
      */
-    ownership: string;
+    scope: string;
+    /**
+     * 
+     */
+    ownerHouseholdMemberIds: Array<string>;
     /**
      * 
      */
@@ -59,7 +63,8 @@ export interface CreateAccountRequest {
 export function instanceOfCreateAccountRequest(value: object): value is CreateAccountRequest {
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('type' in value) || value['type'] === undefined) return false;
-    if (!('ownership' in value) || value['ownership'] === undefined) return false;
+    if (!('scope' in value) || value['scope'] === undefined) return false;
+    if (!('ownerHouseholdMemberIds' in value) || value['ownerHouseholdMemberIds'] === undefined) return false;
     if (!('visibility' in value) || value['visibility'] === undefined) return false;
     if (!('includeInHouseholdReports' in value) || value['includeInHouseholdReports'] === undefined) return false;
     if (!('currency' in value) || value['currency'] === undefined) return false;
@@ -80,7 +85,8 @@ export function CreateAccountRequestFromJSONTyped(json: any, ignoreDiscriminator
         
         'name': json['name'],
         'type': json['type'],
-        'ownership': json['ownership'],
+        'scope': json['scope'],
+        'ownerHouseholdMemberIds': json['ownerHouseholdMemberIds'],
         'visibility': json['visibility'],
         'includeInHouseholdReports': json['includeInHouseholdReports'],
         'currency': json['currency'],
@@ -102,7 +108,8 @@ export function CreateAccountRequestToJSONTyped(value?: CreateAccountRequest | n
         
         'name': value['name'],
         'type': value['type'],
-        'ownership': value['ownership'],
+        'scope': value['scope'],
+        'ownerHouseholdMemberIds': value['ownerHouseholdMemberIds'],
         'visibility': value['visibility'],
         'includeInHouseholdReports': value['includeInHouseholdReports'],
         'currency': value['currency'],

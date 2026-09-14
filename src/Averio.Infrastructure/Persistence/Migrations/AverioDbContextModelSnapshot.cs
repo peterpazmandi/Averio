@@ -66,15 +66,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
-                    b.Property<Guid?>("OwnerHouseholdMemberId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("owner_household_member_id");
-
-                    b.Property<string>("Ownership")
+                    b.Property<string>("Scope")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
-                        .HasColumnName("ownership");
+                        .HasColumnName("scope");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -100,11 +96,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("HouseholdId", "Id")
+                        .HasName("ak_accounts_household_id_id");
+
                     b.HasIndex("HouseholdId");
-
-                    b.HasIndex("OwnerHouseholdMemberId");
-
-                    b.HasIndex("HouseholdId", "OwnerHouseholdMemberId");
 
                     b.HasIndex("HouseholdId", "Status");
 
@@ -114,8 +109,42 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_accounts_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
 
-                            t.HasCheckConstraint("ck_accounts_ownership_visibility", "(\r\n    (\r\n        ownership = 'Household'\r\n        AND owner_household_member_id IS NULL\r\n        AND visibility = 'Household'\r\n        AND include_in_household_reports = true\r\n    )\r\n    OR\r\n    (\r\n        ownership = 'Personal'\r\n        AND owner_household_member_id IS NOT NULL\r\n        AND (\r\n            visibility <> 'Private'\r\n            OR include_in_household_reports = false\r\n        )\r\n    )\r\n)");
+                            t.HasCheckConstraint("ck_accounts_scope", "scope IN ('Household', 'Personal')");
+
+                            t.HasCheckConstraint("ck_accounts_scope_visibility", "(scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)\nOR\n(scope = 'Personal' AND (visibility <> 'Private' OR NOT include_in_household_reports))");
+
+                            t.HasCheckConstraint("ck_accounts_status", "status IN ('Active', 'Archived')");
+
+                            t.HasCheckConstraint("ck_accounts_type", "type IN ('Checking', 'Savings', 'Cash', 'CreditCard')");
+
+                            t.HasCheckConstraint("ck_accounts_visibility", "visibility IN ('Household', 'Private')");
                         });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Accounts.AccountOwner", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.HasKey("AccountId", "HouseholdMemberId")
+                        .HasName("pk_account_owners");
+
+                    b.HasIndex("HouseholdId", "AccountId")
+                        .HasDatabaseName("ix_account_owners_household_account");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId")
+                        .HasDatabaseName("ix_account_owners_household_member");
+
+                    b.ToTable("account_owners", (string)null);
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>
@@ -156,9 +185,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.ToTable("households", null, t =>
                         {
-                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\r\nOR country_code ~ '^[A-Z]{2}$'");
+                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\nOR country_code ~ '^[A-Z]{2}$'");
 
-                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\r\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
+                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
                         });
                 });
 
@@ -425,11 +454,31 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Averio.Domain.Accounts.Account", b =>
                 {
+                    b.HasOne("Averio.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_accounts_households_household_id");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Accounts.AccountOwner", b =>
+                {
+                    b.HasOne("Averio.Domain.Accounts.Account", null)
+                        .WithMany("Owners")
+                        .HasForeignKey("HouseholdId", "AccountId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_account_owners_accounts");
+
                     b.HasOne("Averio.Domain.Households.HouseholdMember", null)
                         .WithMany()
-                        .HasForeignKey("HouseholdId", "OwnerHouseholdMemberId")
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
                         .HasPrincipalKey("HouseholdId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_account_owners_members");
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>
@@ -477,6 +526,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_tokens_users_user_id");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Accounts.Account", b =>
+                {
+                    b.Navigation("Owners");
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>

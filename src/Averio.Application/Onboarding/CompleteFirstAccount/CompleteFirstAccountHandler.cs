@@ -55,6 +55,7 @@ public sealed class CompleteFirstAccountHandler(
 
         await accountCreator.CreateAsync(
             command,
+            household,
             membership,
             cancellationToken);
 

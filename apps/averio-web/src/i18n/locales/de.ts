@@ -615,9 +615,6 @@ export const de = {
         title:
             'Übersicht',
 
-        greeting:
-            'Willkommen zurück, {{name}}',
-
         householdOverview:
             'Haushaltsübersicht',
 
@@ -646,6 +643,27 @@ export const de = {
             description:
                 'Füge ein Konto und deine ersten Transaktionen hinzu, um deine Übersicht aufzubauen.',
         },
+        greeting: 'Hallo, {{name}}',
+        recordedBalanceHelp:
+            'Diese Übersicht verwendet deine erfassten Kontostände. Transaktionen werden noch nicht berücksichtigt.',
+
+        householdBalances: 'Erfasste Haushaltssalden',
+        reportingCurrency: 'Berichtswährung: {{currency}}',
+        noConversion:
+            'Jede Währung wird separat angezeigt. Es erfolgt keine Währungsumrechnung.',
+        noReportedAccounts:
+            'Keine aktiven Konten sind in den Haushaltsberichten enthalten.',
+
+        recordedOn: 'Erfasst zum Ende des Tages {{date}}',
+        recordedBetween: 'Stichtage: {{from}}–{{to}}',
+
+        accountsTitle: 'Deine Konten',
+        manageAccounts: 'Konten verwalten',
+        noActiveAccounts: 'Du hast keine aktiven Konten.',
+
+        privateAccount: 'Privat · nicht in Haushaltsberichten enthalten',
+        includedAccount: 'In Haushaltsberichten enthalten',
+        excludedAccount: 'Nicht in Haushaltsberichten enthalten',
     },
 
     household: {

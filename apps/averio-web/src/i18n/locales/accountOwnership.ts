@@ -1,0 +1,62 @@
+export const accountOwnershipEN = {
+    "scope": "Financial scope",
+    "household": "Household finances",
+    "personal": "Personal finances",
+    "holders": "Named account holders",
+    "holdersHelp": "Select the people who hold this account. This is separate from whose finances it supports. Leave all unchecked for household cash or when no holder is recorded.",
+    "member": "Household member {{number}}",
+    "you": "you",
+    "noHolders": "No named holder recorded",
+    "personalHolderHelp": "Personal accounts must include you as a holder. Other selected holders can also access a private account.",
+    "visibility": "Who can see this account?",
+    "visible": "Everyone in this household",
+    "private": "Selected holders only",
+    "privateHelp": "Only the selected holders can see this account and its balance. It is excluded from household reports.",
+    "visibleHelp": "Everyone in this household can see this account and its balance.",
+    "reports": "Include in household reports",
+    "included": "Included",
+    "excluded": "Excluded",
+    "loadRequired": "Account holders could not be loaded. Retry before saving this account."
+};
+
+export const accountOwnershipDE = {
+    "scope": "Finanzieller Bereich",
+    "household": "Haushaltsfinanzen",
+    "personal": "Persönliche Finanzen",
+    "holders": "Eingetragene Kontoinhaber",
+    "holdersHelp": "Wähle die Personen aus, denen dieses Konto gehört. Dies ist unabhängig davon, welche Finanzen es unterstützt. Für Haushaltsbargeld oder unbekannte Inhaber kannst du alle Felder leer lassen.",
+    "member": "Haushaltsmitglied {{number}}",
+    "you": "du",
+    "noHolders": "Kein Kontoinhaber eingetragen",
+    "personalHolderHelp": "Bei persönlichen Konten musst du selbst als Inhaber ausgewählt sein. Weitere ausgewählte Inhaber können auch ein privates Konto sehen.",
+    "visibility": "Wer kann dieses Konto sehen?",
+    "visible": "Alle in diesem Haushalt",
+    "private": "Nur ausgewählte Kontoinhaber",
+    "privateHelp": "Nur die ausgewählten Kontoinhaber sehen dieses Konto und seinen Saldo. Es wird nicht in Haushaltsberichte einbezogen.",
+    "visibleHelp": "Alle in diesem Haushalt sehen dieses Konto und seinen Saldo.",
+    "reports": "In Haushaltsberichte einbeziehen",
+    "included": "Einbezogen",
+    "excluded": "Nicht einbezogen",
+    "loadRequired": "Die Kontoinhaber konnten nicht geladen werden. Bitte versuche es vor dem Speichern erneut."
+};
+
+export const accountOwnershipHU = {
+    "scope": "Pénzügyi felhasználás",
+    "household": "Háztartási pénzügyek",
+    "personal": "Személyes pénzügyek",
+    "holders": "Megadott számlatulajdonosok",
+    "holdersHelp": "Válaszd ki, kinek a nevén van a számla. Ez független attól, hogy kinek a pénzügyeit szolgálja. Háztartási készpénznél vagy ismeretlen tulajdonos esetén minden jelölést üresen hagyhatsz.",
+    "member": "Háztartástag {{number}}",
+    "you": "te",
+    "noHolders": "Nincs megadott számlatulajdonos",
+    "personalHolderHelp": "Személyes számla létrehozásakor magadat is ki kell választanod. A többi kiválasztott tulajdonos a privát számlát is láthatja.",
+    "visibility": "Ki láthatja ezt a számlát?",
+    "visible": "A háztartás minden tagja",
+    "private": "Csak a kiválasztott tulajdonosok",
+    "privateHelp": "Csak a kiválasztott tulajdonosok láthatják a számlát és az egyenlegét. Nem szerepel a háztartási kimutatásokban.",
+    "visibleHelp": "A háztartás minden tagja láthatja a számlát és az egyenlegét.",
+    "reports": "Szerepeljen a háztartási kimutatásokban",
+    "included": "Beleszámít",
+    "excluded": "Nem számít bele",
+    "loadRequired": "Nem sikerült betölteni a számlatulajdonosokat. Mentés előtt próbáld újra."
+};

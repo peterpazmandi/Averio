@@ -9,6 +9,11 @@ export const accountsQueryKeys = {
         includeArchived,
     ] as const,
 
+    ownerOptions: (userId: string, householdId: string) => [
+        ...accountsQueryKeys.household(userId, householdId),
+        'owner-options',
+    ] as const,
+
     detail: (userId: string, householdId: string, accountId: string) => [
         ...accountsQueryKeys.household(userId, householdId),
         'detail',

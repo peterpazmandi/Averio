@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { AccountOwnerResponse } from './AccountOwnerResponse';
+import {
+    AccountOwnerResponseFromJSON,
+    AccountOwnerResponseFromJSONTyped,
+    AccountOwnerResponseToJSON,
+    AccountOwnerResponseToJSONTyped,
+} from './AccountOwnerResponse';
+
 /**
  * 
  * @export
@@ -30,7 +38,7 @@ export interface AccountResponse {
     /**
      * 
      */
-    ownerHouseholdMemberId: string | null;
+    owners: Array<AccountOwnerResponse>;
     /**
      * 
      */
@@ -42,7 +50,7 @@ export interface AccountResponse {
     /**
      * 
      */
-    ownership: string;
+    scope: string;
     /**
      * 
      */
@@ -75,10 +83,10 @@ export interface AccountResponse {
 export function instanceOfAccountResponse(value: object): value is AccountResponse {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('householdId' in value) || value['householdId'] === undefined) return false;
-    if (!('ownerHouseholdMemberId' in value) || value['ownerHouseholdMemberId'] === undefined) return false;
+    if (!('owners' in value) || value['owners'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('type' in value) || value['type'] === undefined) return false;
-    if (!('ownership' in value) || value['ownership'] === undefined) return false;
+    if (!('scope' in value) || value['scope'] === undefined) return false;
     if (!('visibility' in value) || value['visibility'] === undefined) return false;
     if (!('includeInHouseholdReports' in value) || value['includeInHouseholdReports'] === undefined) return false;
     if (!('currency' in value) || value['currency'] === undefined) return false;
@@ -100,10 +108,10 @@ export function AccountResponseFromJSONTyped(json: any, ignoreDiscriminator: boo
         
         'id': json['id'],
         'householdId': json['householdId'],
-        'ownerHouseholdMemberId': json['ownerHouseholdMemberId'],
+        'owners': ((json['owners'] as Array<any>).map(AccountOwnerResponseFromJSON)),
         'name': json['name'],
         'type': json['type'],
-        'ownership': json['ownership'],
+        'scope': json['scope'],
         'visibility': json['visibility'],
         'includeInHouseholdReports': json['includeInHouseholdReports'],
         'currency': json['currency'],
@@ -126,10 +134,10 @@ export function AccountResponseToJSONTyped(value?: AccountResponse | null, ignor
         
         'id': value['id'],
         'householdId': value['householdId'],
-        'ownerHouseholdMemberId': value['ownerHouseholdMemberId'],
+        'owners': ((value['owners'] as Array<any>).map(AccountOwnerResponseToJSON)),
         'name': value['name'],
         'type': value['type'],
-        'ownership': value['ownership'],
+        'scope': value['scope'],
         'visibility': value['visibility'],
         'includeInHouseholdReports': value['includeInHouseholdReports'],
         'currency': value['currency'],

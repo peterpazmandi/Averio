@@ -14,7 +14,7 @@ public static class AccountAccess
             return false;
         }
 
-        return account.Ownership == AccountOwnership.Household
-            || account.OwnerHouseholdMemberId == membership.Id;
+        return account.Scope == AccountScope.Household
+            || account.Owners.Any(owner => owner.HouseholdMemberId == membership.Id);
     }
 }

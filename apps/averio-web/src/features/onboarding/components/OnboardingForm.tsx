@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -11,6 +11,12 @@ import type {
 
 import { FormField } from '../../../shared/components/FormField';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
+
+import { accountsQueries } from '../../accounts/api/accountsQueries';
+import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
+import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
+import { AccountOwnershipFields } from '../../accounts/components/AccountOwnershipFields';
+import type { AccountOwnershipValue } from '../../accounts/components/AccountOwnershipFields';
 
 import { authQueryKeys } from '../../authentication/api/authQueryKeys';
 
@@ -30,10 +36,6 @@ type AccountType =
     | 'Cash'
     | 'CreditCard';
 
-type AccountSharing =
-    | 'shared'
-    | 'personalVisible'
-    | 'private';
 
 type CreditCardBalanceKind =
     | 'owed'
@@ -52,11 +54,6 @@ function isAccountType(value: string): value is AccountType {
         || value === 'CreditCard';
 }
 
-function isAccountSharing(value: string): value is AccountSharing {
-    return value === 'shared'
-        || value === 'personalVisible'
-        || value === 'private';
-}
 
 function previousLocalDate(): string {
     const date = new Date();
@@ -122,13 +119,23 @@ export function OnboardingForm({
     const [accountType, setAccountType] =
         useState<AccountType>('Checking');
 
-    const [accountSharing, setAccountSharing] =
-        useState<AccountSharing>('shared');
+    const ownerOptionsQuery = useQuery({
+        ...accountsQueries.ownerOptions(userId, householdId),
+        enabled: isFirstAccountStep,
+    });
 
-    const [
-        includeInHouseholdReports,
-        setIncludeInHouseholdReports,
-    ] = useState(true);
+    // Null means the default has not been edited. Refetches never overwrite edits.
+    const [ownershipOverride, setOwnershipOverride] =
+        useState<AccountOwnershipValue | null>(null);
+
+    const ownershipValue: AccountOwnershipValue = ownershipOverride ?? {
+        scope: 'Household',
+        ownerHouseholdMemberIds: ownerOptionsQuery.data
+            ? [ownerOptionsQuery.data.currentMemberId]
+            : [],
+        visibility: 'Household',
+        includeInHouseholdReports: true,
+    };
 
     const [accountCurrencyOverride, setAccountCurrencyOverride] =
         useState<Currency | null>(null);
@@ -199,29 +206,14 @@ export function OnboardingForm({
                 ? -enteredAmount
                 : enteredAmount;
 
-        const ownership =
-            accountSharing === 'shared'
-                ? 'Household'
-                : 'Personal';
-
-        const visibility =
-            accountSharing === 'private'
-                ? 'Private'
-                : 'Household';
-
-        const includeInReports =
-            accountSharing === 'shared'
-                ? true
-                : accountSharing === 'private'
-                    ? false
-                    : includeInHouseholdReports;
+        if (!ownerOptionsQuery.isSuccess) {
+            throw new Error(t('accountOwnership.loadRequired'));
+        }
 
         return {
             name: accountName.trim(),
             type: accountType,
-            ownership,
-            visibility,
-            includeInHouseholdReports: includeInReports,
+            ...ownershipValue,
             currency: accountCurrency,
             balanceAnchorAmount,
             balanceAnchorDate,
@@ -282,6 +274,14 @@ export function OnboardingForm({
             ]);
 
             if (isFirstAccountStep) {
+                await Promise.all([
+                    queryClient.invalidateQueries({
+                        queryKey: accountsQueryKeys.household(userId, householdId),
+                    }),
+                    queryClient.invalidateQueries({
+                        queryKey: dashboardQueryKeys.household(userId, householdId),
+                    }),
+                ]);
                 await navigate({
                     to: '/app',
                     replace: true,
@@ -468,61 +468,27 @@ export function OnboardingForm({
                             </select>
                         </label>
 
-                        <label className="block space-y-2">
-                            <span className="text-sm font-medium">
-                                {t('onboarding.account.sharing')}
-                            </span>
-
-                            <select
-                                value={accountSharing}
-                                onChange={(event) => {
-                                    const value = event.target.value;
-
-                                    if (isAccountSharing(value)) {
-                                        setAccountSharing(value);
-                                    }
-                                }}
-                                className="
-                                    w-full rounded-xl border
-                                    border-slate-300 bg-white px-4 py-3
-                                    dark:border-slate-700 dark:bg-slate-950
-                                "
-                            >
-                                <option value="shared">
-                                    {t('onboarding.account.shared')}
-                                </option>
-                                <option value="personalVisible">
-                                    {t('onboarding.account.personalVisible')}
-                                </option>
-                                <option value="private">
-                                    {t('onboarding.account.private')}
-                                </option>
-                            </select>
-                        </label>
-
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            {accountSharing === 'private'
-                                ? t('onboarding.account.privateHelp')
-                                : t('onboarding.account.visibleHelp')}
-                        </p>
-
-                        {accountSharing === 'personalVisible' && (
-                            <label className="flex items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={includeInHouseholdReports}
-                                    onChange={(event) => {
-                                        setIncludeInHouseholdReports(
-                                            event.target.checked,
-                                        );
-                                    }}
-                                    className="mt-1"
-                                />
-
-                                <span>
-                                    {t('onboarding.account.includeInReports')}
-                                </span>
-                            </label>
+                        {ownerOptionsQuery.isPending && (
+                            <p role="status">{t('common.status.loading')}</p>
+                        )}
+                        {ownerOptionsQuery.isError && (
+                            <div role="alert" className="space-y-2">
+                                <p>{t('accountOwnership.loadRequired')}</p>
+                                <PrimaryButton
+                                    type="button"
+                                    loading={ownerOptionsQuery.isFetching}
+                                    onClick={() => { void ownerOptionsQuery.refetch(); }}
+                                >
+                                    {t('common.actions.retry')}
+                                </PrimaryButton>
+                            </div>
+                        )}
+                        {ownerOptionsQuery.isSuccess && (
+                            <AccountOwnershipFields
+                                options={ownerOptionsQuery.data}
+                                value={ownershipValue}
+                                onChange={setOwnershipOverride}
+                            />
                         )}
 
                         <label className="block space-y-2">
@@ -646,7 +612,7 @@ export function OnboardingForm({
             <PrimaryButton
                 type="submit"
                 loading={isSubmitting}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (isFirstAccountStep && !ownerOptionsQuery.isSuccess)}
             >
                 {isFirstAccountStep
                     ? t('onboarding.finishSetup')

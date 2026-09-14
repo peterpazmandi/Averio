@@ -1,5 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './AccountOwnerOptionsResponse';
+export * from './AccountOwnerResponse';
 export * from './AccountResponse';
 export * from './CompleteOnboardingRequest';
 export * from './CreateAccountRequest';

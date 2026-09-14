@@ -1,6 +1,6 @@
 namespace Averio.Domain.Accounts;
 
-public enum AccountOwnership
+public enum AccountScope
 {
     Household = 1,
     Personal = 2,

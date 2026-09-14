@@ -3,7 +3,8 @@ namespace Averio.Contracts.Accounts;
 public sealed record CreateAccountRequest(
     string Name,
     string Type,
-    string Ownership,
+    string Scope,
+    IReadOnlyList<Guid> OwnerHouseholdMemberIds,
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,
@@ -12,13 +13,19 @@ public sealed record CreateAccountRequest(
 
 public sealed record CreateAccountResponse(Guid Id);
 
+public sealed record AccountOwnerResponse(Guid HouseholdMemberId, string? DisplayName);
+
+public sealed record AccountOwnerOptionsResponse(
+    Guid CurrentMemberId,
+    IReadOnlyList<AccountOwnerResponse> Members);
+
 public sealed record AccountResponse(
     Guid Id,
     Guid HouseholdId,
-    Guid? OwnerHouseholdMemberId,
+    IReadOnlyList<AccountOwnerResponse> Owners,
     string Name,
     string Type,
-    string Ownership,
+    string Scope,
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,

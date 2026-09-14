@@ -12,7 +12,8 @@ namespace Averio.Application.Accounts.GetAccounts;
 public sealed class GetAccountsHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
-    IAccountRepository accountRepository)
+    IAccountRepository accountRepository,
+    HouseholdMemberDirectory memberDirectory)
 {
     public async Task<IEnumerable<AccountResult>> HandleAsync(
         Guid householdId,
@@ -38,8 +39,9 @@ public sealed class GetAccountsHandler(
             includeArchived,
             cancellationToken);
 
+        var names = await memberDirectory.GetAsync(household, cancellationToken);
         return accounts
-            .Select(AccountResult.From)
+            .Select(account => AccountResult.From(account, names))
             .ToArray();
     }
 }

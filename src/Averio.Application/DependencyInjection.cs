@@ -1,3 +1,8 @@
+using Averio.Application.Accounts.CreateAccount;
+using Averio.Application.Accounts.GetAccount;
+using Averio.Application.Accounts.GetAccounts;
+using Averio.Application.Accounts.GetAccountOwnerOptions;
+using Averio.Application.Onboarding.SaveOnboardingProfile;
 using Averio.Application.Identity.GetCurrentUser;
 using Averio.Application.Identity.Login;
 using Averio.Application.Identity.RegisterUser;
@@ -55,6 +60,13 @@ public static class DependencyInjection
         services.AddScoped<RestoreAccountHandler>();
 
         services.AddScoped<GetDashboardHandler>();
+
+        services.AddScoped<CreateAccountHandler>();
+        services.AddScoped<GetAccountHandler>();
+        services.AddScoped<GetAccountsHandler>();
+        services.AddScoped<SaveOnboardingProfileHandler>();
+        services.AddScoped<HouseholdMemberDirectory>();
+        services.AddScoped<GetAccountOwnerOptionsHandler>();
 
         return services;
     }

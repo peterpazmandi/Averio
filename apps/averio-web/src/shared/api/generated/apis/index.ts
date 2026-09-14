@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './AccountOwnerOptionsApi';
 export * from './AccountsApi';
 export * from './AuthApi';
 export * from './DashboardApi';

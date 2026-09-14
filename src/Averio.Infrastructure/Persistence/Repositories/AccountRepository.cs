@@ -50,11 +50,11 @@ internal sealed class AccountRepository(
         Guid householdId,
         Guid memberId)
     {
-        return dbContext.Accounts.Where(account =>
+        return dbContext.Accounts.Include(account => account.Owners).Where(account =>
             account.HouseholdId == householdId
             && (
                 account.Visibility == AccountVisibility.Household
-                || account.OwnerHouseholdMemberId == memberId
+                || account.Owners.Any(owner => owner.HouseholdMemberId == memberId)
             ));
     }
 }

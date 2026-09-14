@@ -1,6 +1,7 @@
 import { apiFetch } from '../../../shared/api/apiFetch';
 
 import type {
+    AccountOwnerOptionsResponse,
     AccountResponse,
     CreateAccountRequest,
     CreateAccountResponse,
@@ -32,5 +33,16 @@ export function createAccount(
             method: 'POST',
             body: JSON.stringify(request),
         },
+    );
+}
+
+export function getAccountOwnerOptions(
+    householdId: string,
+    signal?: AbortSignal,
+): Promise<AccountOwnerOptionsResponse> {
+    const id = encodeURIComponent(householdId);
+    return apiFetch<AccountOwnerOptionsResponse>(
+        `/api/v1/households/${id}/account-owner-options`,
+        { signal },
     );
 }

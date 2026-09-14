@@ -11,10 +11,11 @@ internal static class AccountResponseMapper
         return new AccountResponse(
             result.Id,
             result.HouseholdId,
-            result.OwnerHouseholdMemberId,
+            result.Owners.Select(owner => new AccountOwnerResponse(
+                owner.HouseholdMemberId, owner.DisplayName)).ToArray(),
             result.Name,
             result.Type,
-            result.Ownership,
+            result.Scope,
             result.Visibility,
             result.IncludeInHouseholdReports,
             result.Currency,

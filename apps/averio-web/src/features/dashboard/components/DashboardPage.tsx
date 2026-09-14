@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
+import { AccountOwnershipSummary } from '../../accounts/components/AccountOwnershipSummary';
 import { dashboardQueries } from '../api/dashboardQueries';
 
 interface DashboardPageProps {
@@ -215,13 +216,7 @@ export function DashboardPage({
                                     {account.name}
                                 </h3>
 
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    {account.visibility === 'Private'
-                                        ? t('app.dashboard.privateAccount')
-                                        : account.includeInHouseholdReports
-                                            ? t('app.dashboard.includedAccount')
-                                            : t('app.dashboard.excludedAccount')}
-                                </p>
+                                <AccountOwnershipSummary account={account} />
 
                                 <p className="mt-4 text-2xl font-semibold">
                                     {formatMoney(

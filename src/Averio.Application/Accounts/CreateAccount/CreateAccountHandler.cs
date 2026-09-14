@@ -36,6 +36,7 @@ public sealed class CreateAccountHandler(
 
         var account = await accountCreator.CreateAsync(
             command,
+            household,
             membership,
             cancellationToken);
 

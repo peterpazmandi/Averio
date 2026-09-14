@@ -2,13 +2,15 @@ using Averio.Domain.Accounts;
 
 namespace Averio.Application.Accounts.Common;
 
+public sealed record AccountOwnerResult(Guid HouseholdMemberId, string? DisplayName);
+
 public sealed record AccountResult(
     Guid Id,
     Guid HouseholdId,
-    Guid? OwnerHouseholdMemberId,
+    IReadOnlyList<AccountOwnerResult> Owners,
     string Name,
     string Type,
-    string Ownership,
+    string Scope,
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,
@@ -16,20 +18,22 @@ public sealed record AccountResult(
     DateOnly BalanceAnchorDate,
     string Status)
 {
-    public static AccountResult From(Account account)
+    public static AccountResult From(
+        Account account,
+        IReadOnlyDictionary<Guid, string?> memberNames)
     {
+        var owners = account.Owners
+            .OrderBy(owner => owner.HouseholdMemberId)
+            .Select(owner => new AccountOwnerResult(
+                owner.HouseholdMemberId,
+                memberNames.GetValueOrDefault(owner.HouseholdMemberId)))
+            .ToArray();
+
         return new AccountResult(
-            account.Id,
-            account.HouseholdId,
-            account.OwnerHouseholdMemberId,
-            account.Name,
-            account.Type.ToString(),
-            account.Ownership.ToString(),
-            account.Visibility.ToString(),
-            account.IncludeInHouseholdReports,
-            account.Currency.ToString(),
-            account.BalanceAnchorAmount,
-            account.BalanceAnchorDate,
-            account.Status.ToString());
+            account.Id, account.HouseholdId, owners, account.Name,
+            account.Type.ToString(), account.Scope.ToString(),
+            account.Visibility.ToString(), account.IncludeInHouseholdReports,
+            account.Currency.Value, account.BalanceAnchorAmount,
+            account.BalanceAnchorDate, account.Status.ToString());
     }
 }

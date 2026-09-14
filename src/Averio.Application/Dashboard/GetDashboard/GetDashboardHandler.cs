@@ -10,7 +10,8 @@ public sealed class GetDashboardHandler(
     ICurrentUser currentUser,
     IIdentityService identityService,
     IHouseholdRepository householdRepository,
-    IAccountRepository accountRepository)
+    IAccountRepository accountRepository,
+    HouseholdMemberDirectory memberDirectory)
 {
     public async Task<DashboardResult> HandleAsync(
         Guid householdId,
@@ -72,8 +73,9 @@ public sealed class GetDashboardHandler(
             .ThenBy(balance => balance.Currency)
             .ToArray();
 
+        var names = await memberDirectory.GetAsync(household, cancellationToken);
         var accounts = activeAccounts
-            .Select(AccountResult.From)
+            .Select(account => AccountResult.From(account, names))
             .ToArray();
 
         return new DashboardResult(
