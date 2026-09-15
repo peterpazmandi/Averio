@@ -87,14 +87,14 @@ export function DashboardPage({
             <header>
                 <h1 className="text-3xl font-semibold">
                     {dashboard.displayName
-                        ? t('app.dashboard.greeting', {
+                        ? t('dashboard.greeting', {
                             name: dashboard.displayName,
                         })
-                        : t('app.dashboard.title')}
+                        : t('dashboard.title')}
                 </h1>
 
                 <p className="mt-2 text-slate-600 dark:text-slate-400">
-                    {t('app.dashboard.recordedBalanceHelp')}
+                    {t('dashboard.recordedBalanceHelp')}
                 </p>
             </header>
 
@@ -107,23 +107,23 @@ export function DashboardPage({
                         id="household-balances-title"
                         className="text-xl font-semibold"
                     >
-                        {t('app.dashboard.householdBalances')}
+                        {t('dashboard.householdBalances')}
                     </h2>
 
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        {t('app.dashboard.reportingCurrency', {
+                        {t('dashboard.reportingCurrency', {
                             currency: dashboard.reportingCurrency,
                         })}
                     </p>
 
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        {t('app.dashboard.noConversion')}
+                        {t('dashboard.noConversion')}
                     </p>
                 </div>
 
                 {dashboard.householdBalances.length === 0 ? (
                     <p className="text-slate-600 dark:text-slate-400">
-                        {t('app.dashboard.noReportedAccounts')}
+                        {t('dashboard.noReportedAccounts')}
                     </p>
                 ) : (
                     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -151,12 +151,12 @@ export function DashboardPage({
                                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                                     {balance.earliestBalanceDate
                                         === balance.latestBalanceDate
-                                        ? t('app.dashboard.recordedOn', {
+                                        ? t('dashboard.recordedOn', {
                                             date: formatDate(
                                                 balance.latestBalanceDate,
                                             ),
                                         })
-                                        : t('app.dashboard.recordedBetween', {
+                                        : t('dashboard.recordedBetween', {
                                             from: formatDate(
                                                 balance.earliestBalanceDate,
                                             ),
@@ -180,7 +180,7 @@ export function DashboardPage({
                         id="dashboard-accounts-title"
                         className="text-xl font-semibold"
                     >
-                        {t('app.dashboard.accountsTitle')}
+                        {t('dashboard.accountsTitle')}
                     </h2>
 
                     <Link
@@ -192,13 +192,13 @@ export function DashboardPage({
                             dark:text-primary-300
                         "
                     >
-                        {t('app.dashboard.manageAccounts')}
+                        {t('dashboard.manageAccounts')}
                     </Link>
                 </div>
 
                 {dashboard.accounts.length === 0 ? (
                     <p className="text-slate-600 dark:text-slate-400">
-                        {t('app.dashboard.noActiveAccounts')}
+                        {t('dashboard.noActiveAccounts')}
                     </p>
                 ) : (
                     <ul className="grid gap-4 sm:grid-cols-2">
@@ -226,7 +226,7 @@ export function DashboardPage({
                                 </p>
 
                                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                    {t('app.dashboard.recordedOn', {
+                                    {t('dashboard.recordedOn', {
                                         date: formatDate(
                                             account.balanceAnchorDate,
                                         ),
