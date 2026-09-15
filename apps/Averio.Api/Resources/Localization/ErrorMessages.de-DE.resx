@@ -195,4 +195,72 @@
   <data name="Error_OperationForbidden" xml:space="preserve">
     <value>Du hast keine Berechtigung, diese Aktion auszuführen.</value>
   </data>
+
+  <data name="Validation_HouseholdRequired" xml:space="preserve">
+    <value>Ein Haushalt ist erforderlich.</value>
+  </data>
+
+  <data name="Validation_AccountNameRequired" xml:space="preserve">
+    <value>Gib einen Kontonamen ein.</value>
+  </data>
+
+  <data name="Validation_AccountNameTooLong" xml:space="preserve">
+    <value>Der Kontoname darf höchstens 100 Zeichen enthalten.</value>
+  </data>
+
+  <data name="Validation_AccountTypeInvalid" xml:space="preserve">
+    <value>Wähle einen gültigen Kontotyp aus.</value>
+  </data>
+
+  <data name="Validation_AccountScopeInvalid" xml:space="preserve">
+    <value>Wähle aus, ob dieses Konto für Haushaltsfinanzen oder persönliche Finanzen verwendet wird.</value>
+  </data>
+
+  <data name="Validation_AccountVisibilityInvalid" xml:space="preserve">
+    <value>Wähle eine gültige Sichtbarkeit für das Konto aus.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceInvalid" xml:space="preserve">
+    <value>Gib einen Kontostand mit höchstens 15 Stellen vor dem Dezimaltrennzeichen und 4 Stellen danach ein.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceDateRequired" xml:space="preserve">
+    <value>Wähle das Datum aus, für das dieser Kontostand gilt.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersRequired" xml:space="preserve">
+    <value>Angaben zu den Kontoinhabern sind erforderlich. Wenn ein Haushaltskonto keine benannten Kontoinhaber hat, übermittle eine leere Liste.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersInvalid" xml:space="preserve">
+    <value>Wähle gültige Haushaltsmitglieder als Kontoinhaber aus. Jedes Mitglied darf nur einmal ausgewählt werden.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountRequiresOwner" xml:space="preserve">
+    <value>Wähle mindestens einen Kontoinhaber für ein persönliches Konto aus.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeVisible" xml:space="preserve">
+    <value>Ein Konto für Haushaltsfinanzen muss für den Haushalt sichtbar sein.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeIncluded" xml:space="preserve">
+    <value>Ein Konto für Haushaltsfinanzen muss in Haushaltsberichten berücksichtigt werden.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountMustBePersonal" xml:space="preserve">
+    <value>Ein privates Konto muss für persönliche Finanzen verwendet werden.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountCannotBeIncluded" xml:space="preserve">
+    <value>Ein privates Konto darf nicht in Haushaltsberichten berücksichtigt werden.</value>
+  </data>
+
+  <data name="Validation_AccountOwnerOutsideHousehold" xml:space="preserve">
+    <value>Alle ausgewählten Kontoinhaber müssen diesem Haushalt angehören.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
+    <value>Wenn du ein persönliches Konto erstellst, musst du dich selbst als Kontoinhaber angeben.</value>
+  </data>
 </root>

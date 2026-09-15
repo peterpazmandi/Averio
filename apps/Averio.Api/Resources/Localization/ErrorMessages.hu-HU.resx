@@ -195,4 +195,72 @@
   <data name="Error_OperationForbidden" xml:space="preserve">
     <value>Nincs jogosultságod ehhez a művelethez.</value>
   </data>
+
+  <data name="Validation_HouseholdRequired" xml:space="preserve">
+    <value>A háztartás megadása kötelező.</value>
+  </data>
+
+  <data name="Validation_AccountNameRequired" xml:space="preserve">
+    <value>Add meg a számla nevét.</value>
+  </data>
+
+  <data name="Validation_AccountNameTooLong" xml:space="preserve">
+    <value>A számla neve legfeljebb 100 karakter lehet.</value>
+  </data>
+
+  <data name="Validation_AccountTypeInvalid" xml:space="preserve">
+    <value>Válassz érvényes számlatípust.</value>
+  </data>
+
+  <data name="Validation_AccountScopeInvalid" xml:space="preserve">
+    <value>Válaszd ki, hogy a számla a háztartás közös pénzügyeit vagy személyes pénzügyeket szolgál.</value>
+  </data>
+
+  <data name="Validation_AccountVisibilityInvalid" xml:space="preserve">
+    <value>Válassz érvényes láthatósági beállítást a számlához.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceInvalid" xml:space="preserve">
+    <value>Olyan egyenleget adj meg, amelyben a tizedesjel előtt legfeljebb 15, utána pedig legfeljebb 4 számjegy szerepel.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceDateRequired" xml:space="preserve">
+    <value>Válaszd ki, hogy melyik dátumra vonatkozik az egyenleg.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersRequired" xml:space="preserve">
+    <value>A számlatulajdonosok listájának megadása kötelező. Ha a háztartási számlának nincs megnevezett tulajdonosa, adj meg üres listát.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersInvalid" xml:space="preserve">
+    <value>Érvényes háztartástagokat válassz számlatulajdonosnak, és minden tagot csak egyszer jelölj ki.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountRequiresOwner" xml:space="preserve">
+    <value>Személyes számlához legalább egy számlatulajdonost ki kell választanod.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeVisible" xml:space="preserve">
+    <value>A háztartás közös pénzügyeit szolgáló számlának láthatónak kell lennie a háztartás számára.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeIncluded" xml:space="preserve">
+    <value>A háztartás közös pénzügyeit szolgáló számlának szerepelnie kell a háztartási kimutatásokban.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountMustBePersonal" xml:space="preserve">
+    <value>Privát láthatóságot csak személyes pénzügyeket szolgáló számlához választhatsz.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountCannotBeIncluded" xml:space="preserve">
+    <value>Privát számla nem szerepelhet a háztartási kimutatásokban.</value>
+  </data>
+
+  <data name="Validation_AccountOwnerOutsideHousehold" xml:space="preserve">
+    <value>Minden kiválasztott számlatulajdonosnak ehhez a háztartáshoz kell tartoznia.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
+    <value>Személyes számla létrehozásakor magadat is ki kell választanod számlatulajdonosnak.</value>
+  </data>
 </root>
