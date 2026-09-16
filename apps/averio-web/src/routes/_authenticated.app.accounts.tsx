@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { useAuth } from '../features/authentication/context/AuthProvider';
 import { AccountsPage } from '../features/accounts/components/AccountsPage';
 
 export const Route = createFileRoute(
@@ -9,7 +10,17 @@ export const Route = createFileRoute(
 });
 
 function AccountsRoute() {
-    const { user } = Route.useRouteContext();
+    const auth = useAuth();
+
+    if (
+        auth.status !== 'authenticated'
+        || !auth.user
+        || auth.user.onboardingRequired
+    ) {
+        return null;
+    }
+
+    const user = auth.user;
 
     return (
         <AccountsPage

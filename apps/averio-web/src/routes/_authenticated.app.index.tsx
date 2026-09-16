@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { useAuth } from '../features/authentication/context/AuthProvider';
 import { DashboardPage } from '../features/dashboard/components/DashboardPage';
 
 export const Route = createFileRoute('/_authenticated/app/')({
@@ -7,7 +8,17 @@ export const Route = createFileRoute('/_authenticated/app/')({
 });
 
 function DashboardRoute() {
-    const { user } = Route.useRouteContext();
+    const auth = useAuth();
+
+    if (
+        auth.status !== 'authenticated'
+        || !auth.user
+        || auth.user.onboardingRequired
+    ) {
+        return null;
+    }
+
+    const user = auth.user;
 
     return (
         <DashboardPage
