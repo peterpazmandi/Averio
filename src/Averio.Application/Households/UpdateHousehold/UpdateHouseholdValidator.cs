@@ -3,7 +3,8 @@ using FluentValidation;
 
 namespace Averio.Application.Households.UpdateHousehold
 {
-    public sealed class UpdateHouseholdValidator : AbstractValidator<UpdateHouseholdCommand>
+    public sealed class UpdateHouseholdValidator
+        : AbstractValidator<UpdateHouseholdCommand>
     {
         public UpdateHouseholdValidator()
         {
@@ -24,7 +25,10 @@ namespace Averio.Application.Households.UpdateHousehold
                 .NotEmpty()
                 .WithErrorCode("Validation_CurrencyRequired")
                 .Must(value => CurrencyCode.IsSupported(value))
-                .WithErrorCode("Validation_CurrencyInvalid");
+                .WithErrorCode("Validation_CurrencyInvalid")
+                .When(
+                    x => x.PreferredCurrency is not null,
+                    ApplyConditionTo.AllValidators);
         }
     }
 }
