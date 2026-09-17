@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Averio.Contracts.Accounts;
 
 public sealed record CreateAccountRequest(
@@ -8,12 +10,14 @@ public sealed record CreateAccountRequest(
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,
-    string BalanceAnchorAmount,
+    [property: JsonRequired] string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate);
 
 public sealed record CreateAccountResponse(Guid Id);
 
-public sealed record AccountOwnerResponse(Guid HouseholdMemberId, string? DisplayName);
+public sealed record AccountOwnerResponse(
+    Guid HouseholdMemberId,
+    string? DisplayName);
 
 public sealed record AccountOwnerOptionsResponse(
     Guid CurrentMemberId,
