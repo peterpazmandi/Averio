@@ -1,16 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { AverioBrand } from "../../../shared/components/branding/AverioBrand";
-import { BentoCard } from "../../../shared/components/layout/BentoCard";
-import { PreferencesToolbar } from "../../../shared/components/preferences/PreferencesToolbar";
-import { PrimaryButton } from "../../../shared/components/PrimaryButton";
-import { onboardingQueries } from "../api/onboardingQueries";
-import { OnboardingForm } from "./OnboardingForm";
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+
+import { AverioBrand } from '../../../shared/components/branding/AverioBrand';
+import { BentoCard } from '../../../shared/components/layout/BentoCard';
+import { PreferencesToolbar } from '../../../shared/components/preferences/PreferencesToolbar';
+import { PrimaryButton } from '../../../shared/components/PrimaryButton';
+
+import { onboardingQueries } from '../api/onboardingQueries';
+import { OnboardingCompleted } from './OnboardingCompleted';
+import { OnboardingForm } from './OnboardingForm';
 
 /**
  * Loads onboarding data using this user's query key.
  *
- * The form is mounted only when data is available.
+ * Completed server state starts the transition into the app.
+ * Otherwise, the form is mounted when data is available.
  */
 export function OnboardingForUser({
     userId,
@@ -19,7 +23,9 @@ export function OnboardingForUser({
 }) {
     const { t } = useTranslation();
 
-    const statusQuery = useQuery(onboardingQueries.status(userId));
+    const statusQuery = useQuery(
+        onboardingQueries.status(userId),
+    );
 
     return (
         <main
@@ -36,11 +42,12 @@ export function OnboardingForUser({
             "
         >
             <div className="mx-auto max-w-5xl">
-                <header className="
-                            flex flex-wrap
-                            items-center justify-between
-                            gap-4
-                        "
+                <header
+                    className="
+                        flex flex-wrap
+                        items-center justify-between
+                        gap-4
+                    "
                 >
                     <AverioBrand />
                     <PreferencesToolbar />
@@ -104,7 +111,12 @@ export function OnboardingForUser({
                     </section>
 
                     <BentoCard className="p-6 sm:p-8">
-                        {statusQuery.data ? (
+                        {statusQuery.data?.completed ? (
+                            <OnboardingCompleted
+                                key={userId}
+                                userId={userId}
+                            />
+                        ) : statusQuery.data ? (
                             <OnboardingForm
                                 key={userId}
                                 userId={userId}
