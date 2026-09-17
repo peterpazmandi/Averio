@@ -19,7 +19,7 @@ internal static class AccountResponseMapper
             result.Visibility,
             result.IncludeInHouseholdReports,
             result.Currency,
-            result.BalanceAnchorAmount,
+            DecimalAmountMapper.Format(result.BalanceAnchorAmount),
             result.BalanceAnchorDate,
             result.Status);
     }

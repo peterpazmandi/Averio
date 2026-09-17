@@ -25,7 +25,7 @@ public sealed class DashboardController(
         var balances = result.HouseholdBalances
             .Select(balance => new HouseholdBalanceResponse(
                 balance.Currency,
-                balance.Amount,
+                DecimalAmountMapper.Format(balance.Amount),
                 balance.EarliestBalanceDate,
                 balance.LatestBalanceDate))
             .ToArray();

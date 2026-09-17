@@ -26,7 +26,7 @@ export interface HouseholdBalanceResponse {
     /**
      * 
      */
-    amount: any | null;
+    amount: string;
     /**
      * 
      */

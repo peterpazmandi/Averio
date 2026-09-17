@@ -10,6 +10,6 @@ public sealed record DashboardResponse(
 
 public sealed record HouseholdBalanceResponse(
     string Currency,
-    decimal Amount,
+    string Amount,
     DateOnly EarliestBalanceDate,
     DateOnly LatestBalanceDate);

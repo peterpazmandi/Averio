@@ -8,7 +8,7 @@ public sealed record CreateAccountRequest(
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,
-    decimal BalanceAnchorAmount,
+    string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate);
 
 public sealed record CreateAccountResponse(Guid Id);
@@ -29,6 +29,6 @@ public sealed record AccountResponse(
     string Visibility,
     bool IncludeInHouseholdReports,
     string Currency,
-    decimal BalanceAnchorAmount,
+    string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate,
     string Status);

@@ -50,7 +50,7 @@ export interface CreateAccountRequest {
     /**
      * 
      */
-    balanceAnchorAmount: any | null;
+    balanceAnchorAmount: string;
     /**
      * 
      */

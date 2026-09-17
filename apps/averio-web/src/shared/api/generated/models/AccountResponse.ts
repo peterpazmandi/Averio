@@ -66,7 +66,7 @@ export interface AccountResponse {
     /**
      * 
      */
-    balanceAnchorAmount: any | null;
+    balanceAnchorAmount: string;
     /**
      * 
      */

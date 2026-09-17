@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
 import { AccountOwnershipSummary } from '../../accounts/components/AccountOwnershipSummary';
 import { dashboardQueries } from '../api/dashboardQueries';
@@ -62,15 +63,10 @@ export function DashboardPage({
         ?? i18n.language;
 
     function formatMoney(
-        amount: number,
+        amount: string,
         currency: string,
     ): string {
-        return new Intl.NumberFormat(language, {
-            style: 'currency',
-            currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 4,
-        }).format(amount);
+        return formatDecimalAmount(amount, currency, language);
     }
 
     function formatDate(value: string): string {

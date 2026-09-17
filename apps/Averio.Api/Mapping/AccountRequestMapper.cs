@@ -28,7 +28,7 @@ internal static class AccountRequestMapper
                 "Validation_AccountVisibilityInvalid"),
             request.IncludeInHouseholdReports,
             request.Currency,
-            request.BalanceAnchorAmount,
+            DecimalAmountMapper.ParseBalance(request.BalanceAnchorAmount),
             request.BalanceAnchorDate);
     }
 }

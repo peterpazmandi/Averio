@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
+import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
 import { AccountOwnershipSummary } from './AccountOwnershipSummary';
 import { accountsQueries } from '../api/accountsQueries';
@@ -106,13 +107,11 @@ export function AccountsPage({
                             </p>
 
                             <p className="mt-1 text-2xl font-semibold">
-                                {new Intl.NumberFormat(
+                                {formatDecimalAmount(
+                                    account.balanceAnchorAmount,
+                                    account.currency,
                                     language,
-                                    {
-                                        style: 'currency',
-                                        currency: account.currency,
-                                    },
-                                ).format(account.balanceAnchorAmount)}
+                                )}
                             </p>
 
                             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">

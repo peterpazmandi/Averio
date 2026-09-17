@@ -9,6 +9,11 @@ import type {
     OnboardingStatusResponse,
 } from '../../../shared/api/generated';
 
+import {
+    normalizeBalanceInput,
+    negateDecimalAmount,
+} from '../../../shared/money/decimalAmount';
+
 import { FormField } from '../../../shared/components/FormField';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
 
@@ -180,11 +185,10 @@ export function OnboardingForm({
     });
 
     function buildAccountRequest(): CreateAccountRequest {
-        const enteredAmount = Number(balanceAmount);
+        const enteredAmount = normalizeBalanceInput(balanceAmount);
 
         if (
-            balanceAmount.trim() === ''
-            || !Number.isFinite(enteredAmount)
+            enteredAmount === null
         ) {
             throw new Error(
                 t('onboarding.account.invalidBalance'),
@@ -193,7 +197,7 @@ export function OnboardingForm({
 
         if (
             accountType === 'CreditCard'
-            && enteredAmount < 0
+            && enteredAmount.startsWith('-')
         ) {
             throw new Error(
                 t('onboarding.account.enterPositiveAmount'),
@@ -203,7 +207,7 @@ export function OnboardingForm({
         const balanceAnchorAmount =
             accountType === 'CreditCard'
                 && creditCardBalanceKind === 'owed'
-                ? -enteredAmount
+                ? negateDecimalAmount(enteredAmount)
                 : enteredAmount;
 
         if (!ownerOptionsQuery.isSuccess) {
@@ -563,14 +567,8 @@ export function OnboardingForm({
                                         : t('onboarding.account.credit')
                                     : t('onboarding.account.balance')
                             }
-                            type="number"
+                            type="text"
                             inputMode="decimal"
-                            step="0.0001"
-                            min={
-                                accountType === 'CreditCard'
-                                    ? 0
-                                    : undefined
-                            }
                             value={balanceAmount}
                             required
                             onChange={(event) => {
