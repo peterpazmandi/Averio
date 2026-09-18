@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ConceptBrand } from '../../../shared/components/concept/ConceptBrand';
+import { AverioBrand } from '../../../shared/components/branding/AverioBrand';
 import { ConceptPreferences } from '../../../shared/components/concept/ConceptPreferences';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { onboardingQueries } from '../api/onboardingQueries';
@@ -24,7 +24,7 @@ export function OnboardingForUser({ userId }: { userId: string }) {
     return (
         <main className="av-ui av-onboarding">
             <header className="av-onboarding-top">
-                <ConceptBrand />
+                <div className="av-brand"><AverioBrand /></div>
                 <ConceptPreferences />
             </header>
 

@@ -8,7 +8,7 @@ import { AppNavigation } from './AppNavigation';
 import { logoutUser } from '../../features/authentication/api/authApi';
 import { useAuth } from '../../features/authentication/context/AuthProvider';
 import { onboardingQueries } from '../../features/onboarding/api/onboardingQueries';
-import { ConceptBrand } from './concept/ConceptBrand';
+import { AverioBrand } from './branding/AverioBrand';
 import { ConceptIcon } from './concept/ConceptIcon';
 import { ConceptPreferences } from './concept/ConceptPreferences';
 import '../styles/concept.css';
@@ -64,7 +64,7 @@ export function AppShell({ children }: PropsWithChildren) {
     function sidebarContent() {
         return (
             <>
-                <ConceptBrand />
+                <div className="av-brand"><AverioBrand variant="on-dark" /></div>
                 <div className="av-workspace">
                     <div className="av-workspace-label">{t('concept.currentHousehold')}</div>
                     <div className="av-workspace-main">
