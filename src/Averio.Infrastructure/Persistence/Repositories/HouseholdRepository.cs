@@ -45,4 +45,47 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
                             member.UserId == userId),
                 cancellationToken);
     }
+
+    public async Task<Household?> GetByIdForUserForUpdateAsync(
+    Guid householdId,
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        if (dbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "A transaction is required when locking a household.");
+        }
+
+        var households = await dbContext.Households
+            .FromSqlInterpolated(
+                $"""
+                    SELECT h.*
+                    FROM households AS h
+                    WHERE h.id = {householdId}
+                    AND EXISTS
+                    (
+                        SELECT 1
+                        FROM household_members AS m
+                        WHERE m.household_id = h.id
+                            AND m.user_id = {userId}
+                    )
+                    FOR UPDATE OF h
+                """)
+            .AsTracking()
+            .ToListAsync(cancellationToken);
+
+        var household = households.SingleOrDefault();
+
+        if (household is null)
+        {
+            return null;
+        }
+
+        await dbContext.Entry(household)
+            .Collection(value => value.Members)
+            .LoadAsync(cancellationToken);
+
+        return household;
+    }
 }

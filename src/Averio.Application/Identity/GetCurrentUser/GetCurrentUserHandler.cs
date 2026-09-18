@@ -29,6 +29,6 @@ public sealed class GetCurrentUserHandler(
             user.EmailConfirmed,
             household.Id,
             membership.Role,
-            !household.IsOnboardingCompleted);
+            !household.IsFinancialSetupCompleted);
     }
 }

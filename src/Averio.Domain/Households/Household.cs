@@ -24,7 +24,7 @@ public sealed class Household
 
     public string? CountryCode { get; private set; }
 
-    public CurrencyCode? PreferredCurrency { get; private set; }
+    public CurrencyCode? ReportingCurrency { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
@@ -32,7 +32,26 @@ public sealed class Household
 
     public bool IsOnboardingCompleted => OnboardingCompletedAtUtc.HasValue;
 
-    public IReadOnlyCollection<HouseholdMember> Members =>  _members;
+    public IReadOnlyCollection<HouseholdMember> Members => _members;
+    public DateTimeOffset? FinancialSetupCompletedAtUtc
+    {
+        get;
+        private set;
+    }
+
+    public bool IsFinancialSetupCompleted =>
+        IsOnboardingCompleted
+        && FinancialSetupCompletedAtUtc.HasValue;
+
+    public void CompleteFinancialSetup(DateTimeOffset now)
+    {
+        if (!IsOnboardingCompleted)
+        {
+            throw new InvalidOperationException("Household setup must be completed first.");
+        }
+
+        FinancialSetupCompletedAtUtc ??= now;
+    }
 
     public static Household CreateForUser(
         Guid userId,
@@ -99,6 +118,6 @@ public sealed class Household
 
         Name = normalizedName;
         CountryCode = normalizedCountryCode;
-        PreferredCurrency = preferredCurrency;
+        ReportingCurrency = preferredCurrency;
     }
 }

@@ -1,9 +1,10 @@
 using Averio.Application.Onboarding.CompleteOnboarding;
 using Averio.Application.Onboarding.GetOnboardingStatus;
 using Averio.Contracts.Onboarding;
-using Averio.Infrastructure.Onboarding.CompleteOnboarding;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Averio.Application.Onboarding.SaveOnboardingProfile;
+using Averio.Application.Onboarding.SaveOnboardingHousehold;
 
 namespace Averio.Api.Controllers;
 
@@ -12,7 +13,9 @@ namespace Averio.Api.Controllers;
 [Route("api/v1/onboarding")]
 public sealed class OnboardingController(
     GetOnboardingStatusHandler statusHandler,
-    CompleteOnboardingHandler completeHandler) : ControllerBase
+    CompleteOnboardingHandler completeHandler,
+    SaveOnboardingProfileHandler profileHandler,
+    SaveOnboardingHouseholdHandler householdHandler) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<OnboardingStatusResponse>> GetStatus(CancellationToken cancellationToken)
@@ -20,13 +23,14 @@ public sealed class OnboardingController(
         var result = await statusHandler.HandleAsync(cancellationToken);
 
         return Ok(new OnboardingStatusResponse(
-                result.Completed,
-                result.DisplayName,
-                new HouseholdSetupResponse(
-                    result.HouseholdId,
-                    result.HouseholdName,
-                    result.CountryCode,
-                    result.PreferredCurrency)));
+            result.Completed,
+            result.CurrentStep,
+            result.DisplayName,
+            new HouseholdSetupResponse(
+                result.HouseholdId,
+                result.HouseholdName,
+                result.CountryCode,
+                result.PreferredCurrency)));
     }
 
     [HttpPut]
@@ -36,6 +40,36 @@ public sealed class OnboardingController(
         await completeHandler.HandleAsync(
             new CompleteOnboardingCommand(
                 request.DisplayName,
+                request.HouseholdName,
+                request.CountryCode,
+                request.PreferredCurrency),
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPut("profile")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SaveProfile(
+        SaveOnboardingProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        await profileHandler.HandleAsync(
+            new SaveOnboardingProfileCommand(
+                request.DisplayName),
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPut("household")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SaveHousehold(
+        SaveOnboardingHouseholdRequest request,
+        CancellationToken cancellationToken)
+    {
+        await householdHandler.HandleAsync(
+            new SaveOnboardingHouseholdCommand(
                 request.HouseholdName,
                 request.CountryCode,
                 request.PreferredCurrency),

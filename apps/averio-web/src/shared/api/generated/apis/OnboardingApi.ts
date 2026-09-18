@@ -23,6 +23,30 @@ import {
     OnboardingStatusResponseFromJSON,
     OnboardingStatusResponseToJSON,
 } from '../models/OnboardingStatusResponse';
+import {
+    type SaveOnboardingHouseholdRequest,
+    SaveOnboardingHouseholdRequestFromJSON,
+    SaveOnboardingHouseholdRequestToJSON,
+} from '../models/SaveOnboardingHouseholdRequest';
+import {
+    type SaveOnboardingProfileRequest,
+    SaveOnboardingProfileRequestFromJSON,
+    SaveOnboardingProfileRequestToJSON,
+} from '../models/SaveOnboardingProfileRequest';
+
+export interface ApiV1OnboardingHouseholdPutRequest {
+    /**
+     * 
+     */
+    saveOnboardingHouseholdRequest: SaveOnboardingHouseholdRequest;
+}
+
+export interface ApiV1OnboardingProfilePutRequest {
+    /**
+     * 
+     */
+    saveOnboardingProfileRequest: SaveOnboardingProfileRequest;
+}
 
 export interface ApiV1OnboardingPutRequest {
     /**
@@ -69,6 +93,94 @@ export class OnboardingApi extends runtime.BaseAPI {
     async apiV1OnboardingGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OnboardingStatusResponse> {
         const response = await this.apiV1OnboardingGetRaw(initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1OnboardingHouseholdPut without sending the request
+     */
+    async apiV1OnboardingHouseholdPutRequestOpts(requestParameters: ApiV1OnboardingHouseholdPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['saveOnboardingHouseholdRequest'] == null) {
+            throw new runtime.RequiredError(
+                'saveOnboardingHouseholdRequest',
+                'Required parameter "saveOnboardingHouseholdRequest" was null or undefined when calling apiV1OnboardingHouseholdPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/onboarding/household`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SaveOnboardingHouseholdRequestToJSON(requestParameters['saveOnboardingHouseholdRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1OnboardingHouseholdPutRaw(requestParameters: ApiV1OnboardingHouseholdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1OnboardingHouseholdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1OnboardingHouseholdPut(requestParameters: ApiV1OnboardingHouseholdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1OnboardingHouseholdPutRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1OnboardingProfilePut without sending the request
+     */
+    async apiV1OnboardingProfilePutRequestOpts(requestParameters: ApiV1OnboardingProfilePutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['saveOnboardingProfileRequest'] == null) {
+            throw new runtime.RequiredError(
+                'saveOnboardingProfileRequest',
+                'Required parameter "saveOnboardingProfileRequest" was null or undefined when calling apiV1OnboardingProfilePut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/onboarding/profile`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SaveOnboardingProfileRequestToJSON(requestParameters['saveOnboardingProfileRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1OnboardingProfilePutRaw(requestParameters: ApiV1OnboardingProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1OnboardingProfilePutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1OnboardingProfilePut(requestParameters: ApiV1OnboardingProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1OnboardingProfilePutRaw(requestParameters, initOverrides);
     }
 
     /**

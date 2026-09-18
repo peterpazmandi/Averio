@@ -1,145 +1,86 @@
-import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { AverioBrand } from "../../../shared/components/branding/AverioBrand";
-import { BentoCard } from "../../../shared/components/layout/BentoCard";
-import { PreferencesToolbar } from "../../../shared/components/preferences/PreferencesToolbar";
-import { PrimaryButton } from "../../../shared/components/PrimaryButton";
-import { onboardingQueries } from "../api/onboardingQueries";
-import { OnboardingForm } from "./OnboardingForm";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { AverioBrand } from '../../../shared/components/branding/AverioBrand';
+import { ConceptPreferences } from '../../../shared/components/concept/ConceptPreferences';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
+import { onboardingQueries } from '../api/onboardingQueries';
+import { OnboardingCompleted } from './OnboardingCompleted';
+import { OnboardingForm } from './OnboardingForm';
+import type { OnboardingStep } from './OnboardingForm';
+import '../../../shared/styles/concept.css';
 
-/**
- * Loads onboarding data using this user's query key.
- *
- * The form is mounted only when data is available.
- */
-export function OnboardingForUser({
-    userId,
-}: {
-    userId: string;
-}) {
+const steps = ['profile', 'household', 'firstAccount'] as const;
+
+export function OnboardingForUser({ userId }: { userId: string }) {
     const { t } = useTranslation();
-
     const statusQuery = useQuery(onboardingQueries.status(userId));
+    const status = statusQuery.data;
+    const [viewedStep, setViewedStep] = useState<OnboardingStep | null>(null);
+    const currentStep = viewedStep ?? status?.currentStep;
+    const currentIndex = status?.completed ? steps.length
+        : steps.findIndex((step) => step === currentStep);
 
     return (
-        <main
-            className="
-                min-h-screen
-                bg-slate-50
-                px-5 py-8
-                text-slate-950
-                transition-colors
-                dark:bg-slate-950
-                dark:text-white
-                sm:px-8
-                lg:py-14
-            "
-        >
-            <div className="mx-auto max-w-5xl">
-                <header
-                    className="
-                        flex flex-wrap
-                        items-center justify-between
-                        gap-4
-                    "
-                >
-                    <AverioBrand />
-                    <PreferencesToolbar />
-                </header>
+        <main className="av-ui av-onboarding">
+            <header className="av-onboarding-top">
+                <div className="av-brand"><AverioBrand /></div>
+                <ConceptPreferences />
+            </header>
 
-                <div
-                    className="
-                        mt-12
-                        grid gap-10
-                        lg:grid-cols-[0.8fr_1.2fr]
-                    "
-                >
-                    <section>
-                        <p
-                            className="
-                                text-sm font-semibold
-                                text-primary-700
-                                dark:text-primary-400
-                            "
-                        >
-                            {t('onboarding.eyebrow')}
-                        </p>
+            <div className="av-onboarding-layout">
+                <section className="av-onboarding-intro" aria-labelledby="onboarding-title">
+                    <span className="av-badge av-green">{t('onboarding.eyebrow')}</span>
+                    <h1 id="onboarding-title">{t('onboarding.title')}</h1>
+                    <p>{t('onboarding.description')}</p>
 
-                        <h1
-                            className="
-                                mt-3
-                                text-4xl font-semibold
-                                tracking-tight
-                            "
-                        >
-                            {t('onboarding.title')}
-                        </h1>
+                    <ol className="av-steps" aria-label={t('onboarding.title')}>
+                        {steps.map((step, index) => (
+                            <li key={step}
+                                className={'av-step' + (index < currentIndex ? ' av-done' : '')}
+                                aria-current={index === currentIndex ? 'step' : undefined}>
+                                <span className="av-step-number" aria-hidden="true">
+                                    {index < currentIndex ? '✓' : index + 1}
+                                </span>
+                                <span>{t('onboarding.steps.' + step)}</span>
+                            </li>
+                        ))}
+                    </ol>
 
-                        <p
-                            className="
-                                mt-5 max-w-md
-                                text-lg leading-8
-                                text-slate-600
-                                dark:text-slate-400
-                            "
-                        >
-                            {t('onboarding.description')}
-                        </p>
-
-                        <div
-                            className="
-                                mt-8
-                                rounded-2xl
-                                border border-primary-200
-                                bg-primary-50
-                                p-5
-                                text-sm leading-6
-                                text-primary-900
-                                dark:border-primary-900/60
-                                dark:bg-primary-950/40
-                                dark:text-primary-200
-                            "
-                        >
-                            {t('onboarding.householdOfOne')}
+                    <div className="av-hero">
+                        <span className="av-hero-icon"><ConceptIcon name="household" /></span>
+                        <div>
+                            <h3>{t('onboarding.householdOfOne')}</h3>
+                            <p>{t('concept.onboardingNote')}</p>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    <BentoCard className="p-6 sm:p-8">
-                        {statusQuery.data ? (
-                            <OnboardingForm
-                                userId={userId}
-                                initialData={statusQuery.data}
-                            />
-                        ) : statusQuery.isError ? (
-                            <div className="space-y-4">
-                                <p
-                                    role="alert"
-                                    className="
-                                        text-sm
-                                        text-red-700
-                                        dark:text-red-400
-                                    "
-                                >
-                                    {t('errors.genericDescription')}
-                                </p>
-
-                                <PrimaryButton
-                                    type="button"
-                                    loading={statusQuery.isFetching}
-                                    onClick={() => {
-                                        void statusQuery.refetch();
-                                    }}
-                                >
-                                    {t('common.actions.retry')}
-                                </PrimaryButton>
-                            </div>
-                        ) : (
-                            <p role="status">
-                                {t('common.status.loading')}
-                            </p>
-                        )}
-                    </BentoCard>
-                </div>
+                <section className="av-card av-onboarding-panel"
+                    aria-label={t('onboarding.title')}>
+                    {status?.completed ? (
+                        <OnboardingCompleted key={userId} userId={userId} />
+                    ) : status ? (
+                        <OnboardingForm
+                            key={userId}
+                            userId={userId}
+                            initialData={status}
+                            currentStep={currentStep ?? status.currentStep}
+                            onStepChange={setViewedStep}
+                        />
+                    ) : statusQuery.isError ? (
+                        <div className="space-y-4">
+                            <p role="alert" className="av-error">{t('errors.genericDescription')}</p>
+                            <button type="button" className="av-btn av-primary"
+                                disabled={statusQuery.isFetching}
+                                onClick={() => { void statusQuery.refetch(); }}>
+                                {t('common.actions.retry')}
+                            </button>
+                        </div>
+                    ) : (
+                        <p role="status">{t('common.status.loading')}</p>
+                    )}
+                </section>
             </div>
         </main>
     );

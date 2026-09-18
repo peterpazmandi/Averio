@@ -51,6 +51,26 @@ export const en = {
             switchToDark: 'Switch to dark mode',
         },
     },
+    app: {
+        navigation: {
+            label: 'Main navigation',
+            dashboard: 'Dashboard',
+            accounts: 'Accounts',
+        },
+
+        dashboard: {
+            title: 'Dashboard',
+            description: 'Your household finances in one place.',
+            viewAccounts: 'View accounts',
+        },
+
+        accounts: {
+            title: 'Accounts',
+            description: 'Your shared and personal accounts.',
+            empty: 'You have no active accounts.',
+            recordedBalance: 'Recorded balance',
+        },
+    },
     preferences: {
         language: {
             label: 'Language',
@@ -274,6 +294,8 @@ export const en = {
         currency: 'Default currency',
 
         continue: 'Continue',
+        firstAccountNext:
+            'Your profile and financial home are saved. Next: add your first account.',
         common: {
             title: 'Make Averio yours',
 
@@ -392,6 +414,51 @@ export const en = {
 
             action: 'Continue setup',
         },
+        stepProgress: 'Step {{current}} of {{total}}',
+        finishSetup: 'Finish setup',
+        setupCompleted: 'Your setup is complete.',
+
+        steps: {
+            profile: 'About you',
+            household: 'Your financial home',
+            firstAccount: 'Your first account',
+        },
+
+        account: {
+            name: 'Account name',
+            type: 'Account type',
+            checking: 'Bank account',
+            savings: 'Savings',
+            cash: 'Cash',
+            creditCard: 'Credit card',
+
+            sharing: 'Who is this account for?',
+            shared: 'Shared household account',
+            personalVisible: 'My account, visible to the household',
+            private: 'My private account',
+
+            privateHelp:
+                'Only you can see this account. It is excluded from household totals.',
+            visibleHelp:
+                'Household members, including people you invite later, can see this account.',
+            includeInReports: 'Include in household reports',
+
+            currency: 'Account currency',
+            currencyHelp:
+                'This can differ from your reporting currency. It cannot be changed after the account is created.',
+
+            balanceKind: 'Credit card balance',
+            owed: 'Amount owed',
+            credit: 'Credit balance',
+            balance: 'Balance',
+            balanceDate: 'Balance at the end of',
+            balanceHelp:
+                'Enter the balance at the end of the selected date, in the account currency.',
+
+            invalidBalance: 'Enter a valid balance.',
+            enterPositiveAmount:
+                'Enter zero or a positive amount. Use the balance selection to indicate debt or credit.',
+        },
     },
 
     navigation: {
@@ -408,7 +475,6 @@ export const en = {
 
     dashboard: {
         title: 'Dashboard',
-        greeting: 'Welcome back, {{name}}',
 
         householdOverview: 'Household overview',
         currentBalance: 'Current balance',
@@ -427,6 +493,27 @@ export const en = {
             description:
                 'Add an account and your first transactions to start building your dashboard.',
         },
+        greeting: 'Hello, {{name}}',
+        recordedBalanceHelp:
+            'This overview uses your recorded balances. It does not yet include transaction activity.',
+
+        householdBalances: 'Recorded household balances',
+        reportingCurrency: 'Reporting currency: {{currency}}',
+        noConversion:
+            'Each currency is shown separately. No currency conversion is applied.',
+        noReportedAccounts:
+            'No active accounts are included in household reports.',
+
+        recordedOn: 'Recorded at the end of {{date}}',
+        recordedBetween: 'Balance dates: {{from}}–{{to}}',
+
+        accountsTitle: 'Your accounts',
+        manageAccounts: 'Manage accounts',
+        noActiveAccounts: 'You have no active accounts.',
+
+        privateAccount: 'Private · excluded from household reports',
+        includedAccount: 'Included in household reports',
+        excludedAccount: 'Excluded from household reports',
     },
 
     household: {

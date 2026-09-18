@@ -262,6 +262,13 @@ public sealed class GlobalExceptionHandler(
                     error.Code,
                     Localize(error)),
 
+            ForbiddenException error =>
+                new ExceptionResponse(
+                    StatusCodes.Status403Forbidden,
+                    "Title_Forbidden",
+                    error.Code,
+                    Localize(error)),
+
             _ =>
                 new ExceptionResponse(
                     StatusCodes.Status500InternalServerError,

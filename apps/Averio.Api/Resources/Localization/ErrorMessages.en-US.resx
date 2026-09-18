@@ -191,4 +191,76 @@
   <data name="Error_PasswordRejected" xml:space="preserve">
     <value>The password does not meet the required security rules.</value>
   </data>
+
+  <data name="Error_OperationForbidden" xml:space="preserve">
+    <value>You do not have permission to perform this action.</value>
+  </data>
+
+  <data name="Validation_HouseholdRequired" xml:space="preserve">
+    <value>A household is required.</value>
+  </data>
+
+  <data name="Validation_AccountNameRequired" xml:space="preserve">
+    <value>Enter an account name.</value>
+  </data>
+
+  <data name="Validation_AccountNameTooLong" xml:space="preserve">
+    <value>Account name must contain at most 100 characters.</value>
+  </data>
+
+  <data name="Validation_AccountTypeInvalid" xml:space="preserve">
+    <value>Select a valid account type.</value>
+  </data>
+
+  <data name="Validation_AccountScopeInvalid" xml:space="preserve">
+    <value>Select whether this account is for household or personal finances.</value>
+  </data>
+
+  <data name="Validation_AccountVisibilityInvalid" xml:space="preserve">
+    <value>Select a valid account visibility option.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceInvalid" xml:space="preserve">
+    <value>Enter a balance with no more than 15 digits before the decimal separator and 4 digits after it.</value>
+  </data>
+
+  <data name="Validation_AccountBalanceDateRequired" xml:space="preserve">
+    <value>Select the date this balance applies to.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersRequired" xml:space="preserve">
+    <value>Account holder information is required. If a household account has no named holders, submit an empty list.</value>
+  </data>
+
+  <data name="Validation_AccountOwnersInvalid" xml:space="preserve">
+    <value>Select valid household members as account holders, with each member selected only once.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountRequiresOwner" xml:space="preserve">
+    <value>Select at least one account holder for a personal account.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeVisible" xml:space="preserve">
+    <value>An account used for household finances must be visible to the household.</value>
+  </data>
+
+  <data name="Validation_HouseholdScopeMustBeIncluded" xml:space="preserve">
+    <value>An account used for household finances must be included in household reports.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountMustBePersonal" xml:space="preserve">
+    <value>A private account must be used for personal finances.</value>
+  </data>
+
+  <data name="Validation_PrivateAccountCannotBeIncluded" xml:space="preserve">
+    <value>A private account cannot be included in household reports.</value>
+  </data>
+
+  <data name="Validation_AccountOwnerOutsideHousehold" xml:space="preserve">
+    <value>All selected account holders must belong to this household.</value>
+  </data>
+
+  <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
+    <value>You must include yourself as an account holder when creating a personal account.</value>
+  </data>
 </root>

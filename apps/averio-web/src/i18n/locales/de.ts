@@ -51,6 +51,26 @@ export const de = {
             switchToDark: 'Zum dunklen Modus wechseln',
         },
     },
+    app: {
+        navigation: {
+            label: 'Hauptnavigation',
+            dashboard: 'Übersicht',
+            accounts: 'Konten',
+        },
+
+        dashboard: {
+            title: 'Übersicht',
+            description: 'Deine Haushaltsfinanzen an einem Ort.',
+            viewAccounts: 'Konten ansehen',
+        },
+
+        accounts: {
+            title: 'Konten',
+            description: 'Deine gemeinsamen und persönlichen Konten.',
+            empty: 'Du hast keine aktiven Konten.',
+            recordedBalance: 'Erfasster Kontostand',
+        },
+    },
     preferences: {
         language: {
             label: 'Sprache',
@@ -351,6 +371,8 @@ export const de = {
         currency: 'Standardwährung',
 
         continue: 'Weiter',
+        firstAccountNext:
+            'Dein Profil und dein Finanzhaushalt sind gespeichert. Als Nächstes: Füge dein erstes Konto hinzu.',
         common: {
             title:
                 'Mach Averio zu deinem Averio',
@@ -529,6 +551,52 @@ export const de = {
             action:
                 'Einrichtung fortsetzen',
         },
+
+        stepProgress: 'Schritt {{current}} von {{total}}',
+        finishSetup: 'Einrichtung abschließen',
+        setupCompleted: 'Deine Einrichtung ist abgeschlossen.',
+
+        steps: {
+            profile: 'Über dich',
+            household: 'Dein Finanzhaushalt',
+            firstAccount: 'Dein erstes Konto',
+        },
+
+        account: {
+            name: 'Kontoname',
+            type: 'Kontotyp',
+            checking: 'Bankkonto',
+            savings: 'Sparkonto',
+            cash: 'Bargeld',
+            creditCard: 'Kreditkarte',
+
+            sharing: 'Für wen ist dieses Konto?',
+            shared: 'Gemeinsames Haushaltskonto',
+            personalVisible: 'Mein Konto, für den Haushalt sichtbar',
+            private: 'Mein privates Konto',
+
+            privateHelp:
+                'Nur du kannst dieses Konto sehen. Es wird nicht in Haushaltssummen berücksichtigt.',
+            visibleHelp:
+                'Haushaltsmitglieder können dieses Konto sehen, auch Personen, die du später einlädst.',
+            includeInReports: 'In Haushaltsberichte einbeziehen',
+
+            currency: 'Kontowährung',
+            currencyHelp:
+                'Diese kann von deiner Berichtswährung abweichen. Nach dem Erstellen des Kontos kann sie nicht geändert werden.',
+
+            balanceKind: 'Kreditkartensaldo',
+            owed: 'Offener Betrag',
+            credit: 'Guthaben',
+            balance: 'Kontostand',
+            balanceDate: 'Kontostand am Ende des Tages',
+            balanceHelp:
+                'Gib den Kontostand am Ende des ausgewählten Tages in der Kontowährung ein.',
+
+            invalidBalance: 'Gib einen gültigen Kontostand ein.',
+            enterPositiveAmount:
+                'Gib null oder einen positiven Betrag ein. Wähle aus, ob es sich um einen offenen Betrag oder ein Guthaben handelt.',
+        },
     },
 
     navigation: {
@@ -546,9 +614,6 @@ export const de = {
     dashboard: {
         title:
             'Übersicht',
-
-        greeting:
-            'Willkommen zurück, {{name}}',
 
         householdOverview:
             'Haushaltsübersicht',
@@ -578,6 +643,27 @@ export const de = {
             description:
                 'Füge ein Konto und deine ersten Transaktionen hinzu, um deine Übersicht aufzubauen.',
         },
+        greeting: 'Hallo, {{name}}',
+        recordedBalanceHelp:
+            'Diese Übersicht verwendet deine erfassten Kontostände. Transaktionen werden noch nicht berücksichtigt.',
+
+        householdBalances: 'Erfasste Haushaltssalden',
+        reportingCurrency: 'Berichtswährung: {{currency}}',
+        noConversion:
+            'Jede Währung wird separat angezeigt. Es erfolgt keine Währungsumrechnung.',
+        noReportedAccounts:
+            'Keine aktiven Konten sind in den Haushaltsberichten enthalten.',
+
+        recordedOn: 'Erfasst zum Ende des Tages {{date}}',
+        recordedBetween: 'Stichtage: {{from}}–{{to}}',
+
+        accountsTitle: 'Deine Konten',
+        manageAccounts: 'Konten verwalten',
+        noActiveAccounts: 'Du hast keine aktiven Konten.',
+
+        privateAccount: 'Privat · nicht in Haushaltsberichten enthalten',
+        includedAccount: 'In Haushaltsberichten enthalten',
+        excludedAccount: 'Nicht in Haushaltsberichten enthalten',
     },
 
     household: {

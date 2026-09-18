@@ -51,6 +51,26 @@ export const hu = {
             switchToDark: 'Váltás sötét módra',
         },
     },
+    app: {
+        navigation: {
+            label: 'Fő navigáció',
+            dashboard: 'Áttekintés',
+            accounts: 'Számlák',
+        },
+
+        dashboard: {
+            title: 'Áttekintés',
+            description: 'A háztartásod pénzügyei egy helyen.',
+            viewAccounts: 'Számlák megtekintése',
+        },
+
+        accounts: {
+            title: 'Számlák',
+            description: 'Közös és személyes számláid.',
+            empty: 'Nincsenek aktív számláid.',
+            recordedBalance: 'Rögzített egyenleg',
+        },
+    },
     preferences: {
         language: {
             label: 'Nyelv',
@@ -363,34 +383,24 @@ export const hu = {
     },
 
     onboarding: {
-
         eyebrow: 'Üdv az Averióban',
-
         title: 'Állítsd be a háztartásodat',
-
         description:
             'Néhány adat segítségével létrehozzuk a pénzügyi otthonodat, és személyre szabjuk számodra az Averiót.',
-
         householdOfOne:
             'A háztartásod veled kezdődik. Később meghívhatsz valakit, amikor közösen szeretnétek kezelni a pénzügyeiteket.',
-
         displayName: 'A neved',
-
         householdName: 'Háztartás neve',
-
         country: 'Ország',
-
         currency: 'Alapértelmezett pénznem',
-
         continue: 'Folytatás',
-
+        firstAccountNext:
+            'A profilodat és a háztartásod pénzügyi beállításait mentettük. Következő lépés: add hozzá az első számládat.',
         common: {
             title:
                 'Tedd személyessé az Averiót',
-
             subtitle:
                 'Néhány gyors lépéssel az Averiót ahhoz igazíthatjuk, ahogyan a pénzügyeidet kezeled.',
-
             step:
                 '{{current}}. lépés / {{total}}',
 
@@ -562,6 +572,52 @@ export const hu = {
             action:
                 'Beállítás folytatása',
         },
+
+        stepProgress: '{{current}}. lépés / {{total}}',
+        finishSetup: 'Beállítás befejezése',
+        setupCompleted: 'A beállítás befejeződött.',
+
+        steps: {
+            profile: 'Rólad',
+            household: 'A háztartásod pénzügyei',
+            firstAccount: 'Az első számlád',
+        },
+
+        account: {
+            name: 'Számla neve',
+            type: 'Számla típusa',
+            checking: 'Bankszámla',
+            savings: 'Megtakarítás',
+            cash: 'Készpénz',
+            creditCard: 'Hitelkártya',
+
+            sharing: 'Kihez tartozik ez a számla?',
+            shared: 'Közös háztartási számla',
+            personalVisible: 'Saját számlám, a háztartás számára látható',
+            private: 'Privát számlám',
+
+            privateHelp:
+                'Ezt a számlát csak te láthatod. Nem számít bele a háztartás összesített egyenlegébe.',
+            visibleHelp:
+                'A háztartás tagjai láthatják ezt a számlát, azok is, akiket később hívsz meg.',
+            includeInReports: 'Szerepeljen a háztartás kimutatásaiban',
+
+            currency: 'Számla pénzneme',
+            currencyHelp:
+                'Eltérhet a kimutatások pénznemétől. A számla létrehozása után nem módosítható.',
+
+            balanceKind: 'Hitelkártya-egyenleg',
+            owed: 'Tartozás',
+            credit: 'Túlfizetés',
+            balance: 'Egyenleg',
+            balanceDate: 'Nap végi egyenleg dátuma',
+            balanceHelp:
+                'Add meg a kiválasztott nap végi egyenleget a számla pénznemében.',
+
+            invalidBalance: 'Adj meg érvényes egyenleget.',
+            enterPositiveAmount:
+                'Nullát vagy pozitív összeget adj meg. Válaszd ki, hogy tartozásról vagy túlfizetésről van szó.',
+        },
     },
 
     navigation: {
@@ -597,9 +653,6 @@ export const hu = {
         title:
             'Áttekintés',
 
-        greeting:
-            'Üdv újra, {{name}}',
-
         householdOverview:
             'Háztartás áttekintése',
 
@@ -628,6 +681,27 @@ export const hu = {
             description:
                 'Adj hozzá egy számlát és az első tranzakcióidat az áttekintés felépítéséhez.',
         },
+        greeting: 'Szia, {{name}}!',
+        recordedBalanceHelp:
+            'Ez az áttekintés a rögzített egyenlegeket mutatja. A tranzakciókat még nem tartalmazza.',
+
+        householdBalances: 'Rögzített háztartási egyenlegek',
+        reportingCurrency: 'Kimutatások pénzneme: {{currency}}',
+        noConversion:
+            'Minden pénznem külön jelenik meg. Az összegeket nem váltjuk át.',
+        noReportedAccounts:
+            'Nincs a háztartási kimutatásokban szereplő aktív számla.',
+
+        recordedOn: 'Rögzített nap végi egyenleg: {{date}}',
+        recordedBetween: 'Az egyenlegek dátumai: {{from}}–{{to}}',
+
+        accountsTitle: 'Számláid',
+        manageAccounts: 'Számlák kezelése',
+        noActiveAccounts: 'Nincsenek aktív számláid.',
+
+        privateAccount: 'Privát · nem szerepel a háztartási kimutatásokban',
+        includedAccount: 'Szerepel a háztartási kimutatásokban',
+        excludedAccount: 'Nem szerepel a háztartási kimutatásokban',
     },
 
     household: {

@@ -3,7 +3,8 @@ using FluentValidation;
 
 namespace Averio.Application.Households.UpdateHousehold
 {
-    public sealed class UpdateHouseholdValidator : AbstractValidator<UpdateHouseholdCommand>
+    public sealed class UpdateHouseholdValidator
+        : AbstractValidator<UpdateHouseholdCommand>
     {
         public UpdateHouseholdValidator()
         {
@@ -20,11 +21,14 @@ namespace Averio.Application.Households.UpdateHousehold
                 .When(x => x.CountryCode is not null);
 
             RuleFor(x => x.PreferredCurrency)
-                .Must(value =>
-                    value is null
-                    || Enum.GetNames<CurrencyCode>()
-                         .Contains(value, StringComparer.OrdinalIgnoreCase))
-                .WithErrorCode("Validation_CurrencyInvalid");
+                .Cascade(CascadeMode.Stop)
+                .NotEmpty()
+                .WithErrorCode("Validation_CurrencyRequired")
+                .Must(value => CurrencyCode.IsSupported(value))
+                .WithErrorCode("Validation_CurrencyInvalid")
+                .When(
+                    x => x.PreferredCurrency is not null,
+                    ApplyConditionTo.AllValidators);
         }
     }
 }

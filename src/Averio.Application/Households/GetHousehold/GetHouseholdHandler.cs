@@ -24,7 +24,7 @@ public sealed class GetHouseholdHandler(
             household.Id,
             household.Name,
             household.CountryCode,
-            household.PreferredCurrency?.ToString(),
+            household.ReportingCurrency?.ToString(),
             household.IsOnboardingCompleted,
             membership.Role
                 .ToString()
