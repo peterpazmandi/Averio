@@ -35,6 +35,8 @@ import { onboardingQueryKeys } from '../api/onboardingQueryKeys';
 import { detectCountryCode, suggestCurrency } from '../detectCountry';
 import type { Currency } from './OnboardingPage';
 
+export type OnboardingStep = 'profile' | 'household' | 'firstAccount';
+
 type AccountType =
     | 'Checking'
     | 'Savings'
@@ -81,15 +83,18 @@ function previousLocalDate(): string {
 export function OnboardingForm({
     userId,
     initialData,
+    currentStep,
+    onStepChange,
 }: {
     userId: string;
     initialData: OnboardingStatusResponse;
+    currentStep: string;
+    onStepChange: (step: OnboardingStep) => void;
 }) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
-    const currentStep = initialData.currentStep;
     const householdId = initialData.household.householdId;
 
     const isProfileStep = currentStep === 'profile';
@@ -224,6 +229,15 @@ export function OnboardingForm({
         };
     }
 
+    function goBack(): void {
+        if (submittingRef.current || isProfileStep) {
+            return;
+        }
+
+        setSubmitError(null);
+        onStepChange(isFirstAccountStep ? 'household' : 'profile');
+    }
+
     async function submit(
         event: FormEvent<HTMLFormElement>,
     ): Promise<void> {
@@ -290,6 +304,9 @@ export function OnboardingForm({
                     to: '/app',
                     replace: true,
                 });
+            }
+            else {
+                onStepChange(isProfileStep ? 'household' : 'firstAccount');
             }
         }
         catch (error) {
@@ -607,15 +624,30 @@ export function OnboardingForm({
                 </div>
             )}
 
-            <PrimaryButton
-                type="submit"
-                loading={isSubmitting}
-                disabled={isSubmitting || (isFirstAccountStep && !ownerOptionsQuery.isSuccess)}
-            >
-                {isFirstAccountStep
-                    ? t('onboarding.finishSetup')
-                    : t('onboarding.continue')}
-            </PrimaryButton>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                {!isProfileStep && (
+                    <button
+                        type="button"
+                        className="av-btn"
+                        disabled={isSubmitting}
+                        onClick={goBack}
+                    >
+                        {t('common.actions.back')}
+                    </button>
+                )}
+
+                <div className="ml-auto">
+                    <PrimaryButton
+                        type="submit"
+                        loading={isSubmitting}
+                        disabled={isSubmitting || (isFirstAccountStep && !ownerOptionsQuery.isSuccess)}
+                    >
+                        {isFirstAccountStep
+                            ? t('onboarding.finishSetup')
+                            : t('onboarding.continue')}
+                    </PrimaryButton>
+                </div>
+            </div>
         </form>
     );
 }

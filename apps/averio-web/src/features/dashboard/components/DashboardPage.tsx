@@ -1,238 +1,172 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
-import { PrimaryButton } from '../../../shared/components/PrimaryButton';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
+import type { ConceptIconName } from '../../../shared/components/concept/ConceptIcon';
 import { AccountOwnershipSummary } from '../../accounts/components/AccountOwnershipSummary';
 import { dashboardQueries } from '../api/dashboardQueries';
 
-interface DashboardPageProps {
-    userId: string;
-    householdId: string;
-}
+interface DashboardPageProps { userId: string; householdId: string; }
 
-export function DashboardPage({
-    userId,
-    householdId,
-}: DashboardPageProps) {
+export function DashboardPage({ userId, householdId }: DashboardPageProps) {
     const { t, i18n } = useTranslation();
-
-    const dashboardQuery = useQuery(
-        dashboardQueries.household(
-            userId,
-            householdId,
-        ),
-    );
+    const dashboardQuery = useQuery(dashboardQueries.household(userId, householdId));
 
     if (dashboardQuery.isPending) {
-        return (
-            <p role="status">
-                {t('common.status.loading')}
-            </p>
-        );
+        return <p role="status">{t('common.status.loading')}</p>;
     }
-
     if (dashboardQuery.isError) {
         return (
-            <section className="space-y-4">
-                <p
-                    role="alert"
-                    className="text-red-700 dark:text-red-400"
-                >
-                    {t('errors.genericDescription')}
-                </p>
-
-                <PrimaryButton
-                    type="button"
-                    loading={dashboardQuery.isFetching}
-                    onClick={() => {
-                        void dashboardQuery.refetch();
-                    }}
-                >
+            <section className="av-card space-y-4">
+                <p role="alert" className="av-error">{t('errors.genericDescription')}</p>
+                <button type="button" className="av-btn" disabled={dashboardQuery.isFetching}
+                    onClick={() => { void dashboardQuery.refetch(); }}>
                     {t('common.actions.retry')}
-                </PrimaryButton>
+                </button>
             </section>
         );
     }
 
     const dashboard = dashboardQuery.data;
+    const language = i18n.resolvedLanguage ?? i18n.language;
+    const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, language);
+    const date = (value: string) => new Intl.DateTimeFormat(language, {
+        dateStyle: 'medium', timeZone: 'UTC',
+    }).format(new Date(value + 'T00:00:00Z'));
+    const reportedAccounts = dashboard.accounts.filter((account) =>
+        account.includeInHouseholdReports && account.visibility !== 'Private');
 
-    const language =
-        i18n.resolvedLanguage
-        ?? i18n.language;
-
-    function formatMoney(
-        amount: string,
-        currency: string,
-    ): string {
-        return formatDecimalAmount(amount, currency, language);
-    }
-
-    function formatDate(value: string): string {
-        return new Intl.DateTimeFormat(language, {
-            dateStyle: 'medium',
-            timeZone: 'UTC',
-        }).format(
-            new Date(`${value}T00:00:00Z`),
+    function emptyCard(name: 'cashFlow' | 'category' | 'goals' | 'transactions' | 'personal',
+        icon: ConceptIconName, wide = false) {
+        return (
+            <section className={'av-card ' + (wide ? 'av-span-8' : 'av-span-4')}
+                aria-label={t('concept.' + name + 'Title')}>
+                <div className="av-card-head">
+                    <div>
+                        <h3>{t('concept.' + name + 'Title')}</h3>
+                        <p>{t('concept.' + name + 'Help')}</p>
+                    </div>
+                    <span className="av-badge">{t('concept.soon')}</span>
+                </div>
+                <div className={'av-empty' + (name === 'cashFlow' ? ' av-chart-empty' : '')}>
+                    <ConceptIcon name={icon} />
+                    <p>{t('concept.' + name + 'Empty')}</p>
+                </div>
+            </section>
         );
     }
 
     return (
-        <div className="space-y-8">
-            <header>
-                <h1 className="text-3xl font-semibold">
-                    {dashboard.displayName
-                        ? t('dashboard.greeting', {
-                            name: dashboard.displayName,
-                        })
-                        : t('dashboard.title')}
-                </h1>
-
-                <p className="mt-2 text-slate-600 dark:text-slate-400">
-                    {t('dashboard.recordedBalanceHelp')}
-                </p>
+        <div>
+            <header className="av-page-head">
+                <div>
+                    <h2>{dashboard.displayName
+                        ? t('dashboard.greeting', { name: dashboard.displayName })
+                        : t('dashboard.title')}</h2>
+                    <p>{t('concept.intro')}</p>
+                </div>
+                <div className="av-page-actions">
+                    <button type="button" className="av-btn" disabled title={t('concept.soon')}>
+                        {t('concept.viewReport')}
+                    </button>
+                    <button type="button" className="av-btn av-primary" disabled
+                        title={t('concept.transactionsEmpty')}>
+                        <ConceptIcon name="plus" />{t('concept.addTransaction')}
+                    </button>
+                </div>
             </header>
 
-            <section
-                aria-labelledby="household-balances-title"
-                className="space-y-4"
-            >
+            <div className="av-hero">
+                <span className="av-hero-icon"><ConceptIcon name="check" /></span>
                 <div>
-                    <h2
-                        id="household-balances-title"
-                        className="text-xl font-semibold"
-                    >
-                        {t('dashboard.householdBalances')}
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        {t('dashboard.reportingCurrency', {
-                            currency: dashboard.reportingCurrency,
-                        })}
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        {t('dashboard.noConversion')}
-                    </p>
+                    <h3>{t('concept.setupTitle')}</h3>
+                    <p>{t('concept.setupDescription')}</p>
                 </div>
+                <Link className="av-btn" to="/app/accounts">{t('dashboard.manageAccounts')}</Link>
+            </div>
 
-                {dashboard.householdBalances.length === 0 ? (
-                    <p className="text-slate-600 dark:text-slate-400">
-                        {t('dashboard.noReportedAccounts')}
-                    </p>
-                ) : (
-                    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {dashboard.householdBalances.map((balance) => (
-                            <li
-                                key={balance.currency}
-                                className="
-                                    rounded-2xl border
-                                    border-slate-200 bg-white p-5
-                                    dark:border-slate-800
-                                    dark:bg-slate-900
-                                "
-                            >
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                    {balance.currency}
-                                </p>
-
-                                <p className="mt-2 text-3xl font-semibold">
-                                    {formatMoney(
-                                        balance.amount,
-                                        balance.currency,
-                                    )}
-                                </p>
-
-                                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                                    {balance.earliestBalanceDate
-                                        === balance.latestBalanceDate
-                                        ? t('dashboard.recordedOn', {
-                                            date: formatDate(
-                                                balance.latestBalanceDate,
-                                            ),
-                                        })
-                                        : t('dashboard.recordedBetween', {
-                                            from: formatDate(
-                                                balance.earliestBalanceDate,
-                                            ),
-                                            to: formatDate(
-                                                balance.latestBalanceDate,
-                                            ),
-                                        })}
-                                </p>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
-
-            <section
-                aria-labelledby="dashboard-accounts-title"
-                className="space-y-4"
-            >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2
-                        id="dashboard-accounts-title"
-                        className="text-xl font-semibold"
-                    >
-                        {t('dashboard.accountsTitle')}
-                    </h2>
-
-                    <Link
-                        to="/app/accounts"
-                        className="
-                            rounded
-                            font-medium text-primary-700
-                            hover:underline
-                            dark:text-primary-300
-                        "
-                    >
-                        {t('dashboard.manageAccounts')}
-                    </Link>
-                </div>
-
-                {dashboard.accounts.length === 0 ? (
-                    <p className="text-slate-600 dark:text-slate-400">
-                        {t('dashboard.noActiveAccounts')}
-                    </p>
-                ) : (
-                    <ul className="grid gap-4 sm:grid-cols-2">
-                        {dashboard.accounts.map((account) => (
-                            <li
-                                key={account.id}
-                                className="
-                                    rounded-2xl border
-                                    border-slate-200 bg-white p-5
-                                    dark:border-slate-800
-                                    dark:bg-slate-900
-                                "
-                            >
-                                <h3 className="font-semibold">
-                                    {account.name}
-                                </h3>
-
-                                <AccountOwnershipSummary account={account} />
-
-                                <p className="mt-4 text-2xl font-semibold">
-                                    {formatMoney(
-                                        account.balanceAnchorAmount,
-                                        account.currency,
-                                    )}
-                                </p>
-
-                                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                    {t('dashboard.recordedOn', {
-                                        date: formatDate(
-                                            account.balanceAnchorDate,
-                                        ),
+            <div className="av-bento">
+                <section className="av-card av-balance av-span-4" aria-label={t('concept.balanceTitle')}>
+                    <h3 className="av-label">{t('concept.balanceTitle')}</h3>
+                    {dashboard.householdBalances.length === 0 ? (
+                        <p className="av-subtle">{t('dashboard.noReportedAccounts')}</p>
+                    ) : dashboard.householdBalances.map((balance) => (
+                        <div className="av-balance-group" key={balance.currency}>
+                            <p className="av-kpi">{money(balance.amount, balance.currency)}</p>
+                            <p className="av-subtle">
+                                {balance.earliestBalanceDate === balance.latestBalanceDate
+                                    ? t('concept.recordedOn', { date: date(balance.latestBalanceDate) })
+                                    : t('concept.recordedBetween', {
+                                        from: date(balance.earliestBalanceDate),
+                                        to: date(balance.latestBalanceDate),
                                     })}
-                                </p>
-                            </li>
+                            </p>
+                        </div>
+                    ))}
+                    <p className="av-subtle">{t('concept.balanceHelp')}</p>
+                    <div className="av-mini-accounts">
+                        {reportedAccounts.slice(0, 3).map((account) => (
+                            <div key={account.id} className="av-mini-account">
+                                <span className="av-account-icon"><ConceptIcon name="accounts" /></span>
+                                <div>
+                                    <strong>{account.name}</strong>
+                                    <small>{t(account.scope === 'Household'
+                                        ? 'accountOwnership.household' : 'accountOwnership.personal')} · {account.currency}</small>
+                                </div>
+                                <span className="av-mini-amount">{money(account.balanceAnchorAmount, account.currency)}</span>
+                            </div>
                         ))}
-                    </ul>
-                )}
-            </section>
+                    </div>
+                </section>
+
+                {emptyCard('cashFlow', 'statistics', true)}
+
+                <section className="av-card av-span-4" aria-label={t('concept.monthTitle')}>
+                    <div className="av-card-head">
+                        <div><h3>{t('concept.monthTitle')}</h3><p>{t('concept.monthHelp')}</p></div>
+                        <span className="av-badge">{t('concept.soon')}</span>
+                    </div>
+                    <dl className="av-month-grid">
+                        {(['income', 'expenses', 'netCashFlow', 'upcoming'] as const).map((key) => (
+                            <div key={key}>
+                                <dt className="av-label">{t('concept.' + key)}</dt>
+                                <dd className="av-kpi" aria-label={t('concept.notAvailable')}>—</dd>
+                            </div>
+                        ))}
+                    </dl>
+                    <p className="av-subtle">{t('concept.cashFlowEmpty')}</p>
+                </section>
+
+                {emptyCard('category', 'categories')}
+                {emptyCard('goals', 'goals')}
+                {emptyCard('transactions', 'transactions', true)}
+                {emptyCard('personal', 'profile')}
+
+                <section className="av-card av-span-12" aria-labelledby="dashboard-accounts-title">
+                    <div className="av-card-head">
+                        <div>
+                            <h3 id="dashboard-accounts-title">{t('dashboard.accountsTitle')}</h3>
+                            <p>{t('dashboard.recordedBalanceHelp')}</p>
+                        </div>
+                        <Link to="/app/accounts" className="av-btn">{t('dashboard.manageAccounts')}</Link>
+                    </div>
+                    {dashboard.accounts.length === 0 ? (
+                        <p className="av-subtle">{t('dashboard.noActiveAccounts')}</p>
+                    ) : (
+                        <div className="av-account-list">
+                            {dashboard.accounts.map((account) => (
+                                <article key={account.id} className="av-account-row">
+                                    <h4>{account.name}</h4>
+                                    <p className="av-kpi">{money(account.balanceAnchorAmount, account.currency)}</p>
+                                    <p className="av-subtle">{t('concept.recordedOn', { date: date(account.balanceAnchorDate) })}</p>
+                                    <AccountOwnershipSummary account={account} />
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </div>
         </div>
     );
 }

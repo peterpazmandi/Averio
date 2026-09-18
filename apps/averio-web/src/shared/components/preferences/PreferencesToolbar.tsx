@@ -1,11 +1,5 @@
-import { LanguageSwitcher } from '../../../features/system/components/LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
+import { ConceptPreferences } from '../concept/ConceptPreferences';
 
 export function PreferencesToolbar() {
-    return (
-        <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-        </div>
-    );
+    return <ConceptPreferences />;
 }

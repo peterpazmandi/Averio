@@ -10,13 +10,7 @@ import {
     AverioBrand,
 } from '../../../shared/components/branding/AverioBrand';
 
-import {
-    LanguageSwitcher,
-} from '../../system/components/LanguageSwitcher';
-
-import {
-    ThemeToggle,
-} from '../../../shared/components/preferences/ThemeToggle';
+import { ConceptPreferences } from '../../../shared/components/concept/ConceptPreferences';
 
 export function AuthShell({
     children,
@@ -408,95 +402,11 @@ export function AuthShell({
                 {/* Header                                             */}
                 {/* ================================================== */}
 
-                <header
-                    className="
-                        relative
-                        z-20
-
-                        w-full
-                        min-w-0
-
-                        lg:flex
-                        lg:items-center
-                        lg:justify-end
-                    "
-                >
-                    {/* ------------------------------------------------ */}
-                    {/* Mobile / tablet                                 */}
-                    {/* ------------------------------------------------ */}
-
-                    <div
-                        className="
-                            flex
-                            min-w-0
-
-                            items-center
-                            justify-between
-
-                            gap-3
-
-                            lg:hidden
-                        "
-                    >
-                        {/*
-                            Default brand variant because this surface
-                            changes according to the active theme.
-
-                            Light:
-                            navy wordmark
-
-                            Dark:
-                            white wordmark
-                        */}
-                        <div
-                            className="
-                                min-w-0
-                            "
-                        >
-                            <AverioBrand />
-                        </div>
-
-                        <div
-                            className="
-                                shrink-0
-                            "
-                        >
-                            <ThemeToggle />
-                        </div>
+                <header className="relative z-20 flex w-full min-w-0 flex-wrap items-center justify-between gap-3 lg:justify-end">
+                    <div className="min-w-0 lg:hidden">
+                        <AverioBrand />
                     </div>
-
-                    {/* Mobile language selector */}
-                    <div
-                        className="
-                            mt-3
-                            min-w-0
-
-                            lg:hidden
-                        "
-                    >
-                        <LanguageSwitcher
-                            fullWidth
-                        />
-                    </div>
-
-                    {/* ------------------------------------------------ */}
-                    {/* Desktop preferences                              */}
-                    {/* ------------------------------------------------ */}
-
-                    <div
-                        className="
-                            hidden
-
-                            items-center
-                            gap-2
-
-                            lg:flex
-                        "
-                    >
-                        <LanguageSwitcher />
-
-                        <ThemeToggle />
-                    </div>
+                    <ConceptPreferences />
                 </header>
 
                 {/* ================================================== */}

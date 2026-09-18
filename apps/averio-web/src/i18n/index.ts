@@ -2,6 +2,8 @@ import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 
+import { conceptEN, conceptDE, conceptHU } from './locales/concept';
+
 import { en } from './locales/en';
 import { de } from './locales/de';
 import { hu } from './locales/hu';
@@ -18,13 +20,13 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, accountOwnership: accountOwnershipEN },
+                translation: { ...en, accountOwnership: accountOwnershipEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, accountOwnership: accountOwnershipDE },
+                translation: { ...de, accountOwnership: accountOwnershipDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, accountOwnership: accountOwnershipHU },
+                translation: { ...hu, accountOwnership: accountOwnershipHU, concept: conceptHU },
             },
         },
 

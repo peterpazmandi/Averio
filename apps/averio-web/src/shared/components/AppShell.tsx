@@ -1,120 +1,148 @@
+import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+
 import { AppNavigation } from './AppNavigation';
 import { logoutUser } from '../../features/authentication/api/authApi';
 import { useAuth } from '../../features/authentication/context/AuthProvider';
-import { AverioBrand } from './branding/AverioBrand';
+import { onboardingQueries } from '../../features/onboarding/api/onboardingQueries';
+import { ConceptBrand } from './concept/ConceptBrand';
+import { ConceptIcon } from './concept/ConceptIcon';
+import { ConceptPreferences } from './concept/ConceptPreferences';
+import '../styles/concept.css';
 
 export function AppShell({ children }: PropsWithChildren) {
     const auth = useAuth();
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const pathname = useRouterState({ select: (state) => state.location.pathname });
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const userId = auth.user?.userId ?? '';
+    const statusQuery = useQuery({
+        ...onboardingQueries.status(userId),
+        enabled: auth.status === 'authenticated' && !!userId,
+    });
 
     const logoutMutation = useMutation({
         mutationFn: logoutUser,
-
         onSuccess: async () => {
             await auth.clear();
-
-            await navigate({
-                to: '/login',
-                search: {
-                    redirect: undefined,
-                }
-            });
+            await navigate({ to: '/login', search: { redirect: undefined } });
         },
     });
 
-    const displayName =
-        auth.user?.displayName
-        ?? auth.user?.email
-        ?? 'Averio user';
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog || !menuOpen) return;
+        dialog.showModal();
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            dialog.close();
+            document.body.style.overflow = previous;
+        };
+    }, [menuOpen]);
 
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                <div
-                    className="
-                        mx-auto
-                        flex
-                        h-16
-                        max-w-7xl
-                        items-center
-                        justify-between
-                        px-4
-                        sm:px-6
-                        lg:px-8
-                    "
-                >
-                    <div className="flex items-center gap-3">
-                        <AverioBrand />
+    // The route also gates this subtree and remounts it when the user changes.
+    if (auth.status !== 'authenticated' || !auth.user) return null;
+
+    const user = auth.user;
+    const displayName = user.displayName || user.email;
+    const initials = displayName.trim().split(/\s+/).slice(0, 2)
+        .map((part) => part[0]).join('').toLocaleUpperCase();
+    const household = statusQuery.data?.household;
+    const householdName = household?.name || t('concept.household');
+    const title = pathname.startsWith('/app/accounts')
+        ? t('app.navigation.accounts') : t('app.navigation.dashboard');
+    const month = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+        month: 'long', year: 'numeric',
+    }).format(new Date());
+
+    function sidebarContent() {
+        return (
+            <>
+                <ConceptBrand />
+                <div className="av-workspace">
+                    <div className="av-workspace-label">{t('concept.currentHousehold')}</div>
+                    <div className="av-workspace-main">
+                        <span className="av-workspace-avatar"><ConceptIcon name="household" /></span>
+                        <span>{householdName}</span>
                     </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="hidden text-right sm:block ">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                {displayName}
-                            </p>
-
-                            {auth.user?.displayName && (
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    {auth.user.email}
-                                </p>
-                            )}
+                    {household?.preferredCurrency && (
+                        <div className="av-workspace-sub">
+                            {t('concept.reportingCurrency', { currency: household.preferredCurrency })}
                         </div>
-
-                        <button
-                            type="button"
-                            disabled={logoutMutation.isPending}
-                            onClick={() => { logoutMutation.mutate(); }}
-                            className="
-                                rounded-lg
-                                border
-                                border-slate-300
-                                bg-white
-                                px-3
-                                py-2
-                                text-sm
-                                font-medium
-                                text-slate-700
-                                transition
-                                hover:bg-slate-50
-                                dark:border-slate-700
-                                dark:bg-slate-900
-                                dark:text-slate-200
-                                dark:hover:bg-slate-800
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            {logoutMutation.isPending
-                                ? t('common.actions.signingOut')
-                                : t('common.actions.signOut')}
-                        </button>
+                    )}
+                </div>
+                <AppNavigation onNavigate={() => setMenuOpen(false)} />
+                <div className="av-sidebar-bottom">
+                    <div className="av-help-card">
+                        <strong>{t('concept.receiptTitle')}</strong>
+                        <p>{t('concept.receiptDescription')}</p>
+                        <span className="av-nav-badge">{t('concept.soon')}</span>
                     </div>
                 </div>
-            </header>
+            </>
+        );
+    }
 
-            <div
-                className="
-                    mx-auto grid max-w-7xl gap-6
-                    px-4 py-6
-                    sm:px-6
-                    lg:grid-cols-[220px_minmax(0,1fr)]
-                    lg:gap-8 lg:px-8 lg:py-8
-                "
-            >
-                <AppNavigation />
+    return (
+        <div className="av-ui">
+            <a href="#main-content" className="av-skip">{t('concept.skip')}</a>
+            <aside className="av-sidebar">{sidebarContent()}</aside>
+            <dialog ref={dialogRef} className="av-mobile-dialog"
+                aria-label={t('app.navigation.label')}
+                onCancel={() => setMenuOpen(false)}
+                onClose={() => setMenuOpen(false)}
+                onClick={(event) => {
+                    if (event.target === event.currentTarget) setMenuOpen(false);
+                }}>
+                <button type="button" className="av-icon-btn av-close-menu"
+                    aria-label={t('concept.closeMenu')} onClick={() => setMenuOpen(false)}>
+                    <ConceptIcon name="close" />
+                </button>
+                {sidebarContent()}
+            </dialog>
 
-                <main
-                    id="main-content"
-                    className="
-                        min-w-0
-                        text-slate-950 dark:text-white
-                    "
-                >
+            <div className="av-shell">
+                <header className="av-topbar">
+                    <button type="button" className="av-icon-btn av-mobile-menu"
+                        aria-label={t('concept.openMenu')} aria-expanded={menuOpen}
+                        onClick={() => setMenuOpen(true)}>
+                        <ConceptIcon name="menu" />
+                    </button>
+                    <div className="av-topbar-title">
+                        <div className="av-eyebrow">{householdName} · {month}</div>
+                        <h1>{title}</h1>
+                    </div>
+                    <div className="av-top-actions">
+                        <button type="button" className="av-btn av-add-button" disabled
+                            title={t('concept.transactionsEmpty')}>
+                            <ConceptIcon name="plus" />{t('concept.addTransaction')}
+                        </button>
+                        <ConceptPreferences />
+                        <div className="av-profile">
+                            <span className="av-avatar" aria-hidden="true">{initials}</span>
+                            <div className="av-profile-copy">
+                                <strong>{displayName}</strong>
+                                <small>{t('concept.household')}</small>
+                            </div>
+                        </div>
+                        <button type="button" className="av-btn"
+                            disabled={logoutMutation.isPending}
+                            onClick={() => logoutMutation.mutate()}>
+                            {t(logoutMutation.isPending
+                                ? 'common.actions.signingOut' : 'common.actions.signOut')}
+                        </button>
+                    </div>
+                </header>
+                <main id="main-content" tabIndex={-1} className="av-content">
+                    {logoutMutation.isError && (
+                        <p role="alert" className="av-error">{t('errors.genericDescription')}</p>
+                    )}
                     {children}
                 </main>
             </div>
