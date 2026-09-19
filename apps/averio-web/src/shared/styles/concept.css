@@ -23,6 +23,8 @@
 .av-ui button, .av-ui select, .av-ui input { font: inherit; }
 .av-ui button:disabled { cursor: not-allowed; opacity: .55; }
 .av-ui :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.av-ui .av-select { min-height: 42px; max-width: 100%; border: 1px solid var(--border); border-radius: 11px; padding: 8px 12px; background: var(--panel); color: var(--text); }
+.av-ui .av-kpi.av-long-amount { font-size: 1rem; overflow-wrap: anywhere; }
 .av-ui .av-icon { width: 18px; height: 18px; flex: 0 0 auto; stroke-width: 1.8; }
 .av-ui .av-sidebar {
     width: var(--nav-w); position: fixed; inset: 0 auto 0 0; z-index: 40;

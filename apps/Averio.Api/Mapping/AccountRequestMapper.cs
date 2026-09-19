@@ -6,6 +6,14 @@ namespace Averio.Api.Mapping;
 
 internal static class AccountRequestMapper
 {
+    public static Averio.Application.Accounts.UpdateAccount.UpdateAccountCommand ToCommand(
+        Guid householdId, Guid accountId, UpdateAccountRequest request) => new(
+            householdId, accountId, request.Name,
+            EnumParser.Parse<AccountType>(request.Type, nameof(request.Type), "Validation_AccountTypeInvalid"),
+            request.OwnerHouseholdMemberIds,
+            EnumParser.Parse<AccountVisibility>(request.Visibility, nameof(request.Visibility), "Validation_AccountVisibilityInvalid"),
+            request.IncludeInHouseholdReports, request.ExpectedUpdatedAt);
+
     public static CreateAccountCommand ToCommand(
         Guid householdId,
         CreateAccountRequest request)
@@ -32,3 +40,4 @@ internal static class AccountRequestMapper
             request.BalanceAnchorDate);
     }
 }
+

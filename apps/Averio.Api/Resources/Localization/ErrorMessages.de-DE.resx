@@ -263,4 +263,7 @@
   <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
     <value>Wenn du ein persönliches Konto erstellst, musst du dich selbst als Kontoinhaber angeben.</value>
   </data>
+  <data name="Error_AccountArchived" xml:space="preserve"><value>Aktiviere das Konto vor der Bearbeitung wieder.</value></data>
+  <data name="Error_AccountChanged" xml:space="preserve"><value>Dieses Konto wurde geändert. Lade es neu und versuche es erneut.</value></data>
 </root>
+

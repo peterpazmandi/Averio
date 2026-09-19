@@ -1,128 +1,72 @@
 import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
-import { PrimaryButton } from '../../../shared/components/PrimaryButton';
-import { AccountOwnershipSummary } from './AccountOwnershipSummary';
+import type { AccountResponse } from '../../../shared/api/generated';
 import { accountsQueries } from '../api/accountsQueries';
+import { useAccountMutations } from '../api/useAccountMutations';
+import { AccountCard } from './AccountCard';
+import { AccountForm } from './AccountForm';
 
-interface AccountsPageProps {
-    userId: string;
-    householdId: string;
-}
-
-export function AccountsPage({
-    userId,
-    householdId,
-}: AccountsPageProps) {
-    const { t, i18n } = useTranslation();
-
-    const accountsQuery = useQuery(
-        accountsQueries.list(
-            userId,
-            householdId,
-            false,
-        ),
-    );
-
-    if (accountsQuery.isPending) {
-        return (
-            <p role="status">
-                {t('common.status.loading')}
-            </p>
-        );
-    }
-
-    if (accountsQuery.isError) {
-        return (
-            <section className="space-y-4">
-                <p
-                    role="alert"
-                    className="text-red-700 dark:text-red-400"
-                >
-                    {t('errors.genericDescription')}
-                </p>
-
-                <PrimaryButton
-                    type="button"
-                    loading={accountsQuery.isFetching}
-                    onClick={() => {
-                        void accountsQuery.refetch();
-                    }}
-                >
-                    {t('common.actions.retry')}
-                </PrimaryButton>
-            </section>
-        );
-    }
-
-    const accounts = accountsQuery.data;
-    const language = i18n.resolvedLanguage ?? i18n.language;
+export function AccountsPage({ userId, householdId }: { userId: string; householdId: string }) {
+    const { t } = useTranslation();
+    const [includeArchived, setIncludeArchived] = useState(false);
+    const [search, setSearch] = useState('');
+    const [scope, setScope] = useState('All');
+    const [currency, setCurrency] = useState('All');
+    const [editing, setEditing] = useState<AccountResponse | 'new' | null>(null);
+    const heading = useRef<HTMLHeadingElement>(null);
+    const accounts = useQuery(accountsQueries.list(userId, householdId, includeArchived));
+    const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
+    const mutations = useAccountMutations(userId, householdId);
+    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.restore.isPending;
+    function close() { setEditing(null); heading.current?.focus(); }
+    const visible = (accounts.data ?? []).filter(account =>
+        account.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+        && (scope === 'All' || (scope === 'Private' ? account.visibility === 'Private' : account.scope === scope))
+        && (currency === 'All' || account.currency === currency));
 
     return (
-        <section
-            aria-labelledby="accounts-title"
-            className="space-y-6"
-        >
-            <header>
-                <h1
-                    id="accounts-title"
-                    className="
-                        text-3xl font-semibold
-                        text-slate-950 dark:text-white
-                    "
-                >
-                    {t('app.accounts.title')}
-                </h1>
-
-                <p className="mt-2 text-slate-600 dark:text-slate-400">
-                    {t('app.accounts.description')}
-                </p>
+        <section className="space-y-6" aria-labelledby="accounts-title">
+            <header className="av-page-head">
+                <div><h2 id="accounts-title" ref={heading} tabIndex={-1}>{t('app.accounts.title')}</h2>
+                    <p>{t('app.accounts.description')}</p></div>
+                <button type="button" className="av-btn av-primary" disabled={!owners.isSuccess || busy || editing !== null}
+                    onClick={() => setEditing('new')}>{t('accountManagement.create')}</button>
             </header>
-
-            {accounts.length === 0 ? (
-                <p className="text-slate-600 dark:text-slate-400">
-                    {t('app.accounts.empty')}
-                </p>
-            ) : (
-                <ul className="grid gap-4 sm:grid-cols-2">
-                    {accounts.map((account) => (
-                        <li
-                            key={account.id}
-                            className="
-                                rounded-2xl border
-                                border-slate-200 bg-white p-5
-                                dark:border-slate-800
-                                dark:bg-slate-900
-                            "
-                        >
-                            <h2 className="font-semibold">
-                                {account.name}
-                            </h2>
-
-                            <AccountOwnershipSummary account={account} />
-
-                            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                                {t('app.accounts.recordedBalance')}
-                            </p>
-
-                            <p className="mt-1 text-2xl font-semibold">
-                                {formatDecimalAmount(
-                                    account.balanceAnchorAmount,
-                                    account.currency,
-                                    language,
-                                )}
-                            </p>
-
-                            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                <time dateTime={account.balanceAnchorDate}>
-                                    {account.balanceAnchorDate}
-                                </time>
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {owners.isError && <div role="alert"><p className="av-error">{t('accountOwnership.loadRequired')}</p>
+                <button className="av-btn" disabled={owners.isFetching} onClick={() => { void owners.refetch(); }}>{t('common.actions.retry')}</button></div>}
+            {editing && owners.data && <AccountForm key={editing === 'new' ? 'new' : editing.id}
+                account={editing === 'new' ? undefined : editing} options={owners.data}
+                onCreate={request => mutations.create.mutateAsync(request)}
+                onUpdate={(id, request) => mutations.update.mutateAsync({ id, request })} onClose={close} />}
+            <div className="flex flex-wrap items-end gap-4">
+                <label className="space-y-1"><span className="block">{t('accountManagement.search')}</span>
+                    <input className="av-select" type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
+                <label className="space-y-1"><span className="block">{t('accountOwnership.scope')}</span>
+                    <select className="av-select" value={scope} onChange={event => setScope(event.target.value)}>
+                        <option value="All">{t('accountManagement.all')}</option>
+                        <option value="Household">{t('accountOwnership.household')}</option>
+                        <option value="Personal">{t('accountOwnership.personal')}</option>
+                        <option value="Private">{t('accountOwnership.private')}</option>
+                    </select></label>
+                <label className="space-y-1"><span className="block">{t('onboarding.account.currency')}</span>
+                    <select className="av-select" value={currency} onChange={event => setCurrency(event.target.value)}>
+                        <option value="All">{t('accountManagement.all')}</option>
+                        {['EUR', 'USD', 'HUF'].map(value => <option key={value}>{value}</option>)}
+                    </select></label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={includeArchived}
+                    onChange={event => setIncludeArchived(event.target.checked)} />{t('accountManagement.showArchived')}</label>
+            </div>
+            {accounts.isPending && <p role="status">{t('common.status.loading')}</p>}
+            {accounts.isError && <div role="alert"><p className="av-error">{t('errors.genericDescription')}</p>
+                <button className="av-btn" disabled={accounts.isFetching} onClick={() => { void accounts.refetch(); }}>{t('common.actions.retry')}</button></div>}
+            {accounts.isSuccess && (visible.length === 0 ? <p className="av-subtle">{t('accountManagement.empty')}</p> :
+                <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {visible.map(account => <li key={account.id} className="min-w-0"><AccountCard account={account}
+                        currentMemberId={owners.data?.currentMemberId} busy={busy || editing !== null}
+                        onEdit={() => setEditing(account)} onArchive={() => mutations.archive.mutateAsync(account.id)}
+                        onRestore={() => mutations.restore.mutateAsync(account.id)} /></li>)}
+                </ul>)}
         </section>
     );
 }

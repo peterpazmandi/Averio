@@ -85,6 +85,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnName("type");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 

@@ -263,4 +263,7 @@
   <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
     <value>Személyes számla létrehozásakor magadat is ki kell választanod számlatulajdonosnak.</value>
   </data>
+  <data name="Error_AccountArchived" xml:space="preserve"><value>Szerkesztés előtt aktiváld újra a számlát.</value></data>
+  <data name="Error_AccountChanged" xml:space="preserve"><value>A számla megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
 </root>
+

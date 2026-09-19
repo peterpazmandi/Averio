@@ -24,6 +24,7 @@ function AccountsRoute() {
 
     return (
         <AccountsPage
+            key={`${user.userId}:${user.household.householdId}`}
             userId={user.userId}
             householdId={user.household.householdId}
         />

@@ -13,12 +13,14 @@ interface AccountOwnershipFieldsProps {
     options: AccountOwnerOptionsResponse;
     value: AccountOwnershipValue;
     onChange: (value: AccountOwnershipValue) => void;
+    lockScope?: boolean;
 }
 
 export function AccountOwnershipFields({
     options,
     value,
     onChange,
+    lockScope = false,
 }: AccountOwnershipFieldsProps) {
     const { t } = useTranslation();
     const id = useId();
@@ -45,6 +47,7 @@ export function AccountOwnershipFields({
                 <select
                     className={selectClass}
                     value={value.scope}
+                    disabled={lockScope}
                     onChange={(event) => {
                         const scope = event.target.value;
                         if (scope === 'Household' || scope === 'Personal') changeScope(scope);

@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-09-16  
+**Status date:** 2026-09-19  
 **Scope:** restarted implementation on the `develop` branch
 
 This file intentionally describes only the restarted codebase. Pre-restart features are not counted as implemented.
@@ -64,20 +64,35 @@ The restarted domain/persistence layer contains:
 
 The current product design assumes the user's household context drives onboarding and authorization.
 
-## Onboarding — partially implemented / active work area
+## Onboarding and Account Management — implemented on this branch
 
-The current API/client contracts indicate onboarding-required state and onboarding/household setup responses exist.
+Onboarding establishes profile, household, and the first account. The first-account handler retains its explicit transaction and household-row locking behavior.
 
-The next design/implementation work must continue from the latest account-ownership decisions rather than the older pre-restart onboarding model.
+Account Management now provides:
 
-The important unresolved/next part is the **first Account vertical slice** with correct:
+- visible active-account list, optional archived accounts, name/scope/currency filters
+- additional account creation using the same domain validation as onboarding
+- edit name, type, holders, visibility and household reporting participation
+- archive/reactivate with confirmation; historical records are retained
+- server-side household membership, visibility and modification checks
+- stale-edit detection and EF optimistic concurrency using the existing updated_at column
+- generated OpenAPI transport, scoped TanStack Query invalidation, EN/DE/HU strings
+- responsive cards and forms using the existing application shell and design
+- executable account regression suite under tests/Averio.Accounts.Tests
 
-- household vs personal economic scope
-- member owner(s) where required
-- legal/physical holder
-- visibility/privacy
-- immutable account currency
-- opening balance semantics
+Current implementation boundaries:
+
+- account currency is immutable (ADR-006)
+- economic scope and balance anchors are not changed by the edit endpoint; scope transfer and balance reconciliation need separate semantics
+- account_owners continues to store the named holders used by the current access rules; economic scope remains separate
+- household-scope accounts are household-visible and included in reports
+- personal accounts require at least one holder; the acting member must remain a holder when creating/editing personal accounts
+- private accounts are personal and excluded from household reports
+- household administrative role gives no extra access to personal accounts
+- active lists are sorted by name and ID; account pinning and custom order are not introduced
+- balances are recorded anchors, not transaction-derived live balances; currencies are never summed together
+
+Verification: backend and frontend builds, executable regression suite, changed-feature lint, and browser workflows with mocked API responses. Live PostgreSQL migration, round-trip persistence and concurrency require a database environment and have not been verified here. Repository-wide frontend lint still reports pre-existing errors outside this slice.
 
 ## Frontend foundation — implemented
 
@@ -124,7 +139,6 @@ It is a design specification/prototype, not proof that those features are implem
 
 Unless the repository changes after this status date, do not claim these are complete:
 
-- full Account vertical slice
 - household invitations/partner invite lifecycle
 - transaction ledger
 - transfers
@@ -171,18 +185,4 @@ Personal-money allocation/rollover is also retained as an important future featu
 
 ## Recommended next implementation milestone
 
-Complete the Account vertical slice and onboarding first-account flow based on the accepted ownership/privacy/multi-currency semantics.
-
-A sensible implementation sequence is:
-
-1. finalize Account domain/entity/value semantics
-2. EF configuration + migration
-3. application create/list account use cases
-4. API contracts/endpoints
-5. regenerate frontend client
-6. onboarding first-account integration
-7. Accounts page foundation based on canonical UI
-8. tests for ownership/holder/privacy/currency invariants
-9. update this file
-
-After that, the next major vertical slice should be the Transaction/Transfer ledger foundation, because most dashboard/statistics/goals behavior depends on trustworthy ledger semantics.
+Implement the Transaction/Transfer ledger foundation, including immutable currency handling, explicit transfer linkage, privacy-aware reporting, balance-anchor boundaries, and database-backed integration coverage. Scope-transfer and balance-reconciliation workflows are deliberately deferred until their financial-history semantics are settled.
