@@ -38,6 +38,7 @@ export const accountManagementEN = {
     resultCount_other: "{{count}} accounts",
     archivedIncluded: "Includes archived",
     resetSearch: "Reset all",
+    discardChanges: "You have unsaved account changes. Leave this page and discard them?",
 };
 export const accountManagementDE: typeof accountManagementEN = {
     create: 'Neues Konto', edit: 'Konto bearbeiten', save: 'Konto speichern', cancel: 'Abbrechen',
@@ -79,6 +80,7 @@ export const accountManagementDE: typeof accountManagementEN = {
     resultCount_other: "{{count}} Konten",
     archivedIncluded: "Mit archivierten Konten",
     resetSearch: "Alles zurücksetzen",
+    discardChanges: "Du hast ungespeicherte Kontoänderungen. Möchtest du diese Seite verlassen und die Änderungen verwerfen?",
 };
 export const accountManagementHU: typeof accountManagementEN = {
     create: 'Új számla', edit: 'Számla szerkesztése', save: 'Számla mentése', cancel: 'Mégse',
@@ -120,4 +122,5 @@ export const accountManagementHU: typeof accountManagementEN = {
     resultCount_other: "{{count}} számla",
     archivedIncluded: "Archiváltakkal együtt",
     resetSearch: "Alaphelyzet",
+    discardChanges: "A számla módosításai még nincsenek mentve. Elhagyod az oldalt, és elveted őket?",
 };

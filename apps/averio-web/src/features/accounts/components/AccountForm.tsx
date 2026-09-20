@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useBlocker } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { format, subDays } from 'date-fns';
 import type { AccountOwnerOptionsResponse, AccountResponse, CreateAccountRequest, UpdateAccountRequest } from '../../../shared/api/generated';
@@ -38,6 +39,21 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
     const [error, setError] = useState<string | null>(null);
     const [validation, setValidation] = useState<Record<string, string[]> | undefined>();
     const submitting = useRef(false);
+    const saved = useRef(false);
+    const draft = JSON.stringify({ name, type, currency, amount, date,
+        owed: !account && type === 'CreditCard' ? owed : null,
+        ...ownership, ownerHouseholdMemberIds: [...ownership.ownerHouseholdMemberIds].sort() });
+    const [initialDraft] = useState(draft);
+    const dirty = draft !== initialDraft;
+
+    useBlocker({
+        shouldBlockFn: () => {
+            // Keep the form mounted until an in-flight save finishes.
+            if (submitting.current && !saved.current) return true;
+            return dirty && !saved.current && !window.confirm(t('accountManagement.discardChanges'));
+        },
+        enableBeforeUnload: () => dirty && !saved.current,
+    });
 
     async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -62,6 +78,7 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
                     balanceAnchorAmount: type === 'CreditCard' && owed ? negateDecimalAmount(normalized) : normalized,
                     balanceAnchorDate: date });
             }
+            saved.current = true;
             onClose();
         } catch (cause) {
             setError(cause instanceof ApiError || cause instanceof RangeError ? cause.message : t('errors.genericDescription'));
