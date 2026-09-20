@@ -71,6 +71,8 @@ Onboarding establishes profile, household, and the first account. The first-acco
 Account Management now provides:
 
 - visible active-account list, optional archived accounts, name/scope/currency filters
+- dedicated create (`/app/accounts/new`) and edit (`/app/accounts/$accountId/edit`) pages, with direct-link loading through the account detail query
+- readable icon-led account details, primary-color active badges, aligned controls, and accessible explanations for fixed fields in English, German, and Hungarian
 - additional account creation using the same domain validation as onboarding
 - edit name, type, holders, visibility and household reporting participation
 - archive/reactivate with confirmation; historical records are retained

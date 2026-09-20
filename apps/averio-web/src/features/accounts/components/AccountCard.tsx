@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AccountResponse } from '../../../shared/api/generated';
@@ -9,12 +10,11 @@ interface Props {
     account: AccountResponse;
     currentMemberId?: string;
     busy: boolean;
-    onEdit: () => void;
     onArchive: () => Promise<unknown>;
     onRestore: () => Promise<unknown>;
 }
 
-export function AccountCard({ account, currentMemberId, busy, onEdit, onArchive, onRestore }: Props) {
+export function AccountCard({ account, currentMemberId, busy, onArchive, onRestore }: Props) {
     const { t, i18n } = useTranslation();
     const [confirm, setConfirm] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -32,17 +32,18 @@ export function AccountCard({ account, currentMemberId, busy, onEdit, onArchive,
     }
     const typeKeys: Record<string, string> = { Checking: 'checking', Savings: 'savings', Cash: 'cash', CreditCard: 'creditCard' };
     return (
-        <article className="av-card min-w-0 space-y-3" aria-label={account.name}>
+        <article className="av-card av-account-card" aria-label={account.name}>
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <h3 className="break-words font-semibold">{account.name}</h3>
-                <span className="av-badge">{t(archived ? 'accountManagement.archived' : 'accountManagement.active')}</span>
+                <span className={'av-badge av-account-status' + (archived ? '' : ' av-account-status-active')}>{t(archived ? 'accountManagement.archived' : 'accountManagement.active')}</span>
             </div>
             <p className="av-subtle">{t('onboarding.account.' + typeKeys[account.type])} · {account.currency}</p>
             <p className={'av-kpi break-words' + (balance.length > 20 ? ' av-long-amount' : '')}>{balance}</p>
             <p className="av-subtle">{t('app.accounts.recordedBalance')} · <time dateTime={account.balanceAnchorDate}>{date}</time></p>
             <AccountOwnershipSummary account={account} />
-            {canModify && <div className="flex flex-wrap gap-2">
-                {!archived && <button type="button" className="av-btn" disabled={busy} onClick={onEdit}>{t('accountManagement.edit')}</button>}
+            {canModify && <div className="av-account-actions">
+                {!archived && <Link className="av-btn" to="/app/accounts/$accountId/edit" params={{ accountId: account.id }}
+                    disabled={busy}>{t('accountManagement.edit')}</Link>}
                 <button type="button" className="av-btn" disabled={busy} onClick={() => setConfirm(true)}>
                     {t(archived ? 'accountManagement.restore' : 'accountManagement.archive')}
                 </button>

@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AccountResponse } from '../../../shared/api/generated';
 import { accountsQueries } from '../api/accountsQueries';
 import { useAccountMutations } from '../api/useAccountMutations';
 import { AccountCard } from './AccountCard';
-import { AccountForm } from './AccountForm';
 
 export function AccountsPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t } = useTranslation();
@@ -13,13 +12,10 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
     const [search, setSearch] = useState('');
     const [scope, setScope] = useState('All');
     const [currency, setCurrency] = useState('All');
-    const [editing, setEditing] = useState<AccountResponse | 'new' | null>(null);
-    const heading = useRef<HTMLHeadingElement>(null);
     const accounts = useQuery(accountsQueries.list(userId, householdId, includeArchived));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const mutations = useAccountMutations(userId, householdId);
     const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.restore.isPending;
-    function close() { setEditing(null); heading.current?.focus(); }
     const visible = (accounts.data ?? []).filter(account =>
         account.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())
         && (scope === 'All' || (scope === 'Private' ? account.visibility === 'Private' : account.scope === scope))
@@ -28,18 +24,13 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
     return (
         <section className="space-y-6" aria-labelledby="accounts-title">
             <header className="av-page-head">
-                <div><h2 id="accounts-title" ref={heading} tabIndex={-1}>{t('app.accounts.title')}</h2>
+                <div><h2 id="accounts-title">{t('app.accounts.title')}</h2>
                     <p>{t('app.accounts.description')}</p></div>
-                <button type="button" className="av-btn av-primary" disabled={!owners.isSuccess || busy || editing !== null}
-                    onClick={() => setEditing('new')}>{t('accountManagement.create')}</button>
+                <Link className="av-btn av-primary" to="/app/accounts/new">{t('accountManagement.create')}</Link>
             </header>
             {owners.isError && <div role="alert"><p className="av-error">{t('accountOwnership.loadRequired')}</p>
                 <button className="av-btn" disabled={owners.isFetching} onClick={() => { void owners.refetch(); }}>{t('common.actions.retry')}</button></div>}
-            {editing && owners.data && <AccountForm key={editing === 'new' ? 'new' : editing.id}
-                account={editing === 'new' ? undefined : editing} options={owners.data}
-                onCreate={request => mutations.create.mutateAsync(request)}
-                onUpdate={(id, request) => mutations.update.mutateAsync({ id, request })} onClose={close} />}
-            <div className="flex flex-wrap items-end gap-4">
+            <div className="av-account-filters">
                 <label className="space-y-1"><span className="block">{t('accountManagement.search')}</span>
                     <input className="av-select" type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
                 <label className="space-y-1"><span className="block">{t('accountOwnership.scope')}</span>
@@ -54,7 +45,7 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
                         <option value="All">{t('accountManagement.all')}</option>
                         {['EUR', 'USD', 'HUF'].map(value => <option key={value}>{value}</option>)}
                     </select></label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={includeArchived}
+                <label className="av-check-row av-filter-archived"><input type="checkbox" checked={includeArchived}
                     onChange={event => setIncludeArchived(event.target.checked)} />{t('accountManagement.showArchived')}</label>
             </div>
             {accounts.isPending && <p role="status">{t('common.status.loading')}</p>}
@@ -63,8 +54,8 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
             {accounts.isSuccess && (visible.length === 0 ? <p className="av-subtle">{t('accountManagement.empty')}</p> :
                 <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {visible.map(account => <li key={account.id} className="min-w-0"><AccountCard account={account}
-                        currentMemberId={owners.data?.currentMemberId} busy={busy || editing !== null}
-                        onEdit={() => setEditing(account)} onArchive={() => mutations.archive.mutateAsync(account.id)}
+                        currentMemberId={owners.data?.currentMemberId} busy={busy}
+                        onArchive={() => mutations.archive.mutateAsync(account.id)}
                         onRestore={() => mutations.restore.mutateAsync(account.id)} /></li>)}
                 </ul>)}
         </section>

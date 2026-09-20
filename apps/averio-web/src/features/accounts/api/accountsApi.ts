@@ -16,6 +16,9 @@ const owners = new AccountOwnerOptionsApi(configuration);
 export const getAccounts = (householdId: string, includeArchived = false, signal?: AbortSignal) =>
     accounts.apiV1HouseholdsHouseholdIdAccountsGet({ householdId, includeArchived }, { signal });
 
+export const getAccount = (householdId: string, accountId: string, signal?: AbortSignal) =>
+    accounts.apiV1HouseholdsHouseholdIdAccountsAccountIdGet({ householdId, accountId }, { signal });
+
 export const createAccount = (householdId: string, request: CreateAccountRequest) =>
     accounts.apiV1HouseholdsHouseholdIdAccountsPost({ householdId, createAccountRequest: request });
 

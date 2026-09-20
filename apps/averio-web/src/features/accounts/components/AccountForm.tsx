@@ -6,6 +6,7 @@ import type { AccountOwnerOptionsResponse, AccountResponse, CreateAccountRequest
 import { ApiError } from '../../../shared/api/ApiError';
 import { FormField } from '../../../shared/components/FormField';
 import { normalizeBalanceInput, negateDecimalAmount } from '../../../shared/money/decimalAmount';
+import { AccountFieldHelp } from './AccountFieldHelp';
 import { AccountOwnershipFields } from './AccountOwnershipFields';
 import type { AccountOwnershipValue } from './AccountOwnershipFields';
 
@@ -17,13 +18,15 @@ interface Props {
     onClose: () => void;
 }
 
-export function AccountForm({ account, options, onCreate, onUpdate, onClose }: Props) {
+export function AccountForm({ account: initialAccount, options, onCreate, onUpdate, onClose }: Props) {
+    // Preserve the version alongside the draft, even when a background query refreshes.
+    const [account] = useState(initialAccount);
     const { t } = useTranslation();
     const [name, setName] = useState(account?.name ?? '');
     const [type, setType] = useState(account?.type ?? 'Checking');
-    const [currency, setCurrency] = useState('EUR');
-    const [amount, setAmount] = useState('0');
-    const [date, setDate] = useState(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+    const [currency, setCurrency] = useState(account?.currency ?? 'EUR');
+    const [amount, setAmount] = useState(account?.balanceAnchorAmount ?? '0');
+    const [date, setDate] = useState(() => account?.balanceAnchorDate ?? format(subDays(new Date(), 1), 'yyyy-MM-dd'));
     const [owed, setOwed] = useState(true);
     const [ownership, setOwnership] = useState<AccountOwnershipValue>(() => ({
         scope: account?.scope === 'Personal' ? 'Personal' : 'Household',
@@ -67,45 +70,60 @@ export function AccountForm({ account, options, onCreate, onUpdate, onClose }: P
     }
 
     return (
-        <form className="av-card space-y-5" onSubmit={submit} aria-busy={busy} aria-labelledby="account-form-title">
-            <h2 id="account-form-title" className="text-xl font-semibold">{t(account ? 'accountManagement.edit' : 'accountManagement.create')}</h2>
-            <fieldset disabled={busy} className="min-w-0 space-y-5">
-                <FormField label={t('onboarding.account.name')} autoFocus required maxLength={100} value={name}
-                    error={validation?.Name?.[0]} onChange={event => setName(event.target.value)} />
-                <label className="block space-y-2">
-                    <span>{t('onboarding.account.type')}</span>
-                    <select className="av-select w-full" value={type} onChange={event => setType(event.target.value)}>
-                        {(['Checking', 'Savings', 'Cash', 'CreditCard'] as const).map(value => (
-                            <option key={value} value={value}>{t('onboarding.account.' + ({ Checking: 'checking', Savings: 'savings', Cash: 'cash', CreditCard: 'creditCard' }[value]))}</option>
-                        ))}
-                    </select>
-                </label>
+        <form className="av-account-form" onSubmit={submit} aria-busy={busy} aria-label={t(account ? 'accountManagement.edit' : 'accountManagement.create')}>
+            <fieldset disabled={busy} className="av-form-content">
+                <section className="av-form-section" aria-labelledby="account-basics-title">
+                    <header><h3 id="account-basics-title">{t('accountManagement.basicsSection')}</h3><p>{t('accountManagement.basicsHelp')}</p></header>
+                    <div className="av-form-grid">
+                        <div className="av-field"><FormField label={t('onboarding.account.name')} autoFocus required maxLength={100} value={name}
+                            error={validation?.Name?.[0]} onChange={event => setName(event.target.value)} /></div>
+                        <div className="av-field"><label htmlFor="account-type">{t('onboarding.account.type')}</label>
+                            <select id="account-type" className="av-control" value={type} onChange={event => setType(event.target.value)}>
+                                {(['Checking', 'Savings', 'Cash', 'CreditCard'] as const).map(value => <option key={value} value={value}>
+                                    {t('onboarding.account.' + ({ Checking: 'checking', Savings: 'savings', Cash: 'cash', CreditCard: 'creditCard' }[value]))}
+                                </option>)}
+                            </select>
+                        </div>
+                    </div>
+                </section>
                 <AccountOwnershipFields options={options} value={ownership} onChange={setOwnership} lockScope={!!account} />
-                {account ? <p className="av-subtle">{t('accountManagement.immutable', { currency: account.currency })}</p> : (
-                    <>
-                        <label className="block space-y-2"><span>{t('onboarding.account.currency')}</span>
-                            <select className="av-select w-full" value={currency} onChange={event => setCurrency(event.target.value)}>
+                <section className="av-form-section" aria-labelledby="account-balance-title">
+                    <header><h3 id="account-balance-title">{t('accountManagement.balanceSection')}</h3><p>{t('accountManagement.balanceHelp')}</p></header>
+                    <div className="av-form-grid">
+                        <div className="av-field" data-locked={!!account}>
+                            <label htmlFor="account-currency">{t('onboarding.account.currency')}{account && <span className="av-fixed-label">{t('accountManagement.fixed')}</span>}</label>
+                            <select id="account-currency" className="av-control" value={currency} disabled={!!account}
+                                aria-describedby={account ? 'currency-help' : undefined} onChange={event => setCurrency(event.target.value)}>
                                 {['EUR', 'USD', 'HUF'].map(value => <option key={value}>{value}</option>)}
                             </select>
-                        </label>
-                        {type === 'CreditCard' && <label className="block space-y-2"><span>{t('accountManagement.creditKind')}</span>
-                            <select className="av-select w-full" value={owed ? 'owed' : 'credit'} onChange={event => setOwed(event.target.value === 'owed')}>
+                            {account && <AccountFieldHelp id="currency-help" field={t('onboarding.account.currency')}>{t('accountManagement.currencyFixed')}</AccountFieldHelp>}
+                        </div>
+                        {!account && type === 'CreditCard' && <div className="av-field"><label htmlFor="credit-kind">{t('accountManagement.creditKind')}</label>
+                            <select id="credit-kind" className="av-control" value={owed ? 'owed' : 'credit'} onChange={event => setOwed(event.target.value === 'owed')}>
                                 <option value="owed">{t('accountManagement.owed')}</option><option value="credit">{t('accountManagement.credit')}</option>
                             </select>
-                        </label>}
-                        <FormField label={t('app.accounts.recordedBalance')} required inputMode="decimal" value={amount}
-                            error={validation?.BalanceAnchorAmount?.[0]} onChange={event => setAmount(event.target.value)} />
-                        <FormField label={t('accountManagement.balanceDate')} type="date" required value={date}
-                            error={validation?.BalanceAnchorDate?.[0]} onChange={event => setDate(event.target.value)} />
-                    </>
-                )}
-                {error && <div role="alert" className="av-error"><p>{error}</p>
+                        </div>}
+                        <div className="av-field" data-locked={!!account}>
+                            <FormField label={t('app.accounts.recordedBalance')} required inputMode="decimal" value={amount} disabled={!!account}
+                                aria-describedby={account ? 'balance-help' : undefined}
+                                error={validation?.BalanceAnchorAmount?.[0]} onChange={event => setAmount(event.target.value)} />
+                            {account && <AccountFieldHelp id="balance-help" field={t('app.accounts.recordedBalance')}>{t('accountManagement.balanceFixed')}</AccountFieldHelp>}
+                        </div>
+                        <div className="av-field" data-locked={!!account}>
+                            <FormField label={t('accountManagement.balanceDate')} type="date" required value={date} disabled={!!account}
+                                aria-describedby={account ? 'date-help' : undefined}
+                                error={validation?.BalanceAnchorDate?.[0]} onChange={event => setDate(event.target.value)} />
+                            {account && <AccountFieldHelp id="date-help" field={t('accountManagement.balanceDate')}>{t('accountManagement.balanceFixed')}</AccountFieldHelp>}
+                        </div>
+                    </div>
+                </section>
+                {error && <div role="alert" className="av-card av-error"><p>{error}</p>
                     {validation && <ul>{[...new Set(Object.values(validation).flat())].map(message => <li key={message}>{message}</li>)}</ul>}
                 </div>}
-                <div className="flex flex-wrap gap-3">
-                    <button className="av-btn av-primary" type="submit">{t(busy ? 'common.status.loading' : 'accountManagement.save')}</button>
+                <footer className="av-form-actions">
                     <button className="av-btn" type="button" onClick={onClose}>{t('accountManagement.cancel')}</button>
-                </div>
+                    <button className="av-btn av-primary" type="submit">{t(busy ? 'common.status.loading' : 'accountManagement.save')}</button>
+                </footer>
             </fieldset>
         </form>
     );
