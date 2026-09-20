@@ -30,6 +30,14 @@ export const accountManagementEN = {
     editorHelp: "Keep account ownership, holders, and sharing preferences together.",
     restoreBeforeEdit: "Reactivate this account from the accounts list before editing it.",
     readOnly: "You can view this account, but only its holders can edit it.",
+    searchPlaceholder: "Search by account name",
+    clearSearch: "Clear search",
+    filters: "Filters",
+    showResults: "Show results",
+    resultCount_one: "{{count}} account",
+    resultCount_other: "{{count}} accounts",
+    archivedIncluded: "Includes archived",
+    resetSearch: "Reset all",
 };
 export const accountManagementDE: typeof accountManagementEN = {
     create: 'Neues Konto', edit: 'Konto bearbeiten', save: 'Konto speichern', cancel: 'Abbrechen',
@@ -63,6 +71,14 @@ export const accountManagementDE: typeof accountManagementEN = {
     editorHelp: "Verwalte Zuordnung, Kontoinhaber und Freigaben an einem Ort.",
     restoreBeforeEdit: "Reaktiviere dieses Konto in der Kontenliste, bevor du es bearbeitest.",
     readOnly: "Du kannst dieses Konto sehen, aber nur seine Inhaber können es bearbeiten.",
+    searchPlaceholder: "Kontoname suchen",
+    clearSearch: "Suche löschen",
+    filters: "Filter",
+    showResults: "Ergebnisse anzeigen",
+    resultCount_one: "{{count}} Konto",
+    resultCount_other: "{{count}} Konten",
+    archivedIncluded: "Mit archivierten Konten",
+    resetSearch: "Alles zurücksetzen",
 };
 export const accountManagementHU: typeof accountManagementEN = {
     create: 'Új számla', edit: 'Számla szerkesztése', save: 'Számla mentése', cancel: 'Mégse',
@@ -96,4 +112,12 @@ export const accountManagementHU: typeof accountManagementEN = {
     editorHelp: "Kezeld egy helyen a besorolást, a számlatulajdonosokat és a megosztási beállításokat.",
     restoreBeforeEdit: "Szerkesztés előtt aktiváld újra a számlát a számlalistában.",
     readOnly: "Ezt a számlát megtekintheted, de csak a számlatulajdonosok szerkeszthetik.",
+    searchPlaceholder: "Keresés számlanév alapján",
+    clearSearch: "Keresés törlése",
+    filters: "Szűrők",
+    showResults: "Találatok megjelenítése",
+    resultCount_one: "{{count}} számla",
+    resultCount_other: "{{count}} számla",
+    archivedIncluded: "Archiváltakkal együtt",
+    resetSearch: "Alaphelyzet",
 };
