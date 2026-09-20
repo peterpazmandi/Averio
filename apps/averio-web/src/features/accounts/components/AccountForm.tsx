@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { format, subDays } from 'date-fns';
 import type { AccountOwnerOptionsResponse, AccountResponse, CreateAccountRequest, UpdateAccountRequest } from '../../../shared/api/generated';
 import { ApiError } from '../../../shared/api/ApiError';
+import { Popup } from '../../../shared/components/Popup';
 import { FormField } from '../../../shared/components/FormField';
 import { normalizeBalanceInput, negateDecimalAmount } from '../../../shared/money/decimalAmount';
 import { AccountFieldHelp } from './AccountFieldHelp';
@@ -46,13 +47,13 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
     const [initialDraft] = useState(draft);
     const dirty = draft !== initialDraft;
 
-    useBlocker({
-        shouldBlockFn: () => {
-            // Keep the form mounted until an in-flight save finishes.
-            if (submitting.current && !saved.current) return true;
-            return dirty && !saved.current && !window.confirm(t('accountManagement.discardChanges'));
-        },
+    const keepEditingRef = useRef<HTMLButtonElement>(null);
+    // Do not offer to discard a request that is already being saved.
+    useBlocker({ shouldBlockFn: () => submitting.current && !saved.current, enableBeforeUnload: false });
+    const blocker = useBlocker({
+        shouldBlockFn: () => dirty && !saved.current && !submitting.current,
         enableBeforeUnload: () => dirty && !saved.current,
+        withResolver: true,
     });
 
     async function submit(event: FormEvent<HTMLFormElement>) {
@@ -87,6 +88,16 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
     }
 
     return (
+        <>
+        <Popup open={blocker.status === 'blocked'} title={t('accountManagement.unsavedTitle')}
+            closeLabel={t('accountManagement.keepEditing')} initialFocusRef={keepEditingRef}
+            onDismiss={() => blocker.reset?.()}
+            actions={<>
+                <button ref={keepEditingRef} type="button" className="av-btn" onClick={() => blocker.reset?.()}>{t('accountManagement.keepEditing')}</button>
+                <button type="button" className="av-btn av-destructive" onClick={() => blocker.proceed?.()}>{t('accountManagement.discardAndLeave')}</button>
+            </>}>
+            <p>{t('accountManagement.unsavedDescription')}</p>
+        </Popup>
         <form className="av-account-form" onSubmit={submit} aria-busy={busy} aria-label={t(account ? 'accountManagement.edit' : 'accountManagement.create')}>
             <fieldset disabled={busy} className="av-form-content">
                 <section className="av-form-section" aria-labelledby="account-basics-title">
@@ -143,5 +154,6 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
                 </footer>
             </fieldset>
         </form>
+        </>
     );
 }
