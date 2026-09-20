@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { AccountResponse } from '../../../shared/api/generated';
 import { ApiError } from '../../../shared/api/ApiError';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import { ConceptIcon, type ConceptIconName } from '../../../shared/components/concept/ConceptIcon';
 import { AccountOwnershipSummary } from './AccountOwnershipSummary';
 
 interface Props {
@@ -30,14 +31,25 @@ export function AccountCard({ account, currentMemberId, busy, onArchive, onResto
         try { await (archived ? onRestore() : onArchive()); setConfirm(false); }
         catch (cause) { setError(cause instanceof ApiError ? cause.message : t('errors.genericDescription')); }
     }
-    const typeKeys: Record<string, string> = { Checking: 'checking', Savings: 'savings', Cash: 'cash', CreditCard: 'creditCard' };
+    const types: Record<string, { key: string; icon: ConceptIconName; tone: string }> = {
+        Checking: { key: 'checking', icon: 'bank', tone: 'blue' },
+        Savings: { key: 'savings', icon: 'savings', tone: 'teal' },
+        Cash: { key: 'cash', icon: 'cash', tone: 'amber' },
+        CreditCard: { key: 'creditCard', icon: 'accounts', tone: 'purple' },
+    };
+    const accountType = types[account.type];
     return (
         <article className="av-card av-account-card" aria-label={account.name}>
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <h3 className="break-words font-semibold">{account.name}</h3>
                 <span className={'av-badge av-account-status' + (archived ? '' : ' av-account-status-active')}>{t(archived ? 'accountManagement.archived' : 'accountManagement.active')}</span>
             </div>
-            <p className="av-subtle">{t('onboarding.account.' + typeKeys[account.type])} · {account.currency}</p>
+            <div className="av-account-type-row">
+                <span className="av-account-type" data-tone={accountType.tone}>
+                    <ConceptIcon name={accountType.icon} />{t('onboarding.account.' + accountType.key)}
+                </span>
+                <span className="av-account-currency">{account.currency}</span>
+            </div>
             <p className={'av-kpi break-words' + (balance.length > 20 ? ' av-long-amount' : '')}>{balance}</p>
             <p className="av-subtle">{t('app.accounts.recordedBalance')} · <time dateTime={account.balanceAnchorDate}>{date}</time></p>
             <AccountOwnershipSummary account={account} />

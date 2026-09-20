@@ -78,3 +78,20 @@
     .av-ui .av-search-panel .av-select { font-size: 16px; }
     .av-ui .av-filter-done { width: 100%; justify-content: center; }
 }
+
+/* Semantic accents retain a text label and distinct icon in both themes. */
+.av-ui [data-tone='blue'] { --account-accent: #1d4ed8; --account-tint: #eff6ff; --account-edge: #bfdbfe; }
+.av-ui [data-tone='teal'] { --account-accent: #0f766e; --account-tint: #f0fdfa; --account-edge: #99f6e4; }
+.av-ui [data-tone='amber'] { --account-accent: #92400e; --account-tint: #fffbeb; --account-edge: #fde68a; }
+.av-ui [data-tone='purple'] { --account-accent: #7e22ce; --account-tint: #faf5ff; --account-edge: #e9d5ff; }
+.av-ui [data-tone='neutral'] { --account-accent: var(--muted); --account-tint: var(--panel-2); --account-edge: var(--border); }
+.dark .av-ui [data-tone='blue'] { --account-accent: #93c5fd; --account-tint: #142b49; --account-edge: #284c75; }
+.dark .av-ui [data-tone='teal'] { --account-accent: #5eead4; --account-tint: #103634; --account-edge: #205650; }
+.dark .av-ui [data-tone='amber'] { --account-accent: #fcd34d; --account-tint: #382b17; --account-edge: #65502a; }
+.dark .av-ui [data-tone='purple'] { --account-accent: #d8b4fe; --account-tint: #302044; --account-edge: #573975; }
+.av-ui .av-account-type-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-height: 36px; }
+.av-ui .av-account-type { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--account-edge); border-radius: 9px; background: var(--account-tint); color: var(--account-accent); font-size: 12px; font-weight: 650; }
+.av-ui .av-account-type .av-icon { flex-shrink: 0; width: 20px; height: 20px; }
+.av-ui .av-account-currency { color: var(--muted); font-size: 12px; font-weight: 600; }
+.av-ui .av-account-detail[data-tone] .av-detail-icon { color: var(--account-accent); background: var(--account-tint); border: 1px solid var(--account-edge); }
+.av-ui .av-account-detail[data-tone] dd { color: var(--account-accent); }

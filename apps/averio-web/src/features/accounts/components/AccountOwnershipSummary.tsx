@@ -9,18 +9,18 @@ export function AccountOwnershipSummary({ account }: { account: AccountResponse 
     const holders = account.owners.map((owner, index) =>
         owner.displayName || t('accountOwnership.member', { number: index + 1 }),
     ).join(', ');
-    const rows: { icon: ConceptIconName; label: string; value: string }[] = [
-        { icon: account.scope === 'Household' ? 'household' : 'profile',
+    const rows: { icon: ConceptIconName; tone: string; label: string; value: string }[] = [
+        { icon: account.scope === 'Household' ? 'household' : 'profile', tone: account.scope === 'Household' ? 'blue' : 'purple',
             label: t('accountManagement.moneyFor'), value: t(account.scope === 'Household' ? 'accountOwnership.household' : 'accountOwnership.personal') },
-        { icon: 'profile', label: t('accountManagement.heldBy'), value: holders || t('accountOwnership.noHolders') },
-        { icon: account.visibility === 'Private' ? 'lock' : 'eye', label: t('accountManagement.visibleTo'),
+        { icon: 'group', tone: 'neutral', label: t('accountManagement.heldBy'), value: holders || t('accountOwnership.noHolders') },
+        { icon: account.visibility === 'Private' ? 'lock' : 'group', tone: account.visibility === 'Private' ? 'amber' : 'teal', label: t('accountManagement.visibleTo'),
             value: t(account.visibility === 'Private' ? 'accountOwnership.private' : 'accountOwnership.visible') },
-        { icon: 'statistics', label: t('accountManagement.reporting'),
+        { icon: account.includeInHouseholdReports ? 'reportIncluded' : 'reportExcluded', tone: account.includeInHouseholdReports ? 'teal' : 'neutral', label: t('accountManagement.reporting'),
             value: t(account.includeInHouseholdReports ? 'accountOwnership.included' : 'accountOwnership.excluded') },
     ];
     return (
         <dl className="av-account-details">
-            {rows.map(row => <div key={row.label} className="av-account-detail">
+            {rows.map(row => <div key={row.label} className="av-account-detail" data-tone={row.tone}>
                 <span className="av-detail-icon"><ConceptIcon name={row.icon} /></span>
                 <div><dt>{row.label}</dt><dd>{row.value}</dd></div>
             </div>)}
