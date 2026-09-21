@@ -48,7 +48,7 @@ internal sealed class TransactionAggregateRepository(
             ? new DateOnly(to.Year, to.Month, 1)
             : to;
 
-        return await (
+        var rows = await (
             from aggregate in dbContext.TransactionAggregates.AsNoTracking()
             join account in dbContext.Accounts.AsNoTracking()
                 on new { aggregate.HouseholdId, aggregate.AccountId }
@@ -59,20 +59,20 @@ internal sealed class TransactionAggregateRepository(
                 && aggregate.PeriodStart <= periodTo
                 && account.Visibility == AccountVisibility.Household
                 && account.IncludeInHouseholdReports
-            group aggregate by new
-            {
-                Currency = aggregate.Currency.Value,
-                aggregate.PeriodStart,
-            }
-            into grouped
-            orderby grouped.Key.PeriodStart, grouped.Key.Currency
-            select new CashFlowAggregateReadModel(
-                grouped.Key.Currency,
-                grouped.Key.PeriodStart,
-                grouped.Sum(row => row.IncomeAmount),
-                grouped.Sum(row => row.ExpenseAmount),
-                grouped.Sum(row => row.TransactionCount)))
+            select aggregate)
             .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => new { row.Currency, row.PeriodStart })
+            .OrderBy(group => group.Key.PeriodStart)
+            .ThenBy(group => group.Key.Currency.Value)
+            .Select(group => new CashFlowAggregateReadModel(
+                group.Key.Currency.Value,
+                group.Key.PeriodStart,
+                group.Sum(row => row.IncomeAmount),
+                group.Sum(row => row.ExpenseAmount),
+                group.Sum(row => row.TransactionCount)))
+            .ToArray();
     }
 
     private Task ApplyPeriodAsync(
@@ -89,23 +89,31 @@ internal sealed class TransactionAggregateRepository(
     {
         var periodName = period.ToString();
 
+        // UPDATE-first permits negative correction deltas without ever attempting
+        // to insert an invalid negative aggregate row.
         return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            WITH updated AS (
+                UPDATE transaction_aggregates
+                SET
+                    income_amount = income_amount + {incomeDelta},
+                    expense_amount = expense_amount + {expenseDelta},
+                    transaction_count = transaction_count + {countDelta},
+                    updated_at = {now}
+                WHERE household_id = {householdId}
+                  AND account_id = {accountId}
+                  AND currency_code = {currency}
+                  AND period = {periodName}
+                  AND period_start = {periodStart}
+                RETURNING 1
+            )
             INSERT INTO transaction_aggregates
                 (household_id, account_id, currency_code, period, period_start,
                  income_amount, expense_amount, transaction_count, updated_at)
-            VALUES
-                ({householdId}, {accountId}, {currency}, {periodName}, {periodStart},
-                 {incomeDelta}, {expenseDelta}, {countDelta}, {now})
-            ON CONFLICT
-                (household_id, account_id, currency_code, period, period_start)
-            DO UPDATE SET
-                income_amount =
-                    transaction_aggregates.income_amount + EXCLUDED.income_amount,
-                expense_amount =
-                    transaction_aggregates.expense_amount + EXCLUDED.expense_amount,
-                transaction_count =
-                    transaction_aggregates.transaction_count + EXCLUDED.transaction_count,
-                updated_at = EXCLUDED.updated_at;
+            SELECT
+                {householdId}, {accountId}, {currency}, {periodName}, {periodStart},
+                {incomeDelta}, {expenseDelta}, {countDelta}, {now}
+            WHERE NOT EXISTS (SELECT 1 FROM updated)
+              AND {countDelta} > 0;
             """, cancellationToken);
     }
 }

@@ -265,5 +265,18 @@
   </data>
   <data name="Error_AccountArchived" xml:space="preserve"><value>Szerkesztés előtt aktiváld újra a számlát.</value></data>
   <data name="Error_AccountChanged" xml:space="preserve"><value>A számla megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
+  <data name="Validation_TransactionAccountRequired" xml:space="preserve"><value>Válassz számlát.</value></data>
+  <data name="Validation_TransactionKindInvalid" xml:space="preserve"><value>Válassz érvényes tranzakciótípust.</value></data>
+  <data name="Validation_TransactionVisibilityInvalid" xml:space="preserve"><value>Válassz érvényes láthatóságot.</value></data>
+  <data name="Validation_TransactionAmountInvalid" xml:space="preserve"><value>Adj meg pozitív összeget legfeljebb négy tizedesjeggyel.</value></data>
+  <data name="Validation_TransactionDescriptionInvalid" xml:space="preserve"><value>Adj meg legfeljebb 160 karakteres leírást.</value></data>
+  <data name="Validation_TransactionNoteTooLong" xml:space="preserve"><value>A megjegyzés legfeljebb 500 karakter lehet.</value></data>
+  <data name="Validation_TransactionDateRequired" xml:space="preserve"><value>Válassz tranzakciós dátumot.</value></data>
+  <data name="Validation_CashFlowDateRangeInvalid" xml:space="preserve"><value>Válassz érvényes cash-flow időszakot.</value></data>
+  <data name="Validation_CashFlowPeriodInvalid" xml:space="preserve"><value>Válassz érvényes cash-flow bontást.</value></data>
+  <data name="Error_TransactionVisibilityNotAllowed" xml:space="preserve"><value>A kiválasztott számlán ez a láthatóság nem engedélyezett.</value></data>
+  <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>A tranzakció nem helyezhető át más pénznemű számlára.</value></data>
+  <data name="Error_TransactionChanged" xml:space="preserve"><value>A tranzakció megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
+  <data name="Error_TransactionVoided" xml:space="preserve"><value>Ezt a tranzakciót már sztornózták, ezért nem szerkeszthető.</value></data>
 </root>
 

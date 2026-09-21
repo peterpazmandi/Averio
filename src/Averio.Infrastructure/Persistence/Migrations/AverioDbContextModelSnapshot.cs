@@ -148,6 +148,70 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.ToTable("account_owners", (string)null);
                 });
 
+            modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<decimal>("Amount").HasPrecision(19, 4).HasColumnType("numeric(19,4)").HasColumnName("amount");
+                    b.Property<Guid>("AccountId").HasColumnType("uuid").HasColumnName("account_id");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.Property<Guid>("CreatedByHouseholdMemberId").HasColumnType("uuid").HasColumnName("created_by_household_member_id");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3).HasColumnType("character varying(3)").HasColumnName("currency_code");
+                    b.Property<string>("Description").IsRequired().HasMaxLength(160).HasColumnType("character varying(160)").HasColumnName("description");
+                    b.Property<Guid>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
+                    b.Property<string>("Kind").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("kind");
+                    b.Property<string>("Note").HasMaxLength(500).HasColumnType("character varying(500)").HasColumnName("note");
+                    b.Property<DateOnly>("OccurredOn").HasColumnType("date").HasColumnName("occurred_on");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("status");
+                    b.Property<DateTimeOffset>("UpdatedAt").IsConcurrencyToken().HasColumnType("timestamp with time zone").HasColumnName("updated_at");
+                    b.Property<DateTimeOffset?>("VoidedAt").HasColumnType("timestamp with time zone").HasColumnName("voided_at");
+                    b.Property<string>("Visibility").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("visibility");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "AccountId", "OccurredOn")
+                        .HasDatabaseName("ix_transactions_household_account_date");
+                    b.HasIndex("HouseholdId", "OccurredOn", "CreatedAt")
+                        .HasDatabaseName("ix_transactions_household_date_created");
+                    b.HasIndex("HouseholdId", "Status", "OccurredOn")
+                        .HasDatabaseName("ix_transactions_household_status_date");
+                    b.HasIndex("HouseholdId", "Visibility", "OccurredOn")
+                        .HasDatabaseName("ix_transactions_household_visibility_date");
+
+                    b.ToTable("transactions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transactions_amount", "amount > 0");
+                            t.HasCheckConstraint("ck_transactions_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
+                            t.HasCheckConstraint("ck_transactions_kind", "kind IN ('Income', 'Expense')");
+                            t.HasCheckConstraint("ck_transactions_status", "status IN ('Posted', 'Voided')");
+                            t.HasCheckConstraint("ck_transactions_visibility", "visibility IN ('Household', 'Private')");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionAggregate", b =>
+                {
+                    b.Property<Guid>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
+                    b.Property<Guid>("AccountId").HasColumnType("uuid").HasColumnName("account_id");
+                    b.Property<string>("Currency").HasMaxLength(3).HasColumnType("character varying(3)").HasColumnName("currency_code");
+                    b.Property<string>("Period").HasMaxLength(10).HasColumnType("character varying(10)").HasColumnName("period");
+                    b.Property<DateOnly>("PeriodStart").HasColumnType("date").HasColumnName("period_start");
+                    b.Property<decimal>("ExpenseAmount").HasPrecision(19, 4).HasColumnType("numeric(19,4)").HasColumnName("expense_amount");
+                    b.Property<decimal>("IncomeAmount").HasPrecision(19, 4).HasColumnType("numeric(19,4)").HasColumnName("income_amount");
+                    b.Property<int>("TransactionCount").HasColumnType("integer").HasColumnName("transaction_count");
+                    b.Property<DateTimeOffset>("UpdatedAt").HasColumnType("timestamp with time zone").HasColumnName("updated_at");
+
+                    b.HasKey("HouseholdId", "AccountId", "Currency", "Period", "PeriodStart");
+
+                    b.HasIndex("HouseholdId", "Period", "PeriodStart", "Currency")
+                        .HasDatabaseName("ix_transaction_aggregates_household_period");
+
+                    b.ToTable("transaction_aggregates", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transaction_aggregates_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
+                            t.HasCheckConstraint("ck_transaction_aggregates_non_negative", "income_amount >= 0 AND expense_amount >= 0 AND transaction_count >= 0");
+                            t.HasCheckConstraint("ck_transaction_aggregates_period", "period IN ('Day', 'Month')");
+                        });
+                });
+
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>
                 {
                     b.Property<Guid>("Id")
@@ -480,6 +544,36 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_account_owners_members");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
+                {
+                    b.HasOne("Averio.Domain.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "AccountId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_transactions_accounts_household_account");
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "CreatedByHouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_transactions_household_members_creator");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionAggregate", b =>
+                {
+                    b.HasOne("Averio.Domain.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "AccountId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_transaction_aggregates_accounts_household_account");
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>

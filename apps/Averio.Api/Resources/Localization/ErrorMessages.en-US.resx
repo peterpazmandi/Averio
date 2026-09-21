@@ -265,5 +265,18 @@
   </data>
   <data name="Error_AccountArchived" xml:space="preserve"><value>Reactivate the account before editing it.</value></data>
   <data name="Error_AccountChanged" xml:space="preserve"><value>This account changed. Reload it and try again.</value></data>
+  <data name="Validation_TransactionAccountRequired" xml:space="preserve"><value>Select an account.</value></data>
+  <data name="Validation_TransactionKindInvalid" xml:space="preserve"><value>Select a valid transaction type.</value></data>
+  <data name="Validation_TransactionVisibilityInvalid" xml:space="preserve"><value>Select a valid transaction visibility.</value></data>
+  <data name="Validation_TransactionAmountInvalid" xml:space="preserve"><value>Enter a positive amount with at most four decimal places.</value></data>
+  <data name="Validation_TransactionDescriptionInvalid" xml:space="preserve"><value>Enter a description up to 160 characters.</value></data>
+  <data name="Validation_TransactionNoteTooLong" xml:space="preserve"><value>The note can contain at most 500 characters.</value></data>
+  <data name="Validation_TransactionDateRequired" xml:space="preserve"><value>Select a transaction date.</value></data>
+  <data name="Validation_CashFlowDateRangeInvalid" xml:space="preserve"><value>Select a valid cash-flow date range.</value></data>
+  <data name="Validation_CashFlowPeriodInvalid" xml:space="preserve"><value>Select a valid cash-flow period.</value></data>
+  <data name="Error_TransactionVisibilityNotAllowed" xml:space="preserve"><value>This visibility is not allowed for the selected account.</value></data>
+  <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>A transaction cannot be moved to an account with another currency.</value></data>
+  <data name="Error_TransactionChanged" xml:space="preserve"><value>This transaction changed. Reload it and try again.</value></data>
+  <data name="Error_TransactionVoided" xml:space="preserve"><value>This transaction has already been voided and can no longer be edited.</value></data>
 </root>
 
