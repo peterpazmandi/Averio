@@ -30,10 +30,21 @@ public sealed class DashboardController(
                 balance.LatestBalanceDate))
             .ToArray();
 
+        var cashFlow = result.CashFlow
+            .Select(period => new DashboardCashFlowPeriodResponse(
+                period.Currency,
+                period.PeriodStart,
+                DecimalAmountMapper.Format(period.IncomeAmount),
+                DecimalAmountMapper.Format(period.ExpenseAmount),
+                period.TransactionCount))
+            .ToArray();
+
         return Ok(new DashboardResponse(
             result.DisplayName,
             result.ReportingCurrency,
             balances,
-            AccountResponseMapper.From(result.Accounts)));
+            AccountResponseMapper.From(result.Accounts),
+            cashFlow,
+            result.LatestTransactions.Select(TransactionMapper.From).ToArray()));
     }
 }

@@ -147,7 +147,7 @@ Unless the repository changes after this status date, do not claim these are com
 - recurring transaction domain
 - category management domain
 - goals domain
-- dashboard financial aggregates
+- dashboard cash-flow aggregates (day/month aggregate read model implemented on `feat/transaction-management`)
 - statistics/reporting domain
 - personal-money ledger/rollover
 - historical CSV/XLSX import

@@ -2,7 +2,9 @@ using Averio.Application.Accounts.Common;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Identity;
+using Averio.Application.Transactions.GetTransactions;
 using Averio.Domain.Accounts;
+using Averio.Domain.Transactions;
 
 namespace Averio.Application.Dashboard.GetDashboard;
 
@@ -11,7 +13,10 @@ public sealed class GetDashboardHandler(
     IIdentityService identityService,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
-    HouseholdMemberDirectory memberDirectory)
+    ITransactionRepository transactionRepository,
+    ITransactionAggregateRepository aggregateRepository,
+    HouseholdMemberDirectory memberDirectory,
+    TimeProvider timeProvider)
 {
     public async Task<DashboardResult> HandleAsync(
         Guid householdId,
@@ -78,10 +83,42 @@ public sealed class GetDashboardHandler(
             .Select(account => AccountResult.From(account, names))
             .ToArray();
 
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var currentMonth = new DateOnly(today.Year, today.Month, 1);
+        var sixMonthStart = currentMonth.AddMonths(-5);
+
+        var cashFlowRows = await aggregateRepository.GetCashFlowAsync(
+            household.Id,
+            sixMonthStart,
+            today,
+            TransactionAggregatePeriod.Month,
+            cancellationToken);
+
+        var cashFlow = cashFlowRows
+            .Select(row => new DashboardCashFlowPeriodResult(
+                row.Currency,
+                row.PeriodStart,
+                row.IncomeAmount,
+                row.ExpenseAmount,
+                row.TransactionCount))
+            .ToArray();
+
+        var latestRows = await transactionRepository.GetLatestVisibleAsync(
+            household.Id,
+            membership.Id,
+            6,
+            cancellationToken);
+
+        var latestTransactions = latestRows
+            .Select(TransactionResult.From)
+            .ToArray();
+
         return new DashboardResult(
             user.DisplayName,
             reportingCurrency,
             householdBalances,
-            accounts);
+            accounts,
+            cashFlow,
+            latestTransactions);
     }
 }
