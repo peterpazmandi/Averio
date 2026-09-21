@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import { createLabel } from '../api/transactionApi';
+import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import type {
+    CategoryDto,
+    LabelScope,
     TransactionDto,
     TransactionInputDto,
     TransactionKind,
-    TransactionLabelInputDto,
-    TransactionLabelScope,
     TransactionVisibility,
 } from '../api/transactionApi';
 
@@ -25,7 +27,7 @@ interface Props {
 interface EditorItem {
     key: string;
     description: string;
-    categoryName: string;
+    categoryId: string;
     amount: string;
 }
 
@@ -60,6 +62,19 @@ function scaledToAmount(value: bigint) {
     return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
+function categoryLabel(
+    category: CategoryDto,
+    categoriesById: Map<string, CategoryDto>,
+) {
+    const parent = category.parentId
+        ? categoriesById.get(category.parentId)
+        : undefined;
+
+    return parent
+        ? `${parent.icon} ${parent.name} › ${category.icon} ${category.name}`
+        : `${category.icon} ${category.name}`;
+}
+
 export function TransactionEditor({
     userId,
     householdId,
@@ -70,6 +85,7 @@ export function TransactionEditor({
     busy,
 }: Props) {
     const { t, i18n } = useTranslation();
+    const queryClient = useQueryClient();
     const accounts = useQuery(accountsQueries.list(userId, householdId, false));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writableAccounts = useMemo(() => (accounts.data ?? []).filter(account =>
@@ -92,29 +108,26 @@ export function TransactionEditor({
     const [occurredOn, setOccurredOn] = useState(transaction?.occurredOn ?? todayIso());
     const [items, setItems] = useState<EditorItem[]>(() =>
         transaction?.items.length
-            ? transaction.items
+            ? [...transaction.items]
                 .sort((a, b) => a.position - b.position)
                 .map(item => ({
                     key: item.id || itemKey(),
                     description: item.description,
-                    categoryName: item.categoryName ?? '',
+                    categoryId: item.categoryId,
                     amount: item.amount,
                 }))
             : [{
                 key: itemKey(),
                 description: '',
-                categoryName: '',
+                categoryId: '',
                 amount: '',
             }],
     );
-    const [labels, setLabels] = useState<TransactionLabelInputDto[]>(
-        () => transaction?.labels.map(label => ({
-            name: label.name,
-            scope: label.scope,
-        })) ?? [],
+    const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
+        () => transaction?.labels.map(label => label.id) ?? [],
     );
-    const [labelName, setLabelName] = useState('');
-    const [labelScope, setLabelScope] = useState<TransactionLabelScope>('Household');
+    const [newLabelName, setNewLabelName] = useState('');
+    const [newLabelScope, setNewLabelScope] = useState<LabelScope>('Household');
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -131,6 +144,56 @@ export function TransactionEditor({
     const effectiveVisibility = forcedVisibility ?? visibility;
     const currency = account?.currency ?? transaction?.currency ?? '';
     const language = i18n.resolvedLanguage ?? i18n.language;
+
+    const categories = useQuery(transactionQueries.categories(userId, householdId, kind));
+    const labels = useQuery(transactionQueries.labels(userId, householdId, accountId || undefined));
+
+    const categoriesById = useMemo(
+        () => new Map((categories.data ?? []).map(category => [category.id, category])),
+        [categories.data],
+    );
+    const uncategorizedId = useMemo(
+        () => (categories.data ?? []).find(category => category.code === 'uncategorized')?.id ?? '',
+        [categories.data],
+    );
+
+    useEffect(() => {
+        if (!uncategorizedId) return;
+
+        setItems(current => current.map(item => {
+            const selected = categoriesById.get(item.categoryId);
+            if (!item.categoryId || !selected) {
+                return { ...item, categoryId: uncategorizedId };
+            }
+            return item;
+        }));
+    }, [categoriesById, uncategorizedId]);
+
+    useEffect(() => {
+        if (!labels.data) return;
+        const available = new Set(labels.data.map(label => label.id));
+        setSelectedLabelIds(current => current.filter(id => available.has(id)));
+    }, [labels.data]);
+
+    const createLabelMutation = useMutation({
+        mutationFn: () => createLabel(householdId, {
+            name: newLabelName.trim(),
+            scope: newLabelScope,
+            accountId: newLabelScope === 'Account' ? accountId : null,
+        }),
+        onSuccess: async result => {
+            setSelectedLabelIds(current =>
+                current.includes(result.id) ? current : [...current, result.id]);
+            setNewLabelName('');
+            await queryClient.invalidateQueries({
+                queryKey: transactionQueryKeys.labels(
+                    userId,
+                    householdId,
+                    accountId || undefined,
+                ),
+            });
+        },
+    });
 
     const total = useMemo(() => {
         let sum = 0n;
@@ -150,7 +213,7 @@ export function TransactionEditor({
         setItems(current => [...current, {
             key: itemKey(),
             description: '',
-            categoryName: '',
+            categoryId: uncategorizedId,
             amount: '',
         }]);
     }
@@ -161,27 +224,10 @@ export function TransactionEditor({
             : current.filter(item => item.key !== key));
     }
 
-    function addLabel() {
-        const name = labelName.trim();
-        if (!name) return;
-
-        const duplicate = labels.some(label =>
-            label.scope === labelScope
-            && label.name.toLocaleLowerCase() === name.toLocaleLowerCase());
-
-        if (duplicate) {
-            setError(t('transactionManagement.labelDuplicate'));
-            return;
-        }
-
-        if (labels.length >= 20) {
-            setError(t('transactionManagement.labelLimit'));
-            return;
-        }
-
-        setLabels(current => [...current, { name, scope: labelScope }]);
-        setLabelName('');
-        setError('');
+    function toggleLabel(id: string) {
+        setSelectedLabelIds(current => current.includes(id)
+            ? current.filter(labelId => labelId !== id)
+            : [...current, id]);
     }
 
     async function submit(event: React.FormEvent) {
@@ -195,12 +241,13 @@ export function TransactionEditor({
 
         const mappedItems = items.map(item => ({
             description: item.description.trim(),
-            categoryName: item.categoryName.trim() || null,
+            categoryId: item.categoryId,
             amount: normalizeAmount(item.amount),
         }));
 
         const invalidItem = mappedItems.some(item =>
             !item.description
+            || !item.categoryId
             || !/^\d+(?:\.\d{1,4})?$/.test(item.amount)
             || Number(item.amount) <= 0);
 
@@ -218,7 +265,7 @@ export function TransactionEditor({
                 note: note.trim() || null,
                 occurredOn,
                 items: mappedItems,
-                labels,
+                labelIds: selectedLabelIds,
             }, transaction?.updatedAt);
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : t('errors.genericDescription'));
@@ -243,53 +290,149 @@ export function TransactionEditor({
                 </header>
 
                 <form className="av-tx-form" onSubmit={submit}>
-                    <fieldset className="av-tx-kind" disabled={busy}>
-                        {(['Income', 'Expense'] as const).map(value => (
-                            <label key={value}
-                                className={`${value.toLowerCase()} ${kind === value ? 'active' : ''}`}>
-                                <input type="radio" name="kind" value={value}
-                                    checked={kind === value} onChange={() => setKind(value)} />
-                                <span>{t(value === 'Income'
-                                    ? 'transactionManagement.income'
-                                    : 'transactionManagement.expense')}</span>
-                            </label>
-                        ))}
-                    </fieldset>
-
-                    <div className="av-tx-form-grid">
-                        <label>
-                            <span>{t('transactionManagement.account')}</span>
-                            <select className="av-select" value={accountId} disabled={busy}
-                                onChange={event => setAccountId(event.target.value)} required>
-                                <option value="" disabled>{t('transactionManagement.account')}</option>
-                                {writableAccounts.map(item => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name} · {item.currency}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <label>
-                            <span>{t('transactionManagement.date')}</span>
-                            <input type="date" value={occurredOn} disabled={busy}
-                                onChange={event => setOccurredOn(event.target.value)} required />
-                        </label>
-                    </div>
-
-                    <label>
-                        <span>{t('transactionManagement.merchant')}</span>
-                        <input maxLength={160} value={merchant} disabled={busy}
-                            onChange={event => setMerchant(event.target.value)}
-                            placeholder={t('transactionManagement.merchantPlaceholder')} />
-                    </label>
-
-                    <section className="av-tx-items" aria-labelledby="transaction-items-title">
-                        <div className="av-tx-section-head">
+                    <section className="av-tx-form-section av-tx-section-basics">
+                        <div className="av-tx-form-section-head">
+                            <span className="av-tx-section-number">1</span>
                             <div>
-                                <h3 id="transaction-items-title">{t('transactionManagement.items')}</h3>
+                                <h3>{t('transactionManagement.basics')}</h3>
+                                <p>{t('transactionManagement.basicsHelp')}</p>
+                            </div>
+                        </div>
+
+                        <fieldset className="av-tx-kind" disabled={busy}>
+                            {(['Income', 'Expense'] as const).map(value => (
+                                <label key={value}
+                                    className={`${value.toLowerCase()} ${kind === value ? 'active' : ''}`}>
+                                    <input type="radio" name="kind" value={value}
+                                        checked={kind === value} onChange={() => setKind(value)} />
+                                    <span>{t(value === 'Income'
+                                        ? 'transactionManagement.income'
+                                        : 'transactionManagement.expense')}</span>
+                                </label>
+                            ))}
+                        </fieldset>
+
+                        <div className="av-tx-form-grid">
+                            <label>
+                                <span>{t('transactionManagement.account')}</span>
+                                <select className="av-select" value={accountId} disabled={busy}
+                                    onChange={event => setAccountId(event.target.value)} required>
+                                    <option value="" disabled>{t('transactionManagement.account')}</option>
+                                    {writableAccounts.map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name} · {item.currency}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                <span>{t('transactionManagement.date')}</span>
+                                <input type="date" value={occurredOn} disabled={busy}
+                                    onChange={event => setOccurredOn(event.target.value)} required />
+                            </label>
+                        </div>
+
+                        <label>
+                            <span>{t('transactionManagement.merchant')}</span>
+                            <input maxLength={160} value={merchant} disabled={busy}
+                                onChange={event => setMerchant(event.target.value)}
+                                placeholder={t('transactionManagement.merchantPlaceholder')} />
+                        </label>
+                    </section>
+
+                    <section className="av-tx-form-section av-tx-section-labels"
+                        aria-labelledby="transaction-labels-title">
+                        <div className="av-tx-form-section-head">
+                            <span className="av-tx-section-number">2</span>
+                            <div>
+                                <h3 id="transaction-labels-title">
+                                    {t('transactionManagement.labels')}
+                                </h3>
+                                <p>{t('transactionManagement.labelsHelp')}</p>
+                            </div>
+                        </div>
+
+                        {labels.isPending && (
+                            <p className="av-subtle">{t('common.status.loading')}</p>
+                        )}
+
+                        {labels.data && labels.data.length > 0 ? (
+                            <div className="av-tx-label-catalog">
+                                {labels.data.map(label => {
+                                    const selected = selectedLabelIds.includes(label.id);
+                                    return (
+                                        <button type="button" key={label.id}
+                                            className={`av-tx-label-choice ${label.scope.toLowerCase()} ${selected ? 'selected' : ''}`}
+                                            aria-pressed={selected}
+                                            disabled={busy}
+                                            onClick={() => toggleLabel(label.id)}>
+                                            <span className="av-tx-label-check">
+                                                {selected ? '✓' : ''}
+                                            </span>
+                                            <span aria-hidden="true">
+                                                {label.scope === 'Household' ? '⌂' : '▣'}
+                                            </span>
+                                            <span>{label.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : labels.isSuccess ? (
+                            <p className="av-subtle">{t('transactionManagement.noLabelsYet')}</p>
+                        ) : null}
+
+                        <div className="av-tx-label-create">
+                            <label>
+                                <span>{t('transactionManagement.newLabel')}</span>
+                                <input value={newLabelName} maxLength={40}
+                                    disabled={busy || createLabelMutation.isPending}
+                                    onChange={event => setNewLabelName(event.target.value)}
+                                    placeholder={t('transactionManagement.labelPlaceholder')} />
+                            </label>
+                            <label>
+                                <span>{t('transactionManagement.labelScope')}</span>
+                                <select className="av-select" value={newLabelScope}
+                                    disabled={busy || createLabelMutation.isPending}
+                                    onChange={event =>
+                                        setNewLabelScope(event.target.value as LabelScope)}>
+                                    <option value="Household">
+                                        {t('transactionManagement.householdLabel')}
+                                    </option>
+                                    <option value="Account">
+                                        {t('transactionManagement.accountLabel')}
+                                    </option>
+                                </select>
+                            </label>
+                            <button type="button" className="av-btn av-compact"
+                                disabled={busy || createLabelMutation.isPending
+                                    || !newLabelName.trim() || !accountId}
+                                onClick={() => createLabelMutation.mutate()}>
+                                + {t(createLabelMutation.isPending
+                                    ? 'transactionManagement.creatingLabel'
+                                    : 'transactionManagement.createLabel')}
+                            </button>
+                        </div>
+
+                        {createLabelMutation.isError && (
+                            <p className="av-error" role="alert">
+                                {createLabelMutation.error instanceof Error
+                                    ? createLabelMutation.error.message
+                                    : t('errors.genericDescription')}
+                            </p>
+                        )}
+                    </section>
+
+                    <section className="av-tx-form-section av-tx-section-items"
+                        aria-labelledby="transaction-items-title">
+                        <div className="av-tx-form-section-head">
+                            <span className="av-tx-section-number">3</span>
+                            <div>
+                                <h3 id="transaction-items-title">
+                                    {t('transactionManagement.items')}
+                                </h3>
                                 <p>{t('transactionManagement.itemsHelp')}</p>
                             </div>
-                            <button type="button" className="av-btn av-compact"
+                            <button type="button" className="av-btn av-compact av-tx-section-action"
                                 onClick={addItem} disabled={busy || items.length >= 100}>
                                 + {t('transactionManagement.addItem')}
                             </button>
@@ -302,21 +445,37 @@ export function TransactionEditor({
                                     <label className="av-tx-item-description">
                                         <span>{t('transactionManagement.itemDescription')}</span>
                                         <input value={item.description} maxLength={160} disabled={busy}
-                                            onChange={event => updateItem(item.key, { description: event.target.value })}
+                                            onChange={event => updateItem(item.key, {
+                                                description: event.target.value,
+                                            })}
                                             placeholder={t('transactionManagement.itemDescriptionPlaceholder')}
                                             required />
                                     </label>
                                     <label>
                                         <span>{t('transactionManagement.category')}</span>
-                                        <input value={item.categoryName} maxLength={80} disabled={busy}
-                                            onChange={event => updateItem(item.key, { categoryName: event.target.value })}
-                                            placeholder={t('transactionManagement.categoryPlaceholder')} />
+                                        <select className="av-select" value={item.categoryId}
+                                            disabled={busy || categories.isPending}
+                                            onChange={event => updateItem(item.key, {
+                                                categoryId: event.target.value,
+                                            })}
+                                            required>
+                                            <option value="" disabled>
+                                                {t('transactionManagement.selectCategory')}
+                                            </option>
+                                            {(categories.data ?? []).map(category => (
+                                                <option key={category.id} value={category.id}>
+                                                    {categoryLabel(category, categoriesById)}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </label>
                                     <label>
                                         <span>{t('transactionManagement.amount')}</span>
                                         <div className="av-tx-amount-input">
                                             <input inputMode="decimal" value={item.amount} disabled={busy}
-                                                onChange={event => updateItem(item.key, { amount: event.target.value })}
+                                                onChange={event => updateItem(item.key, {
+                                                    amount: event.target.value,
+                                                })}
                                                 placeholder="0.00" required />
                                             <strong>{currency}</strong>
                                         </div>
@@ -329,10 +488,6 @@ export function TransactionEditor({
                             ))}
                         </div>
 
-                        <p className="av-subtle av-tx-category-help">
-                            {t('transactionManagement.categorySnapshotHelp')}
-                        </p>
-
                         <div className={`av-tx-total ${kind.toLowerCase()}`}>
                             <span>{t('transactionManagement.total')}</span>
                             <strong>
@@ -344,75 +499,45 @@ export function TransactionEditor({
                         </div>
                     </section>
 
-                    <section className="av-tx-labels" aria-labelledby="transaction-labels-title">
-                        <div className="av-tx-section-head">
+                    <section className="av-tx-form-section av-tx-section-details">
+                        <div className="av-tx-form-section-head">
+                            <span className="av-tx-section-number">4</span>
                             <div>
-                                <h3 id="transaction-labels-title">{t('transactionManagement.labels')}</h3>
-                                <p>{t('transactionManagement.labelsHelp')}</p>
+                                <h3>{t('transactionManagement.detailsPrivacy')}</h3>
+                                <p>{t('transactionManagement.detailsPrivacyHelp')}</p>
                             </div>
                         </div>
-                        <div className="av-tx-label-entry">
-                            <input value={labelName} maxLength={40} disabled={busy}
-                                onChange={event => setLabelName(event.target.value)}
-                                onKeyDown={event => {
-                                    if (event.key === 'Enter') {
-                                        event.preventDefault();
-                                        addLabel();
-                                    }
-                                }}
-                                placeholder={t('transactionManagement.labelPlaceholder')} />
-                            <select className="av-select" value={labelScope} disabled={busy}
-                                onChange={event => setLabelScope(event.target.value as TransactionLabelScope)}>
-                                <option value="Household">{t('transactionManagement.householdLabel')}</option>
-                                <option value="Account">{t('transactionManagement.accountLabel')}</option>
+
+                        <label>
+                            <span>{t('transactionManagement.note')}</span>
+                            <textarea maxLength={500} value={note} disabled={busy}
+                                onChange={event => setNote(event.target.value)}
+                                placeholder={t('transactionManagement.notePlaceholder')} />
+                        </label>
+
+                        <label>
+                            <span>{t('transactionManagement.visibility')}</span>
+                            <select className="av-select" value={effectiveVisibility}
+                                disabled={busy || forcedVisibility !== undefined}
+                                onChange={event =>
+                                    setVisibility(event.target.value as TransactionVisibility)}>
+                                <option value="Household">{t('transactionManagement.household')}</option>
+                                <option value="Private">{t('transactionManagement.private')}</option>
                             </select>
-                            <button type="button" className="av-btn av-compact" onClick={addLabel}
-                                disabled={busy || !labelName.trim()}>
-                                {t('transactionManagement.addLabel')}
-                            </button>
-                        </div>
-                        {labels.length > 0 && (
-                            <div className="av-tx-label-list">
-                                {labels.map((label, index) => (
-                                    <span key={`${label.scope}-${label.name}-${index}`}
-                                        className={`av-tx-label-chip ${label.scope.toLowerCase()}`}>
-                                        <span aria-hidden="true">{label.scope === 'Household' ? '⌂' : '▣'}</span>
-                                        <span>{label.name}</span>
-                                        <button type="button" disabled={busy}
-                                            onClick={() => setLabels(current =>
-                                                current.filter((_, labelIndex) => labelIndex !== index))}
-                                            aria-label={t('transactionManagement.removeLabel', { name: label.name })}>
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
+                        </label>
+
+                        {effectiveVisibility === 'Private' && (
+                            <p className="av-tx-private-help">
+                                {t('transactionManagement.privateHelp')}
+                            </p>
+                        )}
+                        {currency && (
+                            <p className="av-subtle">
+                                {t('transactionManagement.currencyLocked')}
+                            </p>
                         )}
                     </section>
 
-                    <label>
-                        <span>{t('transactionManagement.note')}</span>
-                        <textarea maxLength={500} value={note} disabled={busy}
-                            onChange={event => setNote(event.target.value)}
-                            placeholder={t('transactionManagement.notePlaceholder')} />
-                    </label>
-
-                    <label>
-                        <span>{t('transactionManagement.visibility')}</span>
-                        <select className="av-select" value={effectiveVisibility}
-                            disabled={busy || forcedVisibility !== undefined}
-                            onChange={event => setVisibility(event.target.value as TransactionVisibility)}>
-                            <option value="Household">{t('transactionManagement.household')}</option>
-                            <option value="Private">{t('transactionManagement.private')}</option>
-                        </select>
-                    </label>
-
-                    {effectiveVisibility === 'Private' && (
-                        <p className="av-tx-private-help">{t('transactionManagement.privateHelp')}</p>
-                    )}
-                    {currency && (
-                        <p className="av-subtle">{t('transactionManagement.currencyLocked')}</p>
-                    )}
                     {error && <p className="av-error" role="alert">{error}</p>}
 
                     <footer className="av-tx-modal-actions">
@@ -421,7 +546,9 @@ export function TransactionEditor({
                                 onClick={() => {
                                     if (window.confirm(t('transactionManagement.voidConfirm'))) {
                                         void onVoid().catch(reason => setError(
-                                            reason instanceof Error ? reason.message : t('errors.genericDescription'),
+                                            reason instanceof Error
+                                                ? reason.message
+                                                : t('errors.genericDescription'),
                                         ));
                                     }
                                 }}>
@@ -433,7 +560,8 @@ export function TransactionEditor({
                             {t('common.actions.cancel')}
                         </button>
                         <button type="submit" className="av-btn av-primary"
-                            disabled={busy || writableAccounts.length === 0}>
+                            disabled={busy || writableAccounts.length === 0
+                                || categories.isPending}>
                             {t(busy ? 'transactionManagement.saving' : 'transactionManagement.save')}
                         </button>
                     </footer>

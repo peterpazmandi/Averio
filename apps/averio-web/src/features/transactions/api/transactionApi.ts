@@ -3,20 +3,43 @@ import { apiFetch } from '../../../shared/api/apiFetch';
 export type TransactionKind = 'Income' | 'Expense';
 export type TransactionVisibility = 'Household' | 'Private';
 export type TransactionStatus = 'Posted' | 'Voided';
-export type TransactionLabelScope = 'Household' | 'Account';
+export type LabelScope = 'Household' | 'Account';
+export type CategoryKind = 'Income' | 'Expense' | 'Both';
+export type AggregatePeriod = 'Day' | 'Month' | 'Year';
+
+export interface CategoryDto {
+    id: string;
+    parentId: string | null;
+    code: string;
+    name: string;
+    kind: CategoryKind;
+    icon: string;
+    accentColor: string;
+    sortOrder: number;
+    isBase: boolean;
+}
+
+export interface LabelDto {
+    id: string;
+    name: string;
+    scope: LabelScope;
+    accountId: string | null;
+}
 
 export interface TransactionItemDto {
     id: string;
     position: number;
     description: string;
-    categoryName: string | null;
+    categoryId: string;
+    categoryName: string;
+    categoryIcon: string;
     amount: string;
 }
 
 export interface TransactionLabelDto {
     id: string;
     name: string;
-    scope: TransactionLabelScope;
+    scope: LabelScope;
 }
 
 export interface TransactionDto {
@@ -46,13 +69,8 @@ export interface TransactionPageDto {
 
 export interface TransactionItemInputDto {
     description: string;
-    categoryName: string | null;
+    categoryId: string;
     amount: string;
-}
-
-export interface TransactionLabelInputDto {
-    name: string;
-    scope: TransactionLabelScope;
 }
 
 export interface TransactionInputDto {
@@ -63,7 +81,7 @@ export interface TransactionInputDto {
     note: string | null;
     occurredOn: string;
     items: TransactionItemInputDto[];
-    labels: TransactionLabelInputDto[];
+    labelIds: string[];
 }
 
 export interface UpdateTransactionInputDto extends TransactionInputDto {
@@ -81,8 +99,26 @@ export interface CashFlowPeriodDto {
 export interface CashFlowDto {
     from: string;
     to: string;
-    period: 'Day' | 'Month';
+    period: AggregatePeriod;
     periods: CashFlowPeriodDto[];
+}
+
+export interface CategoryCashFlowPeriodDto {
+    categoryId: string;
+    categoryName: string;
+    categoryIcon: string;
+    currency: string;
+    periodStart: string;
+    incomeAmount: string;
+    expenseAmount: string;
+    itemCount: number;
+}
+
+export interface CategoryCashFlowDto {
+    from: string;
+    to: string;
+    period: AggregatePeriod;
+    periods: CategoryCashFlowPeriodDto[];
 }
 
 export interface TransactionFilters {
@@ -96,7 +132,7 @@ export interface TransactionFilters {
     cursorCreatedAt?: string;
 }
 
-function queryString(filters: TransactionFilters) {
+function queryString(filters: Record<string, string | number | undefined>) {
     const query = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== '') query.set(key, String(value));
@@ -149,16 +185,56 @@ export const voidTransaction = (
     { method: 'DELETE' },
 );
 
+export const getCategories = (
+    householdId: string,
+    kind?: TransactionKind,
+    signal?: AbortSignal,
+) => apiFetch<CategoryDto[]>(
+    `/api/v1/households/${encodeURIComponent(householdId)}/categories${queryString({ kind })}`,
+    { signal },
+);
+
+export const getLabels = (
+    householdId: string,
+    accountId?: string,
+    signal?: AbortSignal,
+) => apiFetch<LabelDto[]>(
+    `/api/v1/households/${encodeURIComponent(householdId)}/labels${queryString({ accountId })}`,
+    { signal },
+);
+
+export const createLabel = (
+    householdId: string,
+    request: { name: string; scope: LabelScope; accountId: string | null },
+) => apiFetch<{ id: string }>(
+    `/api/v1/households/${encodeURIComponent(householdId)}/labels`,
+    { method: 'POST', body: JSON.stringify(request) },
+);
+
 export const getCashFlow = (
     householdId: string,
     from: string,
     to: string,
-    period: 'Day' | 'Month' = 'Month',
+    period: AggregatePeriod = 'Month',
     signal?: AbortSignal,
 ) => {
     const query = new URLSearchParams({ from, to, period });
     return apiFetch<CashFlowDto>(
         `/api/v1/households/${encodeURIComponent(householdId)}/statistics/cash-flow?${query}`,
+        { signal },
+    );
+};
+
+export const getCategoryCashFlow = (
+    householdId: string,
+    from: string,
+    to: string,
+    period: AggregatePeriod = 'Month',
+    signal?: AbortSignal,
+) => {
+    const query = new URLSearchParams({ from, to, period });
+    return apiFetch<CategoryCashFlowDto>(
+        `/api/v1/households/${encodeURIComponent(householdId)}/statistics/category-cash-flow?${query}`,
         { signal },
     );
 };
