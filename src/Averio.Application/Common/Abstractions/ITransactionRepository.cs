@@ -33,7 +33,7 @@ public sealed record TransactionQuery(
     string? Search,
     int PageSize,
     DateOnly? CursorDate,
-    Guid? CursorId);
+    DateTimeOffset? CursorCreatedAt);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,
@@ -51,5 +51,6 @@ public sealed record TransactionReadModel(
     string? Note,
     DateOnly OccurredOn,
     TransactionStatus Status,
+    DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool CanModify);
