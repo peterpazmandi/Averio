@@ -3,6 +3,7 @@ import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { transactionQueries } from '../api/transactionQueries';
+import type { CashFlowPeriodDto } from '../api/transactionApi';
 import '../transactions.css';
 
 export function StatisticsPage({ userId, householdId }: { userId: string; householdId: string }) {
@@ -14,7 +15,7 @@ export function StatisticsPage({ userId, householdId }: { userId: string; househ
     const to = format(end, 'yyyy-MM-dd');
     const cashFlow = useQuery(transactionQueries.cashFlow(userId, householdId, from, to, 'Month'));
 
-    const byCurrency = new Map<string, typeof cashFlow.data.periods>();
+    const byCurrency = new Map<string, CashFlowPeriodDto[]>();
     for (const period of cashFlow.data?.periods ?? []) {
         const list = byCurrency.get(period.currency) ?? [];
         list.push(period);

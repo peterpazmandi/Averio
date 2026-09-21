@@ -186,9 +186,14 @@ export function TransactionEditor({
                     )}
                     {currency && (
                         <p className="av-subtle">
-                            {t('transactionManagement.currencyLocked')} · {
-                                formatDecimalAmount(amount || '0', currency, i18n.resolvedLanguage ?? i18n.language)
-                            }
+                            {t('transactionManagement.currencyLocked')}
+                            {/^\\d+(?:[.,]\\d{0,4})?$/.test(amount) && amount
+                                ? ` · ${formatDecimalAmount(
+                                    amount.replace(',', '.').replace(/\\.$/, ''),
+                                    currency,
+                                    i18n.resolvedLanguage ?? i18n.language,
+                                )}`
+                                : ''}
                         </p>
                     )}
                     {error && <p className="av-error" role="alert">{error}</p>}

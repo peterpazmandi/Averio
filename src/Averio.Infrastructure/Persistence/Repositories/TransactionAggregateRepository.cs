@@ -48,6 +48,10 @@ internal sealed class TransactionAggregateRepository(
             ? new DateOnly(to.Year, to.Month, 1)
             : to;
 
+        // The database removes inaccessible/non-reporting accounts first. The
+        // remaining row count is bounded by accounts × requested periods, so
+        // final currency grouping in memory avoids provider-specific value-object
+        // translation without falling back to the raw transaction ledger.
         var rows = await (
             from aggregate in dbContext.TransactionAggregates.AsNoTracking()
             join account in dbContext.Accounts.AsNoTracking()
@@ -75,7 +79,7 @@ internal sealed class TransactionAggregateRepository(
             .ToArray();
     }
 
-    private Task ApplyPeriodAsync(
+    private async Task ApplyPeriodAsync(
         Guid householdId,
         Guid accountId,
         string currency,
@@ -89,31 +93,52 @@ internal sealed class TransactionAggregateRepository(
     {
         var periodName = period.ToString();
 
-        // UPDATE-first permits negative correction deltas without ever attempting
-        // to insert an invalid negative aggregate row.
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            WITH updated AS (
-                UPDATE transaction_aggregates
-                SET
-                    income_amount = income_amount + {incomeDelta},
-                    expense_amount = expense_amount + {expenseDelta},
-                    transaction_count = transaction_count + {countDelta},
-                    updated_at = {now}
-                WHERE household_id = {householdId}
-                  AND account_id = {accountId}
-                  AND currency_code = {currency}
-                  AND period = {periodName}
-                  AND period_start = {periodStart}
-                RETURNING 1
-            )
-            INSERT INTO transaction_aggregates
-                (household_id, account_id, currency_code, period, period_start,
-                 income_amount, expense_amount, transaction_count, updated_at)
-            SELECT
-                {householdId}, {accountId}, {currency}, {periodName}, {periodStart},
-                {incomeDelta}, {expenseDelta}, {countDelta}, {now}
-            WHERE NOT EXISTS (SELECT 1 FROM updated)
-              AND {countDelta} > 0;
+        if (countDelta > 0)
+        {
+            // Positive contributions are safe to INSERT and PostgreSQL's
+            // ON CONFLICT path serializes concurrent updates to the same bucket.
+            await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO transaction_aggregates
+                    (household_id, account_id, currency_code, period, period_start,
+                     income_amount, expense_amount, transaction_count, updated_at)
+                VALUES
+                    ({householdId}, {accountId}, {currency}, {periodName}, {periodStart},
+                     {incomeDelta}, {expenseDelta}, {countDelta}, {now})
+                ON CONFLICT
+                    (household_id, account_id, currency_code, period, period_start)
+                DO UPDATE SET
+                    income_amount =
+                        transaction_aggregates.income_amount + EXCLUDED.income_amount,
+                    expense_amount =
+                        transaction_aggregates.expense_amount + EXCLUDED.expense_amount,
+                    transaction_count =
+                        transaction_aggregates.transaction_count + EXCLUDED.transaction_count,
+                    updated_at = EXCLUDED.updated_at;
+                """, cancellationToken);
+            return;
+        }
+
+        // A negative delta is always the reversal of an existing posted
+        // contribution. UPDATE-only avoids proposing a negative INSERT row,
+        // while the CHECK constraint protects the aggregate from underflow.
+        var affected = await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE transaction_aggregates
+            SET
+                income_amount = income_amount + {incomeDelta},
+                expense_amount = expense_amount + {expenseDelta},
+                transaction_count = transaction_count + {countDelta},
+                updated_at = {now}
+            WHERE household_id = {householdId}
+              AND account_id = {accountId}
+              AND currency_code = {currency}
+              AND period = {periodName}
+              AND period_start = {periodStart};
             """, cancellationToken);
+
+        if (affected != 1)
+        {
+            throw new InvalidOperationException(
+                "Expected transaction aggregate contribution was not found.");
+        }
     }
 }
