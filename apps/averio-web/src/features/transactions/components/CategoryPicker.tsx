@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
+import { getCategoryDisplayName } from '../categoryLocalization';
 import type { CategoryDto } from '../api/transactionApi';
 
 interface Props {
@@ -47,25 +48,28 @@ export function CategoryPicker({
         const term = normalize(search);
         const roots = categories
             .filter(category => category.parentId === null)
-            .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+            .sort((a, b) => a.sortOrder - b.sortOrder);
 
         return roots.flatMap(parent => {
+            const parentName = getCategoryDisplayName(parent, t);
             const children = categories
                 .filter(category => category.parentId === parent.id)
-                .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+                .sort((a, b) => a.sortOrder - b.sortOrder);
 
             if (!term) {
-                return [{ parent, children }];
+                return [{ parent, parentName, children }];
             }
 
             const parentMatches = normalize(
-                `${parent.name} ${parent.code}`,
+                `${parentName} ${parent.systemKey ?? ''}`,
             ).includes(term);
 
-            const matchingChildren = children.filter(child =>
-                normalize(
-                    `${child.name} ${child.code} ${parent.name}`,
-                ).includes(term));
+            const matchingChildren = children.filter(child => {
+                const childName = getCategoryDisplayName(child, t);
+                return normalize(
+                    `${childName} ${child.systemKey ?? ''} ${parentName}`,
+                ).includes(term);
+            });
 
             if (!parentMatches && matchingChildren.length === 0) {
                 return [];
@@ -73,10 +77,11 @@ export function CategoryPicker({
 
             return [{
                 parent,
+                parentName,
                 children: parentMatches ? children : matchingChildren,
             }];
         });
-    }, [categories, search]);
+    }, [categories, search, t]);
 
     useEffect(() => {
         if (!open) return;
@@ -97,7 +102,9 @@ export function CategoryPicker({
 
         document.addEventListener('pointerdown', onPointerDown);
         document.addEventListener('keydown', onKeyDown);
-        const frame = requestAnimationFrame(() => searchInput.current?.focus());
+        const frame = requestAnimationFrame(
+            () => searchInput.current?.focus(),
+        );
 
         return () => {
             cancelAnimationFrame(frame);
@@ -112,11 +119,13 @@ export function CategoryPicker({
         setSearch('');
     }
 
-    const selectedName = selected
-        ? selectedParent
-            ? `${selectedParent.name} › ${selected.name}`
-            : selected.name
+    const selectedDisplayName = selected
+        ? getCategoryDisplayName(selected, t)
         : t('transactionManagement.selectCategory');
+
+    const selectedParentName = selectedParent
+        ? getCategoryDisplayName(selectedParent, t)
+        : null;
 
     return (
         <div className="av-category-picker" ref={root}>
@@ -134,12 +143,15 @@ export function CategoryPicker({
                     {selected?.icon ?? '🗂️'}
                 </span>
                 <span className="av-category-picker-copy">
-                    <strong>{selectedName}</strong>
+                    <strong>
+                        {selectedParentName
+                            ? `${selectedParentName} › ${selectedDisplayName}`
+                            : selectedDisplayName}
+                    </strong>
                     {selected && (
                         <small>
-                            {selectedParent
-                                ? selectedParent.name
-                                : t('transactionManagement.categoryPickerHelp')}
+                            {selectedParentName
+                                ?? t('transactionManagement.categoryPickerHelp')}
                         </small>
                     )}
                 </span>
@@ -157,7 +169,10 @@ export function CategoryPicker({
                 >
                     <div className="av-category-picker-search">
                         <ConceptIcon name="search" />
-                        <label className="sr-only" htmlFor={`${panelId}-search`}>
+                        <label
+                            className="sr-only"
+                            htmlFor={`${panelId}-search`}
+                        >
                             {t('transactionManagement.categorySearch')}
                         </label>
                         <input
@@ -166,14 +181,18 @@ export function CategoryPicker({
                             type="search"
                             value={search}
                             autoComplete="off"
-                            placeholder={t('transactionManagement.categorySearchPlaceholder')}
+                            placeholder={t(
+                                'transactionManagement.categorySearchPlaceholder',
+                            )}
                             onChange={event => setSearch(event.target.value)}
                         />
                         {search && (
                             <button
                                 type="button"
                                 className="av-category-picker-clear"
-                                aria-label={t('transactionManagement.clearSearch')}
+                                aria-label={t(
+                                    'transactionManagement.clearSearch',
+                                )}
                                 onClick={() => {
                                     setSearch('');
                                     searchInput.current?.focus();
@@ -191,29 +210,46 @@ export function CategoryPicker({
                     {groups.length === 0 ? (
                         <div className="av-category-picker-empty">
                             <ConceptIcon name="search" />
-                            <span>{t('transactionManagement.categoryNoResults')}</span>
+                            <span>
+                                {t('transactionManagement.categoryNoResults')}
+                            </span>
                         </div>
                     ) : (
                         <div className="av-category-bento">
-                            {groups.map(({ parent, children }) => (
-                                <section className="av-category-group" key={parent.id}>
+                            {groups.map(({
+                                parent,
+                                parentName,
+                                children,
+                            }) => (
+                                <section
+                                    className="av-category-group"
+                                    key={parent.id}
+                                >
                                     <button
                                         type="button"
                                         className={
                                             'av-category-parent'
-                                            + (value === parent.id ? ' selected' : '')
+                                            + (value === parent.id
+                                                ? ' selected'
+                                                : '')
                                         }
                                         onClick={() => choose(parent.id)}
                                     >
-                                        <span className="av-category-parent-icon" aria-hidden="true">
+                                        <span
+                                            className="av-category-parent-icon"
+                                            aria-hidden="true"
+                                        >
                                             {parent.icon}
                                         </span>
                                         <span>
-                                            <strong>{parent.name}</strong>
+                                            <strong>{parentName}</strong>
                                             <small>{children.length}</small>
                                         </span>
                                         {value === parent.id && (
-                                            <span className="av-category-selected-mark" aria-hidden="true">
+                                            <span
+                                                className="av-category-selected-mark"
+                                                aria-hidden="true"
+                                            >
                                                 ✓
                                             </span>
                                         )}
@@ -227,12 +263,22 @@ export function CategoryPicker({
                                                     key={child.id}
                                                     className={
                                                         'av-category-child'
-                                                        + (value === child.id ? ' selected' : '')
+                                                        + (value === child.id
+                                                            ? ' selected'
+                                                            : '')
                                                     }
-                                                    onClick={() => choose(child.id)}
+                                                    onClick={() =>
+                                                        choose(child.id)}
                                                 >
-                                                    <span aria-hidden="true">{child.icon}</span>
-                                                    <span>{child.name}</span>
+                                                    <span aria-hidden="true">
+                                                        {child.icon}
+                                                    </span>
+                                                    <span>
+                                                        {getCategoryDisplayName(
+                                                            child,
+                                                            t,
+                                                        )}
+                                                    </span>
                                                     {value === child.id && (
                                                         <span
                                                             className="av-category-selected-mark"

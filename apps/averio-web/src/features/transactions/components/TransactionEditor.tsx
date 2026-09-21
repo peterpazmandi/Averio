@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { createLabel } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { CategoryPicker } from './CategoryPicker';
@@ -115,6 +116,7 @@ export function TransactionEditor({
     );
     const [newLabelName, setNewLabelName] = useState('');
     const [newLabelScope, setNewLabelScope] = useState<LabelScope>('Household');
+    const [newLabelOpen, setNewLabelOpen] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -140,7 +142,9 @@ export function TransactionEditor({
         [categories.data],
     );
     const uncategorizedId = useMemo(
-        () => (categories.data ?? []).find(category => category.code === 'uncategorized')?.id ?? '',
+        () => (categories.data ?? []).find(
+            category => category.systemKey === 'uncategorized',
+        )?.id ?? '',
         [categories.data],
     );
 
@@ -172,6 +176,8 @@ export function TransactionEditor({
             setSelectedLabelIds(current =>
                 current.includes(result.id) ? current : [...current, result.id]);
             setNewLabelName('');
+            setNewLabelScope('Household');
+            setNewLabelOpen(false);
             await queryClient.invalidateQueries({
                 queryKey: transactionQueryKeys.labels(
                     userId,
@@ -343,64 +349,158 @@ export function TransactionEditor({
                             <p className="av-subtle">{t('common.status.loading')}</p>
                         )}
 
-                        {labels.data && labels.data.length > 0 ? (
-                            <div className="av-tx-label-catalog">
-                                {labels.data.map(label => {
-                                    const selected = selectedLabelIds.includes(label.id);
-                                    return (
-                                        <button type="button" key={label.id}
-                                            className={`av-tx-label-choice ${label.scope.toLowerCase()} ${selected ? 'selected' : ''}`}
-                                            aria-pressed={selected}
-                                            disabled={busy}
-                                            onClick={() => toggleLabel(label.id)}>
-                                            <span className="av-tx-label-check">
-                                                {selected ? '✓' : ''}
-                                            </span>
-                                            <span aria-hidden="true">
-                                                {label.scope === 'Household' ? '⌂' : '▣'}
-                                            </span>
-                                            <span>{label.name}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ) : labels.isSuccess ? (
-                            <p className="av-subtle">{t('transactionManagement.noLabelsYet')}</p>
-                        ) : null}
+                        {labels.isSuccess
+                            && labels.data.length === 0
+                            && !newLabelOpen && (
+                            <p className="av-subtle">
+                                {t('transactionManagement.noLabelsYet')}
+                            </p>
+                        )}
 
-                        <div className="av-tx-label-create">
-                            <label>
-                                <span>{t('transactionManagement.newLabel')}</span>
-                                <input value={newLabelName} maxLength={40}
-                                    disabled={busy || createLabelMutation.isPending}
-                                    onChange={event => setNewLabelName(event.target.value)}
-                                    placeholder={t('transactionManagement.labelPlaceholder')} />
-                            </label>
-                            <label>
-                                <span>{t('transactionManagement.labelScope')}</span>
-                                <select className="av-select" value={newLabelScope}
-                                    disabled={busy || createLabelMutation.isPending}
-                                    onChange={event =>
-                                        setNewLabelScope(event.target.value as LabelScope)}>
-                                    <option value="Household">
-                                        {t('transactionManagement.householdLabel')}
-                                    </option>
-                                    <option value="Account">
-                                        {t('transactionManagement.accountLabel')}
-                                    </option>
-                                </select>
-                            </label>
-                            <button type="button" className="av-btn av-compact"
-                                disabled={busy || createLabelMutation.isPending
-                                    || !newLabelName.trim() || !accountId}
-                                onClick={() => createLabelMutation.mutate()}>
-                                + {t(createLabelMutation.isPending
-                                    ? 'transactionManagement.creatingLabel'
-                                    : 'transactionManagement.createLabel')}
-                            </button>
+                        <div className="av-tx-label-catalog">
+                            {(labels.data ?? []).map(label => {
+                                const selected = selectedLabelIds.includes(
+                                    label.id,
+                                );
+
+                                return (
+                                    <button
+                                        type="button"
+                                        key={label.id}
+                                        className={
+                                            `av-tx-label-choice ${label.scope.toLowerCase()} `
+                                            + (selected ? 'selected' : '')
+                                        }
+                                        aria-pressed={selected}
+                                        disabled={busy}
+                                        onClick={() => toggleLabel(label.id)}
+                                    >
+                                        <span className="av-tx-label-check">
+                                            {selected ? '✓' : ''}
+                                        </span>
+                                        <span aria-hidden="true">
+                                            {label.scope === 'Household'
+                                                ? '⌂'
+                                                : '▣'}
+                                        </span>
+                                        <span>{label.name}</span>
+                                    </button>
+                                );
+                            })}
+
+                            {!newLabelOpen && (
+                                <button
+                                    type="button"
+                                    className="av-tx-label-add"
+                                    disabled={busy || !accountId}
+                                    aria-label={t(
+                                        'transactionManagement.addNewLabel',
+                                    )}
+                                    title={t(
+                                        'transactionManagement.addNewLabel',
+                                    )}
+                                    onClick={() => {
+                                        createLabelMutation.reset();
+                                        setNewLabelOpen(true);
+                                    }}
+                                >
+                                    <ConceptIcon name="plus" />
+                                </button>
+                            )}
                         </div>
 
-                        {createLabelMutation.isError && (
+                        {newLabelOpen && (
+                            <div className="av-tx-label-create">
+                                <label>
+                                    <span>
+                                        {t('transactionManagement.newLabel')}
+                                    </span>
+                                    <input
+                                        value={newLabelName}
+                                        maxLength={40}
+                                        autoFocus
+                                        disabled={
+                                            busy
+                                            || createLabelMutation.isPending
+                                        }
+                                        onChange={event =>
+                                            setNewLabelName(
+                                                event.target.value,
+                                            )}
+                                        placeholder={t(
+                                            'transactionManagement.labelPlaceholder',
+                                        )}
+                                    />
+                                </label>
+
+                                <label>
+                                    <span>
+                                        {t('transactionManagement.labelScope')}
+                                    </span>
+                                    <select
+                                        className="av-select"
+                                        value={newLabelScope}
+                                        disabled={
+                                            busy
+                                            || createLabelMutation.isPending
+                                        }
+                                        onChange={event =>
+                                            setNewLabelScope(
+                                                event.target.value as LabelScope,
+                                            )}
+                                    >
+                                        <option value="Household">
+                                            {t(
+                                                'transactionManagement.householdLabel',
+                                            )}
+                                        </option>
+                                        <option value="Account">
+                                            {t(
+                                                'transactionManagement.accountLabel',
+                                            )}
+                                        </option>
+                                    </select>
+                                </label>
+
+                                <div className="av-tx-label-create-actions">
+                                    <button
+                                        type="button"
+                                        className="av-btn av-compact"
+                                        disabled={
+                                            busy
+                                            || createLabelMutation.isPending
+                                            || !newLabelName.trim()
+                                            || !accountId
+                                        }
+                                        onClick={() =>
+                                            createLabelMutation.mutate()}
+                                    >
+                                        + {t(createLabelMutation.isPending
+                                            ? 'transactionManagement.creatingLabel'
+                                            : 'transactionManagement.createLabel')}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="av-btn av-compact"
+                                        disabled={
+                                            busy
+                                            || createLabelMutation.isPending
+                                        }
+                                        onClick={() => {
+                                            createLabelMutation.reset();
+                                            setNewLabelName('');
+                                            setNewLabelScope('Household');
+                                            setNewLabelOpen(false);
+                                        }}
+                                    >
+                                        {t('common.actions.cancel')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {newLabelOpen && createLabelMutation.isError && (
                             <p className="av-error" role="alert">
                                 {createLabelMutation.error instanceof Error
                                     ? createLabelMutation.error.message

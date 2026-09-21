@@ -4,6 +4,7 @@ import { initReactI18next } from 'react-i18next';
 
 import { accountManagementEN, accountManagementDE, accountManagementHU } from './locales/accountManagement';
 import { transactionManagementEN, transactionManagementDE, transactionManagementHU } from './locales/transactionManagement';
+import { systemCategoriesEN, systemCategoriesDE, systemCategoriesHU } from './locales/systemCategories';
 
 import { conceptEN, conceptDE, conceptHU } from './locales/concept';
 
@@ -23,13 +24,13 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, concept: conceptEN },
+                translation: { ...en, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, concept: conceptDE },
+                translation: { ...de, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, concept: conceptHU },
+                translation: { ...hu, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 

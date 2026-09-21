@@ -10,6 +10,7 @@ import {
 } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import { getCategoryDisplayName } from '../categoryLocalization';
 import { transactionQueries } from '../api/transactionQueries';
 import type {
     CashFlowPeriodDto,

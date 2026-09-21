@@ -10,13 +10,13 @@ export type AggregatePeriod = 'Day' | 'Month' | 'Year';
 export interface CategoryDto {
     id: string;
     parentId: string | null;
-    code: string;
-    name: string;
+    systemKey: string | null;
+    name: string | null;
     kind: CategoryKind;
     icon: string;
     accentColor: string;
     sortOrder: number;
-    isBase: boolean;
+    isSystem: boolean;
 }
 
 export interface LabelDto {
@@ -105,7 +105,8 @@ export interface CashFlowDto {
 
 export interface CategoryCashFlowPeriodDto {
     categoryId: string;
-    categoryName: string;
+    categorySystemKey: string | null;
+    categoryName: string | null;
     categoryIcon: string;
     currency: string;
     periodStart: string;
