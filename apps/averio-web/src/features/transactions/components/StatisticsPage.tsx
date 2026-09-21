@@ -61,9 +61,9 @@ export function StatisticsPage({ userId, householdId }: { userId: string; househ
                             {periods.map(period => (
                                 <div key={period.periodStart} className="av-stat-month">
                                     <div className="av-stat-columns">
-                                        <span className="income" style={{ height: `${Math.max(3, Number(period.incomeAmount) / max * 100)}%` }}
+                                        <span className="income" style={{ height: `${Number(period.incomeAmount) === 0 ? 0 : Math.max(3, Number(period.incomeAmount) / max * 100)}%` }}
                                             title={formatDecimalAmount(period.incomeAmount, currency, language)} />
-                                        <span className="expense" style={{ height: `${Math.max(3, Number(period.expenseAmount) / max * 100)}%` }}
+                                        <span className="expense" style={{ height: `${Number(period.expenseAmount) === 0 ? 0 : Math.max(3, Number(period.expenseAmount) / max * 100)}%` }}
                                             title={formatDecimalAmount(period.expenseAmount, currency, language)} />
                                     </div>
                                     <span>{new Intl.DateTimeFormat(language, { month: 'short', timeZone: 'UTC' })

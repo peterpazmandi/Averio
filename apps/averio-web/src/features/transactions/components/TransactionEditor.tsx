@@ -40,11 +40,12 @@ export function TransactionEditor({
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writableAccounts = useMemo(() => (accounts.data ?? []).filter(account =>
         account.status === 'Active'
+        && (!transaction || account.currency === transaction.currency)
         && (
             account.scope === 'Household'
             || account.owners.some(owner =>
                 owner.householdMemberId === owners.data?.currentMemberId)
-        )), [accounts.data, owners.data?.currentMemberId]);
+        )), [accounts.data, owners.data?.currentMemberId, transaction]);
 
     const firstAccountId = transaction?.accountId ?? writableAccounts[0]?.id ?? '';
     const [accountId, setAccountId] = useState(firstAccountId);

@@ -171,10 +171,10 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                                     <div className="av-dashboard-columns">
                                                         <span className="income"
                                                             title={money(period.incomeAmount, currency)}
-                                                            style={{ height: `${Math.max(4, Number(period.incomeAmount) / max * 100)}%` }} />
+                                                            style={{ height: `${Number(period.incomeAmount) === 0 ? 0 : Math.max(4, Number(period.incomeAmount) / max * 100)}%` }} />
                                                         <span className="expense"
                                                             title={money(period.expenseAmount, currency)}
-                                                            style={{ height: `${Math.max(4, Number(period.expenseAmount) / max * 100)}%` }} />
+                                                            style={{ height: `${Number(period.expenseAmount) === 0 ? 0 : Math.max(4, Number(period.expenseAmount) / max * 100)}%` }} />
                                                     </div>
                                                     <small>{monthLabel(period.periodStart)}</small>
                                                 </div>
@@ -221,7 +221,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                                 <dd className="av-kpi">{money(String(net), period.currency)}</dd>
                                             </div>
                                             <div>
-                                                <dt className="av-label">{t('transactions.latest')}</dt>
+                                                <dt className="av-label">{t('navigation.transactions')}</dt>
                                                 <dd className="av-kpi">{period.transactionCount}</dd>
                                             </div>
                                         </dl>
