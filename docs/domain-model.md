@@ -218,19 +218,26 @@ The selected account controls which Account labels are valid. Label scope never 
 
 Category is a first-class classification entity for transaction items.
 
-Core fields include Id, Code, optional HouseholdId, optional ParentId, Name, kind (Expense/Income/Both), Icon, AccentColor, SortOrder, base/archive flags, and timestamps.
+Core fields include Id, optional HouseholdId, optional ParentId, SystemKey or Name, kind (Expense/Income/Both), Icon, AccentColor, SortOrder, base/archive flags, and timestamps.
 
-Categories support a parent-child tree through `ParentId`. The initial product seed contains exactly 100 base categories: 20 parent categories with four children each.
+Categories support a parent-child tree through `ParentId`. The initial product seed contains exactly 100 system categories: 20 parent categories with four children each.
 
-Base categories are product-wide rows with no HouseholdId. The table is also shaped for later household-created categories; that management workflow is not yet exposed as a complete UI vertical slice.
+System and custom category naming are intentionally different:
+
+- **System category:** `SystemKey` is required and `Name` is null. The database stores only a stable product localization key such as `groceries-supermarket`; it does not store an English display name.
+- **Custom household category:** `SystemKey` is null and `Name` contains the user-supplied category name.
+
+The database enforces this either/or rule. System categories are product-wide rows with no HouseholdId. Custom categories belong to one Household.
+
+The frontend owns translations for system-category keys. English, German, and Hungarian resources contain all 100 system category names. Changing UI language therefore changes category display/search text without rewriting financial data.
+
+Transaction item category snapshots store the stable system key for a system category or the custom name for a custom category, together with the copied icon. The live CategoryId remains the classification identity.
 
 ### Category icons
 
 `icons` is a reusable icon chooser/catalog seeded with 240 values.
 
 Category does **not** reference an Icon row. The chosen icon value is copied into `Category.Icon`. This deliberate snapshot rule prevents future icon-catalog maintenance from changing existing categories unexpectedly.
-
-Transaction items also copy CategoryName and CategoryIcon for historical presentation.
 
 ## Label
 

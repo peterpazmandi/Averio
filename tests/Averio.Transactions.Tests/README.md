@@ -10,8 +10,8 @@ This follows the existing dependency-free executable regression-suite approach u
 
 The aggregate repository uses PostgreSQL-specific atomic upserts, so it still needs a disposable PostgreSQL integration check before release. Verify:
 
-1. Apply `20260921100602_AddTransactionLedger`, `20260921133000_AddTransactionDetails`, and `20260921151000_AddReusableCatalogsAndDimensionAggregates`.
-2. Verify exactly 100 base category rows and at least 200 icon-catalog rows are present.
+1. Apply `20260921100602_AddTransactionLedger`, `20260921133000_AddTransactionDetails`, `20260921151000_AddReusableCatalogsAndDimensionAggregates`, and `20260921234000_LocalizeSystemCategories`.
+2. Verify exactly 100 base category rows and at least 200 icon-catalog rows are present. For every base row verify `system_key` is populated and `name` is null; for a custom row verify the inverse.
 3. Verify Category has no foreign key to Icons and changing the icon catalog does not mutate existing category icon values.
 4. Confirm the migration maps existing transaction items to a valid category, defaulting to Uncategorized when no base-category name matches.
 5. Confirm legacy transaction-attached label rows are deduplicated into reusable `labels` and linked through `transaction_labels`.
@@ -36,3 +36,7 @@ The aggregate repository uses PostgreSQL-specific atomic upserts, so it still ne
 - Statistics income/expense bars expose exact formatted values on hover and keyboard focus.
 - Clicking/tapping a statistics bar keeps that value visible until the same or another bar is clicked.
 - Create/edit/void invalidates Accounts and Dashboard queries so derived balances refresh immediately.
+
+- Verify all 100 system-category keys resolve to English, German, and Hungarian frontend strings.
+- Switch language while the category picker is open and confirm parent/child names and search results immediately use the selected language.
+- Confirm the trailing plus button is the only default label-creation control; opening it reveals the creator and Cancel collapses it without adding/selecting a label.

@@ -392,7 +392,11 @@ export function TransactionEditor({
                                 <button
                                     type="button"
                                     className="av-tx-label-add"
-                                    disabled={busy || !accountId}
+                                    disabled={
+                                        busy
+                                        || !accountId
+                                        || labels.isPending
+                                    }
                                     aria-label={t(
                                         'transactionManagement.addNewLabel',
                                     )}

@@ -208,6 +208,9 @@ The current transaction-management branch now includes:
 - yearly category statistics grouped by currency
 - source AccountId retained on Category aggregates so current privacy/reporting rules are enforced before statistics are returned
 - searchable Bento-style category selector in the transaction editor
+- system categories persist only stable localization keys; custom categories persist only their household-defined names
+- all 100 system-category names are localized in the React frontend for English, German, and Hungarian
+- label creation is collapsed behind the trailing plus button in the label chip row and can be cancelled without changing the transaction
 - transaction overview search/filter interaction aligned with Account Management
 - statistics chart bars reveal their exact value on hover/focus and remain visible when clicked/tapped
 - account/dashboard current balances are derived from the balance anchor plus posted requester-visible ledger movements; transaction mutations invalidate account and dashboard queries

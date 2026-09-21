@@ -37,10 +37,11 @@ Averio stores categories in a first-class `categories` table.
 
 A Category contains:
 
-- stable Id and Code
+- stable Id
 - optional HouseholdId
 - optional ParentId referencing another Category
-- Name
+- nullable SystemKey
+- nullable Name
 - kind: Expense, Income, or Both
 - copied Icon value
 - accent color
@@ -48,9 +49,13 @@ A Category contains:
 - base/archive state
 - timestamps
 
-The initial catalog contains exactly **100 base categories**, organized as 20 parent categories with four children each. Base categories are shared product data (`IsBase = true`, `HouseholdId = null`). The schema also supports household-specific categories for the later Category Management slice.
+The initial catalog contains exactly **100 system categories**, organized as 20 parent categories with four children each.
 
-Each transaction item references a Category ID and also stores CategoryName and CategoryIcon snapshots. This keeps historical item presentation stable while the live Category remains the classification identity.
+System-category display names are deliberately **not persisted in English**. A system row stores only its stable `SystemKey` and has `Name = null`. A custom household category stores only its user-defined `Name` and has `SystemKey = null`. A database check constraint enforces this either/or rule.
+
+The frontend owns system-category localization. English, German, and Hungarian resources contain all 100 system keys, so display names and category-picker search follow the selected UI language without changing stored financial data.
+
+Each transaction item references a Category ID and snapshots the system key or custom name together with the category icon. This keeps historical category identity language-neutral while preserving custom names and icon presentation.
 
 ### Icon catalog and snapshot semantics
 
@@ -91,6 +96,8 @@ Currencies remain independent aggregate series.
 
 ## Consequences
 
+- system-category persistence is language-neutral; adding another UI language requires frontend resources rather than data migration
+- custom category names remain exactly the household-defined text
 - transaction labels can be reused instead of repeatedly typed
 - account labels cannot accidentally appear as choices for another account
 - receipt items have real category identities and a stable category/icon snapshot
