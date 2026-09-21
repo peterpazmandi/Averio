@@ -287,5 +287,11 @@
   <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Ugyanaz a címke ugyanabban a hatókörben nem adható hozzá kétszer.</value></data>
   <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>A címke neve kötelező és legfeljebb 40 karakter lehet.</value></data>
   <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>A címke hatóköreként válaszd a Háztartás vagy a Számla lehetőséget.</value></data>
+  <data name="Validation_TransactionCategoryRequired" xml:space="preserve"><value>Minden tranzakciós tételhez válassz kategóriát.</value></data>
+  <data name="Validation_TransactionCategoryInvalid" xml:space="preserve"><value>Egy vagy több kiválasztott kategória nem érhető el.</value></data>
+  <data name="Validation_TransactionCategoryKindInvalid" xml:space="preserve"><value>A kiválasztott kategória nem használható ehhez a tranzakciótípushoz.</value></data>
+  <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Egy vagy több kiválasztott címke nem érhető el ehhez a számlához.</value></data>
+  <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>A számlacímkéhez számla szükséges.</value></data>
+  <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>A háztartási címke nem köthető számlához.</value></data>
 </root>
 

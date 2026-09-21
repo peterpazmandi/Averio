@@ -36,22 +36,15 @@ internal sealed class CategoryRepository(AverioDbContext dbContext)
             .ToListAsync(cancellationToken);
     }
 
-    public Task<IReadOnlyList<Category>> GetAvailableByIdsAsync(
+    public async Task<IReadOnlyList<Category>> GetAvailableByIdsAsync(
         Guid householdId,
         IReadOnlyCollection<Guid> categoryIds,
         CancellationToken cancellationToken)
-    {
-        return dbContext.Categories
+        => await dbContext.Categories
             .AsNoTracking()
             .Where(category =>
                 categoryIds.Contains(category.Id)
                 && !category.IsArchived
                 && (category.IsBase || category.HouseholdId == householdId))
-            .ToListAsync(cancellationToken)
-            .ContinueWith(
-                task => (IReadOnlyList<Category>)task.Result,
-                cancellationToken,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-    }
+            .ToListAsync(cancellationToken);
 }

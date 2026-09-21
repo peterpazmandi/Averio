@@ -287,5 +287,11 @@
   <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Dasselbe Label kann im gleichen Bereich nicht doppelt hinzugefügt werden.</value></data>
   <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>Ein Labelname ist erforderlich und darf höchstens 40 Zeichen enthalten.</value></data>
   <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>Wähle Haushalt oder Konto als Label-Bereich.</value></data>
+  <data name="Validation_TransactionCategoryRequired" xml:space="preserve"><value>Wähle für jede Transaktionsposition eine Kategorie.</value></data>
+  <data name="Validation_TransactionCategoryInvalid" xml:space="preserve"><value>Eine oder mehrere ausgewählte Kategorien sind nicht verfügbar.</value></data>
+  <data name="Validation_TransactionCategoryKindInvalid" xml:space="preserve"><value>Die ausgewählte Kategorie kann für diesen Transaktionstyp nicht verwendet werden.</value></data>
+  <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Eine oder mehrere ausgewählte Labels sind für dieses Konto nicht verfügbar.</value></data>
+  <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>Konto-Labels benötigen ein Konto.</value></data>
+  <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>Haushalts-Labels dürfen nicht an ein Konto gebunden sein.</value></data>
 </root>
 

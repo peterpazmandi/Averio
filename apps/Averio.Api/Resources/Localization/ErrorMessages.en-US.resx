@@ -287,5 +287,11 @@
   <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>The same label cannot be added twice in the same scope.</value></data>
   <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>A label name is required and can contain at most 40 characters.</value></data>
   <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>Select Household or Account as the label scope.</value></data>
+  <data name="Validation_TransactionCategoryRequired" xml:space="preserve"><value>Select a category for every transaction item.</value></data>
+  <data name="Validation_TransactionCategoryInvalid" xml:space="preserve"><value>One or more selected categories are not available.</value></data>
+  <data name="Validation_TransactionCategoryKindInvalid" xml:space="preserve"><value>The selected category cannot be used for this transaction type.</value></data>
+  <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>One or more selected labels are not available for this account.</value></data>
+  <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>Account labels require an account.</value></data>
+  <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>Household labels cannot be tied to an account.</value></data>
 </root>
 
