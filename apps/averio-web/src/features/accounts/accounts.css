@@ -95,3 +95,6 @@
 .av-ui .av-account-currency { color: var(--muted); font-size: 12px; font-weight: 600; }
 .av-ui .av-account-detail[data-tone] .av-detail-icon { color: var(--account-accent); background: var(--account-tint); border: 1px solid var(--account-edge); }
 .av-ui .av-account-detail[data-tone] dd { color: var(--account-accent); }
+
+.av-ui .av-account-balance-block { padding:12px 0 2px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.av-ui .av-account-balance-block .av-kpi { margin:5px 0 4px; }

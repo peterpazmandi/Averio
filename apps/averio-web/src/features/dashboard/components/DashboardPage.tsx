@@ -115,12 +115,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                         <div className="av-balance-group" key={balance.currency}>
                             <p className="av-kpi">{money(balance.amount, balance.currency)}</p>
                             <p className="av-subtle">
-                                {balance.earliestBalanceDate === balance.latestBalanceDate
-                                    ? t('concept.recordedOn', { date: date(balance.latestBalanceDate) })
-                                    : t('concept.recordedBetween', {
-                                        from: date(balance.earliestBalanceDate),
-                                        to: date(balance.latestBalanceDate),
-                                    })}
+                                {t('accountManagement.currentBalance')}
                             </p>
                         </div>
                     ))}
@@ -134,7 +129,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                     <small>{t(account.scope === 'Household'
                                         ? 'accountOwnership.household' : 'accountOwnership.personal')} · {account.currency}</small>
                                 </div>
-                                <span className="av-mini-amount">{money(account.balanceAnchorAmount, account.currency)}</span>
+                                <span className="av-mini-amount">{money(account.currentBalanceAmount, account.currency)}</span>
                             </div>
                         ))}
                     </div>
@@ -293,8 +288,11 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                             {dashboard.accounts.map(account => (
                                 <article key={account.id} className="av-account-row">
                                     <h4>{account.name}</h4>
-                                    <p className="av-kpi">{money(account.balanceAnchorAmount, account.currency)}</p>
-                                    <p className="av-subtle">{t('concept.recordedOn', { date: date(account.balanceAnchorDate) })}</p>
+                                    <p className="av-kpi">{money(account.currentBalanceAmount, account.currency)}</p>
+                                    <p className="av-subtle">
+                                        {t('accountManagement.openingBalance')}: {money(account.balanceAnchorAmount, account.currency)}
+                                        {' · '}{date(account.balanceAnchorDate)}
+                                    </p>
                                     <AccountOwnershipSummary account={account} />
                                 </article>
                             ))}
