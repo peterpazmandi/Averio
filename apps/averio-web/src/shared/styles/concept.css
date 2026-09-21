@@ -186,3 +186,36 @@
 @media (prefers-reduced-motion: reduce) {
     .av-ui *, .av-ui *::before, .av-ui *::after { animation: none !important; transition: none !important; }
 }
+
+/* Transaction-backed dashboard reporting */
+.av-ui .av-dashboard-cashflows { display:grid; gap:16px; }
+.av-ui .av-dashboard-cashflow { min-width:0; }
+.av-ui .av-dashboard-chart-title { display:flex; align-items:center; gap:9px; margin-bottom:7px; color:var(--muted); font-size:9px; }
+.av-ui .av-dashboard-chart-title span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.av-ui .av-dashboard-bars { height:170px; display:flex; align-items:flex-end; gap:9px; padding:8px 3px 0; border-bottom:1px solid var(--border); }
+.av-ui .av-dashboard-month { flex:1; height:100%; min-width:34px; display:grid; grid-template-rows:1fr 18px; align-items:end; gap:3px; text-align:center; color:var(--muted); }
+.av-ui .av-dashboard-columns { height:100%; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
+.av-ui .av-dashboard-columns span { width:min(18px,38%); min-height:4px; border-radius:6px 6px 1px 1px; }
+.av-ui .av-dashboard-columns .income { background:var(--brand); }
+.av-ui .av-dashboard-columns .expense { background:#8B5CF6; }
+.av-ui .av-chart-legend { display:flex; gap:14px; margin-top:10px; color:var(--muted); font-size:10px; }
+.av-ui .av-chart-legend i { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
+.av-ui .av-chart-legend i.income { background:var(--brand); }
+.av-ui .av-chart-legend i.expense { background:#8B5CF6; }
+.av-ui .av-dashboard-month-totals { display:grid; gap:14px; }
+.av-ui .av-dashboard-currency-total + .av-dashboard-currency-total { border-top:1px solid var(--border); padding-top:14px; }
+.av-ui .av-list { display:grid; }
+.av-ui .av-list-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--border); color:var(--text); }
+.av-ui .av-list-row:first-child { border-top:0; }
+.av-ui .av-tx-icon { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:var(--panel-2); border:1px solid var(--border); }
+.av-ui .av-row-title { min-width:0; }
+.av-ui .av-row-title strong,.av-ui .av-row-title span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.av-ui .av-row-title strong { font-size:10.5px; }
+.av-ui .av-row-title span { color:var(--muted); font-size:9px; margin-top:2px; }
+.av-ui .av-amount-pos,.av-ui .av-amount-neg { font-size:10.5px; font-weight:850; white-space:nowrap; }
+.av-ui .av-amount-pos { color:var(--brand-strong); }
+
+@media (max-width: 560px) {
+    .av-ui .av-dashboard-bars { overflow-x:auto; }
+    .av-ui .av-dashboard-month { flex:0 0 42px; }
+}
