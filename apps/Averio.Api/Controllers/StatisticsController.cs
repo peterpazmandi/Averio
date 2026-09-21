@@ -69,6 +69,7 @@ public sealed class StatisticsController(
             result.Period.ToString(),
             result.Periods.Select(item => new CategoryCashFlowPeriodResponse(
                 item.CategoryId,
+                item.CategorySystemKey,
                 item.CategoryName,
                 item.CategoryIcon,
                 item.Currency,

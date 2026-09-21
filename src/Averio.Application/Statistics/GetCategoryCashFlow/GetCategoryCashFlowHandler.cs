@@ -49,6 +49,7 @@ public sealed class GetCategoryCashFlowHandler(
             period,
             rows.Select(row => new CategoryCashFlowPeriodResult(
                 row.CategoryId,
+                row.CategorySystemKey,
                 row.CategoryName,
                 row.CategoryIcon,
                 row.Currency,
@@ -68,7 +69,8 @@ public sealed record CategoryCashFlowResult(
 
 public sealed record CategoryCashFlowPeriodResult(
     Guid CategoryId,
-    string CategoryName,
+    string? CategorySystemKey,
+    string? CategoryName,
     string CategoryIcon,
     string Currency,
     DateOnly PeriodStart,

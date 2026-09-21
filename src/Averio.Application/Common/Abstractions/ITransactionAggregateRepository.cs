@@ -40,7 +40,8 @@ public sealed record CashFlowAggregateReadModel(
 
 public sealed record CategoryCashFlowAggregateReadModel(
     Guid CategoryId,
-    string CategoryName,
+    string? CategorySystemKey,
+    string? CategoryName,
     string CategoryIcon,
     string Currency,
     DateOnly PeriodStart,

@@ -15,42 +15,35 @@ public sealed class GetCategoriesHandler(
         TransactionKind? kind,
         CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId
-            ?? throw new AuthenticationFailedException();
+        var userId = currentUser.UserId ?? throw new AuthenticationFailedException();
 
         var household = await householdRepository.GetByIdForUserAsync(
-            householdId,
-            userId,
-            cancellationToken)
+            householdId, userId, cancellationToken)
             ?? throw new NotFoundException("household", householdId);
 
         var categories = await categoryRepository.GetAvailableAsync(
-            household.Id,
-            kind,
-            cancellationToken);
+            household.Id, kind, cancellationToken);
 
-        return categories
-            .Select(category => new CategoryResult(
-                category.Id,
-                category.ParentId,
-                category.Code,
-                category.Name,
-                category.Kind,
-                category.Icon,
-                category.AccentColor,
-                category.SortOrder,
-                category.IsBase))
-            .ToArray();
+        return categories.Select(category => new CategoryResult(
+            category.Id,
+            category.ParentId,
+            category.SystemKey,
+            category.Name,
+            category.Kind,
+            category.Icon,
+            category.AccentColor,
+            category.SortOrder,
+            category.IsBase)).ToArray();
     }
 }
 
 public sealed record CategoryResult(
     Guid Id,
     Guid? ParentId,
-    string Code,
-    string Name,
+    string? SystemKey,
+    string? Name,
     CategoryKind Kind,
     string Icon,
     string AccentColor,
     int SortOrder,
-    bool IsBase);
+    bool IsSystem);

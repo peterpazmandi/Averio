@@ -67,7 +67,7 @@ static Transaction NewTransaction(
             new TransactionItemDraft(
                 "Regression check",
                 GroceriesId(),
-                "Groceries",
+                "groceries",
                 "🛒",
                 12.34m)
         ],
@@ -80,8 +80,8 @@ static void ItemizedIncomeDerivesTotal()
         kind: TransactionKind.Income,
         items:
         [
-            new TransactionItemDraft("Salary", SalaryId(), "Salary", "💼", 1234.5678m),
-            new TransactionItemDraft("Bonus", SalaryId(), "Salary", "💼", 65.4322m),
+            new TransactionItemDraft("Salary", SalaryId(), "income-salary", "💼", 1234.5678m),
+            new TransactionItemDraft("Bonus", SalaryId(), "income-salary", "💼", 65.4322m),
         ]);
 
     Equal(TransactionKind.Income, transaction.Kind);
@@ -97,19 +97,19 @@ static void RejectInvalidItemAmount()
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Zero", GroceriesId(), "Groceries", "🛒", 0m)
+            new TransactionItemDraft("Zero", GroceriesId(), "groceries", "🛒", 0m)
         ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Negative", GroceriesId(), "Groceries", "🛒", -1m)
+            new TransactionItemDraft("Negative", GroceriesId(), "groceries", "🛒", -1m)
         ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Too precise", GroceriesId(), "Groceries", "🛒", 1.00001m)
+            new TransactionItemDraft("Too precise", GroceriesId(), "groceries", "🛒", 1.00001m)
         ]));
 }
 
@@ -122,8 +122,8 @@ static void CategorySnapshotAndReusableLabels()
         merchant: "Tesco",
         items:
         [
-            new TransactionItemDraft("Milk", GroceriesId(), "Groceries", "🛒", 3.25m),
-            new TransactionItemDraft("Bread", GroceriesId(), "Groceries", "🛒", 2.10m),
+            new TransactionItemDraft("Milk", GroceriesId(), "groceries", "🛒", 3.25m),
+            new TransactionItemDraft("Bread", GroceriesId(), "groceries", "🛒", 2.10m),
         ],
         labelIds: [householdLabelId, accountLabelId]);
 
@@ -136,7 +136,7 @@ static void CategorySnapshotAndReusableLabels()
         GroceriesId(),
         transaction.Items.OrderBy(item => item.Position).First().CategoryId);
     Equal(
-        "Groceries",
+        "groceries",
         transaction.Items.OrderBy(item => item.Position).First().CategoryName);
     Equal(
         "🛒",
@@ -160,8 +160,8 @@ static void UpdateRecalculatesTotal()
         "note",
         new DateOnly(2026, 9, 20),
         [
-            new TransactionItemDraft("One", GroceriesId(), "Groceries", "🛒", 10m),
-            new TransactionItemDraft("Two", GroceriesId(), "Groceries", "🛒", 12.50m),
+            new TransactionItemDraft("One", GroceriesId(), "groceries", "🛒", 10m),
+            new TransactionItemDraft("Two", GroceriesId(), "groceries", "🛒", 12.50m),
         ],
         [Guid.NewGuid()],
         now);
@@ -241,6 +241,9 @@ static void CategoryAndIconModels()
         ?? throw new Exception("Category entity is missing.");
     Equal("categories", category.GetTableName());
     True(category.FindProperty(nameof(Category.ParentId)) is not null);
+    True(category.FindProperty(nameof(Category.SystemKey)) is not null);
+    True(category.FindProperty(nameof(Category.Name)) is not null);
+    True(category.FindProperty("Code") is null);
     True(category.FindProperty(nameof(Category.Icon)) is not null);
     True(category.GetForeignKeys().All(foreignKey =>
         foreignKey.PrincipalEntityType.ClrType != typeof(IconCatalogEntry)));

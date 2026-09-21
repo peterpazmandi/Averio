@@ -108,6 +108,7 @@ internal sealed class TransactionAggregateRepository(
             select new
             {
                 aggregate,
+                category.SystemKey,
                 category.Name,
                 category.Icon,
             })
@@ -117,6 +118,7 @@ internal sealed class TransactionAggregateRepository(
             .GroupBy(row => new
             {
                 row.aggregate.DimensionId,
+                row.SystemKey,
                 row.Name,
                 row.Icon,
                 row.aggregate.Currency,
@@ -124,9 +126,11 @@ internal sealed class TransactionAggregateRepository(
             })
             .OrderBy(group => group.Key.PeriodStart)
             .ThenByDescending(group => group.Sum(row => row.aggregate.ExpenseAmount))
+            .ThenBy(group => group.Key.SystemKey)
             .ThenBy(group => group.Key.Name)
             .Select(group => new CategoryCashFlowAggregateReadModel(
                 group.Key.DimensionId,
+                group.Key.SystemKey,
                 group.Key.Name,
                 group.Key.Icon,
                 group.Key.Currency.Value,

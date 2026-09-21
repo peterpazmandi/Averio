@@ -21,7 +21,8 @@ public sealed record CategoryCashFlowResponse(
 
 public sealed record CategoryCashFlowPeriodResponse(
     Guid CategoryId,
-    string CategoryName,
+    string? CategorySystemKey,
+    string? CategoryName,
     string CategoryIcon,
     string Currency,
     DateOnly PeriodStart,

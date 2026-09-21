@@ -150,77 +150,46 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Averio.Domain.Categories.Category", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
 
                     b.Property<string>("AccentColor")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)")
-                        .HasColumnName("accent_color");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("code");
+                        .IsRequired().HasMaxLength(7)
+                        .HasColumnType("character varying(7)").HasColumnName("accent_color");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone").HasColumnName("created_at");
 
-                    b.Property<Guid?>("HouseholdId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("household_id");
+                    b.Property<Guid?>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
 
                     b.Property<string>("Icon")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("icon");
+                        .IsRequired().HasMaxLength(32)
+                        .HasColumnType("character varying(32)").HasColumnName("icon");
 
-                    b.Property<bool>("IsArchived")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_archived");
-
-                    b.Property<bool>("IsBase")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_base");
+                    b.Property<bool>("IsArchived").HasColumnType("boolean").HasColumnName("is_archived");
+                    b.Property<bool>("IsBase").HasColumnType("boolean").HasColumnName("is_base");
 
                     b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("character varying(12)")
-                        .HasColumnName("kind");
+                        .IsRequired().HasMaxLength(12)
+                        .HasColumnType("character varying(12)").HasColumnName("kind");
 
                     b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
+                        .HasMaxLength(100).HasColumnType("character varying(100)").HasColumnName("name");
 
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("parent_id");
+                    b.Property<Guid?>("ParentId").HasColumnType("uuid").HasColumnName("parent_id");
+                    b.Property<int>("SortOrder").HasColumnType("integer").HasColumnName("sort_order");
 
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
+                    b.Property<string>("SystemKey")
+                        .HasMaxLength(80).HasColumnType("character varying(80)").HasColumnName("system_key");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone").HasColumnName("updated_at");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("ux_categories_base_code")
-                        .HasFilter("is_base");
-
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("SystemKey")
+                        .IsUnique().HasFilter("is_base")
+                        .HasDatabaseName("ux_categories_system_key");
 
                     b.HasIndex("HouseholdId", "ParentId", "SortOrder")
                         .HasDatabaseName("ix_categories_household_parent_order");
@@ -231,13 +200,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.ToTable("categories", null, t =>
                         {
                             t.HasCheckConstraint("ck_categories_accent_color", "accent_color ~ '^#[0-9A-Fa-f]{6}$'");
-
                             t.HasCheckConstraint("ck_categories_kind", "kind IN ('Expense', 'Income', 'Both')");
-
+                            t.HasCheckConstraint("ck_categories_name_source", "(is_base AND system_key IS NOT NULL AND name IS NULL) OR (NOT is_base AND system_key IS NULL AND name IS NOT NULL)");
                             t.HasCheckConstraint("ck_categories_scope", "(is_base AND household_id IS NULL) OR (NOT is_base AND household_id IS NOT NULL)");
                         });
                 });
-
             modelBuilder.Entity("Averio.Domain.Categories.IconCatalogEntry", b =>
                 {
                     b.Property<int>("Id")

@@ -7,8 +7,12 @@ public sealed class Category
     public Guid Id { get; private set; }
     public Guid? HouseholdId { get; private set; }
     public Guid? ParentId { get; private set; }
-    public string Code { get; private set; } = null!;
-    public string Name { get; private set; } = null!;
+
+    // System categories store only a stable localization key.
+    // Custom categories store only the user supplied Name.
+    public string? SystemKey { get; private set; }
+    public string? Name { get; private set; }
+
     public CategoryKind Kind { get; private set; }
     public string Icon { get; private set; } = null!;
     public string AccentColor { get; private set; } = null!;
@@ -20,6 +24,12 @@ public sealed class Category
 
     public bool IsAvailableTo(Guid householdId)
         => IsBase || HouseholdId == householdId;
+
+    public string NameReference
+        => SystemKey
+            ?? Name
+            ?? throw new InvalidOperationException(
+                "Category must have either a system key or a custom name.");
 
     public bool Supports(Averio.Domain.Transactions.TransactionKind kind)
         => Kind == CategoryKind.Both

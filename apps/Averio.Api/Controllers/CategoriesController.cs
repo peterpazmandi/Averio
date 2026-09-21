@@ -10,8 +10,7 @@ namespace Averio.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/v1/households/{householdId:guid}/categories")]
-public sealed class CategoriesController(GetCategoriesHandler handler)
-    : ControllerBase
+public sealed class CategoriesController(GetCategoriesHandler handler) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> List(
@@ -22,24 +21,20 @@ public sealed class CategoriesController(GetCategoriesHandler handler)
         TransactionKind? parsedKind = string.IsNullOrWhiteSpace(kind)
             ? null
             : EnumParser.Parse<TransactionKind>(
-                kind,
-                nameof(kind),
-                "Validation_TransactionKindInvalid");
+                kind, nameof(kind), "Validation_TransactionKindInvalid");
 
         var result = await handler.HandleAsync(
-            householdId,
-            parsedKind,
-            cancellationToken);
+            householdId, parsedKind, cancellationToken);
 
         return Ok(result.Select(category => new CategoryResponse(
             category.Id,
             category.ParentId,
-            category.Code,
+            category.SystemKey,
             category.Name,
             category.Kind.ToString(),
             category.Icon,
             category.AccentColor,
             category.SortOrder,
-            category.IsBase)));
+            category.IsSystem)));
     }
 }

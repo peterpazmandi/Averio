@@ -43,7 +43,7 @@ public sealed class TransactionReferenceResolver(
                 return new TransactionItemDraft(
                     item.Description,
                     category.Id,
-                    category.Name,
+                    category.NameReference,
                     category.Icon,
                     item.Amount);
             })

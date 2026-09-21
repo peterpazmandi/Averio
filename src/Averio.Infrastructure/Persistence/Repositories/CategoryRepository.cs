@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Averio.Infrastructure.Persistence.Repositories;
 
-internal sealed class CategoryRepository(AverioDbContext dbContext)
-    : ICategoryRepository
+internal sealed class CategoryRepository(AverioDbContext dbContext) : ICategoryRepository
 {
     public async Task<IReadOnlyList<Category>> GetAvailableAsync(
         Guid householdId,
@@ -26,12 +25,12 @@ internal sealed class CategoryRepository(AverioDbContext dbContext)
                 : CategoryKind.Expense;
 
             query = query.Where(category =>
-                category.Kind == requested
-                || category.Kind == CategoryKind.Both);
+                category.Kind == requested || category.Kind == CategoryKind.Both);
         }
 
         return await query
             .OrderBy(category => category.SortOrder)
+            .ThenBy(category => category.SystemKey)
             .ThenBy(category => category.Name)
             .ToListAsync(cancellationToken);
     }

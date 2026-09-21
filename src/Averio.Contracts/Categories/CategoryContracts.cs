@@ -3,13 +3,13 @@ namespace Averio.Contracts.Categories;
 public sealed record CategoryResponse(
     Guid Id,
     Guid? ParentId,
-    string Code,
-    string Name,
+    string? SystemKey,
+    string? Name,
     string Kind,
     string Icon,
     string AccentColor,
     int SortOrder,
-    bool IsBase);
+    bool IsSystem);
 
 public sealed record IconResponse(
     int Id,
