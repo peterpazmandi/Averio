@@ -165,103 +165,31 @@ Account currency is immutable. Cross-currency conversion is explicit, not an aut
 
 ## Transaction
 
-A ledger event recorded against one or more financial containers.
+An authoritative income/expense ledger entry associated with one account.
 
-Conceptual kinds:
+The first implemented transaction slice deliberately models **Income** and **Expense** only. A transaction stores a positive amount in the account's immutable currency; its kind supplies the cash-flow direction. It also records description, optional note, date, visibility, creator membership, status, and timestamps.
 
-- Income
-- Expense
-- Transfer
+Transaction visibility is constrained by the containing account. A private transaction on a household-visible personal account is visible only to that account's holders. Household-scope accounts do not accept private transactions. Transactions on a private account remain private through the containing account boundary.
 
-Typical data includes account, date/time, amount, currency, merchant/store, category, note, optional items, visibility/privacy, recurring linkage, receipt linkage, and timestamps.
+Posted transactions may be corrected. Historical ledger rows are not hard-deleted: removal from active cash flow is represented by a **Voided** status. Optimistic concurrency prevents silent overwrites.
+
+Changing a transaction to another account is permitted only when the target account uses the same currency. Moving an existing transaction between currencies would imply conversion semantics and is therefore rejected.
 
 ## Transfer
 
 A transfer is paired movement between financial containers, not a normal expense/income pair.
 
-Transfer linkage must prevent double counting and orphaned counterpart movements.
+Transfers are intentionally outside the first Transaction Management slice. They must be implemented as linked movements with atomic creation/update/void behavior so they cannot be double-counted or orphaned. Cross-currency transfers additionally require explicit FX semantics.
 
-Cross-currency transfers require explicit FX semantics.
+## Reporting aggregates
 
-## Transaction privacy
+Statistics are derived/read-model data, not the authoritative ledger.
 
-Transaction visibility can become more restrictive than account-level visibility where needed, but must never bypass the account's privacy boundary.
+Averio incrementally maintains day- and month-grain cash-flow aggregates keyed by household, account, currency, period kind and period start. Only posted, household-visible income/expense contributions enter these aggregate rows, and mutation of the ledger and its aggregate delta happens inside one database transaction.
 
-Private details are server-filtered before presentation/aggregation.
+Reporting queries still apply the account's current household visibility/reporting participation before returning totals. Currencies are grouped independently and are never directly summed.
 
-## Transaction item
-
-Optional receipt/import line item. May include description, quantity, unit price, total, and later category details.
-
-Itemization is not required for ordinary manual transactions.
-
-## Category
-
-Hierarchical classification with parent/subcategory support.
-
-Conceptual fields/behaviors:
-
-- ParentCategoryId
-- Name
-- Icon
-- optional accent color
-- SortOrder
-- Pinned
-- household/personal semantics when required
-
-System category localization must be separated from user-created names.
-
-## Recurring rule
-
-Represents expected repeated activity. It is not itself a completed transaction.
-
-A future system may distinguish user-created recurring rules from automatically inferred recurring patterns.
-
-## Goal
-
-A savings/financial target. Goals may be household/shared, personal, or private.
-
-Potential data: scope/owner, name, target amount/currency, target date, funding relationships, visibility, status.
-
-A private goal must not leak its target or activity without explicit sharing.
-
-## Personal money
-
-Personal money is a household-budget sub-ledger for individual autonomy.
-
-Conceptually:
-
-```text
-Allocation
-+ Carry-over
-- Chargeable personal spending
-= Available personal money
-```
-
-Example:
-
-```text
-Allocation: +€300
-Spend:       -€50
-Spend:       -€80
-Spend:       -€20
-----------------
-Available:   €150
-```
-
-Unused amount carries into the next period by default.
-
-### PersonalMoneyAllocation
-
-An allocation changes budget responsibility. It is not automatically a household expense.
-
-If €300 is allocated while money remains in a shared account, household cash has not left. Counting both the allocation and later purchase as expenses would double-count.
-
-### Crossing into a private account
-
-When real household cash moves into a private financial boundary, household reporting may intentionally stop at that boundary. Subsequent private merchant purchases must then not be counted again as separate household expenses.
-
-This preserves privacy and prevents double counting. The exact implementation should be finalized before the full personal-money feature is coded.
+This gives dashboard/statistics queries work proportional to requested periods/accounts instead of raw ledger size, while preserving the ability to rebuild aggregates from the authoritative transaction table if repair tooling is needed later.
 
 ## Goal funding vs ledger movement
 
