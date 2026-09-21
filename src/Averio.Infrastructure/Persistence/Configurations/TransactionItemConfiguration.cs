@@ -1,3 +1,4 @@
+using Averio.Domain.Categories;
 using Averio.Domain.Transactions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -21,7 +22,9 @@ public sealed class TransactionItemConfiguration
         builder.Property(x => x.TransactionId).HasColumnName("transaction_id");
         builder.Property(x => x.Position).HasColumnName("position");
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(160).IsRequired();
-        builder.Property(x => x.CategoryName).HasColumnName("category_name").HasMaxLength(80);
+        builder.Property(x => x.CategoryId).HasColumnName("category_id");
+        builder.Property(x => x.CategoryName).HasColumnName("category_name").HasMaxLength(100).IsRequired();
+        builder.Property(x => x.CategoryIcon).HasColumnName("category_icon").HasMaxLength(32).IsRequired();
         builder.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);
 
         builder.HasOne<Transaction>()
@@ -31,8 +34,15 @@ public sealed class TransactionItemConfiguration
             .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("fk_transaction_items_transactions");
 
+        builder.HasOne<Category>().WithMany()
+            .HasForeignKey(x => x.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("fk_transaction_items_categories");
+
         builder.HasIndex(x => new { x.HouseholdId, x.TransactionId, x.Position })
             .IsUnique()
             .HasDatabaseName("ux_transaction_items_transaction_position");
+        builder.HasIndex(x => x.CategoryId)
+            .HasDatabaseName("ix_transaction_items_category");
     }
 }

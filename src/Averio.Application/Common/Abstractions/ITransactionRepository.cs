@@ -1,3 +1,4 @@
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 
 namespace Averio.Application.Common.Abstractions;
@@ -43,13 +44,15 @@ public sealed record TransactionItemReadModel(
     Guid Id,
     int Position,
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
+    string CategoryName,
+    string CategoryIcon,
     decimal Amount);
 
 public sealed record TransactionLabelReadModel(
     Guid Id,
     string Name,
-    TransactionLabelScope Scope);
+    LabelScope Scope);
 
 public sealed record TransactionReadModel(
     Guid Id,

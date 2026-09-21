@@ -1,5 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Domain.Accounts;
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,8 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class TransactionRepository(AverioDbContext dbContext)
     : ITransactionRepository
 {
-    public void Add(Transaction transaction) => dbContext.Transactions.Add(transaction);
+    public void Add(Transaction transaction)
+        => dbContext.Transactions.Add(transaction);
 
     public Task<Transaction?> GetVisibleByIdAsync(
         Guid householdId,
@@ -20,7 +22,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
             .Include(transaction => transaction.Items)
             .Include(transaction => transaction.Labels)
             .AsSplitQuery()
-            .SingleOrDefaultAsync(transaction => transaction.Id == transactionId, cancellationToken);
+            .SingleOrDefaultAsync(
+                transaction => transaction.Id == transactionId,
+                cancellationToken);
     }
 
     public async Task<TransactionReadPage> GetVisiblePageAsync(
@@ -35,7 +39,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 dbContext.Accounts.AsNoTracking(),
                 transaction => new { transaction.HouseholdId, transaction.AccountId },
                 account => new { account.HouseholdId, AccountId = account.Id },
-                (transaction, account) => new { Transaction = transaction, Account = account });
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                });
 
         if (query.From is not null)
             filtered = filtered.Where(item => item.Transaction.OccurredOn >= query.From);
@@ -57,9 +65,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     && EF.Functions.ILike(item.Transaction.Note, pattern))
                 || item.Transaction.Items.Any(detail =>
                     EF.Functions.ILike(detail.Description, pattern)
-                    || (detail.CategoryName != null
-                        && EF.Functions.ILike(detail.CategoryName, pattern)))
-                || item.Transaction.Labels.Any(label => EF.Functions.ILike(label.Name, pattern)));
+                    || EF.Functions.ILike(detail.CategoryName, pattern))
+                || item.Transaction.Labels.Any(link =>
+                    dbContext.Labels.Any(label =>
+                        label.Id == link.LabelId
+                        && EF.Functions.ILike(label.Name, pattern))));
         }
 
         if (query.CursorDate is not null && query.CursorCreatedAt is not null)
@@ -90,7 +100,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.CreatedAt,
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
-                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)))
+                    || item.Account.Owners.Any(owner =>
+                        owner.HouseholdMemberId == householdMemberId)))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > query.PageSize;
@@ -115,7 +126,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 dbContext.Accounts.AsNoTracking(),
                 transaction => new { transaction.HouseholdId, transaction.AccountId },
                 account => new { account.HouseholdId, AccountId = account.Id },
-                (transaction, account) => new { Transaction = transaction, Account = account })
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                })
             .OrderByDescending(item => item.Transaction.OccurredOn)
             .ThenByDescending(item => item.Transaction.CreatedAt)
             .Take(Math.Clamp(take, 1, 20))
@@ -135,7 +150,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.CreatedAt,
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
-                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)))
+                    || item.Account.Owners.Any(owner =>
+                        owner.HouseholdMemberId == householdMemberId)))
             .ToListAsync(cancellationToken);
 
         return await LoadDetailsAsync(rows, cancellationToken);
@@ -156,11 +172,19 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
             .OrderBy(item => item.Position)
             .ToListAsync(cancellationToken);
 
-        var labels = await dbContext.TransactionLabels
-            .AsNoTracking()
-            .Where(label => ids.Contains(label.TransactionId))
-            .OrderBy(label => label.Scope)
-            .ThenBy(label => label.Name)
+        var labels = await (
+            from link in dbContext.TransactionLabels.AsNoTracking()
+            join label in dbContext.Labels.AsNoTracking()
+                on new { link.HouseholdId, link.LabelId }
+                equals new { label.HouseholdId, LabelId = label.Id }
+            where ids.Contains(link.TransactionId)
+            select new
+            {
+                link.TransactionId,
+                label.Id,
+                label.Name,
+                label.Scope,
+            })
             .ToListAsync(cancellationToken);
 
         var itemsByTransaction = items
@@ -172,7 +196,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                         item.Id,
                         item.Position,
                         item.Description,
+                        item.CategoryId,
                         item.CategoryName,
+                        item.CategoryIcon,
                         item.Amount))
                     .ToArray());
 
@@ -181,30 +207,33 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<TransactionLabelReadModel>)group
+                    .OrderBy(label => label.Scope)
+                    .ThenBy(label => label.Name)
                     .Select(label => new TransactionLabelReadModel(
                         label.Id,
                         label.Name,
                         label.Scope))
                     .ToArray());
 
-        return rows.Select(row => new TransactionReadModel(
-            row.Id,
-            row.AccountId,
-            row.AccountName,
-            row.Currency,
-            row.Kind,
-            row.Visibility,
-            row.Amount,
-            row.Description,
-            row.Merchant,
-            row.Note,
-            row.OccurredOn,
-            row.Status,
-            row.CreatedAt,
-            row.UpdatedAt,
-            row.CanModify,
-            itemsByTransaction.GetValueOrDefault(row.Id, []),
-            labelsByTransaction.GetValueOrDefault(row.Id, [])))
+        return rows
+            .Select(row => new TransactionReadModel(
+                row.Id,
+                row.AccountId,
+                row.AccountName,
+                row.Currency,
+                row.Kind,
+                row.Visibility,
+                row.Amount,
+                row.Description,
+                row.Merchant,
+                row.Note,
+                row.OccurredOn,
+                row.Status,
+                row.CreatedAt,
+                row.UpdatedAt,
+                row.CanModify,
+                itemsByTransaction.GetValueOrDefault(row.Id, []),
+                labelsByTransaction.GetValueOrDefault(row.Id, [])))
             .ToArray();
     }
 
@@ -217,7 +246,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 dbContext.Accounts.Include(account => account.Owners),
                 transaction => new { transaction.HouseholdId, transaction.AccountId },
                 account => new { account.HouseholdId, AccountId = account.Id },
-                (transaction, account) => new { Transaction = transaction, Account = account })
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                })
             .Where(item =>
                 item.Transaction.HouseholdId == householdId
                 && (

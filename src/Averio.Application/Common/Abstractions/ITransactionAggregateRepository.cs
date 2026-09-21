@@ -7,14 +7,23 @@ public interface ITransactionAggregateRepository
     Task ApplyDeltaAsync(
         Guid householdId,
         Guid accountId,
+        TransactionAggregateDimension dimensionType,
+        Guid dimensionId,
         string currency,
         DateOnly occurredOn,
         TransactionKind kind,
         decimal amountDelta,
-        int countDelta,
+        int entryCountDelta,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<CashFlowAggregateReadModel>> GetCashFlowAsync(
+        Guid householdId,
+        DateOnly from,
+        DateOnly to,
+        TransactionAggregatePeriod period,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<CategoryCashFlowAggregateReadModel>> GetCategoryCashFlowAsync(
         Guid householdId,
         DateOnly from,
         DateOnly to,
@@ -28,3 +37,13 @@ public sealed record CashFlowAggregateReadModel(
     decimal IncomeAmount,
     decimal ExpenseAmount,
     int TransactionCount);
+
+public sealed record CategoryCashFlowAggregateReadModel(
+    Guid CategoryId,
+    string CategoryName,
+    string CategoryIcon,
+    string Currency,
+    DateOnly PeriodStart,
+    decimal IncomeAmount,
+    decimal ExpenseAmount,
+    int ItemCount);

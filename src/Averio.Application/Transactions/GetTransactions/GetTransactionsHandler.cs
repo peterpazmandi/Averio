@@ -1,5 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 
 namespace Averio.Application.Transactions.GetTransactions;
@@ -61,13 +62,15 @@ public sealed record TransactionItemResult(
     Guid Id,
     int Position,
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
+    string CategoryName,
+    string CategoryIcon,
     decimal Amount);
 
 public sealed record TransactionLabelResult(
     Guid Id,
     string Name,
-    TransactionLabelScope Scope);
+    LabelScope Scope);
 
 public sealed record TransactionResult(
     Guid Id,
@@ -108,7 +111,9 @@ public sealed record TransactionResult(
             item.Id,
             item.Position,
             item.Description,
+            item.CategoryId,
             item.CategoryName,
+            item.CategoryIcon,
             item.Amount)).ToArray(),
         model.Labels.Select(label => new TransactionLabelResult(
             label.Id,

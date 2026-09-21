@@ -2,7 +2,9 @@ namespace Averio.Domain.Transactions;
 
 public sealed record TransactionItemDraft(
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
+    string CategoryName,
+    string CategoryIcon,
     decimal Amount);
 
 public sealed class TransactionItem
@@ -14,7 +16,9 @@ public sealed class TransactionItem
     public Guid TransactionId { get; private set; }
     public int Position { get; private set; }
     public string Description { get; private set; } = null!;
-    public string? CategoryName { get; private set; }
+    public Guid CategoryId { get; private set; }
+    public string CategoryName { get; private set; } = null!;
+    public string CategoryIcon { get; private set; } = null!;
     public decimal Amount { get; private set; }
 
     internal static TransactionItem Create(
@@ -24,12 +28,17 @@ public sealed class TransactionItem
         TransactionItemDraft draft)
     {
         var description = draft.Description.Trim();
-        var categoryName = Normalize(draft.CategoryName);
+        var categoryName = draft.CategoryName.Trim();
+        var categoryIcon = draft.CategoryIcon.Trim();
 
         if (description.Length is 0 or > 160)
             throw new ArgumentOutOfRangeException(nameof(draft.Description));
-        if (categoryName?.Length > 80)
+        if (draft.CategoryId == Guid.Empty)
+            throw new ArgumentException("Category identifier is required.", nameof(draft.CategoryId));
+        if (categoryName.Length is 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(draft.CategoryName));
+        if (categoryIcon.Length is 0 or > 32)
+            throw new ArgumentOutOfRangeException(nameof(draft.CategoryIcon));
         if (draft.Amount <= 0
             || draft.Amount > 999999999999999.9999m
             || decimal.Round(draft.Amount, 4) != draft.Amount)
@@ -44,11 +53,10 @@ public sealed class TransactionItem
             TransactionId = transactionId,
             Position = position,
             Description = description,
+            CategoryId = draft.CategoryId,
             CategoryName = categoryName,
+            CategoryIcon = categoryIcon,
             Amount = draft.Amount,
         };
     }
-
-    private static string? Normalize(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

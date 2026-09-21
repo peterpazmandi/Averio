@@ -1,5 +1,6 @@
 using Averio.Api.Mapping;
 using Averio.Application.Statistics.GetCashFlow;
+using Averio.Application.Statistics.GetCategoryCashFlow;
 using Averio.Contracts.Statistics;
 using Averio.Domain.Transactions;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,9 @@ namespace Averio.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/v1/households/{householdId:guid}/statistics")]
-public sealed class StatisticsController(GetCashFlowHandler cashFlowHandler)
+public sealed class StatisticsController(
+    GetCashFlowHandler cashFlowHandler,
+    GetCategoryCashFlowHandler categoryCashFlowHandler)
     : ControllerBase
 {
     [HttpGet("cash-flow")]
@@ -21,10 +24,7 @@ public sealed class StatisticsController(GetCashFlowHandler cashFlowHandler)
         [FromQuery] string period = "Month",
         CancellationToken cancellationToken = default)
     {
-        var parsedPeriod = EnumParser.Parse<TransactionAggregatePeriod>(
-            period,
-            nameof(period),
-            "Validation_CashFlowPeriodInvalid");
+        var parsedPeriod = ParsePeriod(period);
 
         var result = await cashFlowHandler.HandleAsync(
             householdId,
@@ -45,4 +45,43 @@ public sealed class StatisticsController(GetCashFlowHandler cashFlowHandler)
                 item.TransactionCount))
                 .ToArray()));
     }
+
+    [HttpGet("category-cash-flow")]
+    public async Task<ActionResult<CategoryCashFlowResponse>> GetCategoryCashFlow(
+        Guid householdId,
+        [FromQuery] DateOnly from,
+        [FromQuery] DateOnly to,
+        [FromQuery] string period = "Month",
+        CancellationToken cancellationToken = default)
+    {
+        var parsedPeriod = ParsePeriod(period);
+
+        var result = await categoryCashFlowHandler.HandleAsync(
+            householdId,
+            from,
+            to,
+            parsedPeriod,
+            cancellationToken);
+
+        return Ok(new CategoryCashFlowResponse(
+            result.From,
+            result.To,
+            result.Period.ToString(),
+            result.Periods.Select(item => new CategoryCashFlowPeriodResponse(
+                item.CategoryId,
+                item.CategoryName,
+                item.CategoryIcon,
+                item.Currency,
+                item.PeriodStart,
+                DecimalAmountMapper.Format(item.IncomeAmount),
+                DecimalAmountMapper.Format(item.ExpenseAmount),
+                item.ItemCount))
+                .ToArray()));
+    }
+
+    private static TransactionAggregatePeriod ParsePeriod(string period)
+        => EnumParser.Parse<TransactionAggregatePeriod>(
+            period,
+            nameof(period),
+            "Validation_CashFlowPeriodInvalid");
 }

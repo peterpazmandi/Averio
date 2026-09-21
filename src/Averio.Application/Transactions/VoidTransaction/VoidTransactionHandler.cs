@@ -10,7 +10,7 @@ public sealed class VoidTransactionHandler(
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
     ITransactionRepository transactionRepository,
-    ITransactionAggregateRepository aggregateRepository,
+    TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -45,9 +45,7 @@ public sealed class VoidTransactionHandler(
         }
 
         if (transaction.Status == TransactionStatus.Voided)
-        {
             return;
-        }
 
         var account = await accountRepository.GetVisibleByIdAsync(
             household.Id,
@@ -57,28 +55,14 @@ public sealed class VoidTransactionHandler(
             ?? throw new NotFoundException("account", transaction.AccountId);
 
         if (!TransactionAccess.CanModify(account, membership))
-        {
             throw new ForbiddenException();
-        }
 
         await using var databaseTransaction =
             await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            if (TransactionAccess.ContributesToHouseholdCashFlow(transaction))
-            {
-                await aggregateRepository.ApplyDeltaAsync(
-                    transaction.HouseholdId,
-                    transaction.AccountId,
-                    transaction.Currency.Value,
-                    transaction.OccurredOn,
-                    transaction.Kind,
-                    -transaction.Amount,
-                    -1,
-                    cancellationToken);
-            }
-
+            await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
             transaction.Void(timeProvider.GetUtcNow());
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await databaseTransaction.CommitAsync(cancellationToken);

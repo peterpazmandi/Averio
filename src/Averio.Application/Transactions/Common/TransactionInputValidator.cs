@@ -5,12 +5,8 @@ namespace Averio.Application.Transactions.Common;
 
 public sealed record TransactionItemInput(
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
     decimal Amount);
-
-public sealed record TransactionLabelInput(
-    string Name,
-    TransactionLabelScope Scope);
 
 public sealed record TransactionInput(
     Guid AccountId,
@@ -20,7 +16,7 @@ public sealed record TransactionInput(
     string? Note,
     DateOnly OccurredOn,
     IReadOnlyList<TransactionItemInput> Items,
-    IReadOnlyList<TransactionLabelInput> Labels);
+    IReadOnlyList<Guid> LabelIds);
 
 public sealed class TransactionInputValidator : AbstractValidator<TransactionInput>
 {
@@ -65,10 +61,9 @@ public sealed class TransactionInputValidator : AbstractValidator<TransactionInp
                     .MaximumLength(160)
                     .WithErrorCode("Validation_TransactionItemDescriptionInvalid");
 
-                item.RuleFor(x => x.CategoryName)
-                    .MaximumLength(80)
-                    .When(x => x.CategoryName is not null)
-                    .WithErrorCode("Validation_TransactionItemCategoryTooLong");
+                item.RuleFor(x => x.CategoryId)
+                    .NotEmpty()
+                    .WithErrorCode("Validation_TransactionCategoryRequired");
 
                 item.RuleFor(x => x.Amount)
                     .GreaterThan(0)
@@ -85,27 +80,12 @@ public sealed class TransactionInputValidator : AbstractValidator<TransactionInp
             })
             .WithErrorCode("Validation_TransactionTotalInvalid");
 
-        RuleFor(x => x.Labels)
+        RuleFor(x => x.LabelIds)
             .Must(labels => labels.Count <= 20)
             .WithErrorCode("Validation_TransactionLabelsTooMany")
-            .Must(labels => labels
-                .GroupBy(
-                    label => $"{label.Scope}:{label.Name.Trim().ToUpperInvariant()}",
-                    StringComparer.Ordinal)
-                .All(group => group.Count() == 1))
+            .Must(labels => labels.All(label => label != Guid.Empty))
+            .WithErrorCode("Validation_TransactionLabelInvalid")
+            .Must(labels => labels.Distinct().Count() == labels.Count)
             .WithErrorCode("Validation_TransactionLabelsDuplicate");
-
-        RuleForEach(x => x.Labels)
-            .ChildRules(label =>
-            {
-                label.RuleFor(x => x.Name)
-                    .NotEmpty()
-                    .MaximumLength(40)
-                    .WithErrorCode("Validation_TransactionLabelNameInvalid");
-
-                label.RuleFor(x => x.Scope)
-                    .IsInEnum()
-                    .WithErrorCode("Validation_TransactionLabelScopeInvalid");
-            });
     }
 }

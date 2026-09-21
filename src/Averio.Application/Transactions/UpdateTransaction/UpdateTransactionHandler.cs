@@ -17,7 +17,7 @@ public sealed record UpdateTransactionCommand(
     string? Note,
     DateOnly OccurredOn,
     IReadOnlyList<TransactionItemInput> Items,
-    IReadOnlyList<TransactionLabelInput> Labels,
+    IReadOnlyList<Guid> LabelIds,
     DateTimeOffset ExpectedUpdatedAt);
 
 public sealed class UpdateTransactionHandler(
@@ -25,8 +25,9 @@ public sealed class UpdateTransactionHandler(
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
     ITransactionRepository transactionRepository,
-    ITransactionAggregateRepository aggregateRepository,
     IValidator<TransactionInput> validator,
+    TransactionReferenceResolver referenceResolver,
+    TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -42,7 +43,7 @@ public sealed class UpdateTransactionHandler(
             command.Note,
             command.OccurredOn,
             command.Items,
-            command.Labels);
+            command.LabelIds);
 
         await validator.ValidateAndThrowAsync(input, cancellationToken);
 
@@ -116,30 +117,24 @@ public sealed class UpdateTransactionHandler(
                 "Error_TransactionVisibilityNotAllowed");
         }
 
-        var oldContributes = TransactionAccess.ContributesToHouseholdCashFlow(transaction);
-        var oldAccountId = transaction.AccountId;
-        var oldOccurredOn = transaction.OccurredOn;
-        var oldKind = transaction.Kind;
-        var oldAmount = transaction.Amount;
-        var currency = transaction.Currency.Value;
+        var items = await referenceResolver.ResolveItemsAsync(
+            household.Id,
+            command.Kind,
+            command.Items,
+            cancellationToken);
+
+        var labelIds = await referenceResolver.ResolveLabelIdsAsync(
+            household.Id,
+            targetAccount.Id,
+            command.LabelIds,
+            cancellationToken);
 
         await using var databaseTransaction =
             await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            if (oldContributes)
-            {
-                await aggregateRepository.ApplyDeltaAsync(
-                    transaction.HouseholdId,
-                    oldAccountId,
-                    currency,
-                    oldOccurredOn,
-                    oldKind,
-                    -oldAmount,
-                    -1,
-                    cancellationToken);
-            }
+            await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
 
             transaction.Update(
                 targetAccount.Id,
@@ -149,34 +144,12 @@ public sealed class UpdateTransactionHandler(
                 command.Merchant,
                 command.Note,
                 command.OccurredOn,
-                command.Items
-                    .Select(item => new TransactionItemDraft(
-                        item.Description,
-                        item.CategoryName,
-                        item.Amount))
-                    .ToArray(),
-                command.Labels
-                    .Select(label => new TransactionLabelDraft(
-                        label.Name,
-                        label.Scope))
-                    .ToArray(),
+                items,
+                labelIds,
                 timeProvider.GetUtcNow());
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            if (TransactionAccess.ContributesToHouseholdCashFlow(transaction))
-            {
-                await aggregateRepository.ApplyDeltaAsync(
-                    transaction.HouseholdId,
-                    transaction.AccountId,
-                    currency,
-                    transaction.OccurredOn,
-                    transaction.Kind,
-                    transaction.Amount,
-                    1,
-                    cancellationToken);
-            }
-
+            await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
             await databaseTransaction.CommitAsync(cancellationToken);
         }
         catch

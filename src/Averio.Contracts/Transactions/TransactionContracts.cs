@@ -4,12 +4,8 @@ namespace Averio.Contracts.Transactions;
 
 public sealed record TransactionItemRequest(
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
     [property: JsonRequired] string Amount);
-
-public sealed record TransactionLabelRequest(
-    string Name,
-    string Scope);
 
 public sealed record CreateTransactionRequest(
     Guid AccountId,
@@ -19,7 +15,7 @@ public sealed record CreateTransactionRequest(
     string? Note,
     DateOnly OccurredOn,
     [property: JsonRequired] IReadOnlyList<TransactionItemRequest> Items,
-    IReadOnlyList<TransactionLabelRequest>? Labels);
+    IReadOnlyList<Guid>? LabelIds);
 
 public sealed record UpdateTransactionRequest(
     Guid AccountId,
@@ -29,7 +25,7 @@ public sealed record UpdateTransactionRequest(
     string? Note,
     DateOnly OccurredOn,
     [property: JsonRequired] IReadOnlyList<TransactionItemRequest> Items,
-    IReadOnlyList<TransactionLabelRequest>? Labels,
+    IReadOnlyList<Guid>? LabelIds,
     [property: JsonRequired] DateTimeOffset ExpectedUpdatedAt);
 
 public sealed record CreateTransactionResponse(Guid Id);
@@ -38,7 +34,9 @@ public sealed record TransactionItemResponse(
     Guid Id,
     int Position,
     string Description,
-    string? CategoryName,
+    Guid CategoryId,
+    string CategoryName,
+    string CategoryIcon,
     string Amount);
 
 public sealed record TransactionLabelResponse(

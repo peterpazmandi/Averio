@@ -1,43 +1,30 @@
 namespace Averio.Domain.Transactions;
 
-public sealed record TransactionLabelDraft(
-    string Name,
-    TransactionLabelScope Scope);
-
 public sealed class TransactionLabel
 {
     private TransactionLabel() { }
 
-    public Guid Id { get; private set; }
     public Guid HouseholdId { get; private set; }
     public Guid TransactionId { get; private set; }
-    public Guid? AccountId { get; private set; }
-    public TransactionLabelScope Scope { get; private set; }
-    public string Name { get; private set; } = null!;
+    public Guid LabelId { get; private set; }
 
     internal static TransactionLabel Create(
         Guid householdId,
         Guid transactionId,
-        Guid accountId,
-        TransactionLabelDraft draft)
+        Guid labelId)
     {
-        var name = draft.Name.Trim();
-
-        if (name.Length is 0 or > 40)
-            throw new ArgumentOutOfRangeException(nameof(draft.Name));
-        if (!Enum.IsDefined(draft.Scope))
-            throw new ArgumentException("Invalid label scope.", nameof(draft.Scope));
+        if (householdId == Guid.Empty)
+            throw new ArgumentException("Household identifier is required.", nameof(householdId));
+        if (transactionId == Guid.Empty)
+            throw new ArgumentException("Transaction identifier is required.", nameof(transactionId));
+        if (labelId == Guid.Empty)
+            throw new ArgumentException("Label identifier is required.", nameof(labelId));
 
         return new TransactionLabel
         {
-            Id = Guid.NewGuid(),
             HouseholdId = householdId,
             TransactionId = transactionId,
-            AccountId = draft.Scope == TransactionLabelScope.Account
-                ? accountId
-                : null,
-            Scope = draft.Scope,
-            Name = name,
+            LabelId = labelId,
         };
     }
 }

@@ -39,7 +39,7 @@ public sealed class Transaction
         string? note,
         DateOnly occurredOn,
         IReadOnlyCollection<TransactionItemDraft> items,
-        IReadOnlyCollection<TransactionLabelDraft> labels,
+        IReadOnlyCollection<Guid> labelIds,
         DateTimeOffset now)
     {
         ValidateBase(
@@ -53,7 +53,7 @@ public sealed class Transaction
             note,
             occurredOn,
             items,
-            labels);
+            labelIds);
 
         var transaction = new Transaction
         {
@@ -73,7 +73,7 @@ public sealed class Transaction
         };
 
         transaction.ReplaceItems(items);
-        transaction.ReplaceLabels(labels);
+        transaction.ReplaceLabels(labelIds);
         transaction.Description = BuildDescription(transaction.Merchant, transaction._items);
 
         return transaction;
@@ -88,7 +88,7 @@ public sealed class Transaction
         string? note,
         DateOnly occurredOn,
         IReadOnlyCollection<TransactionItemDraft> items,
-        IReadOnlyCollection<TransactionLabelDraft> labels,
+        IReadOnlyCollection<Guid> labelIds,
         DateTimeOffset now)
     {
         if (Status != TransactionStatus.Posted)
@@ -105,7 +105,7 @@ public sealed class Transaction
             note,
             occurredOn,
             items,
-            labels);
+            labelIds);
 
         AccountId = accountId;
         Kind = kind;
@@ -116,7 +116,7 @@ public sealed class Transaction
         OccurredOn = occurredOn;
 
         ReplaceItems(items);
-        ReplaceLabels(labels);
+        ReplaceLabels(labelIds);
         Description = BuildDescription(Merchant, _items);
         UpdatedAt = NextVersion(now);
     }
@@ -151,17 +151,16 @@ public sealed class Transaction
             throw new ArgumentOutOfRangeException(nameof(drafts));
     }
 
-    private void ReplaceLabels(IReadOnlyCollection<TransactionLabelDraft> drafts)
+    private void ReplaceLabels(IReadOnlyCollection<Guid> labelIds)
     {
         _labels.Clear();
 
-        foreach (var draft in drafts)
+        foreach (var labelId in labelIds.Distinct())
         {
             _labels.Add(TransactionLabel.Create(
                 HouseholdId,
                 Id,
-                AccountId,
-                draft));
+                labelId));
         }
     }
 
@@ -176,7 +175,7 @@ public sealed class Transaction
         string? note,
         DateOnly occurredOn,
         IReadOnlyCollection<TransactionItemDraft> items,
-        IReadOnlyCollection<TransactionLabelDraft> labels)
+        IReadOnlyCollection<Guid> labelIds)
     {
         if (householdId == Guid.Empty)
             throw new ArgumentException("Household identifier is required.", nameof(householdId));
@@ -198,17 +197,12 @@ public sealed class Transaction
             throw new ArgumentException("Transaction date is required.", nameof(occurredOn));
         if (items.Count is < 1 or > 100)
             throw new ArgumentOutOfRangeException(nameof(items));
-        if (labels.Count > 20)
-            throw new ArgumentOutOfRangeException(nameof(labels));
-
-        var duplicateLabels = labels
-            .GroupBy(
-                label => $"{label.Scope}:{label.Name.Trim().ToUpperInvariant()}",
-                StringComparer.Ordinal)
-            .Any(group => group.Count() > 1);
-
-        if (duplicateLabels)
-            throw new ArgumentException("Duplicate transaction labels are not allowed.", nameof(labels));
+        if (labelIds.Count > 20)
+            throw new ArgumentOutOfRangeException(nameof(labelIds));
+        if (labelIds.Any(id => id == Guid.Empty))
+            throw new ArgumentException("Label identifier is required.", nameof(labelIds));
+        if (labelIds.Distinct().Count() != labelIds.Count)
+            throw new ArgumentException("Duplicate labels are not allowed.", nameof(labelIds));
     }
 
     private static string BuildDescription(

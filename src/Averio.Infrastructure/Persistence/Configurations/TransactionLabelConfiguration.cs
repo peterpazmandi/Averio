@@ -1,4 +1,4 @@
-using Averio.Domain.Accounts;
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -10,21 +10,14 @@ public sealed class TransactionLabelConfiguration
 {
     public void Configure(EntityTypeBuilder<TransactionLabel> builder)
     {
-        builder.ToTable("transaction_labels", table =>
-        {
-            table.HasCheckConstraint("ck_transaction_labels_scope", "scope IN ('Household', 'Account')");
-            table.HasCheckConstraint(
-                "ck_transaction_labels_scope_account",
-                "(scope = 'Household' AND account_id IS NULL) OR (scope = 'Account' AND account_id IS NOT NULL)");
-        });
+        builder.ToTable("transaction_labels");
 
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
+        builder.HasKey(x => new { x.TransactionId, x.LabelId })
+            .HasName("pk_transaction_labels");
+
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");
         builder.Property(x => x.TransactionId).HasColumnName("transaction_id");
-        builder.Property(x => x.AccountId).HasColumnName("account_id");
-        builder.Property(x => x.Scope).HasColumnName("scope").HasConversion<string>().HasMaxLength(20);
-        builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(40).IsRequired();
+        builder.Property(x => x.LabelId).HasColumnName("label_id");
 
         builder.HasOne<Transaction>()
             .WithMany(x => x.Labels)
@@ -33,16 +26,13 @@ public sealed class TransactionLabelConfiguration
             .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("fk_transaction_labels_transactions");
 
-        builder.HasOne<Account>()
-            .WithMany()
-            .HasForeignKey(x => new { x.HouseholdId, x.AccountId })
+        builder.HasOne<Label>().WithMany()
+            .HasForeignKey(x => new { x.HouseholdId, x.LabelId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
             .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("fk_transaction_labels_accounts");
+            .HasConstraintName("fk_transaction_labels_labels");
 
-        builder.HasIndex(x => new { x.HouseholdId, x.TransactionId })
-            .HasDatabaseName("ix_transaction_labels_transaction");
-        builder.HasIndex(x => new { x.HouseholdId, x.AccountId })
-            .HasDatabaseName("ix_transaction_labels_account");
+        builder.HasIndex(x => new { x.HouseholdId, x.LabelId })
+            .HasDatabaseName("ix_transaction_labels_label");
     }
 }

@@ -16,15 +16,16 @@ public sealed record CreateTransactionCommand(
     string? Note,
     DateOnly OccurredOn,
     IReadOnlyList<TransactionItemInput> Items,
-    IReadOnlyList<TransactionLabelInput> Labels);
+    IReadOnlyList<Guid> LabelIds);
 
 public sealed class CreateTransactionHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
     ITransactionRepository transactionRepository,
-    ITransactionAggregateRepository aggregateRepository,
     IValidator<TransactionInput> validator,
+    TransactionReferenceResolver referenceResolver,
+    TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -40,7 +41,7 @@ public sealed class CreateTransactionHandler(
             command.Note,
             command.OccurredOn,
             command.Items,
-            command.Labels);
+            command.LabelIds);
 
         await validator.ValidateAndThrowAsync(input, cancellationToken);
 
@@ -77,6 +78,18 @@ public sealed class CreateTransactionHandler(
                 "Error_TransactionVisibilityNotAllowed");
         }
 
+        var items = await referenceResolver.ResolveItemsAsync(
+            household.Id,
+            command.Kind,
+            command.Items,
+            cancellationToken);
+
+        var labelIds = await referenceResolver.ResolveLabelIdsAsync(
+            household.Id,
+            account.Id,
+            command.LabelIds,
+            cancellationToken);
+
         var transaction = Transaction.Create(
             household.Id,
             account.Id,
@@ -87,17 +100,8 @@ public sealed class CreateTransactionHandler(
             command.Merchant,
             command.Note,
             command.OccurredOn,
-            command.Items
-                .Select(item => new TransactionItemDraft(
-                    item.Description,
-                    item.CategoryName,
-                    item.Amount))
-                .ToArray(),
-            command.Labels
-                .Select(label => new TransactionLabelDraft(
-                    label.Name,
-                    label.Scope))
-                .ToArray(),
+            items,
+            labelIds,
             timeProvider.GetUtcNow());
 
         await using var databaseTransaction =
@@ -107,20 +111,7 @@ public sealed class CreateTransactionHandler(
         {
             transactionRepository.Add(transaction);
             await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            if (TransactionAccess.ContributesToHouseholdCashFlow(transaction))
-            {
-                await aggregateRepository.ApplyDeltaAsync(
-                    transaction.HouseholdId,
-                    transaction.AccountId,
-                    transaction.Currency.Value,
-                    transaction.OccurredOn,
-                    transaction.Kind,
-                    transaction.Amount,
-                    1,
-                    cancellationToken);
-            }
-
+            await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
             await databaseTransaction.CommitAsync(cancellationToken);
             return transaction.Id;
         }

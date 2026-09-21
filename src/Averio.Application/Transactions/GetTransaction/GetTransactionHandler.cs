@@ -10,6 +10,7 @@ public sealed class GetTransactionHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
+    ILabelRepository labelRepository,
     ITransactionRepository transactionRepository)
 {
     public async Task<TransactionDetailResult> HandleAsync(
@@ -41,6 +42,15 @@ public sealed class GetTransactionHandler(
             cancellationToken)
             ?? throw new NotFoundException("account", transaction.AccountId);
 
+        var labelIds = transaction.Labels.Select(link => link.LabelId).ToArray();
+        var labels = labelIds.Length == 0
+            ? []
+            : await labelRepository.GetApplicableByIdsAsync(
+                household.Id,
+                account.Id,
+                labelIds,
+                cancellationToken);
+
         return new TransactionDetailResult(
             transaction.Id,
             transaction.AccountId,
@@ -63,10 +73,12 @@ public sealed class GetTransactionHandler(
                     item.Id,
                     item.Position,
                     item.Description,
+                    item.CategoryId,
                     item.CategoryName,
+                    item.CategoryIcon,
                     item.Amount))
                 .ToArray(),
-            transaction.Labels
+            labels
                 .OrderBy(label => label.Scope)
                 .ThenBy(label => label.Name)
                 .Select(label => new TransactionLabelResult(

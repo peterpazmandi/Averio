@@ -27,7 +27,7 @@ internal static class TransactionMapper
             request.Note,
             request.OccurredOn,
             MapItems(request.Items),
-            MapLabels(request.Labels));
+            request.LabelIds ?? []);
 
     public static UpdateTransactionCommand ToCommand(
         Guid householdId,
@@ -48,7 +48,7 @@ internal static class TransactionMapper
             request.Note,
             request.OccurredOn,
             MapItems(request.Items),
-            MapLabels(request.Labels),
+            request.LabelIds ?? [],
             request.ExpectedUpdatedAt);
 
     public static TransactionResponse From(TransactionResult result) => new(
@@ -71,7 +71,9 @@ internal static class TransactionMapper
             item.Id,
             item.Position,
             item.Description,
+            item.CategoryId,
             item.CategoryName,
+            item.CategoryIcon,
             DecimalAmountMapper.Format(item.Amount))).ToArray(),
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
@@ -98,7 +100,9 @@ internal static class TransactionMapper
             item.Id,
             item.Position,
             item.Description,
+            item.CategoryId,
             item.CategoryName,
+            item.CategoryIcon,
             DecimalAmountMapper.Format(item.Amount))).ToArray(),
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
@@ -109,18 +113,7 @@ internal static class TransactionMapper
         IReadOnlyList<TransactionItemRequest> items)
         => items.Select(item => new TransactionItemInput(
             item.Description,
-            item.CategoryName,
+            item.CategoryId,
             DecimalAmountMapper.ParseTransactionAmount(item.Amount)))
-            .ToArray();
-
-    private static IReadOnlyList<TransactionLabelInput> MapLabels(
-        IReadOnlyList<TransactionLabelRequest>? labels)
-        => (labels ?? [])
-            .Select(label => new TransactionLabelInput(
-                label.Name,
-                EnumParser.Parse<TransactionLabelScope>(
-                    label.Scope,
-                    nameof(label.Scope),
-                    "Validation_TransactionLabelScopeInvalid")))
             .ToArray();
 }
