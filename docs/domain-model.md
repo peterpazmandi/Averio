@@ -167,7 +167,39 @@ Account currency is immutable. Cross-currency conversion is explicit, not an aut
 
 An authoritative income/expense ledger entry associated with one account.
 
-The first implemented transaction slice deliberately models **Income** and **Expense** only. A transaction stores a positive amount in the account's immutable currency; its kind supplies the cash-flow direction. It also records description, optional note, date, visibility, creator membership, status, and timestamps.
+The implemented transaction slice deliberately models **Income** and **Expense** only. A transaction uses the account's immutable currency and contains one or more ordered **TransactionItem** records. Its positive total amount is derived from the exact decimal sum of those item amounts; the transaction kind supplies the cash-flow direction.
+
+A transaction may also contain:
+
+- free-text Merchant/Store
+- optional note
+- date
+- Household or Private visibility
+- creator membership
+- status and timestamps
+- Household-scoped or Account-scoped labels
+
+`Description` on the transaction is a derived summary used for compact list/search scenarios. Merchant/Store is preferred when present; otherwise the first item description is used.
+
+### TransactionItem
+
+A receipt or other transaction can be split into multiple items. Each item currently stores:
+
+- ordered position
+- description
+- optional category-name snapshot
+- amount in the transaction/account currency
+
+The Category vertical slice is not implemented yet, so item category is intentionally a name snapshot rather than a fake Category entity/reference. This allows useful itemization now while leaving category hierarchy, icons, ordering and ownership semantics for the dedicated Category implementation.
+
+### Transaction labels
+
+A transaction may have labels with explicit scope:
+
+- **Household:** shared contextual label; no account id is stored
+- **Account:** label tied to the transaction's selected account
+
+The UI visually distinguishes the scopes. This slice stores scoped labels on the transaction; reusable label catalogue/autocomplete management can be introduced later.
 
 Transaction visibility is constrained by the containing account. A private transaction on a household-visible personal account is visible only to that account's holders. Household-scope accounts do not accept private transactions. Transactions on a private account remain private through the containing account boundary.
 

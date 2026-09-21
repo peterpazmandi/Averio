@@ -2,6 +2,7 @@ using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.Common;
 using Averio.Application.Transactions.GetTransactions;
+using Averio.Domain.Transactions;
 
 namespace Averio.Application.Transactions.GetTransaction;
 
@@ -88,7 +89,7 @@ public sealed record TransactionDetailResult(
     string? Merchant,
     string? Note,
     DateOnly OccurredOn,
-    Domain.Transactions.TransactionStatus Status,
+    TransactionStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool CanModify,

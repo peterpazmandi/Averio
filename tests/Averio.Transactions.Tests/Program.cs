@@ -7,12 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 var checks = new (string Name, Action Run)[]
 {
-    ("create income", CreateIncome),
-    ("reject non-positive amount", RejectNonPositiveAmount),
-    ("update advances concurrency version", UpdateAdvancesVersion),
+    ("itemized income total", ItemizedIncomeTotal),
+    ("reject invalid item amount", RejectInvalidItemAmount),
+    ("merchant and scoped labels", MerchantAndScopedLabels),
+    ("update recalculates total and advances version", UpdateRecalculatesTotal),
     ("void removes cash-flow contribution", VoidRemovesContribution),
     ("account visibility constrains transaction visibility", VisibilityRules),
     ("EF transaction model", TransactionModel),
+    ("EF transaction detail model", TransactionDetailModel),
     ("EF aggregate model", AggregateModel),
 };
 
@@ -36,7 +38,9 @@ return 0;
 static Transaction NewTransaction(
     TransactionKind kind = TransactionKind.Expense,
     TransactionVisibility visibility = TransactionVisibility.Household,
-    decimal amount = 12.34m,
+    IReadOnlyCollection<TransactionItemDraft>? items = null,
+    IReadOnlyCollection<TransactionLabelDraft>? labels = null,
+    string? merchant = null,
     DateTimeOffset? now = null)
     => Transaction.Create(
         Guid.NewGuid(),
@@ -44,31 +48,79 @@ static Transaction NewTransaction(
         Guid.NewGuid(),
         kind,
         visibility,
-        amount,
         CurrencyCode.Eur,
-        "Regression check",
+        merchant,
         null,
         new DateOnly(2026, 9, 21),
+        items ??
+        [
+            new TransactionItemDraft("Regression check", "Tests", 12.34m)
+        ],
+        labels ?? [],
         now ?? new DateTimeOffset(2026, 9, 21, 6, 0, 0, TimeSpan.Zero));
 
-static void CreateIncome()
+static void ItemizedIncomeTotal()
 {
-    var transaction = NewTransaction(TransactionKind.Income, amount: 1234.5678m);
+    var transaction = NewTransaction(
+        kind: TransactionKind.Income,
+        items:
+        [
+            new TransactionItemDraft("Salary", "Salary", 1234.5678m),
+            new TransactionItemDraft("Bonus", "Bonus", 65.4322m),
+        ]);
+
     Equal(TransactionKind.Income, transaction.Kind);
-    Equal(1234.5678m, transaction.Amount);
+    Equal(1300.0000m, transaction.Amount);
+    Equal(2, transaction.Items.Count);
     Equal(CurrencyCode.Eur, transaction.Currency);
     Equal(TransactionStatus.Posted, transaction.Status);
     True(TransactionAccess.ContributesToHouseholdCashFlow(transaction));
 }
 
-static void RejectNonPositiveAmount()
+static void RejectInvalidItemAmount()
 {
-    Throws<ArgumentOutOfRangeException>(() => NewTransaction(amount: 0m));
-    Throws<ArgumentOutOfRangeException>(() => NewTransaction(amount: -1m));
-    Throws<ArgumentOutOfRangeException>(() => NewTransaction(amount: 1.00001m));
+    Throws<ArgumentOutOfRangeException>(() => NewTransaction(
+        items: [new TransactionItemDraft("Zero", null, 0m)]));
+
+    Throws<ArgumentOutOfRangeException>(() => NewTransaction(
+        items: [new TransactionItemDraft("Negative", null, -1m)]));
+
+    Throws<ArgumentOutOfRangeException>(() => NewTransaction(
+        items: [new TransactionItemDraft("Too precise", null, 1.00001m)]));
 }
 
-static void UpdateAdvancesVersion()
+static void MerchantAndScopedLabels()
+{
+    var transaction = NewTransaction(
+        merchant: "Tesco",
+        items:
+        [
+            new TransactionItemDraft("Milk", "Groceries", 3.25m),
+            new TransactionItemDraft("Bread", "Groceries", 2.10m),
+        ],
+        labels:
+        [
+            new TransactionLabelDraft("Family", TransactionLabelScope.Household),
+            new TransactionLabelDraft("Daily spending", TransactionLabelScope.Account),
+        ]);
+
+    Equal("Tesco", transaction.Merchant);
+    Equal("Tesco", transaction.Description);
+    Equal(5.35m, transaction.Amount);
+    Equal(2, transaction.Items.Count);
+    Equal(2, transaction.Labels.Count);
+
+    var householdLabel = transaction.Labels.Single(
+        label => label.Scope == TransactionLabelScope.Household);
+    var accountLabel = transaction.Labels.Single(
+        label => label.Scope == TransactionLabelScope.Account);
+
+    Equal<Guid?>(null, householdLabel.AccountId);
+    Equal<Guid?>(transaction.AccountId, accountLabel.AccountId);
+    Equal("Groceries", transaction.Items.OrderBy(item => item.Position).First().CategoryName);
+}
+
+static void UpdateRecalculatesTotal()
 {
     var now = new DateTimeOffset(2026, 9, 21, 6, 0, 0, TimeSpan.Zero);
     var transaction = NewTransaction(now: now);
@@ -78,16 +130,24 @@ static void UpdateAdvancesVersion()
         transaction.AccountId,
         TransactionKind.Expense,
         TransactionVisibility.Household,
-        22.50m,
         CurrencyCode.Eur,
-        "Changed",
+        "Updated merchant",
         "note",
         new DateOnly(2026, 9, 20),
+        [
+            new TransactionItemDraft("One", "A", 10m),
+            new TransactionItemDraft("Two", "B", 12.50m),
+        ],
+        [
+            new TransactionLabelDraft("Updated", TransactionLabelScope.Household)
+        ],
         now);
 
     True(transaction.UpdatedAt > original);
     Equal(22.50m, transaction.Amount);
-    Equal("Changed", transaction.Description);
+    Equal("Updated merchant", transaction.Description);
+    Equal(2, transaction.Items.Count);
+    Equal(1, transaction.Labels.Count);
 }
 
 static void VoidRemovesContribution()
@@ -173,8 +233,29 @@ static void TransactionModel()
 
     Equal("transactions", entity.GetTableName());
     True(entity.FindProperty(nameof(Transaction.UpdatedAt))?.IsConcurrencyToken == true);
+    True(entity.FindProperty(nameof(Transaction.Merchant)) is not null);
+    True(entity.GetKeys().Any(key =>
+        key.Properties.Select(property => property.Name)
+            .SequenceEqual([nameof(Transaction.HouseholdId), nameof(Transaction.Id)])));
     True(entity.GetIndexes().Any(index =>
         index.GetDatabaseName() == "ix_transactions_household_date_created"));
+}
+
+static void TransactionDetailModel()
+{
+    using var context = NewContext();
+
+    var item = context.Model.FindEntityType(typeof(TransactionItem))
+        ?? throw new Exception("TransactionItem entity is missing.");
+    Equal("transaction_items", item.GetTableName());
+    True(item.GetIndexes().Any(index =>
+        index.GetDatabaseName() == "ux_transaction_items_transaction_position"
+        && index.IsUnique));
+
+    var label = context.Model.FindEntityType(typeof(TransactionLabel))
+        ?? throw new Exception("TransactionLabel entity is missing.");
+    Equal("transaction_labels", label.GetTableName());
+    True(label.FindProperty(nameof(TransactionLabel.AccountId))?.IsNullable == true);
 }
 
 static void AggregateModel()

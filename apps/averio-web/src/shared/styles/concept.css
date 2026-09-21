@@ -197,11 +197,11 @@
 .av-ui .av-dashboard-columns { height:100%; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
 .av-ui .av-dashboard-columns span { width:min(18px,38%); min-height:4px; border-radius:6px 6px 1px 1px; }
 .av-ui .av-dashboard-columns .income { background:var(--brand); }
-.av-ui .av-dashboard-columns .expense { background:#8B5CF6; }
+.av-ui .av-dashboard-columns .expense { background:#D92D20; }
 .av-ui .av-chart-legend { display:flex; gap:14px; margin-top:10px; color:var(--muted); font-size:10px; }
 .av-ui .av-chart-legend i { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
 .av-ui .av-chart-legend i.income { background:var(--brand); }
-.av-ui .av-chart-legend i.expense { background:#8B5CF6; }
+.av-ui .av-chart-legend i.expense { background:#D92D20; }
 .av-ui .av-dashboard-month-totals { display:grid; gap:14px; }
 .av-ui .av-dashboard-currency-total + .av-dashboard-currency-total { border-top:1px solid var(--border); padding-top:14px; }
 .av-ui .av-list { display:grid; }
@@ -214,6 +214,7 @@
 .av-ui .av-row-title span { color:var(--muted); font-size:9px; margin-top:2px; }
 .av-ui .av-amount-pos,.av-ui .av-amount-neg { font-size:10.5px; font-weight:850; white-space:nowrap; }
 .av-ui .av-amount-pos { color:var(--brand-strong); }
+.av-ui .av-amount-neg { color:#D92D20; }
 
 @media (max-width: 560px) {
     .av-ui .av-dashboard-bars { overflow-x:auto; }

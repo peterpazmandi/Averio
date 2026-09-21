@@ -188,3 +188,18 @@ Personal-money allocation/rollover is also retained as an important future featu
 ## Recommended next implementation milestone
 
 Implement the Transaction/Transfer ledger foundation, including immutable currency handling, explicit transfer linkage, privacy-aware reporting, balance-anchor boundaries, and database-backed integration coverage. Scope-transfer and balance-reconciliation workflows are deliberately deferred until their financial-history semantics are settled.
+
+
+### Transaction Management review additions — 2026-09-21
+
+The current transaction-management branch now includes:
+
+- itemized income/expense transactions with the transaction total derived from item amounts
+- free-text merchant/store
+- optional per-item category-name snapshot until the Category vertical slice exists
+- Household-scoped and Account-scoped transaction labels
+- green Income and red Expense visual semantics
+- header and page-level Add transaction entry points opening the same editor
+- cash-flow aggregates continuing to use the transaction's derived total
+
+This does **not** mean full Category management or reusable Label management is complete. Those remain dedicated future slices.
