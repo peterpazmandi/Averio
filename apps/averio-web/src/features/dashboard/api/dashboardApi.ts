@@ -1,5 +1,8 @@
 import { apiFetch } from '../../../shared/api/apiFetch';
-import type { DashboardResponse } from '../../../shared/api/generated';
+import type {
+    AccountResponse,
+    DashboardResponse,
+} from '../../../shared/api/generated';
 
 export interface DashboardCashFlowPeriod {
     currency: string;
@@ -26,7 +29,12 @@ export interface DashboardLatestTransaction {
     canModify: boolean;
 }
 
-export type DashboardData = DashboardResponse & {
+export type DashboardAccount = AccountResponse & {
+    currentBalanceAmount: string;
+};
+
+export type DashboardData = Omit<DashboardResponse, 'accounts'> & {
+    accounts: DashboardAccount[];
     cashFlow: DashboardCashFlowPeriod[];
     latestTransactions: DashboardLatestTransaction[];
 };
