@@ -13,6 +13,7 @@ public sealed class GetDashboardHandler(
     IIdentityService identityService,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
+    IAccountBalanceReader accountBalanceReader,
     ITransactionRepository transactionRepository,
     ITransactionAggregateRepository aggregateRepository,
     HouseholdMemberDirectory memberDirectory,
@@ -35,9 +36,7 @@ public sealed class GetDashboardHandler(
                 householdId);
 
         if (!household.IsFinancialSetupCompleted)
-        {
             throw new OnboardingRequiredException();
-        }
 
         var user = await identityService.FindByIdAsync(
             userId,
@@ -59,9 +58,18 @@ public sealed class GetDashboardHandler(
                 cancellationToken);
 
         var activeAccounts = visibleAccounts
-            .Where(account =>
-                account.Status == AccountStatus.Active)
+            .Where(account => account.Status == AccountStatus.Active)
             .ToArray();
+
+        var today = DateOnly.FromDateTime(
+            timeProvider.GetUtcNow().UtcDateTime);
+
+        var currentBalances = await accountBalanceReader.GetCurrentBalancesAsync(
+            household.Id,
+            membership.Id,
+            activeAccounts.Select(account => account.Id).ToArray(),
+            today,
+            cancellationToken);
 
         var householdBalances = activeAccounts
             .Where(account =>
@@ -70,7 +78,10 @@ public sealed class GetDashboardHandler(
             .GroupBy(account => account.Currency.Value)
             .Select(group => new HouseholdBalanceResult(
                 group.Key,
-                group.Sum(account => account.BalanceAnchorAmount),
+                group.Sum(account =>
+                    currentBalances.GetValueOrDefault(
+                        account.Id,
+                        account.BalanceAnchorAmount)),
                 group.Min(account => account.BalanceAnchorDate),
                 group.Max(account => account.BalanceAnchorDate)))
             .OrderByDescending(balance =>
@@ -78,12 +89,19 @@ public sealed class GetDashboardHandler(
             .ThenBy(balance => balance.Currency)
             .ToArray();
 
-        var names = await memberDirectory.GetAsync(household, cancellationToken);
+        var names = await memberDirectory.GetAsync(
+            household,
+            cancellationToken);
+
         var accounts = activeAccounts
-            .Select(account => AccountResult.From(account, names))
+            .Select(account => AccountResult.From(
+                account,
+                names,
+                currentBalances.GetValueOrDefault(
+                    account.Id,
+                    account.BalanceAnchorAmount)))
             .ToArray();
 
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var currentMonth = new DateOnly(today.Year, today.Month, 1);
         var sixMonthStart = currentMonth.AddMonths(-5);
 

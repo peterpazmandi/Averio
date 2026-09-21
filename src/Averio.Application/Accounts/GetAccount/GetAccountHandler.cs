@@ -8,7 +8,9 @@ public sealed class GetAccountHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
-    HouseholdMemberDirectory memberDirectory)
+    IAccountBalanceReader accountBalanceReader,
+    HouseholdMemberDirectory memberDirectory,
+    TimeProvider timeProvider)
 {
     public async Task<AccountResult> HandleAsync(
         Guid householdId,
@@ -40,7 +42,25 @@ public sealed class GetAccountHandler(
                 "account",
                 accountId);
 
-        var names = await memberDirectory.GetAsync(household, cancellationToken);
-        return AccountResult.From(account, names);
+        var asOf = DateOnly.FromDateTime(
+            timeProvider.GetUtcNow().UtcDateTime);
+
+        var balances = await accountBalanceReader.GetCurrentBalancesAsync(
+            householdId,
+            membership.Id,
+            [account.Id],
+            asOf,
+            cancellationToken);
+
+        var names = await memberDirectory.GetAsync(
+            household,
+            cancellationToken);
+
+        return AccountResult.From(
+            account,
+            names,
+            balances.GetValueOrDefault(
+                account.Id,
+                account.BalanceAnchorAmount));
     }
 }

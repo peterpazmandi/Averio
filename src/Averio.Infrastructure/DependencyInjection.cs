@@ -85,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IHouseholdRepository, HouseholdRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IAccountBalanceReader, AccountBalanceReader>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IIconCatalogRepository, IconCatalogRepository>();
         services.AddScoped<ILabelRepository, LabelRepository>();
