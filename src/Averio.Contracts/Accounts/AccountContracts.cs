@@ -13,6 +13,14 @@ public sealed record CreateAccountRequest(
     [property: JsonRequired] string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate);
 
+public sealed record UpdateAccountRequest(
+    string Name,
+    string Type,
+    IReadOnlyList<Guid> OwnerHouseholdMemberIds,
+    string Visibility,
+    bool IncludeInHouseholdReports,
+    [property: JsonRequired] DateTimeOffset ExpectedUpdatedAt);
+
 public sealed record CreateAccountResponse(Guid Id);
 
 public sealed record AccountOwnerResponse(
@@ -35,4 +43,5 @@ public sealed record AccountResponse(
     string Currency,
     string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate,
-    string Status);
+    string Status,
+    DateTimeOffset UpdatedAt);

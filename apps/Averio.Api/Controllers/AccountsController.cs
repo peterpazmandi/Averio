@@ -18,7 +18,8 @@ public sealed class AccountsController(
     GetAccountHandler getHandler,
     GetAccountsHandler listHandler,
     ArchiveAccountHandler archiveHandler,
-    RestoreAccountHandler restoreHandler)
+    RestoreAccountHandler restoreHandler,
+    Averio.Application.Accounts.UpdateAccount.UpdateAccountHandler updateHandler)
     : ControllerBase
 {
     [HttpPost]
@@ -44,6 +45,19 @@ public sealed class AccountsController(
                 accountId
             },
             new CreateAccountResponse(accountId));
+    }
+
+    [HttpPut("{accountId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Update(
+        Guid householdId,
+        Guid accountId,
+        UpdateAccountRequest request,
+        CancellationToken cancellationToken)
+    {
+        await updateHandler.HandleAsync(AccountRequestMapper.ToCommand(
+            householdId, accountId, request), cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{accountId:guid}")]

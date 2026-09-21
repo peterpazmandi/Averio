@@ -22,6 +22,9 @@ import { Route as GuestResetPasswordRouteImport } from './routes/_guest.reset-pa
 import { Route as GuestVerifyEmailRouteImport } from './routes/_guest.verify-email'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppAccountsRouteImport } from './routes/_authenticated.app.accounts'
+import { Route as AuthenticatedAppAccountsIndexRouteImport } from './routes/_authenticated.app.accounts.index'
+import { Route as AuthenticatedAppAccountsNewRouteImport } from './routes/_authenticated.app.accounts.new'
+import { Route as AuthenticatedAppAccountsAccountIdEditRouteImport } from './routes/_authenticated.app.accounts.$accountId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -87,6 +90,24 @@ const AuthenticatedAppAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAccountsIndexRoute =
+  AuthenticatedAppAccountsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppAccountsRoute,
+  } as any)
+const AuthenticatedAppAccountsNewRoute =
+  AuthenticatedAppAccountsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAppAccountsRoute,
+  } as any)
+const AuthenticatedAppAccountsAccountIdEditRoute =
+  AuthenticatedAppAccountsAccountIdEditRouteImport.update({
+    id: '/$accountId/edit',
+    path: '/$accountId/edit',
+    getParentRoute: () => AuthenticatedAppAccountsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -98,8 +119,11 @@ export interface FileRoutesByFullPath {
   '/resend-verification': typeof GuestResendVerificationRoute
   '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
-  '/app/accounts': typeof AuthenticatedAppAccountsRoute
+  '/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
+  '/app/accounts/': typeof AuthenticatedAppAccountsIndexRoute
+  '/app/accounts/$accountId/edit': typeof AuthenticatedAppAccountsAccountIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,8 +134,10 @@ export interface FileRoutesByTo {
   '/resend-verification': typeof GuestResendVerificationRoute
   '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
-  '/app/accounts': typeof AuthenticatedAppAccountsRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
+  '/app/accounts': typeof AuthenticatedAppAccountsIndexRoute
+  '/app/accounts/$accountId/edit': typeof AuthenticatedAppAccountsAccountIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,8 +152,11 @@ export interface FileRoutesById {
   '/_guest/resend-verification': typeof GuestResendVerificationRoute
   '/_guest/reset-password': typeof GuestResetPasswordRoute
   '/_guest/verify-email': typeof GuestVerifyEmailRoute
-  '/_authenticated/app/accounts': typeof AuthenticatedAppAccountsRoute
+  '/_authenticated/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
+  '/_authenticated/app/accounts/': typeof AuthenticatedAppAccountsIndexRoute
+  '/_authenticated/app/accounts/$accountId/edit': typeof AuthenticatedAppAccountsAccountIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -143,6 +172,9 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/app/accounts'
     | '/app/'
+    | '/app/accounts/new'
+    | '/app/accounts/'
+    | '/app/accounts/$accountId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,8 +185,10 @@ export interface FileRouteTypes {
     | '/resend-verification'
     | '/reset-password'
     | '/verify-email'
-    | '/app/accounts'
     | '/app'
+    | '/app/accounts/new'
+    | '/app/accounts'
+    | '/app/accounts/$accountId/edit'
   id:
     | '__root__'
     | '/'
@@ -170,6 +204,9 @@ export interface FileRouteTypes {
     | '/_guest/verify-email'
     | '/_authenticated/app/accounts'
     | '/_authenticated/app/'
+    | '/_authenticated/app/accounts/new'
+    | '/_authenticated/app/accounts/'
+    | '/_authenticated/app/accounts/$accountId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -271,16 +308,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAccountsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/accounts/': {
+      id: '/_authenticated/app/accounts/'
+      path: '/'
+      fullPath: '/app/accounts/'
+      preLoaderRoute: typeof AuthenticatedAppAccountsIndexRouteImport
+      parentRoute: typeof AuthenticatedAppAccountsRoute
+    }
+    '/_authenticated/app/accounts/new': {
+      id: '/_authenticated/app/accounts/new'
+      path: '/new'
+      fullPath: '/app/accounts/new'
+      preLoaderRoute: typeof AuthenticatedAppAccountsNewRouteImport
+      parentRoute: typeof AuthenticatedAppAccountsRoute
+    }
+    '/_authenticated/app/accounts/$accountId/edit': {
+      id: '/_authenticated/app/accounts/$accountId/edit'
+      path: '/$accountId/edit'
+      fullPath: '/app/accounts/$accountId/edit'
+      preLoaderRoute: typeof AuthenticatedAppAccountsAccountIdEditRouteImport
+      parentRoute: typeof AuthenticatedAppAccountsRoute
+    }
   }
 }
 
+interface AuthenticatedAppAccountsRouteChildren {
+  AuthenticatedAppAccountsNewRoute: typeof AuthenticatedAppAccountsNewRoute
+  AuthenticatedAppAccountsIndexRoute: typeof AuthenticatedAppAccountsIndexRoute
+  AuthenticatedAppAccountsAccountIdEditRoute: typeof AuthenticatedAppAccountsAccountIdEditRoute
+}
+
+const AuthenticatedAppAccountsRouteChildren: AuthenticatedAppAccountsRouteChildren =
+  {
+    AuthenticatedAppAccountsNewRoute: AuthenticatedAppAccountsNewRoute,
+    AuthenticatedAppAccountsIndexRoute: AuthenticatedAppAccountsIndexRoute,
+    AuthenticatedAppAccountsAccountIdEditRoute:
+      AuthenticatedAppAccountsAccountIdEditRoute,
+  }
+
+const AuthenticatedAppAccountsRouteWithChildren =
+  AuthenticatedAppAccountsRoute._addFileChildren(
+    AuthenticatedAppAccountsRouteChildren,
+  )
+
 interface AuthenticatedAppRouteChildren {
-  AuthenticatedAppAccountsRoute: typeof AuthenticatedAppAccountsRoute
+  AuthenticatedAppAccountsRoute: typeof AuthenticatedAppAccountsRouteWithChildren
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
-  AuthenticatedAppAccountsRoute: AuthenticatedAppAccountsRoute,
+  AuthenticatedAppAccountsRoute: AuthenticatedAppAccountsRouteWithChildren,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 

@@ -23,5 +23,6 @@ export * from './ResetPasswordRequest';
 export * from './SaveOnboardingHouseholdRequest';
 export * from './SaveOnboardingProfileRequest';
 export * from './SystemHealthResponse';
+export * from './UpdateAccountRequest';
 export * from './UpdateHouseholdRequest';
 export * from './VerifyEmailRequest';

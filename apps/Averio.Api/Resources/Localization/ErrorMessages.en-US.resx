@@ -263,4 +263,7 @@
   <data name="Validation_PersonalAccountMustIncludeYou" xml:space="preserve">
     <value>You must include yourself as an account holder when creating a personal account.</value>
   </data>
+  <data name="Error_AccountArchived" xml:space="preserve"><value>Reactivate the account before editing it.</value></data>
+  <data name="Error_AccountChanged" xml:space="preserve"><value>This account changed. Reload it and try again.</value></data>
 </root>
+

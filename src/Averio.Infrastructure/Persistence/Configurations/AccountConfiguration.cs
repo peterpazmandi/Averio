@@ -41,7 +41,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.BalanceAnchorDate).HasColumnName("balance_anchor_date");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").IsConcurrencyToken();
         builder.Property(x => x.ArchivedAt).HasColumnName("archived_at");
 
         builder.HasOne<Household>().WithMany()

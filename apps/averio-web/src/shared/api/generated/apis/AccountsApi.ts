@@ -28,6 +28,11 @@ import {
     CreateAccountResponseFromJSON,
     CreateAccountResponseToJSON,
 } from '../models/CreateAccountResponse';
+import {
+    type UpdateAccountRequest,
+    UpdateAccountRequestFromJSON,
+    UpdateAccountRequestToJSON,
+} from '../models/UpdateAccountRequest';
 
 export interface ApiV1HouseholdsHouseholdIdAccountsAccountIdArchiveDeleteRequest {
     /**
@@ -60,6 +65,21 @@ export interface ApiV1HouseholdsHouseholdIdAccountsAccountIdGetRequest {
      * 
      */
     accountId: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdAccountsAccountIdPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    accountId: string;
+    /**
+     * 
+     */
+    updateAccountRequest: UpdateAccountRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdAccountsGetRequest {
@@ -238,6 +258,66 @@ export class AccountsApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdAccountsAccountIdGet(requestParameters: ApiV1HouseholdsHouseholdIdAccountsAccountIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountResponse> {
         const response = await this.apiV1HouseholdsHouseholdIdAccountsAccountIdGetRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdAccountsAccountIdPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdAccountsAccountIdPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdAccountsAccountIdPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdAccountsAccountIdPut().'
+            );
+        }
+
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling apiV1HouseholdsHouseholdIdAccountsAccountIdPut().'
+            );
+        }
+
+        if (requestParameters['updateAccountRequest'] == null) {
+            throw new runtime.RequiredError(
+                'updateAccountRequest',
+                'Required parameter "updateAccountRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdAccountsAccountIdPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/accounts/{accountId}`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UpdateAccountRequestToJSON(requestParameters['updateAccountRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdAccountsAccountIdPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdAccountsAccountIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdAccountsAccountIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdAccountsAccountIdPut(requestParameters: ApiV1HouseholdsHouseholdIdAccountsAccountIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdAccountsAccountIdPutRaw(requestParameters, initOverrides);
     }
 
     /**

@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<GetDashboardHandler>();
 
         services.AddScoped<CreateAccountHandler>();
+        services.AddScoped<Accounts.UpdateAccount.UpdateAccountHandler>();
         services.AddScoped<GetAccountHandler>();
         services.AddScoped<GetAccountsHandler>();
         services.AddScoped<SaveOnboardingProfileHandler>();

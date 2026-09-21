@@ -1,128 +1,100 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
-import { PrimaryButton } from '../../../shared/components/PrimaryButton';
-import { AccountOwnershipSummary } from './AccountOwnershipSummary';
 import { accountsQueries } from '../api/accountsQueries';
+import { useAccountMutations } from '../api/useAccountMutations';
+import { AccountCard } from './AccountCard';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
+import '../accounts.css';
 
-interface AccountsPageProps {
-    userId: string;
-    householdId: string;
-}
-
-export function AccountsPage({
-    userId,
-    householdId,
-}: AccountsPageProps) {
-    const { t, i18n } = useTranslation();
-
-    const accountsQuery = useQuery(
-        accountsQueries.list(
-            userId,
-            householdId,
-            false,
-        ),
-    );
-
-    if (accountsQuery.isPending) {
-        return (
-            <p role="status">
-                {t('common.status.loading')}
-            </p>
-        );
-    }
-
-    if (accountsQuery.isError) {
-        return (
-            <section className="space-y-4">
-                <p
-                    role="alert"
-                    className="text-red-700 dark:text-red-400"
-                >
-                    {t('errors.genericDescription')}
-                </p>
-
-                <PrimaryButton
-                    type="button"
-                    loading={accountsQuery.isFetching}
-                    onClick={() => {
-                        void accountsQuery.refetch();
-                    }}
-                >
-                    {t('common.actions.retry')}
-                </PrimaryButton>
-            </section>
-        );
-    }
-
-    const accounts = accountsQuery.data;
-    const language = i18n.resolvedLanguage ?? i18n.language;
+export function AccountsPage({ userId, householdId }: { userId: string; householdId: string }) {
+    const { t } = useTranslation();
+    const [includeArchived, setIncludeArchived] = useState(false);
+    const [search, setSearch] = useState('');
+    const [scope, setScope] = useState('All');
+    const [currency, setCurrency] = useState('All');
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const searchInput = useRef<HTMLInputElement>(null);
+    const filterToggle = useRef<HTMLButtonElement>(null);
+    const filterCount = Number(scope !== 'All') + Number(currency !== 'All') + Number(includeArchived);
+    const hasCriteria = search.length > 0 || filterCount > 0;
+    const normalize = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase().trim();
+    function reset() { setSearch(''); setScope('All'); setCurrency('All'); setIncludeArchived(false); searchInput.current?.focus(); }
+    const accounts = useQuery(accountsQueries.list(userId, householdId, includeArchived));
+    const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
+    const mutations = useAccountMutations(userId, householdId);
+    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.restore.isPending;
+    const visible = (accounts.data ?? []).filter(account =>
+        normalize(account.name).includes(normalize(search))
+        && (scope === 'All' || (scope === 'Private' ? account.visibility === 'Private' : account.scope === scope))
+        && (currency === 'All' || account.currency === currency));
 
     return (
-        <section
-            aria-labelledby="accounts-title"
-            className="space-y-6"
-        >
-            <header>
-                <h1
-                    id="accounts-title"
-                    className="
-                        text-3xl font-semibold
-                        text-slate-950 dark:text-white
-                    "
-                >
-                    {t('app.accounts.title')}
-                </h1>
-
-                <p className="mt-2 text-slate-600 dark:text-slate-400">
-                    {t('app.accounts.description')}
-                </p>
+        <section className="space-y-6" aria-labelledby="accounts-title">
+            <header className="av-page-head">
+                <div><h2 id="accounts-title">{t('app.accounts.title')}</h2>
+                    <p>{t('app.accounts.description')}</p></div>
+                <Link className="av-btn av-primary" to="/app/accounts/new">{t('accountManagement.create')}</Link>
             </header>
-
-            {accounts.length === 0 ? (
-                <p className="text-slate-600 dark:text-slate-400">
-                    {t('app.accounts.empty')}
-                </p>
-            ) : (
-                <ul className="grid gap-4 sm:grid-cols-2">
-                    {accounts.map((account) => (
-                        <li
-                            key={account.id}
-                            className="
-                                rounded-2xl border
-                                border-slate-200 bg-white p-5
-                                dark:border-slate-800
-                                dark:bg-slate-900
-                            "
-                        >
-                            <h2 className="font-semibold">
-                                {account.name}
-                            </h2>
-
-                            <AccountOwnershipSummary account={account} />
-
-                            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                                {t('app.accounts.recordedBalance')}
-                            </p>
-
-                            <p className="mt-1 text-2xl font-semibold">
-                                {formatDecimalAmount(
-                                    account.balanceAnchorAmount,
-                                    account.currency,
-                                    language,
-                                )}
-                            </p>
-
-                            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                <time dateTime={account.balanceAnchorDate}>
-                                    {account.balanceAnchorDate}
-                                </time>
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {owners.isError && <div role="alert"><p className="av-error">{t('accountOwnership.loadRequired')}</p>
+                <button className="av-btn" disabled={owners.isFetching} onClick={() => { void owners.refetch(); }}>{t('common.actions.retry')}</button></div>}
+            <div className="av-account-search" role="search" aria-label={t('accountManagement.search')}>
+                <div className="av-search-toolbar">
+                    <div className="av-search-input">
+                        <ConceptIcon name="search" />
+                        <label className="sr-only" htmlFor="account-search">{t('accountManagement.search')}</label>
+                        <input ref={searchInput} id="account-search" type="search" autoComplete="off"
+                            placeholder={t('accountManagement.searchPlaceholder')} value={search}
+                            onChange={event => setSearch(event.target.value)} />
+                        {search && <button type="button" className="av-search-clear" aria-label={t('accountManagement.clearSearch')}
+                            onClick={() => { setSearch(''); searchInput.current?.focus(); }}><ConceptIcon name="close" /></button>}
+                    </div>
+                    <button ref={filterToggle} type="button" className="av-btn av-filter-toggle" aria-expanded={filtersOpen}
+                        aria-controls="account-filters" onClick={() => setFiltersOpen(open => !open)}>
+                        <ConceptIcon name="filters" /><span>{t('accountManagement.filters')}</span>
+                        {filterCount > 0 && <span className="av-filter-count">{filterCount}</span>}
+                    </button>
+                </div>
+                <div id="account-filters" className="av-search-panel" hidden={!filtersOpen}>
+                    <div className="av-account-filters">
+                        <label htmlFor="account-filter-scope" className="space-y-1"><span className="block">{t('accountOwnership.scope')}</span>
+                            <select id="account-filter-scope" className="av-select" value={scope} onChange={event => setScope(event.target.value)}>
+                                <option value="All">{t('accountManagement.all')}</option>
+                                <option value="Household">{t('accountOwnership.household')}</option>
+                                <option value="Personal">{t('accountOwnership.personal')}</option>
+                                <option value="Private">{t('accountOwnership.private')}</option>
+                            </select></label>
+                        <label htmlFor="account-filter-currency" className="space-y-1"><span className="block">{t('onboarding.account.currency')}</span>
+                            <select id="account-filter-currency" className="av-select" value={currency} onChange={event => setCurrency(event.target.value)}>
+                                <option value="All">{t('accountManagement.all')}</option>
+                                {['EUR', 'USD', 'HUF'].map(value => <option key={value}>{value}</option>)}
+                            </select></label>
+                        <label className="av-check-row av-filter-archived"><input type="checkbox" checked={includeArchived}
+                            onChange={event => setIncludeArchived(event.target.checked)} /><span>{t('accountManagement.showArchived')}</span></label>
+                    </div>
+                    <button type="button" className="av-btn av-filter-done" onClick={() => { setFiltersOpen(false); filterToggle.current?.focus(); }}>{t('accountManagement.showResults')}</button>
+                </div>
+                {(hasCriteria || accounts.isSuccess) && <div className="av-search-summary">
+                    <div className="av-search-selection">
+                        {accounts.isSuccess && <span role="status">{t('accountManagement.resultCount', { count: visible.length })}</span>}
+                        {scope !== 'All' && <span className="av-badge">{t(scope === 'Private' ? 'accountOwnership.private' : scope === 'Personal' ? 'accountOwnership.personal' : 'accountOwnership.household')}</span>}
+                        {currency !== 'All' && <span className="av-badge">{currency}</span>}
+                        {includeArchived && <span className="av-badge">{t('accountManagement.archivedIncluded')}</span>}
+                    </div>
+                    {hasCriteria && <button type="button" className="av-search-reset" onClick={reset}>{t('accountManagement.resetSearch')}</button>}
+                </div>}
+            </div>
+            {accounts.isPending && <p role="status">{t('common.status.loading')}</p>}
+            {accounts.isError && <div role="alert"><p className="av-error">{t('errors.genericDescription')}</p>
+                <button className="av-btn" disabled={accounts.isFetching} onClick={() => { void accounts.refetch(); }}>{t('common.actions.retry')}</button></div>}
+            {accounts.isSuccess && (visible.length === 0 ? <p className="av-subtle">{t('accountManagement.empty')}</p> :
+                <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {visible.map(account => <li key={account.id} className="min-w-0"><AccountCard account={account}
+                        currentMemberId={owners.data?.currentMemberId} busy={busy}
+                        onArchive={() => mutations.archive.mutateAsync(account.id)}
+                        onRestore={() => mutations.restore.mutateAsync(account.id)} /></li>)}
+                </ul>)}
         </section>
     );
 }

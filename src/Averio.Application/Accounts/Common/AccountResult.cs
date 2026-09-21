@@ -16,7 +16,8 @@ public sealed record AccountResult(
     string Currency,
     decimal BalanceAnchorAmount,
     DateOnly BalanceAnchorDate,
-    string Status)
+    string Status,
+    DateTimeOffset UpdatedAt)
 {
     public static AccountResult From(
         Account account,
@@ -34,6 +35,6 @@ public sealed record AccountResult(
             account.Type.ToString(), account.Scope.ToString(),
             account.Visibility.ToString(), account.IncludeInHouseholdReports,
             account.Currency.Value, account.BalanceAnchorAmount,
-            account.BalanceAnchorDate, account.Status.ToString());
+            account.BalanceAnchorDate, account.Status.ToString(), account.UpdatedAt);
     }
 }

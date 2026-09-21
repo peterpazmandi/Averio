@@ -1,7 +1,7 @@
 # Averio Domain Model
 
 **Status:** Authoritative conceptual domain reference  
-**Updated:** 2026-09-16
+**Updated:** 2026-09-19
 
 This document captures accepted domain semantics. Some concepts are intentionally defined before their final database/entity implementation.
 
@@ -105,6 +105,19 @@ Legal holder:      Péter
 ```
 
 Meaning: Péter legally holds the bank account, but the money is treated as household money.
+
+### Current Account Management implementation boundary
+
+The current code implements Household and Personal scope, Household and Private visibility, and explicit named-holder relationships in AccountOwner. The holder relationship does not replace economic scope. This is narrower than the future visibility/reporting concepts below:
+
+- Household scope requires Household visibility and inclusion in reports.
+- Private visibility requires Personal scope and exclusion from household reports.
+- Personal creation/editing keeps the acting member among the holders.
+- Any member may manage household-scope accounts; personal management is limited to named holders. Household administrator status adds no personal-finance permission.
+- Editing changes name, type, holders, visibility and reporting participation. Currency, economic scope and the recorded balance/date remain fixed in this flow. A future scope-transfer or balance-reconciliation use case must define its financial-history impact before exposing these changes.
+- Archive/reactivate preserves the account and history. Archived accounts must be reactivated before editing.
+- Edits submit the last observed UpdatedAt value; concurrent changes return a conflict. EF uses the existing timestamp as a concurrency token. New versions advance at PostgreSQL microsecond precision.
+- Lists keep deterministic name/ID ordering. No account pinning or manual ordering has been adopted.
 
 ### Joint ownership
 

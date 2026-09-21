@@ -21,7 +21,8 @@ internal static class AccountResponseMapper
             result.Currency,
             DecimalAmountMapper.Format(result.BalanceAnchorAmount),
             result.BalanceAnchorDate,
-            result.Status);
+            result.Status,
+            result.UpdatedAt);
     }
 
     public static IReadOnlyList<AccountResponse> From(
@@ -32,3 +33,4 @@ internal static class AccountResponseMapper
             .ToArray();
     }
 }
+

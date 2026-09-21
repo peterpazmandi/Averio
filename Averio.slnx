@@ -8,4 +8,8 @@
     <Project Path="src/Averio.Domain/Averio.Domain.csproj" />
     <Project Path="src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Averio.Accounts.Tests/Averio.Accounts.Tests.csproj" />
+  </Folder>
 </Solution>
+

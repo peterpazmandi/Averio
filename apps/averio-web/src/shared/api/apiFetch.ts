@@ -10,10 +10,10 @@ const unsafeMethods =
         'DELETE',
     ]);
 
-export async function apiFetch<T>(
+export async function apiFetchResponse(
     path: string,
     init?: RequestInit,
-): Promise<T> {
+): Promise<Response> {
     const method = (init?.method ?? 'GET').toUpperCase();
 
     const headers = new Headers(init?.headers);
@@ -77,6 +77,11 @@ export async function apiFetch<T>(
         );
     }
 
+    return response;
+}
+
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+    const response = await apiFetchResponse(path, init);
     if (response.status === 204) {
         return undefined as T;
     }

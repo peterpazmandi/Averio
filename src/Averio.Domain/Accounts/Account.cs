@@ -98,12 +98,39 @@ public sealed class Account
         return account;
     }
 
+    public void Update(
+        string name,
+        AccountType type,
+        IReadOnlyCollection<Guid> ownerHouseholdMemberIds,
+        AccountVisibility visibility,
+        bool includeInHouseholdReports,
+        DateTimeOffset now)
+    {
+        if (Status != AccountStatus.Active)
+            throw new InvalidOperationException("Restore the account before editing it.");
+
+        // Reuse creation invariants without changing identity, scope, currency or anchor.
+        var validated = Create(HouseholdId, ownerHouseholdMemberIds, name, type, Scope,
+            visibility, includeInHouseholdReports, Currency, BalanceAnchorAmount,
+            BalanceAnchorDate, now);
+
+        Name = validated.Name;
+        Type = validated.Type;
+        Visibility = validated.Visibility;
+        IncludeInHouseholdReports = validated.IncludeInHouseholdReports;
+        _owners.RemoveAll(owner => !ownerHouseholdMemberIds.Contains(owner.HouseholdMemberId));
+        foreach (var memberId in ownerHouseholdMemberIds)
+            if (!_owners.Any(owner => owner.HouseholdMemberId == memberId))
+                _owners.Add(new AccountOwner(HouseholdId, Id, memberId));
+        UpdatedAt = NextVersion(now);
+    }
+
     public void Archive(DateTimeOffset now)
     {
         if (Status == AccountStatus.Archived) return;
         Status = AccountStatus.Archived;
         ArchivedAt = now;
-        UpdatedAt = now;
+        UpdatedAt = NextVersion(now);
     }
 
     public void Restore(DateTimeOffset now)
@@ -111,6 +138,11 @@ public sealed class Account
         if (Status == AccountStatus.Active) return;
         Status = AccountStatus.Active;
         ArchivedAt = null;
-        UpdatedAt = now;
+        UpdatedAt = NextVersion(now);
     }
+
+    // PostgreSQL timestamps have microsecond precision. Always advance, even under a fixed clock.
+    private DateTimeOffset NextVersion(DateTimeOffset now) => new(
+        Math.Max(now.UtcTicks - now.UtcTicks % 10, UpdatedAt.UtcTicks - UpdatedAt.UtcTicks % 10 + 10),
+        TimeSpan.Zero);
 }
