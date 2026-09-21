@@ -5,8 +5,8 @@ import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { createLabel } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
+import { CategoryPicker } from './CategoryPicker';
 import type {
-    CategoryDto,
     LabelScope,
     TransactionDto,
     TransactionInputDto,
@@ -60,19 +60,6 @@ function scaledToAmount(value: bigint) {
     const whole = value / 10_000n;
     const fraction = (value % 10_000n).toString().padStart(4, '0').replace(/0+$/, '');
     return fraction ? `${whole}.${fraction}` : whole.toString();
-}
-
-function categoryLabel(
-    category: CategoryDto,
-    categoriesById: Map<string, CategoryDto>,
-) {
-    const parent = category.parentId
-        ? categoriesById.get(category.parentId)
-        : undefined;
-
-    return parent
-        ? `${parent.icon} ${parent.name} › ${category.icon} ${category.name}`
-        : `${category.icon} ${category.name}`;
 }
 
 export function TransactionEditor({
@@ -451,25 +438,21 @@ export function TransactionEditor({
                                             placeholder={t('transactionManagement.itemDescriptionPlaceholder')}
                                             required />
                                     </label>
-                                    <label>
-                                        <span>{t('transactionManagement.category')}</span>
-                                        <select className="av-select" value={item.categoryId}
+                                    <div className="av-tx-category-field">
+                                        <span className="av-tx-field-label">
+                                            {t('transactionManagement.category')}
+                                        </span>
+                                        <CategoryPicker
+                                            categories={categories.data ?? []}
+                                            value={item.categoryId}
                                             disabled={busy || categories.isPending}
-                                            onChange={event => updateItem(item.key, {
-                                                categoryId: event.target.value,
+                                            label={t('transactionManagement.category')}
+                                            onChange={categoryId => updateItem(item.key, {
+                                                categoryId,
                                             })}
-                                            required>
-                                            <option value="" disabled>
-                                                {t('transactionManagement.selectCategory')}
-                                            </option>
-                                            {(categories.data ?? []).map(category => (
-                                                <option key={category.id} value={category.id}>
-                                                    {categoryLabel(category, categoriesById)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <label>
+                                        />
+                                    </div>
+                                    <label className="av-tx-item-amount-field">
                                         <span>{t('transactionManagement.amount')}</span>
                                         <div className="av-tx-amount-input">
                                             <input inputMode="decimal" value={item.amount} disabled={busy}

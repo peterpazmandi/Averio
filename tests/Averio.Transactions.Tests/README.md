@@ -26,3 +26,13 @@ The aggregate repository uses PostgreSQL-specific atomic upserts, so it still ne
 14. Verify EUR, USD, and HUF remain separate in account and category reporting.
 15. Race two edits and verify the losing write rolls back item/label/aggregate changes.
 16. Rebuild ledger-derived account/category totals independently and compare them with aggregate rows to detect drift.
+
+
+## Frontend review checks added 2026-09-21
+
+- Category selection opens a Bento-style grouped picker instead of a 100-row native select.
+- Category picker search matches parent groups and child categories and works on desktop/mobile.
+- Transaction overview uses the same search + expandable filter-panel interaction as Accounts.
+- Statistics income/expense bars expose exact formatted values on hover and keyboard focus.
+- Clicking/tapping a statistics bar keeps that value visible until the same or another bar is clicked.
+- Create/edit/void invalidates Accounts and Dashboard queries so derived balances refresh immediately.

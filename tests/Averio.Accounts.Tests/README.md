@@ -20,5 +20,9 @@ Handler tests use fake repositories and a fake unit of work. EF model/tracking c
 6. Save concurrently from two contexts; the second writer must receive a conflict, with holder changes rolled back.
 7. Edit while another context archives or revokes access; verify no partial write.
 8. Verify FK/check constraints and original decimal precision after a round trip.
+9. Starting from a known balance anchor, create posted income and expense on/after the anchor date and verify current balance changes by the signed ledger movement.
+10. Verify a transaction before the anchor date and a future-dated transaction do not change today's current balance.
+11. Void and edit a posted transaction and verify current balance reverses/reapplies exactly once.
+12. On a Household-visible Personal account, verify another member's current-balance read does not include Private transactions while the account holder's read does.
 
 Frontend checks performed with a mocked API in a headless browser: active/archived lists, read-only personal account, precise decimal create, edit, fixed scope/currency, archive/reactivate, localized conflict propagation, preservation of failed edits, mobile overflow and absence of runtime errors. This validates the UI/transport path, not end-to-end database behavior.

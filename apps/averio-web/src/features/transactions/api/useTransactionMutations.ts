@@ -3,6 +3,7 @@ import { createTransaction, updateTransaction, voidTransaction } from './transac
 import type { TransactionInputDto, UpdateTransactionInputDto } from './transactionApi';
 import { transactionQueryKeys } from './transactionQueries';
 import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
+import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
 
 export function useTransactionMutations(userId: string, householdId: string) {
     const queryClient = useQueryClient();
@@ -17,6 +18,9 @@ export function useTransactionMutations(userId: string, householdId: string) {
             }),
             queryClient.invalidateQueries({
                 queryKey: dashboardQueryKeys.household(userId, householdId),
+            }),
+            queryClient.invalidateQueries({
+                queryKey: accountsQueryKeys.household(userId, householdId),
             }),
         ]);
     }

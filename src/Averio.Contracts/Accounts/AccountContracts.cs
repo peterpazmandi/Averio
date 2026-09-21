@@ -43,5 +43,6 @@ public sealed record AccountResponse(
     string Currency,
     string BalanceAnchorAmount,
     DateOnly BalanceAnchorDate,
+    string CurrentBalanceAmount,
     string Status,
     DateTimeOffset UpdatedAt);

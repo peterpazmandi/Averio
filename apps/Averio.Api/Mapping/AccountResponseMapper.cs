@@ -12,7 +12,8 @@ internal static class AccountResponseMapper
             result.Id,
             result.HouseholdId,
             result.Owners.Select(owner => new AccountOwnerResponse(
-                owner.HouseholdMemberId, owner.DisplayName)).ToArray(),
+                owner.HouseholdMemberId,
+                owner.DisplayName)).ToArray(),
             result.Name,
             result.Type,
             result.Scope,
@@ -21,16 +22,12 @@ internal static class AccountResponseMapper
             result.Currency,
             DecimalAmountMapper.Format(result.BalanceAnchorAmount),
             result.BalanceAnchorDate,
+            DecimalAmountMapper.Format(result.CurrentBalanceAmount),
             result.Status,
             result.UpdatedAt);
     }
 
     public static IReadOnlyList<AccountResponse> From(
         IEnumerable<AccountResult> results)
-    {
-        return results
-            .Select(From)
-            .ToArray();
-    }
+        => results.Select(From).ToArray();
 }
-

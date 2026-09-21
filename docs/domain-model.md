@@ -145,9 +145,24 @@ Describes who legally/physically holds an account when relevant. Holder informat
 
 ## Opening/balance anchor
 
-Accounts need a defined starting balance/date so users can begin tracking without fabricating all history before Averio.
+Accounts have a persisted starting balance/date so users can begin tracking without fabricating all financial history before Averio.
 
-The final persistence model may use an opening/anchor balance plus date and subsequent ledger movement.
+The anchor is immutable in the normal Account Management edit flow. It is the opening balance at the start of `BalanceAnchorDate`.
+
+**Current balance is a read model, not a second stored mutable balance.** For a requested as-of date:
+
+```text
+current balance
+= balance anchor
++ posted visible income from anchor date through as-of date
+- posted visible expense from anchor date through as-of date
+```
+
+Transactions before the anchor date do not change the current balance. Future-dated transactions do not change today's balance until their date is reached.
+
+Privacy is applied before the movement is added. Household-visible transactions are included for members allowed to see the account. Private transactions are included only for an account holder who is allowed to see them. This prevents a private transaction from leaking indirectly through a shared current-balance number.
+
+Creating, editing or voiding a transaction never rewrites the anchor. The UI invalidates account/dashboard reads so the derived balance is recalculated from the authoritative ledger.
 
 ## Money
 

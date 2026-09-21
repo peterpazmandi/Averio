@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Averio.Application.Accounts.Common;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
-using Averio.Application.Accounts.Common;
 
 namespace Averio.Application.Accounts.GetAccounts;
 
@@ -13,7 +8,9 @@ public sealed class GetAccountsHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
-    HouseholdMemberDirectory memberDirectory)
+    IAccountBalanceReader accountBalanceReader,
+    HouseholdMemberDirectory memberDirectory,
+    TimeProvider timeProvider)
 {
     public async Task<IEnumerable<AccountResult>> HandleAsync(
         Guid householdId,
@@ -39,9 +36,27 @@ public sealed class GetAccountsHandler(
             includeArchived,
             cancellationToken);
 
-        var names = await memberDirectory.GetAsync(household, cancellationToken);
+        var asOf = DateOnly.FromDateTime(
+            timeProvider.GetUtcNow().UtcDateTime);
+
+        var balances = await accountBalanceReader.GetCurrentBalancesAsync(
+            householdId,
+            membership.Id,
+            accounts.Select(account => account.Id).ToArray(),
+            asOf,
+            cancellationToken);
+
+        var names = await memberDirectory.GetAsync(
+            household,
+            cancellationToken);
+
         return accounts
-            .Select(account => AccountResult.From(account, names))
+            .Select(account => AccountResult.From(
+                account,
+                names,
+                balances.GetValueOrDefault(
+                    account.Id,
+                    account.BalanceAnchorAmount)))
             .ToArray();
     }
 }
