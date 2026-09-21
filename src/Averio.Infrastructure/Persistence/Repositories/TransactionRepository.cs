@@ -31,7 +31,17 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         TransactionQuery query,
         CancellationToken cancellationToken)
     {
-        var filtered = VisibleReadModels(householdId, householdMemberId);
+        var filtered = VisibleTransactions(householdId, householdMemberId)
+            .AsNoTracking()
+            .Join(
+                dbContext.Accounts.AsNoTracking(),
+                transaction => new { transaction.HouseholdId, transaction.AccountId },
+                account => new { account.HouseholdId, AccountId = account.Id },
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                });
 
         if (query.From is not null)
             filtered = filtered.Where(item => item.Transaction.OccurredOn >= query.From);
@@ -95,7 +105,19 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         int take,
         CancellationToken cancellationToken)
     {
-        return await VisibleReadModels(householdId, householdMemberId)
+        var visible = VisibleTransactions(householdId, householdMemberId)
+            .AsNoTracking()
+            .Join(
+                dbContext.Accounts.AsNoTracking(),
+                transaction => new { transaction.HouseholdId, transaction.AccountId },
+                account => new { account.HouseholdId, AccountId = account.Id },
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                });
+
+        return await visible
             .Where(item => item.Transaction.Status == TransactionStatus.Posted)
             .OrderByDescending(item => item.Transaction.OccurredOn)
             .ThenByDescending(item => item.Transaction.CreatedAt)
@@ -124,45 +146,27 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         Guid householdId,
         Guid householdMemberId)
     {
-        return from transaction in dbContext.Transactions
-            join account in dbContext.Accounts.Include(account => account.Owners)
-                on new { transaction.HouseholdId, transaction.AccountId }
-                equals new { account.HouseholdId, AccountId = account.Id }
-            where transaction.HouseholdId == householdId
+        return dbContext.Transactions
+            .Join(
+                dbContext.Accounts.Include(account => account.Owners),
+                transaction => new { transaction.HouseholdId, transaction.AccountId },
+                account => new { account.HouseholdId, AccountId = account.Id },
+                (transaction, account) => new
+                {
+                    Transaction = transaction,
+                    Account = account
+                })
+            .Where(item =>
+                item.Transaction.HouseholdId == householdId
                 && (
-                    account.Visibility == AccountVisibility.Household
-                    || account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
+                    item.Account.Visibility == AccountVisibility.Household
+                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
                 )
                 && (
-                    transaction.Visibility == TransactionVisibility.Household
-                    || account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
-                )
-            select transaction;
+                    item.Transaction.Visibility == TransactionVisibility.Household
+                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
+                ))
+            .Select(item => item.Transaction);
     }
 
-    private IQueryable<TransactionWithAccount> VisibleReadModels(
-        Guid householdId,
-        Guid householdMemberId)
-    {
-        return from transaction in dbContext.Transactions.AsNoTracking()
-            join account in dbContext.Accounts
-                .Include(account => account.Owners)
-                .AsNoTracking()
-                on new { transaction.HouseholdId, transaction.AccountId }
-                equals new { account.HouseholdId, AccountId = account.Id }
-            where transaction.HouseholdId == householdId
-                && (
-                    account.Visibility == AccountVisibility.Household
-                    || account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
-                )
-                && (
-                    transaction.Visibility == TransactionVisibility.Household
-                    || account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
-                )
-            select new TransactionWithAccount(transaction, account);
-    }
-
-    private sealed record TransactionWithAccount(
-        Transaction Transaction,
-        Account Account);
 }
