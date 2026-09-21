@@ -56,7 +56,12 @@ export function AppShell({ children }: PropsWithChildren) {
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
     const title = pathname.startsWith('/app/accounts')
-        ? t('app.navigation.accounts') : t('app.navigation.dashboard');
+        ? t('app.navigation.accounts')
+        : pathname.startsWith('/app/transactions')
+            ? t('navigation.transactions')
+            : pathname.startsWith('/app/statistics')
+                ? t('navigation.statistics')
+                : t('app.navigation.dashboard');
     const month = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
         month: 'long', year: 'numeric',
     }).format(new Date());
@@ -119,8 +124,8 @@ export function AppShell({ children }: PropsWithChildren) {
                         <h1>{title}</h1>
                     </div>
                     <div className="av-top-actions">
-                        <button type="button" className="av-btn av-add-button" disabled
-                            title={t('concept.transactionsEmpty')}>
+                        <button type="button" className="av-btn av-add-button"
+                            onClick={() => { void navigate({ to: '/app/transactions' }); }}>
                             <ConceptIcon name="plus" />{t('concept.addTransaction')}
                         </button>
                         <ConceptPreferences />

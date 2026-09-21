@@ -31,10 +31,20 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}>
                 <ConceptIcon name="accounts" />{t('app.navigation.accounts')}
             </Link>
-            {(['transactions', 'recurring', 'categories'] as const).map(unavailable)}
+            <Link to="/app/transactions" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }}
+                onClick={onNavigate}>
+                <ConceptIcon name="transactions" />{t('navigation.transactions')}
+            </Link>
+            {(['recurring', 'categories'] as const).map(unavailable)}
 
             <div className="av-nav-label">{t('concept.planning')}</div>
-            {(['goals', 'statistics'] as const).map(unavailable)}
+            {unavailable('goals')}
+            <Link to="/app/statistics" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }}
+                onClick={onNavigate}>
+                <ConceptIcon name="statistics" />{t('navigation.statistics')}
+            </Link>
 
             <div className="av-nav-label">{t('concept.settings')}</div>
             {(['household', 'profile'] as const).map(unavailable)}
