@@ -62,6 +62,9 @@ internal static partial class DecimalAmountMapper
             CultureInfo.InvariantCulture);
     }
 
+    [GeneratedRegex(@"\A(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,4})?\z")]
+    private static partial Regex TransactionAmountPattern();
+
     [GeneratedRegex(@"\A-?(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,4})?\z")]
     private static partial Regex BalancePattern();
 }
