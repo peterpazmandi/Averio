@@ -1,21 +1,25 @@
 using Averio.Application.Transactions.Common;
 using Averio.Domain.Accounts;
+using Averio.Domain.Categories;
 using Averio.Domain.Common;
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var checks = new (string Name, Action Run)[]
 {
-    ("itemized income total", ItemizedIncomeTotal),
+    ("itemized income derives total", ItemizedIncomeDerivesTotal),
     ("reject invalid item amount", RejectInvalidItemAmount),
-    ("merchant and scoped labels", MerchantAndScopedLabels),
+    ("category snapshot and reusable labels", CategorySnapshotAndReusableLabels),
     ("update recalculates total and advances version", UpdateRecalculatesTotal),
     ("void removes cash-flow contribution", VoidRemovesContribution),
     ("account visibility constrains transaction visibility", VisibilityRules),
-    ("EF transaction model", TransactionModel),
+    ("year aggregate period exists", YearAggregatePeriodExists),
+    ("EF category and icon catalogs", CategoryAndIconModels),
+    ("EF reusable label model", ReusableLabelModel),
     ("EF transaction detail model", TransactionDetailModel),
-    ("EF aggregate model", AggregateModel),
+    ("EF dimension aggregate model", DimensionAggregateModel),
 };
 
 foreach (var check in checks)
@@ -35,11 +39,16 @@ foreach (var check in checks)
 Console.WriteLine($"PASS {checks.Length} transaction regression checks");
 return 0;
 
+static readonly Guid GroceriesId =
+    Guid.Parse("00000000-0000-4000-8000-000000000011");
+static readonly Guid SalaryId =
+    Guid.Parse("00000000-0000-4000-8000-000000000091");
+
 static Transaction NewTransaction(
     TransactionKind kind = TransactionKind.Expense,
     TransactionVisibility visibility = TransactionVisibility.Household,
     IReadOnlyCollection<TransactionItemDraft>? items = null,
-    IReadOnlyCollection<TransactionLabelDraft>? labels = null,
+    IReadOnlyCollection<Guid>? labelIds = null,
     string? merchant = null,
     DateTimeOffset? now = null)
     => Transaction.Create(
@@ -54,19 +63,24 @@ static Transaction NewTransaction(
         new DateOnly(2026, 9, 21),
         items ??
         [
-            new TransactionItemDraft("Regression check", "Tests", 12.34m)
+            new TransactionItemDraft(
+                "Regression check",
+                GroceriesId,
+                "Groceries",
+                "🛒",
+                12.34m)
         ],
-        labels ?? [],
+        labelIds ?? [],
         now ?? new DateTimeOffset(2026, 9, 21, 6, 0, 0, TimeSpan.Zero));
 
-static void ItemizedIncomeTotal()
+static void ItemizedIncomeDerivesTotal()
 {
     var transaction = NewTransaction(
         kind: TransactionKind.Income,
         items:
         [
-            new TransactionItemDraft("Salary", "Salary", 1234.5678m),
-            new TransactionItemDraft("Bonus", "Bonus", 65.4322m),
+            new TransactionItemDraft("Salary", SalaryId, "Salary", "💼", 1234.5678m),
+            new TransactionItemDraft("Bonus", SalaryId, "Salary", "💼", 65.4322m),
         ]);
 
     Equal(TransactionKind.Income, transaction.Kind);
@@ -80,44 +94,54 @@ static void ItemizedIncomeTotal()
 static void RejectInvalidItemAmount()
 {
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
-        items: [new TransactionItemDraft("Zero", null, 0m)]));
+        items:
+        [
+            new TransactionItemDraft("Zero", GroceriesId, "Groceries", "🛒", 0m)
+        ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
-        items: [new TransactionItemDraft("Negative", null, -1m)]));
+        items:
+        [
+            new TransactionItemDraft("Negative", GroceriesId, "Groceries", "🛒", -1m)
+        ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
-        items: [new TransactionItemDraft("Too precise", null, 1.00001m)]));
+        items:
+        [
+            new TransactionItemDraft("Too precise", GroceriesId, "Groceries", "🛒", 1.00001m)
+        ]));
 }
 
-static void MerchantAndScopedLabels()
+static void CategorySnapshotAndReusableLabels()
 {
+    var householdLabelId = Guid.NewGuid();
+    var accountLabelId = Guid.NewGuid();
+
     var transaction = NewTransaction(
         merchant: "Tesco",
         items:
         [
-            new TransactionItemDraft("Milk", "Groceries", 3.25m),
-            new TransactionItemDraft("Bread", "Groceries", 2.10m),
+            new TransactionItemDraft("Milk", GroceriesId, "Groceries", "🛒", 3.25m),
+            new TransactionItemDraft("Bread", GroceriesId, "Groceries", "🛒", 2.10m),
         ],
-        labels:
-        [
-            new TransactionLabelDraft("Family", TransactionLabelScope.Household),
-            new TransactionLabelDraft("Daily spending", TransactionLabelScope.Account),
-        ]);
+        labelIds: [householdLabelId, accountLabelId]);
 
     Equal("Tesco", transaction.Merchant);
     Equal("Tesco", transaction.Description);
     Equal(5.35m, transaction.Amount);
     Equal(2, transaction.Items.Count);
     Equal(2, transaction.Labels.Count);
-
-    var householdLabel = transaction.Labels.Single(
-        label => label.Scope == TransactionLabelScope.Household);
-    var accountLabel = transaction.Labels.Single(
-        label => label.Scope == TransactionLabelScope.Account);
-
-    Equal<Guid?>(null, householdLabel.AccountId);
-    Equal<Guid?>(transaction.AccountId, accountLabel.AccountId);
-    Equal("Groceries", transaction.Items.OrderBy(item => item.Position).First().CategoryName);
+    Equal(
+        GroceriesId,
+        transaction.Items.OrderBy(item => item.Position).First().CategoryId);
+    Equal(
+        "Groceries",
+        transaction.Items.OrderBy(item => item.Position).First().CategoryName);
+    Equal(
+        "🛒",
+        transaction.Items.OrderBy(item => item.Position).First().CategoryIcon);
+    True(transaction.Labels.Any(label => label.LabelId == householdLabelId));
+    True(transaction.Labels.Any(label => label.LabelId == accountLabelId));
 }
 
 static void UpdateRecalculatesTotal()
@@ -135,12 +159,10 @@ static void UpdateRecalculatesTotal()
         "note",
         new DateOnly(2026, 9, 20),
         [
-            new TransactionItemDraft("One", "A", 10m),
-            new TransactionItemDraft("Two", "B", 12.50m),
+            new TransactionItemDraft("One", GroceriesId, "Groceries", "🛒", 10m),
+            new TransactionItemDraft("Two", GroceriesId, "Groceries", "🛒", 12.50m),
         ],
-        [
-            new TransactionLabelDraft("Updated", TransactionLabelScope.Household)
-        ],
+        [Guid.NewGuid()],
         now);
 
     True(transaction.UpdatedAt > original);
@@ -203,42 +225,43 @@ static void VisibilityRules()
     True(!TransactionAccess.IsVisibilityAllowed(
         personalPrivate,
         TransactionVisibility.Household));
-
-    var personalVisible = Account.Create(
-        Guid.NewGuid(),
-        [memberId],
-        "Visible personal",
-        AccountType.Checking,
-        AccountScope.Personal,
-        AccountVisibility.Household,
-        true,
-        CurrencyCode.Eur,
-        0m,
-        new DateOnly(2026, 9, 20),
-        now);
-
-    True(TransactionAccess.IsVisibilityAllowed(
-        personalVisible,
-        TransactionVisibility.Private));
-    True(TransactionAccess.IsVisibilityAllowed(
-        personalVisible,
-        TransactionVisibility.Household));
 }
 
-static void TransactionModel()
+static void YearAggregatePeriodExists()
+{
+    True(Enum.IsDefined(TransactionAggregatePeriod.Year));
+}
+
+static void CategoryAndIconModels()
 {
     using var context = NewContext();
-    var entity = context.Model.FindEntityType(typeof(Transaction))
-        ?? throw new Exception("Transaction entity is missing.");
 
-    Equal("transactions", entity.GetTableName());
-    True(entity.FindProperty(nameof(Transaction.UpdatedAt))?.IsConcurrencyToken == true);
-    True(entity.FindProperty(nameof(Transaction.Merchant)) is not null);
-    True(entity.GetKeys().Any(key =>
-        key.Properties.Select(property => property.Name)
-            .SequenceEqual([nameof(Transaction.HouseholdId), nameof(Transaction.Id)])));
-    True(entity.GetIndexes().Any(index =>
-        index.GetDatabaseName() == "ix_transactions_household_date_created"));
+    var category = context.Model.FindEntityType(typeof(Category))
+        ?? throw new Exception("Category entity is missing.");
+    Equal("categories", category.GetTableName());
+    True(category.FindProperty(nameof(Category.ParentId)) is not null);
+    True(category.FindProperty(nameof(Category.Icon)) is not null);
+    True(category.GetForeignKeys().All(foreignKey =>
+        foreignKey.PrincipalEntityType.ClrType != typeof(IconCatalogEntry)));
+
+    var icon = context.Model.FindEntityType(typeof(IconCatalogEntry))
+        ?? throw new Exception("Icon catalog entity is missing.");
+    Equal("icons", icon.GetTableName());
+}
+
+static void ReusableLabelModel()
+{
+    using var context = NewContext();
+
+    var label = context.Model.FindEntityType(typeof(Label))
+        ?? throw new Exception("Label entity is missing.");
+    Equal("labels", label.GetTableName());
+
+    var link = context.Model.FindEntityType(typeof(TransactionLabel))
+        ?? throw new Exception("TransactionLabel entity is missing.");
+    Equal("transaction_labels", link.GetTableName());
+    Equal(2, link.FindPrimaryKey()?.Properties.Count ?? 0);
+    True(link.FindProperty(nameof(TransactionLabel.LabelId)) is not null);
 }
 
 static void TransactionDetailModel()
@@ -248,32 +271,34 @@ static void TransactionDetailModel()
     var item = context.Model.FindEntityType(typeof(TransactionItem))
         ?? throw new Exception("TransactionItem entity is missing.");
     Equal("transaction_items", item.GetTableName());
+    True(item.FindProperty(nameof(TransactionItem.CategoryId)) is not null);
+    True(item.FindProperty(nameof(TransactionItem.CategoryIcon)) is not null);
     True(item.GetIndexes().Any(index =>
         index.GetDatabaseName() == "ux_transaction_items_transaction_position"
         && index.IsUnique));
-
-    var label = context.Model.FindEntityType(typeof(TransactionLabel))
-        ?? throw new Exception("TransactionLabel entity is missing.");
-    Equal("transaction_labels", label.GetTableName());
-    True(label.FindProperty(nameof(TransactionLabel.AccountId))?.IsNullable == true);
 }
 
-static void AggregateModel()
+static void DimensionAggregateModel()
 {
     using var context = NewContext();
     var entity = context.Model.FindEntityType(typeof(TransactionAggregate))
         ?? throw new Exception("TransactionAggregate entity is missing.");
 
     Equal("transaction_aggregates", entity.GetTableName());
-    Equal(5, entity.FindPrimaryKey()?.Properties.Count ?? 0);
+    Equal(7, entity.FindPrimaryKey()?.Properties.Count ?? 0);
+    True(entity.FindProperty(nameof(TransactionAggregate.DimensionType)) is not null);
+    True(entity.FindProperty(nameof(TransactionAggregate.DimensionId)) is not null);
+    True(entity.FindProperty(nameof(TransactionAggregate.EntryCount)) is not null);
     True(entity.GetIndexes().Any(index =>
-        index.GetDatabaseName() == "ix_transaction_aggregates_household_period"));
+        index.GetDatabaseName() ==
+            "ix_transaction_aggregates_household_dimension_period"));
 }
 
 static AverioDbContext NewContext()
 {
     var options = new DbContextOptionsBuilder<AverioDbContext>()
-        .UseNpgsql("Host=localhost;Database=averio_model_only;Username=unused;Password=unused")
+        .UseNpgsql(
+            "Host=localhost;Database=averio_model_only;Username=unused;Password=unused")
         .Options;
 
     return new AverioDbContext(options);

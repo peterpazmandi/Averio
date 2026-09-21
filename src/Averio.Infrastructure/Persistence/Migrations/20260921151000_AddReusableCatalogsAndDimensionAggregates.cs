@@ -79,6 +79,11 @@ public partial class AddReusableCatalogsAndDimensionAggregates : Migration
             filter: "is_base");
 
         migrationBuilder.CreateIndex(
+            name: "IX_categories_parent_id",
+            table: "categories",
+            column: "parent_id");
+
+        migrationBuilder.CreateIndex(
             name: "ix_categories_household_parent_order",
             table: "categories",
             columns: new[] { "household_id", "parent_id", "sort_order" });
@@ -235,18 +240,29 @@ public partial class AddReusableCatalogsAndDimensionAggregates : Migration
             """
             UPDATE transaction_items AS item
             SET
-                category_id = COALESCE(matched.id, '00000000-0000-4000-8000-000000000001'::uuid),
-                category_name = COALESCE(NULLIF(item.category_name, ''), matched.name, 'Uncategorized'),
-                category_icon = COALESCE(matched.icon, '🗂️')
-            FROM LATERAL (
-                SELECT category.id, category.name, category.icon
-                FROM categories AS category
-                WHERE category.is_base
-                  AND lower(category.name) = lower(COALESCE(item.category_name, ''))
-                ORDER BY category.sort_order
-                LIMIT 1
-            ) AS matched
-            WHERE TRUE;
+                category_id = COALESCE(
+                    (
+                        SELECT category.id
+                        FROM categories AS category
+                        WHERE category.is_base
+                          AND lower(category.name) = lower(COALESCE(item.category_name, ''))
+                        ORDER BY category.sort_order
+                        LIMIT 1
+                    ),
+                    '00000000-0000-4000-8000-000000000001'::uuid
+                ),
+                category_name = COALESCE(NULLIF(item.category_name, ''), 'Uncategorized'),
+                category_icon = COALESCE(
+                    (
+                        SELECT category.icon
+                        FROM categories AS category
+                        WHERE category.is_base
+                          AND lower(category.name) = lower(COALESCE(item.category_name, ''))
+                        ORDER BY category.sort_order
+                        LIMIT 1
+                    ),
+                    '🗂️'
+                );
             """);
 
         migrationBuilder.Sql(
@@ -405,7 +421,7 @@ public partial class AddReusableCatalogsAndDimensionAggregates : Migration
             INSERT INTO labels
                 (id, household_id, account_id, scope, name, normalized_name, created_at)
             SELECT
-                min(id),
+                min(id::text)::uuid,
                 household_id,
                 account_id,
                 scope,

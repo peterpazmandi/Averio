@@ -2,6 +2,7 @@ using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.Common;
 using Averio.Application.Transactions.GetTransactions;
+using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 
 namespace Averio.Application.Transactions.GetTransaction;
@@ -43,7 +44,7 @@ public sealed class GetTransactionHandler(
             ?? throw new NotFoundException("account", transaction.AccountId);
 
         var labelIds = transaction.Labels.Select(link => link.LabelId).ToArray();
-        var labels = labelIds.Length == 0
+        IReadOnlyList<Label> labels = labelIds.Length == 0
             ? []
             : await labelRepository.GetApplicableByIdsAsync(
                 household.Id,
