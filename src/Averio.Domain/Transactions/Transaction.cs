@@ -4,6 +4,9 @@ namespace Averio.Domain.Transactions;
 
 public sealed class Transaction
 {
+    private readonly List<TransactionItem> _items = [];
+    private readonly List<TransactionLabel> _labels = [];
+
     private Transaction() { }
 
     public Guid Id { get; private set; }
@@ -15,12 +18,15 @@ public sealed class Transaction
     public decimal Amount { get; private set; }
     public CurrencyCode Currency { get; private set; }
     public string Description { get; private set; } = null!;
+    public string? Merchant { get; private set; }
     public string? Note { get; private set; }
     public DateOnly OccurredOn { get; private set; }
     public TransactionStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? VoidedAt { get; private set; }
+    public IReadOnlyCollection<TransactionItem> Items => _items;
+    public IReadOnlyCollection<TransactionLabel> Labels => _labels;
 
     public static Transaction Create(
         Guid householdId,
@@ -28,26 +34,28 @@ public sealed class Transaction
         Guid createdByHouseholdMemberId,
         TransactionKind kind,
         TransactionVisibility visibility,
-        decimal amount,
         CurrencyCode currency,
-        string description,
+        string? merchant,
         string? note,
         DateOnly occurredOn,
+        IReadOnlyCollection<TransactionItemDraft> items,
+        IReadOnlyCollection<TransactionLabelDraft> labels,
         DateTimeOffset now)
     {
-        Validate(
+        ValidateBase(
             householdId,
             accountId,
             createdByHouseholdMemberId,
             kind,
             visibility,
-            amount,
             currency,
-            description,
+            merchant,
             note,
-            occurredOn);
+            occurredOn,
+            items,
+            labels);
 
-        return new Transaction
+        var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
             HouseholdId = householdId,
@@ -55,79 +63,120 @@ public sealed class Transaction
             CreatedByHouseholdMemberId = createdByHouseholdMemberId,
             Kind = kind,
             Visibility = visibility,
-            Amount = amount,
             Currency = currency,
-            Description = description.Trim(),
-            Note = NormalizeNote(note),
+            Merchant = Normalize(merchant),
+            Note = Normalize(note),
             OccurredOn = occurredOn,
             Status = TransactionStatus.Posted,
             CreatedAt = now,
             UpdatedAt = now,
         };
+
+        transaction.ReplaceItems(items);
+        transaction.ReplaceLabels(labels);
+        transaction.Description = BuildDescription(transaction.Merchant, transaction._items);
+
+        return transaction;
     }
 
     public void Update(
         Guid accountId,
         TransactionKind kind,
         TransactionVisibility visibility,
-        decimal amount,
         CurrencyCode currency,
-        string description,
+        string? merchant,
         string? note,
         DateOnly occurredOn,
+        IReadOnlyCollection<TransactionItemDraft> items,
+        IReadOnlyCollection<TransactionLabelDraft> labels,
         DateTimeOffset now)
     {
         if (Status != TransactionStatus.Posted)
-        {
             throw new InvalidOperationException("Voided transactions cannot be edited.");
-        }
 
-        Validate(
+        ValidateBase(
             HouseholdId,
             accountId,
             CreatedByHouseholdMemberId,
             kind,
             visibility,
-            amount,
             currency,
-            description,
+            merchant,
             note,
-            occurredOn);
+            occurredOn,
+            items,
+            labels);
 
         AccountId = accountId;
         Kind = kind;
         Visibility = visibility;
-        Amount = amount;
         Currency = currency;
-        Description = description.Trim();
-        Note = NormalizeNote(note);
+        Merchant = Normalize(merchant);
+        Note = Normalize(note);
         OccurredOn = occurredOn;
+
+        ReplaceItems(items);
+        ReplaceLabels(labels);
+        Description = BuildDescription(Merchant, _items);
         UpdatedAt = NextVersion(now);
     }
 
     public void Void(DateTimeOffset now)
     {
         if (Status == TransactionStatus.Voided)
-        {
             return;
-        }
 
         Status = TransactionStatus.Voided;
         VoidedAt = now;
         UpdatedAt = NextVersion(now);
     }
 
-    private static void Validate(
+    private void ReplaceItems(IReadOnlyCollection<TransactionItemDraft> drafts)
+    {
+        _items.Clear();
+
+        var position = 0;
+        foreach (var draft in drafts)
+        {
+            _items.Add(TransactionItem.Create(
+                HouseholdId,
+                Id,
+                position++,
+                draft));
+        }
+
+        Amount = _items.Sum(item => item.Amount);
+
+        if (Amount <= 0 || Amount > 999999999999999.9999m)
+            throw new ArgumentOutOfRangeException(nameof(drafts));
+    }
+
+    private void ReplaceLabels(IReadOnlyCollection<TransactionLabelDraft> drafts)
+    {
+        _labels.Clear();
+
+        foreach (var draft in drafts)
+        {
+            _labels.Add(TransactionLabel.Create(
+                HouseholdId,
+                Id,
+                AccountId,
+                draft));
+        }
+    }
+
+    private static void ValidateBase(
         Guid householdId,
         Guid accountId,
         Guid createdByHouseholdMemberId,
         TransactionKind kind,
         TransactionVisibility visibility,
-        decimal amount,
         CurrencyCode currency,
-        string description,
+        string? merchant,
         string? note,
-        DateOnly occurredOn)
+        DateOnly occurredOn,
+        IReadOnlyCollection<TransactionItemDraft> items,
+        IReadOnlyCollection<TransactionLabelDraft> labels)
     {
         if (householdId == Guid.Empty)
             throw new ArgumentException("Household identifier is required.", nameof(householdId));
@@ -139,20 +188,44 @@ public sealed class Transaction
             throw new ArgumentException("Invalid transaction kind.", nameof(kind));
         if (!Enum.IsDefined(visibility))
             throw new ArgumentException("Invalid transaction visibility.", nameof(visibility));
-        if (amount <= 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount)
-            throw new ArgumentOutOfRangeException(nameof(amount));
         if (!CurrencyCode.IsSupported(currency.Value))
             throw new ArgumentException("Unsupported currency.", nameof(currency));
-        if (string.IsNullOrWhiteSpace(description) || description.Trim().Length > 160)
-            throw new ArgumentOutOfRangeException(nameof(description));
-        if (note?.Trim().Length > 500)
+        if (Normalize(merchant)?.Length > 160)
+            throw new ArgumentOutOfRangeException(nameof(merchant));
+        if (Normalize(note)?.Length > 500)
             throw new ArgumentOutOfRangeException(nameof(note));
         if (occurredOn == default)
             throw new ArgumentException("Transaction date is required.", nameof(occurredOn));
+        if (items.Count is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(items));
+        if (labels.Count > 20)
+            throw new ArgumentOutOfRangeException(nameof(labels));
+
+        var duplicateLabels = labels
+            .GroupBy(
+                label => $"{label.Scope}:{label.Name.Trim().ToUpperInvariant()}",
+                StringComparer.Ordinal)
+            .Any(group => group.Count() > 1);
+
+        if (duplicateLabels)
+            throw new ArgumentException("Duplicate transaction labels are not allowed.", nameof(labels));
     }
 
-    private static string? NormalizeNote(string? note)
-        => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+    private static string BuildDescription(
+        string? merchant,
+        IReadOnlyCollection<TransactionItem> items)
+    {
+        if (!string.IsNullOrWhiteSpace(merchant))
+            return merchant;
+
+        return items
+            .OrderBy(item => item.Position)
+            .First()
+            .Description;
+    }
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private DateTimeOffset NextVersion(DateTimeOffset now) => new(
         Math.Max(

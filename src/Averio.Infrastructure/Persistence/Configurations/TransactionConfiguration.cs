@@ -21,6 +21,9 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         });
 
         builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.HouseholdId, x.Id })
+            .HasName("ak_transactions_household_id_id");
+
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");
         builder.Property(x => x.AccountId).HasColumnName("account_id");
@@ -31,6 +34,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(x => x.Currency).HasColumnName("currency_code")
             .HasConversion<CurrencyCodeConverter>().HasMaxLength(3).IsRequired();
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(160).IsRequired();
+        builder.Property(x => x.Merchant).HasColumnName("merchant").HasMaxLength(160);
         builder.Property(x => x.Note).HasColumnName("note").HasMaxLength(500);
         builder.Property(x => x.OccurredOn).HasColumnName("occurred_on");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
@@ -49,6 +53,9 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
             .OnDelete(DeleteBehavior.Restrict)
             .HasConstraintName("fk_transactions_household_members_creator");
+
+        builder.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(x => x.Labels).UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(x => new { x.HouseholdId, x.OccurredOn, x.CreatedAt })
             .HasDatabaseName("ix_transactions_household_date_created");

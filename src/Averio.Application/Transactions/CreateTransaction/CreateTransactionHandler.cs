@@ -12,10 +12,11 @@ public sealed record CreateTransactionCommand(
     Guid AccountId,
     TransactionKind Kind,
     TransactionVisibility Visibility,
-    decimal Amount,
-    string Description,
+    string? Merchant,
     string? Note,
-    DateOnly OccurredOn);
+    DateOnly OccurredOn,
+    IReadOnlyList<TransactionItemInput> Items,
+    IReadOnlyList<TransactionLabelInput> Labels);
 
 public sealed class CreateTransactionHandler(
     ICurrentUser currentUser,
@@ -31,16 +32,17 @@ public sealed class CreateTransactionHandler(
         CreateTransactionCommand command,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(
-            new TransactionInput(
-                command.AccountId,
-                command.Kind,
-                command.Visibility,
-                command.Amount,
-                command.Description,
-                command.Note,
-                command.OccurredOn),
-            cancellationToken);
+        var input = new TransactionInput(
+            command.AccountId,
+            command.Kind,
+            command.Visibility,
+            command.Merchant,
+            command.Note,
+            command.OccurredOn,
+            command.Items,
+            command.Labels);
+
+        await validator.ValidateAndThrowAsync(input, cancellationToken);
 
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -52,9 +54,7 @@ public sealed class CreateTransactionHandler(
             ?? throw new NotFoundException("household", command.HouseholdId);
 
         if (!household.IsFinancialSetupCompleted)
-        {
             throw new OnboardingRequiredException();
-        }
 
         var membership = household.Members.Single(member => member.UserId == userId);
         var account = await accountRepository.GetVisibleByIdAsync(
@@ -65,14 +65,10 @@ public sealed class CreateTransactionHandler(
             ?? throw new NotFoundException("account", command.AccountId);
 
         if (account.Status != AccountStatus.Active)
-        {
             throw new ConflictException("account_archived", "Error_AccountArchived");
-        }
 
         if (!TransactionAccess.CanModify(account, membership))
-        {
             throw new ForbiddenException();
-        }
 
         if (!TransactionAccess.IsVisibilityAllowed(account, command.Visibility))
         {
@@ -87,11 +83,21 @@ public sealed class CreateTransactionHandler(
             membership.Id,
             command.Kind,
             command.Visibility,
-            command.Amount,
             account.Currency,
-            command.Description,
+            command.Merchant,
             command.Note,
             command.OccurredOn,
+            command.Items
+                .Select(item => new TransactionItemDraft(
+                    item.Description,
+                    item.CategoryName,
+                    item.Amount))
+                .ToArray(),
+            command.Labels
+                .Select(label => new TransactionLabelDraft(
+                    label.Name,
+                    label.Scope))
+                .ToArray(),
             timeProvider.GetUtcNow());
 
         await using var databaseTransaction =

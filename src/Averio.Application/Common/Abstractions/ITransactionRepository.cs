@@ -39,6 +39,18 @@ public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,
     bool HasMore);
 
+public sealed record TransactionItemReadModel(
+    Guid Id,
+    int Position,
+    string Description,
+    string? CategoryName,
+    decimal Amount);
+
+public sealed record TransactionLabelReadModel(
+    Guid Id,
+    string Name,
+    TransactionLabelScope Scope);
+
 public sealed record TransactionReadModel(
     Guid Id,
     Guid AccountId,
@@ -48,9 +60,12 @@ public sealed record TransactionReadModel(
     TransactionVisibility Visibility,
     decimal Amount,
     string Description,
+    string? Merchant,
     string? Note,
     DateOnly OccurredOn,
     TransactionStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    bool CanModify);
+    bool CanModify,
+    IReadOnlyList<TransactionItemReadModel> Items,
+    IReadOnlyList<TransactionLabelReadModel> Labels);

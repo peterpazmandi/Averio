@@ -13,10 +13,11 @@ public sealed record UpdateTransactionCommand(
     Guid AccountId,
     TransactionKind Kind,
     TransactionVisibility Visibility,
-    decimal Amount,
-    string Description,
+    string? Merchant,
     string? Note,
     DateOnly OccurredOn,
+    IReadOnlyList<TransactionItemInput> Items,
+    IReadOnlyList<TransactionLabelInput> Labels,
     DateTimeOffset ExpectedUpdatedAt);
 
 public sealed class UpdateTransactionHandler(
@@ -33,16 +34,17 @@ public sealed class UpdateTransactionHandler(
         UpdateTransactionCommand command,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(
-            new TransactionInput(
-                command.AccountId,
-                command.Kind,
-                command.Visibility,
-                command.Amount,
-                command.Description,
-                command.Note,
-                command.OccurredOn),
-            cancellationToken);
+        var input = new TransactionInput(
+            command.AccountId,
+            command.Kind,
+            command.Visibility,
+            command.Merchant,
+            command.Note,
+            command.OccurredOn,
+            command.Items,
+            command.Labels);
+
+        await validator.ValidateAndThrowAsync(input, cancellationToken);
 
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -92,9 +94,7 @@ public sealed class UpdateTransactionHandler(
                 ?? throw new NotFoundException("account", command.AccountId);
 
         if (targetAccount.Status != AccountStatus.Active)
-        {
             throw new ConflictException("account_archived", "Error_AccountArchived");
-        }
 
         if (!TransactionAccess.CanModify(currentAccount, membership)
             || !TransactionAccess.CanModify(targetAccount, membership))
@@ -145,11 +145,21 @@ public sealed class UpdateTransactionHandler(
                 targetAccount.Id,
                 command.Kind,
                 command.Visibility,
-                command.Amount,
                 targetAccount.Currency,
-                command.Description,
+                command.Merchant,
                 command.Note,
                 command.OccurredOn,
+                command.Items
+                    .Select(item => new TransactionItemDraft(
+                        item.Description,
+                        item.CategoryName,
+                        item.Amount))
+                    .ToArray(),
+                command.Labels
+                    .Select(label => new TransactionLabelDraft(
+                        label.Name,
+                        label.Scope))
+                    .ToArray(),
                 timeProvider.GetUtcNow());
 
             await unitOfWork.SaveChangesAsync(cancellationToken);

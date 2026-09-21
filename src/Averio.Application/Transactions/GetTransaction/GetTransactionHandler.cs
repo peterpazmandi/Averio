@@ -1,7 +1,7 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.Common;
-using Averio.Domain.Transactions;
+using Averio.Application.Transactions.GetTransactions;
 
 namespace Averio.Application.Transactions.GetTransaction;
 
@@ -49,12 +49,30 @@ public sealed class GetTransactionHandler(
             transaction.Visibility,
             transaction.Amount,
             transaction.Description,
+            transaction.Merchant,
             transaction.Note,
             transaction.OccurredOn,
             transaction.Status,
             transaction.CreatedAt,
             transaction.UpdatedAt,
-            TransactionAccess.CanModify(account, membership));
+            TransactionAccess.CanModify(account, membership),
+            transaction.Items
+                .OrderBy(item => item.Position)
+                .Select(item => new TransactionItemResult(
+                    item.Id,
+                    item.Position,
+                    item.Description,
+                    item.CategoryName,
+                    item.Amount))
+                .ToArray(),
+            transaction.Labels
+                .OrderBy(label => label.Scope)
+                .ThenBy(label => label.Name)
+                .Select(label => new TransactionLabelResult(
+                    label.Id,
+                    label.Name,
+                    label.Scope))
+                .ToArray());
     }
 }
 
@@ -67,9 +85,12 @@ public sealed record TransactionDetailResult(
     TransactionVisibility Visibility,
     decimal Amount,
     string Description,
+    string? Merchant,
     string? Note,
     DateOnly OccurredOn,
-    TransactionStatus Status,
+    Domain.Transactions.TransactionStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    bool CanModify);
+    bool CanModify,
+    IReadOnlyList<TransactionItemResult> Items,
+    IReadOnlyList<TransactionLabelResult> Labels);

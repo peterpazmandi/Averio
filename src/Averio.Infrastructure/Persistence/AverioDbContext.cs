@@ -20,12 +20,13 @@ public sealed class AverioDbContext(
     } = null!;
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<TransactionItem> TransactionItems => Set<TransactionItem>();
+    public DbSet<TransactionLabel> TransactionLabels => Set<TransactionLabel>();
     public DbSet<TransactionAggregate> TransactionAggregates => Set<TransactionAggregate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AverioDbContext).Assembly);
     }
 }

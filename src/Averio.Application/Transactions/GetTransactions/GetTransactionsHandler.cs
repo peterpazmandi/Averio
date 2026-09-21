@@ -57,6 +57,18 @@ public sealed record TransactionPageResult(
     IReadOnlyList<TransactionResult> Items,
     bool HasMore);
 
+public sealed record TransactionItemResult(
+    Guid Id,
+    int Position,
+    string Description,
+    string? CategoryName,
+    decimal Amount);
+
+public sealed record TransactionLabelResult(
+    Guid Id,
+    string Name,
+    TransactionLabelScope Scope);
+
 public sealed record TransactionResult(
     Guid Id,
     Guid AccountId,
@@ -66,12 +78,15 @@ public sealed record TransactionResult(
     TransactionVisibility Visibility,
     decimal Amount,
     string Description,
+    string? Merchant,
     string? Note,
     DateOnly OccurredOn,
     TransactionStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    bool CanModify)
+    bool CanModify,
+    IReadOnlyList<TransactionItemResult> Items,
+    IReadOnlyList<TransactionLabelResult> Labels)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,
@@ -82,10 +97,21 @@ public sealed record TransactionResult(
         model.Visibility,
         model.Amount,
         model.Description,
+        model.Merchant,
         model.Note,
         model.OccurredOn,
         model.Status,
         model.CreatedAt,
         model.UpdatedAt,
-        model.CanModify);
+        model.CanModify,
+        model.Items.Select(item => new TransactionItemResult(
+            item.Id,
+            item.Position,
+            item.Description,
+            item.CategoryName,
+            item.Amount)).ToArray(),
+        model.Labels.Select(label => new TransactionLabelResult(
+            label.Id,
+            label.Name,
+            label.Scope)).ToArray());
 }
