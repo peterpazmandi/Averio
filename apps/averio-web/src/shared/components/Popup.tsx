@@ -15,7 +15,7 @@ interface PopupProps {
     initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
-/** Modal dialog with a content-sized top sheet on mobile. Dismissal never accepts an action. */
+/** Modal dialog with a content-sized bottom sheet on mobile. Dismissal never accepts an action. */
 export function Popup({ open, title, closeLabel, children, actions, onDismiss, initialFocusRef }: PopupProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
