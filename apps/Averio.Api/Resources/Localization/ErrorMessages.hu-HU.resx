@@ -278,5 +278,14 @@
   <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>A tranzakció nem helyezhető át más pénznemű számlára.</value></data>
   <data name="Error_TransactionChanged" xml:space="preserve"><value>A tranzakció megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
   <data name="Error_TransactionVoided" xml:space="preserve"><value>Ezt a tranzakciót már sztornózták, ezért nem szerkeszthető.</value></data>
+  <data name="Validation_TransactionMerchantTooLong" xml:space="preserve"><value>A kereskedő/üzlet neve legfeljebb 160 karakter lehet.</value></data>
+  <data name="Validation_TransactionItemsInvalid" xml:space="preserve"><value>Adj hozzá 1 és 100 közötti tranzakciós tételt.</value></data>
+  <data name="Validation_TransactionItemDescriptionInvalid" xml:space="preserve"><value>Minden tételhez legfeljebb 160 karakteres leírás szükséges.</value></data>
+  <data name="Validation_TransactionItemCategoryTooLong" xml:space="preserve"><value>A tétel kategóriája legfeljebb 80 karakter lehet.</value></data>
+  <data name="Validation_TransactionTotalInvalid" xml:space="preserve"><value>A tranzakció végösszegének pozitívnak és a támogatott tartományon belülinek kell lennie.</value></data>
+  <data name="Validation_TransactionLabelsTooMany" xml:space="preserve"><value>Egy tranzakción legfeljebb 20 címke lehet.</value></data>
+  <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Ugyanaz a címke ugyanabban a hatókörben nem adható hozzá kétszer.</value></data>
+  <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>A címke neve kötelező és legfeljebb 40 karakter lehet.</value></data>
+  <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>A címke hatóköreként válaszd a Háztartás vagy a Számla lehetőséget.</value></data>
 </root>
 

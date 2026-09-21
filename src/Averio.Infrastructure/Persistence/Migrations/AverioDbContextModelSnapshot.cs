@@ -285,6 +285,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
 
+                    b.Property<string>("Merchant")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("merchant");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -317,6 +322,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("HouseholdId", "Id")
+                        .HasName("ak_transactions_household_id_id");
+
                     b.HasIndex("HouseholdId", "CreatedByHouseholdMemberId");
 
                     b.HasIndex("HouseholdId", "AccountId", "OccurredOn")
@@ -342,6 +350,100 @@ namespace Averio.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_transactions_status", "status IN ('Posted', 'Voided')");
 
                             t.HasCheckConstraint("ck_transactions_visibility", "visibility IN ('Household', 'Private')");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("CategoryName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("category_name");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "TransactionId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transaction_items_transaction_position");
+
+                    b.ToTable("transaction_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transaction_items_amount", "amount > 0");
+                            t.HasCheckConstraint("ck_transaction_items_position", "position >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionLabel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "AccountId")
+                        .HasDatabaseName("ix_transaction_labels_account");
+
+                    b.HasIndex("HouseholdId", "TransactionId")
+                        .HasDatabaseName("ix_transaction_labels_transaction");
+
+                    b.ToTable("transaction_labels", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transaction_labels_scope", "scope IN ('Household', 'Account')");
+                            t.HasCheckConstraint("ck_transaction_labels_scope_account", "(scope = 'Household' AND account_id IS NULL) OR (scope = 'Account' AND account_id IS NOT NULL)");
                         });
                 });
 
@@ -681,6 +783,35 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_transactions_household_members_creator");
                 });
 
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionItem", b =>
+                {
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany("Items")
+                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_transaction_items_transactions");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.TransactionLabel", b =>
+                {
+                    b.HasOne("Averio.Domain.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "AccountId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_transaction_labels_accounts");
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany("Labels")
+                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_transaction_labels_transactions");
+                });
+
             modelBuilder.Entity("Averio.Domain.Transactions.TransactionAggregate", b =>
                 {
                     b.HasOne("Averio.Domain.Accounts.Account", null)
@@ -730,6 +861,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
+                {
+                    b.Navigation("Items");
+                    b.Navigation("Labels");
                 });
 
             modelBuilder.Entity("Averio.Infrastructure.Identity.ApplicationUser", b =>

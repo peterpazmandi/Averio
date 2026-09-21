@@ -278,5 +278,14 @@
   <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>Eine Transaktion kann nicht auf ein Konto mit einer anderen Währung verschoben werden.</value></data>
   <data name="Error_TransactionChanged" xml:space="preserve"><value>Diese Transaktion wurde geändert. Lade sie neu und versuche es erneut.</value></data>
   <data name="Error_TransactionVoided" xml:space="preserve"><value>Diese Transaktion wurde bereits storniert und kann nicht mehr bearbeitet werden.</value></data>
+  <data name="Validation_TransactionMerchantTooLong" xml:space="preserve"><value>Händler/Geschäft darf höchstens 160 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionItemsInvalid" xml:space="preserve"><value>Füge zwischen 1 und 100 Transaktionspositionen hinzu.</value></data>
+  <data name="Validation_TransactionItemDescriptionInvalid" xml:space="preserve"><value>Jede Position benötigt eine Beschreibung mit höchstens 160 Zeichen.</value></data>
+  <data name="Validation_TransactionItemCategoryTooLong" xml:space="preserve"><value>Eine Positionskategorie darf höchstens 80 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionTotalInvalid" xml:space="preserve"><value>Die Transaktionssumme muss positiv und innerhalb des unterstützten Wertebereichs liegen.</value></data>
+  <data name="Validation_TransactionLabelsTooMany" xml:space="preserve"><value>Eine Transaktion kann höchstens 20 Labels haben.</value></data>
+  <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Dasselbe Label kann im gleichen Bereich nicht doppelt hinzugefügt werden.</value></data>
+  <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>Ein Labelname ist erforderlich und darf höchstens 40 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>Wähle Haushalt oder Konto als Label-Bereich.</value></data>
 </root>
 

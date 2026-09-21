@@ -54,9 +54,6 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .OnDelete(DeleteBehavior.Restrict)
             .HasConstraintName("fk_transactions_household_members_creator");
 
-        builder.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
-        builder.Navigation(x => x.Labels).UsePropertyAccessMode(PropertyAccessMode.Field);
-
         builder.HasIndex(x => new { x.HouseholdId, x.OccurredOn, x.CreatedAt })
             .HasDatabaseName("ix_transactions_household_date_created");
         builder.HasIndex(x => new { x.HouseholdId, x.AccountId, x.OccurredOn })

@@ -278,5 +278,14 @@
   <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>A transaction cannot be moved to an account with another currency.</value></data>
   <data name="Error_TransactionChanged" xml:space="preserve"><value>This transaction changed. Reload it and try again.</value></data>
   <data name="Error_TransactionVoided" xml:space="preserve"><value>This transaction has already been voided and can no longer be edited.</value></data>
+  <data name="Validation_TransactionMerchantTooLong" xml:space="preserve"><value>Merchant/store can contain at most 160 characters.</value></data>
+  <data name="Validation_TransactionItemsInvalid" xml:space="preserve"><value>Add between 1 and 100 transaction items.</value></data>
+  <data name="Validation_TransactionItemDescriptionInvalid" xml:space="preserve"><value>Each item needs a description up to 160 characters.</value></data>
+  <data name="Validation_TransactionItemCategoryTooLong" xml:space="preserve"><value>An item category can contain at most 80 characters.</value></data>
+  <data name="Validation_TransactionTotalInvalid" xml:space="preserve"><value>The transaction total must be positive and within the supported amount range.</value></data>
+  <data name="Validation_TransactionLabelsTooMany" xml:space="preserve"><value>A transaction can have at most 20 labels.</value></data>
+  <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>The same label cannot be added twice in the same scope.</value></data>
+  <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>A label name is required and can contain at most 40 characters.</value></data>
+  <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>Select Household or Account as the label scope.</value></data>
 </root>
 
