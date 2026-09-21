@@ -3,6 +3,21 @@ import { apiFetch } from '../../../shared/api/apiFetch';
 export type TransactionKind = 'Income' | 'Expense';
 export type TransactionVisibility = 'Household' | 'Private';
 export type TransactionStatus = 'Posted' | 'Voided';
+export type TransactionLabelScope = 'Household' | 'Account';
+
+export interface TransactionItemDto {
+    id: string;
+    position: number;
+    description: string;
+    categoryName: string | null;
+    amount: string;
+}
+
+export interface TransactionLabelDto {
+    id: string;
+    name: string;
+    scope: TransactionLabelScope;
+}
 
 export interface TransactionDto {
     id: string;
@@ -13,12 +28,15 @@ export interface TransactionDto {
     visibility: TransactionVisibility;
     amount: string;
     description: string;
+    merchant: string | null;
     note: string | null;
     occurredOn: string;
     status: TransactionStatus;
     createdAt: string;
     updatedAt: string;
     canModify: boolean;
+    items: TransactionItemDto[];
+    labels: TransactionLabelDto[];
 }
 
 export interface TransactionPageDto {
@@ -26,14 +44,26 @@ export interface TransactionPageDto {
     hasMore: boolean;
 }
 
+export interface TransactionItemInputDto {
+    description: string;
+    categoryName: string | null;
+    amount: string;
+}
+
+export interface TransactionLabelInputDto {
+    name: string;
+    scope: TransactionLabelScope;
+}
+
 export interface TransactionInputDto {
     accountId: string;
     kind: TransactionKind;
     visibility: TransactionVisibility;
-    amount: string;
-    description: string;
+    merchant: string | null;
     note: string | null;
     occurredOn: string;
+    items: TransactionItemInputDto[];
+    labels: TransactionLabelInputDto[];
 }
 
 export interface UpdateTransactionInputDto extends TransactionInputDto {

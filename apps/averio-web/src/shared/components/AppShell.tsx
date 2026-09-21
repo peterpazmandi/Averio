@@ -46,7 +46,6 @@ export function AppShell({ children }: PropsWithChildren) {
         };
     }, [menuOpen]);
 
-    // The route also gates this subtree and remounts it when the user changes.
     if (auth.status !== 'authenticated' || !auth.user) return null;
 
     const user = auth.user;
@@ -125,7 +124,12 @@ export function AppShell({ children }: PropsWithChildren) {
                     </div>
                     <div className="av-top-actions">
                         <button type="button" className="av-btn av-add-button"
-                            onClick={() => { void navigate({ to: '/app/transactions' }); }}>
+                            onClick={() => {
+                                void navigate({
+                                    to: '/app/transactions',
+                                    search: { create: true },
+                                });
+                            }}>
                             <ConceptIcon name="plus" />{t('concept.addTransaction')}
                         </button>
                         <ConceptPreferences />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { format, endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -6,13 +6,30 @@ import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { getTransactions } from '../api/transactionApi';
-import type { TransactionDto, TransactionFilters, TransactionInputDto, TransactionKind } from '../api/transactionApi';
+import type {
+    TransactionDto,
+    TransactionFilters,
+    TransactionInputDto,
+    TransactionKind,
+} from '../api/transactionApi';
 import { transactionQueryKeys } from '../api/transactionQueries';
 import { useTransactionMutations } from '../api/useTransactionMutations';
 import { TransactionEditor } from './TransactionEditor';
 import '../transactions.css';
 
-export function TransactionsPage({ userId, householdId }: { userId: string; householdId: string }) {
+interface Props {
+    userId: string;
+    householdId: string;
+    createRequested?: boolean;
+    onCreateRequestHandled?: () => void;
+}
+
+export function TransactionsPage({
+    userId,
+    householdId,
+    createRequested = false,
+    onCreateRequestHandled,
+}: Props) {
     const { t, i18n } = useTranslation();
     const language = i18n.resolvedLanguage ?? i18n.language;
     const [search, setSearch] = useState('');
@@ -24,6 +41,12 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
     const accounts = useQuery(accountsQueries.list(userId, householdId, false));
     const mutations = useTransactionMutations(userId, householdId);
     const busy = mutations.create.isPending || mutations.update.isPending || mutations.void.isPending;
+
+    useEffect(() => {
+        if (!createRequested) return;
+        setEditor('new');
+        onCreateRequestHandled?.();
+    }, [createRequested, onCreateRequestHandled]);
 
     const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, index) => {
         const date = subMonths(new Date(), index);
@@ -94,6 +117,7 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
     }
 
     let previousDate = '';
+
     return (
         <section className="av-tx-page" aria-labelledby="transactions-title">
             <header className="av-page-head">
@@ -118,24 +142,30 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
                     <span className="sr-only">{t('transactionManagement.filterMonth')}</span>
                     <select className="av-select" value={month} onChange={event => setMonth(event.target.value)}>
                         <option value="">{t('transactionManagement.allDates')}</option>
-                        {monthOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {monthOptions.map(option =>
+                            <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                 </label>
                 <label>
                     <span className="sr-only">{t('transactionManagement.account')}</span>
                     <select className="av-select" value={accountId} onChange={event => setAccountId(event.target.value)}>
                         <option value="">{t('transactionManagement.allAccounts')}</option>
-                        {(accounts.data ?? []).map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                        {(accounts.data ?? []).map(account =>
+                            <option key={account.id} value={account.id}>{account.name}</option>)}
                     </select>
                 </label>
                 <div className="av-tx-segmented" aria-label={t('transactionManagement.type')}>
                     <button type="button" className={!kind ? 'active' : ''} onClick={() => setKind('')}>
                         {t('transactionManagement.all')}
                     </button>
-                    <button type="button" className={kind === 'Income' ? 'active' : ''} onClick={() => setKind('Income')}>
+                    <button type="button"
+                        className={kind === 'Income' ? 'active income' : 'income'}
+                        onClick={() => setKind('Income')}>
                         {t('transactionManagement.income')}
                     </button>
-                    <button type="button" className={kind === 'Expense' ? 'active' : ''} onClick={() => setKind('Expense')}>
+                    <button type="button"
+                        className={kind === 'Expense' ? 'active expense' : 'expense'}
+                        onClick={() => setKind('Expense')}>
                         {t('transactionManagement.expense')}
                     </button>
                 </div>
@@ -163,7 +193,9 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
             {transactions.isSuccess && items.length === 0 && (
                 <div className="av-card av-tx-empty">
                     <ConceptIcon name="transactions" />
-                    <p>{t(search || accountId || kind ? 'transactionManagement.noResults' : 'transactionManagement.empty')}</p>
+                    <p>{t(search || accountId || kind
+                        ? 'transactionManagement.noResults'
+                        : 'transactionManagement.empty')}</p>
                 </div>
             )}
 
@@ -172,8 +204,11 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
                     {items.map(transaction => {
                         const showDate = previousDate !== transaction.occurredOn;
                         previousDate = transaction.occurredOn;
-                        const dateLabel = formatter.format(new Date(transaction.occurredOn + 'T00:00:00Z'));
+                        const dateLabel = formatter.format(
+                            new Date(transaction.occurredOn + 'T00:00:00Z'));
                         const isIncome = transaction.kind === 'Income';
+                        const title = transaction.merchant ?? transaction.description;
+
                         return (
                             <div key={transaction.id}>
                                 {showDate && (
@@ -198,11 +233,38 @@ export function TransactionsPage({ userId, householdId }: { userId: string; hous
                                                 </span>
                                             )}
                                         </span>
-                                        <strong className="av-tx-description">{transaction.description}</strong>
+
+                                        <strong className="av-tx-description">{title}</strong>
+                                        {transaction.items.length > 1 && (
+                                            <span className="av-tx-item-count">
+                                                {t('transactionManagement.itemCount', {
+                                                    count: transaction.items.length,
+                                                })}
+                                            </span>
+                                        )}
+
                                         <strong className="av-tx-amount">
                                             {isIncome ? '+' : '−'}
-                                            {formatDecimalAmount(transaction.amount, transaction.currency, language)}
+                                            {formatDecimalAmount(
+                                                transaction.amount,
+                                                transaction.currency,
+                                                language)}
                                         </strong>
+
+                                        {transaction.labels.length > 0 && (
+                                            <span className="av-tx-bubble-labels">
+                                                {transaction.labels.slice(0, 4).map(label => (
+                                                    <span key={label.id}
+                                                        className={`av-tx-label-chip ${label.scope.toLowerCase()}`}>
+                                                        <span aria-hidden="true">
+                                                            {label.scope === 'Household' ? '⌂' : '▣'}
+                                                        </span>
+                                                        {label.name}
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        )}
+
                                         <span className="av-tx-bubble-foot">
                                             {transaction.note && <span>{transaction.note}</span>}
                                             <span>{t(transaction.status === 'Voided'
