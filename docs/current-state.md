@@ -207,5 +207,9 @@ The current transaction-management branch now includes:
 - synchronous Account and Category aggregates at Day, Month and Year grain
 - yearly category statistics grouped by currency
 - source AccountId retained on Category aggregates so current privacy/reporting rules are enforced before statistics are returned
+- searchable Bento-style category selector in the transaction editor
+- transaction overview search/filter interaction aligned with Account Management
+- statistics chart bars reveal their exact value on hover/focus and remain visible when clicked/tapped
+- account/dashboard current balances are derived from the balance anchor plus posted requester-visible ledger movements; transaction mutations invalidate account and dashboard queries
 
 The full Category Management page (create/edit/reorder/archive/custom icons) is still a future UI slice. The persistence model and icon/category APIs now provide its foundation.
