@@ -1,7 +1,10 @@
 # ADR-015 — Transaction ledger and synchronous reporting aggregates
 
-**Status:** Accepted  
-**Date:** 2026-09
+**Status:** Superseded  
+**Date:** 2026-09  
+**Superseded by:** ADR-016
+
+ADR-016 keeps the ledger/atomic-aggregate principles from this decision but replaces the temporary free-text category/transaction-attached label model and extends aggregate periods/dimensions.
 
 ## Context
 

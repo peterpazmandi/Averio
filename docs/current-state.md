@@ -194,12 +194,18 @@ Implement the Transaction/Transfer ledger foundation, including immutable curren
 
 The current transaction-management branch now includes:
 
-- itemized income/expense transactions with the transaction total derived from item amounts
-- free-text merchant/store
-- optional per-item category-name snapshot until the Category vertical slice exists
-- Household-scoped and Account-scoped transaction labels
+- itemized Income/Expense transactions with transaction total derived from exact item amounts
+- free-text Merchant/Store
+- a first-class hierarchical Category model with exactly 100 seeded base categories
+- a 240-entry seeded icon catalog; categories store copied icon values and have no Icon foreign key
+- required per-item CategoryId plus category name/icon history snapshots
+- reusable Household and Account labels, selectable on every transaction form and creatable inline
+- label selection before item entry in the editor
+- four visually separated editor sections: basics, labels, items, details/privacy
 - green Income and red Expense visual semantics
-- header and page-level Add transaction entry points opening the same editor
-- cash-flow aggregates continuing to use the transaction's derived total
+- header, dashboard and transaction-page Add transaction entry points opening the same editor
+- synchronous Account and Category aggregates at Day, Month and Year grain
+- yearly category statistics grouped by currency
+- source AccountId retained on Category aggregates so current privacy/reporting rules are enforced before statistics are returned
 
-This does **not** mean full Category management or reusable Label management is complete. Those remain dedicated future slices.
+The full Category Management page (create/edit/reorder/archive/custom icons) is still a future UI slice. The persistence model and icon/category APIs now provide its foundation.

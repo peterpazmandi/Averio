@@ -39,10 +39,11 @@ foreach (var check in checks)
 Console.WriteLine($"PASS {checks.Length} transaction regression checks");
 return 0;
 
-static readonly Guid GroceriesId =
-    Guid.Parse("00000000-0000-4000-8000-000000000011");
-static readonly Guid SalaryId =
-    Guid.Parse("00000000-0000-4000-8000-000000000091");
+static Guid GroceriesId()
+    => Guid.Parse("00000000-0000-4000-8000-000000000011");
+
+static Guid SalaryId()
+    => Guid.Parse("00000000-0000-4000-8000-000000000092");
 
 static Transaction NewTransaction(
     TransactionKind kind = TransactionKind.Expense,
@@ -65,7 +66,7 @@ static Transaction NewTransaction(
         [
             new TransactionItemDraft(
                 "Regression check",
-                GroceriesId,
+                GroceriesId(),
                 "Groceries",
                 "🛒",
                 12.34m)
@@ -79,8 +80,8 @@ static void ItemizedIncomeDerivesTotal()
         kind: TransactionKind.Income,
         items:
         [
-            new TransactionItemDraft("Salary", SalaryId, "Salary", "💼", 1234.5678m),
-            new TransactionItemDraft("Bonus", SalaryId, "Salary", "💼", 65.4322m),
+            new TransactionItemDraft("Salary", SalaryId(), "Salary", "💼", 1234.5678m),
+            new TransactionItemDraft("Bonus", SalaryId(), "Salary", "💼", 65.4322m),
         ]);
 
     Equal(TransactionKind.Income, transaction.Kind);
@@ -96,19 +97,19 @@ static void RejectInvalidItemAmount()
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Zero", GroceriesId, "Groceries", "🛒", 0m)
+            new TransactionItemDraft("Zero", GroceriesId(), "Groceries", "🛒", 0m)
         ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Negative", GroceriesId, "Groceries", "🛒", -1m)
+            new TransactionItemDraft("Negative", GroceriesId(), "Groceries", "🛒", -1m)
         ]));
 
     Throws<ArgumentOutOfRangeException>(() => NewTransaction(
         items:
         [
-            new TransactionItemDraft("Too precise", GroceriesId, "Groceries", "🛒", 1.00001m)
+            new TransactionItemDraft("Too precise", GroceriesId(), "Groceries", "🛒", 1.00001m)
         ]));
 }
 
@@ -121,8 +122,8 @@ static void CategorySnapshotAndReusableLabels()
         merchant: "Tesco",
         items:
         [
-            new TransactionItemDraft("Milk", GroceriesId, "Groceries", "🛒", 3.25m),
-            new TransactionItemDraft("Bread", GroceriesId, "Groceries", "🛒", 2.10m),
+            new TransactionItemDraft("Milk", GroceriesId(), "Groceries", "🛒", 3.25m),
+            new TransactionItemDraft("Bread", GroceriesId(), "Groceries", "🛒", 2.10m),
         ],
         labelIds: [householdLabelId, accountLabelId]);
 
@@ -132,7 +133,7 @@ static void CategorySnapshotAndReusableLabels()
     Equal(2, transaction.Items.Count);
     Equal(2, transaction.Labels.Count);
     Equal(
-        GroceriesId,
+        GroceriesId(),
         transaction.Items.OrderBy(item => item.Position).First().CategoryId);
     Equal(
         "Groceries",
@@ -159,8 +160,8 @@ static void UpdateRecalculatesTotal()
         "note",
         new DateOnly(2026, 9, 20),
         [
-            new TransactionItemDraft("One", GroceriesId, "Groceries", "🛒", 10m),
-            new TransactionItemDraft("Two", GroceriesId, "Groceries", "🛒", 12.50m),
+            new TransactionItemDraft("One", GroceriesId(), "Groceries", "🛒", 10m),
+            new TransactionItemDraft("Two", GroceriesId(), "Groceries", "🛒", 12.50m),
         ],
         [Guid.NewGuid()],
         now);

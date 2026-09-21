@@ -6,19 +6,23 @@ Run from the repository root:
 dotnet run --project tests/Averio.Transactions.Tests
 ```
 
-This follows the existing dependency-free executable regression-suite approach used by the account slice. It covers itemized transaction totals, merchant/category data, household/account label scope, optimistic-concurrency version advancement, void semantics, account/transaction visibility compatibility, and EF metadata for the ledger, detail tables and aggregate table.
+This follows the existing dependency-free executable regression-suite approach used by the account slice. It covers item-derived totals, category snapshots, reusable labels, optimistic concurrency, void semantics, privacy rules, the Category/Icon/Label EF model, and dimension-aware account/category aggregates.
 
-The aggregate repository deliberately uses PostgreSQL-specific atomic upserts, so it needs a disposable PostgreSQL integration check before release. Verify:
+The aggregate repository uses PostgreSQL-specific atomic upserts, so it still needs a disposable PostgreSQL integration check before release. Verify:
 
-1. Apply `20260921100602_AddTransactionLedger` and `20260921133000_AddTransactionDetails`.
-2. Confirm the detail migration backfills each pre-existing transaction into exactly one item without changing its total.
-3. Create household-visible, visible-personal and private accounts.
-4. Create a transaction with multiple receipt items and verify `transactions.amount` equals the exact decimal sum of the item amounts.
-5. Edit item amounts, date, type and account and verify the old aggregate contribution is removed and the new derived total is added exactly once.
-6. Void an itemized transaction and verify it remains in the ledger while its contribution disappears.
-7. Race two edits of the same transaction and verify the losing write rolls back item/label changes and aggregate deltas.
-8. Confirm private transactions cannot be listed by another member and merchant, item, category, note and labels do not leak.
-9. Verify Household labels have no account id and Account labels are tied to the selected account.
-10. Toggle an account out of household reporting and verify existing aggregate rows stop appearing without requiring a rebuild.
-11. Verify EUR, USD and HUF are returned separately and never summed.
-12. Re-run ledger-derived totals against the aggregate rows to detect drift.
+1. Apply `20260921100602_AddTransactionLedger`, `20260921133000_AddTransactionDetails`, and `20260921151000_AddReusableCatalogsAndDimensionAggregates`.
+2. Verify exactly 100 base category rows and at least 200 icon-catalog rows are present.
+3. Verify Category has no foreign key to Icons and changing the icon catalog does not mutate existing category icon values.
+4. Confirm the migration maps existing transaction items to a valid category, defaulting to Uncategorized when no base-category name matches.
+5. Confirm legacy transaction-attached label rows are deduplicated into reusable `labels` and linked through `transaction_labels`.
+6. Create Household and Account labels and verify the label list exposes Household labels plus only the selected account's Account labels.
+7. Create a multi-item transaction with items in different categories and verify `transactions.amount` equals the exact decimal sum.
+8. Verify account aggregates receive one transaction contribution while category aggregates receive item amounts/counts, without multiplying the account transaction count.
+9. Verify Day, Month, and Year aggregate rows are written atomically for create/edit/void.
+10. Change an item's category and verify the old category contribution is removed and the new category contribution is added exactly once.
+11. Change transaction date/type/account and verify both account and category buckets are reversed/reapplied correctly.
+12. Confirm private transactions do not enter household account or category aggregates.
+13. Confirm category-statistics queries still filter by the source account's current visibility/reporting participation.
+14. Verify EUR, USD, and HUF remain separate in account and category reporting.
+15. Race two edits and verify the losing write rolls back item/label/aggregate changes.
+16. Rebuild ledger-derived account/category totals independently and compare them with aggregate rows to detect drift.

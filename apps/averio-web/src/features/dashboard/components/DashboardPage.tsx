@@ -90,7 +90,8 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     <Link className="av-btn" to="/app/statistics">
                         {t('concept.viewReport')}
                     </Link>
-                    <Link className="av-btn av-primary" to="/app/transactions">
+                    <Link className="av-btn av-primary" to="/app/transactions"
+                        search={{ create: true }}>
                         <ConceptIcon name="plus" />{t('concept.addTransaction')}
                     </Link>
                 </div>

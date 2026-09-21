@@ -132,9 +132,9 @@ export interface TransactionFilters {
     cursorCreatedAt?: string;
 }
 
-function queryString(filters: Record<string, string | number | undefined>) {
+function queryString<T extends object>(filters: T) {
     const query = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(filters as Record<string, unknown>).forEach(([key, value]) => {
         if (value !== undefined && value !== '') query.set(key, String(value));
     });
     const value = query.toString();

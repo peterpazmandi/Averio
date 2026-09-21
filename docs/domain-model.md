@@ -167,45 +167,63 @@ Account currency is immutable. Cross-currency conversion is explicit, not an aut
 
 An authoritative income/expense ledger entry associated with one account.
 
-The implemented transaction slice deliberately models **Income** and **Expense** only. A transaction uses the account's immutable currency and contains one or more ordered **TransactionItem** records. Its positive total amount is derived from the exact decimal sum of those item amounts; the transaction kind supplies the cash-flow direction.
+The implemented Transaction Management slice deliberately models **Income** and **Expense** only. A transaction uses the account's immutable currency and contains one or more ordered **TransactionItem** records. Its positive total is derived from the exact decimal sum of item amounts; the transaction kind supplies the cash-flow direction.
 
-A transaction may also contain:
+A transaction may also contain free-text Merchant/Store, optional note, date, Household/Private visibility, creator membership, status/timestamps, and zero or more reusable labels.
 
-- free-text Merchant/Store
-- optional note
-- date
-- Household or Private visibility
-- creator membership
-- status and timestamps
-- Household-scoped or Account-scoped labels
-
-`Description` on the transaction is a derived summary used for compact list/search scenarios. Merchant/Store is preferred when present; otherwise the first item description is used.
+`Description` is a derived compact summary: Merchant/Store when available, otherwise the first item description.
 
 ### TransactionItem
 
-A receipt or other transaction can be split into multiple items. Each item currently stores:
+A receipt or other transaction can be split into multiple items. Each item stores:
 
 - ordered position
 - description
-- optional category-name snapshot
+- CategoryId
+- CategoryName snapshot
+- CategoryIcon snapshot
 - amount in the transaction/account currency
 
-The Category vertical slice is not implemented yet, so item category is intentionally a name snapshot rather than a fake Category entity/reference. This allows useful itemization now while leaving category hierarchy, icons, ordering and ownership semantics for the dedicated Category implementation.
+Every item must have a valid available Category. The base Uncategorized category provides a low-friction fallback.
+
+The Category ID is the classification identity. Name/icon snapshots preserve transaction-history presentation if the category display metadata changes later.
 
 ### Transaction labels
 
-A transaction may have labels with explicit scope:
+Transactions select reusable Label entities through a join table.
 
-- **Household:** shared contextual label; no account id is stored
-- **Account:** label tied to the transaction's selected account
+Label scope:
 
-The UI visually distinguishes the scopes. This slice stores scoped labels on the transaction; reusable label catalogue/autocomplete management can be introduced later.
+- **Household** — reusable throughout the household
+- **Account** — reusable only on the specific account
 
-Transaction visibility is constrained by the containing account. A private transaction on a household-visible personal account is visible only to that account's holders. Household-scope accounts do not accept private transactions. Transactions on a private account remain private through the containing account boundary.
+The selected account controls which Account labels are valid. Label scope never grants transaction visibility and cannot bypass account/transaction privacy rules.
 
-Posted transactions may be corrected. Historical ledger rows are not hard-deleted: removal from active cash flow is represented by a **Voided** status. Optimistic concurrency prevents silent overwrites.
+## Category
 
-Changing a transaction to another account is permitted only when the target account uses the same currency. Moving an existing transaction between currencies would imply conversion semantics and is therefore rejected.
+Category is a first-class classification entity for transaction items.
+
+Core fields include Id, Code, optional HouseholdId, optional ParentId, Name, kind (Expense/Income/Both), Icon, AccentColor, SortOrder, base/archive flags, and timestamps.
+
+Categories support a parent-child tree through `ParentId`. The initial product seed contains exactly 100 base categories: 20 parent categories with four children each.
+
+Base categories are product-wide rows with no HouseholdId. The table is also shaped for later household-created categories; that management workflow is not yet exposed as a complete UI vertical slice.
+
+### Category icons
+
+`icons` is a reusable icon chooser/catalog seeded with 240 values.
+
+Category does **not** reference an Icon row. The chosen icon value is copied into `Category.Icon`. This deliberate snapshot rule prevents future icon-catalog maintenance from changing existing categories unexpectedly.
+
+Transaction items also copy CategoryName and CategoryIcon for historical presentation.
+
+## Label
+
+Label is a reusable transaction-tag catalog scoped to the household context.
+
+A Household label has no AccountId. An Account label has exactly one AccountId. Normalized-name uniqueness is enforced inside each scope.
+
+Transactions relate to labels through `transaction_labels`; label text/scope is not duplicated into every transaction row.
 
 ## Transfer
 
@@ -217,25 +235,21 @@ Transfers are intentionally outside the first Transaction Management slice. They
 
 Statistics are derived/read-model data, not the authoritative ledger.
 
-Averio incrementally maintains day- and month-grain cash-flow aggregates keyed by household, account, currency, period kind and period start. Only posted, household-visible income/expense contributions enter these aggregate rows, and mutation of the ledger and its aggregate delta happens inside one database transaction.
+Averio synchronously maintains Account and Category aggregate dimensions at Day, Month, and Year grain.
 
-Reporting queries still apply the account's current household visibility/reporting participation before returning totals. Currencies are grouped independently and are never directly summed.
+Every aggregate retains the source AccountId so current account visibility/reporting participation can be applied before values are returned. This is important for Category aggregates: a category total must never reveal spending from a private or excluded account.
 
-This gives dashboard/statistics queries work proportional to requested periods/accounts instead of raw ledger size, while preserving the ability to rebuild aggregates from the authoritative transaction table if repair tooling is needed later.
+Account aggregates use the transaction's full item-derived amount and count transactions. Category aggregates use item amounts grouped by directly assigned CategoryId and count categorized items.
+
+Parent/child category rollups are intentionally not persisted multiple times. Hierarchy rollups can be composed at read time from direct category rows.
+
+Only posted Household-visible transaction contributions enter household reporting aggregates. Ledger and aggregate mutations are atomic. Currency series remain separate and are never directly summed.
 
 ## Goal funding vs ledger movement
 
 Moving money to a savings account linked to a goal is not automatically consumption. The goal contribution is planning semantics while the ledger movement may be a transfer.
 
 Keep planning semantics and cash-flow semantics distinct.
-
-## Reporting aggregates
-
-Statistics are derived/read-model data, not the authoritative ledger.
-
-Potential dimensions include period, category, account, merchant/store, and household/member scope.
-
-Private data must be filtered or intentionally anonymized before aggregation results reach a consumer.
 
 ## Domain relationships at a glance
 
