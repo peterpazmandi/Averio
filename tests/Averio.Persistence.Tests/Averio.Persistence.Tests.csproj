@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Averio.Application/Averio.Application.csproj" />
+    <ProjectReference Include="../../src/Averio.Domain/Averio.Domain.csproj" />
+    <ProjectReference Include="../../src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
