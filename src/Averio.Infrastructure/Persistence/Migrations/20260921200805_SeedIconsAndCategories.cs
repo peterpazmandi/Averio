@@ -133,7 +133,39 @@ namespace Averio.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                """
+                WITH seeded_categories AS (
+                    SELECT (
+                        '00000000-0000-4000-8000-000000000'
+                        || lpad(value::text, 3, '0')
+                    )::uuid AS id
+                    FROM generate_series(1, 100) AS seed(value)
+                )
+                DELETE FROM categories
+                WHERE id IN (SELECT id FROM seeded_categories)
+                  AND parent_id IS NOT NULL;
+                """);
 
+            migrationBuilder.Sql(
+                """
+                WITH seeded_categories AS (
+                    SELECT (
+                        '00000000-0000-4000-8000-000000000'
+                        || lpad(value::text, 3, '0')
+                    )::uuid AS id
+                    FROM generate_series(1, 100) AS seed(value)
+                )
+                DELETE FROM categories
+                WHERE id IN (SELECT id FROM seeded_categories);
+                """);
+
+            migrationBuilder.Sql(
+                """
+                DELETE FROM icons
+                WHERE id BETWEEN 1 AND 240
+                  AND name = 'icon-' || lpad(id::text, 3, '0');
+                """);
         }
     }
 }
