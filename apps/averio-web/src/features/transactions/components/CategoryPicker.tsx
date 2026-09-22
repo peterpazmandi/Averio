@@ -130,7 +130,7 @@ export function CategoryPicker({
 
             const width = Math.max(
                 Math.min(rect.width, desiredWidth),
-                Math.min(520, desiredWidth),
+                Math.min(640, desiredWidth),
             );
 
             const centeredLeft = rect.left + rect.width / 2 - width / 2;
@@ -325,6 +325,7 @@ export function CategoryPicker({
                                             : '')
                                     }
                                     onClick={() => choose(parent.id)}
+                                    aria-pressed={value === parent.id}
                                 >
                                     <span
                                         className="av-category-parent-icon"
@@ -334,7 +335,6 @@ export function CategoryPicker({
                                     </span>
                                     <span>
                                         <strong>{parentName}</strong>
-                                        <small>{children.length}</small>
                                     </span>
                                     {value === parent.id && (
                                         <span
@@ -360,6 +360,7 @@ export function CategoryPicker({
                                                 }
                                                 onClick={() =>
                                                     choose(child.id)}
+                                                aria-pressed={value === child.id}
                                             >
                                                 <span aria-hidden="true">
                                                     {child.icon}
