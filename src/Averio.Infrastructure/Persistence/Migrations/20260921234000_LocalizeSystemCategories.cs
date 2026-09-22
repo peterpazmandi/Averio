@@ -35,13 +35,6 @@ public partial class LocalizeSystemCategories : Migration
               AND category.is_base;
             """);
 
-        migrationBuilder.Sql(
-            """
-            UPDATE categories
-            SET name = NULL
-            WHERE is_base;
-            """);
-
         migrationBuilder.AlterColumn<string>(
             name: "name",
             table: "categories",
@@ -51,6 +44,13 @@ public partial class LocalizeSystemCategories : Migration
             oldClrType: typeof(string),
             oldType: "character varying(100)",
             oldMaxLength: 100);
+
+        migrationBuilder.Sql(
+            """
+            UPDATE categories
+            SET name = NULL
+            WHERE is_base;
+            """);
 
         migrationBuilder.DropColumn(
             name: "code",
