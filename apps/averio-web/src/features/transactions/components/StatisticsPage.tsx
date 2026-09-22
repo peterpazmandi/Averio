@@ -400,7 +400,15 @@ export function StatisticsPage({
 
                                                 <div className="av-category-stat-copy">
                                                     <strong>
-                                                        {period.categoryName}
+                                                        {getCategoryDisplayName(
+                                                            {
+                                                                systemKey:
+                                                                    period.categorySystemKey,
+                                                                name:
+                                                                    period.categoryName,
+                                                            },
+                                                            t,
+                                                        )}
                                                     </strong>
                                                     <span>
                                                         {t(
