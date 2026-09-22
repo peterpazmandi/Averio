@@ -67,7 +67,7 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
     /**
      * 
      */
-    pageSize?: any;
+    pageSize?: number;
     /**
      * 
      */
@@ -105,7 +105,7 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsTransactionIdDeleteReques
     /**
      * 
      */
-    expectedUpdatedAt?: string;
+    expectedUpdatedAt: string;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsTransactionIdGetRequest {
@@ -286,6 +286,13 @@ export class TransactionsApi extends runtime.BaseAPI {
             throw new runtime.RequiredError(
                 'transactionId',
                 'Required parameter "transactionId" was null or undefined when calling apiV1HouseholdsHouseholdIdTransactionsTransactionIdDelete().'
+            );
+        }
+
+        if (requestParameters['expectedUpdatedAt'] == null) {
+            throw new runtime.RequiredError(
+                'expectedUpdatedAt',
+                'Required parameter "expectedUpdatedAt" was null or undefined when calling apiV1HouseholdsHouseholdIdTransactionsTransactionIdDelete().'
             );
         }
 

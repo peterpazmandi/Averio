@@ -5,6 +5,7 @@ using Averio.Contracts.Statistics;
 using Averio.Domain.Transactions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Averio.Api.Controllers;
 
@@ -19,8 +20,8 @@ public sealed class StatisticsController(
     [HttpGet("cash-flow")]
     public async Task<ActionResult<CashFlowResponse>> GetCashFlow(
         Guid householdId,
-        [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to,
+        [FromQuery, BindRequired] DateOnly from,
+        [FromQuery, BindRequired] DateOnly to,
         [FromQuery] string period = "Month",
         CancellationToken cancellationToken = default)
     {
@@ -49,8 +50,8 @@ public sealed class StatisticsController(
     [HttpGet("category-cash-flow")]
     public async Task<ActionResult<CategoryCashFlowResponse>> GetCategoryCashFlow(
         Guid householdId,
-        [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to,
+        [FromQuery, BindRequired] DateOnly from,
+        [FromQuery, BindRequired] DateOnly to,
         [FromQuery] string period = "Month",
         CancellationToken cancellationToken = default)
     {

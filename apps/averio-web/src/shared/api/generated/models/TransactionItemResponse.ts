@@ -26,7 +26,7 @@ export interface TransactionItemResponse {
     /**
      * 
      */
-    position: any | null;
+    position: number;
     /**
      * 
      */

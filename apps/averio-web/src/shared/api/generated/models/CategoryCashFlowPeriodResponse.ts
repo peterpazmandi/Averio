@@ -54,7 +54,7 @@ export interface CategoryCashFlowPeriodResponse {
     /**
      * 
      */
-    itemCount: any | null;
+    itemCount: number;
 }
 
 /**

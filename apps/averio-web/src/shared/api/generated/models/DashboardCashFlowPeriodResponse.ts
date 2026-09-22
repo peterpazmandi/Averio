@@ -38,7 +38,7 @@ export interface DashboardCashFlowPeriodResponse {
     /**
      * 
      */
-    transactionCount: any | null;
+    transactionCount: number;
 }
 
 /**

@@ -50,7 +50,7 @@ export interface CategoryResponse {
     /**
      * 
      */
-    sortOrder: any | null;
+    sortOrder: number;
     /**
      * 
      */

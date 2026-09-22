@@ -32,11 +32,11 @@ export interface ApiV1HouseholdsHouseholdIdStatisticsCashFlowGetRequest {
     /**
      * 
      */
-    from?: string;
+    from: string;
     /**
      * 
      */
-    to?: string;
+    to: string;
     /**
      * 
      */
@@ -51,11 +51,11 @@ export interface ApiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGetRequest 
     /**
      * 
      */
-    from?: string;
+    from: string;
     /**
      * 
      */
-    to?: string;
+    to: string;
     /**
      * 
      */
@@ -75,6 +75,20 @@ export class StatisticsApi extends runtime.BaseAPI {
             throw new runtime.RequiredError(
                 'householdId',
                 'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCashFlowGet().'
+            );
+        }
+
+        if (requestParameters['from'] == null) {
+            throw new runtime.RequiredError(
+                'from',
+                'Required parameter "from" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCashFlowGet().'
+            );
+        }
+
+        if (requestParameters['to'] == null) {
+            throw new runtime.RequiredError(
+                'to',
+                'Required parameter "to" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCashFlowGet().'
             );
         }
 
@@ -130,6 +144,20 @@ export class StatisticsApi extends runtime.BaseAPI {
             throw new runtime.RequiredError(
                 'householdId',
                 'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGet().'
+            );
+        }
+
+        if (requestParameters['from'] == null) {
+            throw new runtime.RequiredError(
+                'from',
+                'Required parameter "from" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGet().'
+            );
+        }
+
+        if (requestParameters['to'] == null) {
+            throw new runtime.RequiredError(
+                'to',
+                'Required parameter "to" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGet().'
             );
         }
 

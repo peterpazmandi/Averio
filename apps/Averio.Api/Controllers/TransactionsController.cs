@@ -8,6 +8,7 @@ using Averio.Contracts.Transactions;
 using Averio.Domain.Transactions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Averio.Api.Controllers;
 
@@ -111,7 +112,7 @@ public sealed class TransactionsController(
     public async Task<IActionResult> Void(
         Guid householdId,
         Guid transactionId,
-        [FromQuery] DateTimeOffset expectedUpdatedAt,
+        [FromQuery, BindRequired] DateTimeOffset expectedUpdatedAt,
         CancellationToken cancellationToken)
     {
         await voidHandler.HandleAsync(

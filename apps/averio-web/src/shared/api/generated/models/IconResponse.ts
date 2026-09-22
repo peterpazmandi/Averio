@@ -22,7 +22,7 @@ export interface IconResponse {
     /**
      * 
      */
-    id: any | null;
+    id: number;
     /**
      * 
      */
@@ -34,7 +34,7 @@ export interface IconResponse {
     /**
      * 
      */
-    sortOrder: any | null;
+    sortOrder: number;
 }
 
 /**
