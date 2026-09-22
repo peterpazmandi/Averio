@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +10,54 @@ import { dashboardQueries } from '../api/dashboardQueries';
 
 interface DashboardPageProps { userId: string; householdId: string; }
 
+interface DashboardCashFlowBarProps {
+    id: string;
+    tone: 'income' | 'expense';
+    label: string;
+    value: string;
+    height: number;
+    active: boolean;
+    onToggle: () => void;
+}
+
+function DashboardCashFlowBar({
+    id,
+    tone,
+    label,
+    value,
+    height,
+    active,
+    onToggle,
+}: DashboardCashFlowBarProps) {
+    return (
+        <button
+            type="button"
+            className={
+                `av-dashboard-bar ${tone}`
+                + (active ? ' is-active' : '')
+                + (height === 0 ? ' is-zero' : '')
+            }
+            style={{ height: `${height === 0 ? 2 : height}%` }}
+            aria-label={`${label}: ${value}`}
+            aria-pressed={active}
+            aria-describedby={`${id}-tooltip`}
+            onClick={onToggle}
+        >
+            <span
+                id={`${id}-tooltip`}
+                className="av-dashboard-bar-tooltip"
+                role="tooltip"
+            >
+                <span>{label}</span>
+                <strong>{value}</strong>
+            </span>
+        </button>
+    );
+}
+
 export function DashboardPage({ userId, householdId }: DashboardPageProps) {
     const { t, i18n } = useTranslation();
+    const [activeCashFlowBar, setActiveCashFlowBar] = useState<string | null>(null);
     const dashboardQuery = useQuery(dashboardQueries.household(userId, householdId));
 
     if (dashboardQuery.isPending) {
@@ -162,19 +209,99 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                             <span>{t('transactionManagement.reportingNote')}</span>
                                         </div>
                                         <div className="av-dashboard-bars">
-                                            {periods.map(period => (
-                                                <div className="av-dashboard-month" key={period.periodStart}>
-                                                    <div className="av-dashboard-columns">
-                                                        <span className="income"
-                                                            title={money(period.incomeAmount, currency)}
-                                                            style={{ height: `${Number(period.incomeAmount) === 0 ? 0 : Math.max(4, Number(period.incomeAmount) / max * 100)}%` }} />
-                                                        <span className="expense"
-                                                            title={money(period.expenseAmount, currency)}
-                                                            style={{ height: `${Number(period.expenseAmount) === 0 ? 0 : Math.max(4, Number(period.expenseAmount) / max * 100)}%` }} />
+                                            {periods.map(period => {
+                                                const month = monthLabel(
+                                                    period.periodStart,
+                                                );
+                                                const income = Number(
+                                                    period.incomeAmount,
+                                                );
+                                                const expense = Number(
+                                                    period.expenseAmount,
+                                                );
+                                                const incomeId =
+                                                    `dashboard-${currency}-${period.periodStart}-income`;
+                                                const expenseId =
+                                                    `dashboard-${currency}-${period.periodStart}-expense`;
+
+                                                return (
+                                                    <div
+                                                        className="av-dashboard-month"
+                                                        key={period.periodStart}
+                                                    >
+                                                        <div className="av-dashboard-columns">
+                                                            <DashboardCashFlowBar
+                                                                id={incomeId}
+                                                                tone="income"
+                                                                label={
+                                                                    `${month} · ${
+                                                                        t('statistics.income')
+                                                                    }`
+                                                                }
+                                                                value={money(
+                                                                    period.incomeAmount,
+                                                                    currency,
+                                                                )}
+                                                                height={
+                                                                    income === 0
+                                                                        ? 0
+                                                                        : Math.max(
+                                                                            4,
+                                                                            income / max * 100,
+                                                                        )
+                                                                }
+                                                                active={
+                                                                    activeCashFlowBar
+                                                                    === incomeId
+                                                                }
+                                                                onToggle={() =>
+                                                                    setActiveCashFlowBar(
+                                                                        current =>
+                                                                            current
+                                                                            === incomeId
+                                                                                ? null
+                                                                                : incomeId,
+                                                                    )}
+                                                            />
+
+                                                            <DashboardCashFlowBar
+                                                                id={expenseId}
+                                                                tone="expense"
+                                                                label={
+                                                                    `${month} · ${
+                                                                        t('statistics.expenses')
+                                                                    }`
+                                                                }
+                                                                value={money(
+                                                                    period.expenseAmount,
+                                                                    currency,
+                                                                )}
+                                                                height={
+                                                                    expense === 0
+                                                                        ? 0
+                                                                        : Math.max(
+                                                                            4,
+                                                                            expense / max * 100,
+                                                                        )
+                                                                }
+                                                                active={
+                                                                    activeCashFlowBar
+                                                                    === expenseId
+                                                                }
+                                                                onToggle={() =>
+                                                                    setActiveCashFlowBar(
+                                                                        current =>
+                                                                            current
+                                                                            === expenseId
+                                                                                ? null
+                                                                                : expenseId,
+                                                                    )}
+                                                            />
+                                                        </div>
+                                                        <small>{month}</small>
                                                     </div>
-                                                    <small>{monthLabel(period.periodStart)}</small>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
