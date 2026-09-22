@@ -28,6 +28,58 @@ export function negateDecimalAmount(value: string): string {
     return value.startsWith('-') ? value.slice(1) : '-' + value;
 }
 
+const DECIMAL_SCALE = 10_000n;
+const DECIMAL_AMOUNT_PATTERN = /^(-?)([0-9]+)(?:\.([0-9]{1,4}))?$/;
+
+function toScaledDecimal(value: string): bigint {
+    const match = DECIMAL_AMOUNT_PATTERN.exec(value);
+
+    if (!match) {
+        throw new Error('Invalid decimal amount returned by the API.');
+    }
+
+    const whole = BigInt(match[2]) * DECIMAL_SCALE;
+    const fraction = BigInt((match[3] ?? '').padEnd(4, '0') || '0');
+    const scaled = whole + fraction;
+
+    return match[1] === '-' ? -scaled : scaled;
+}
+
+function fromScaledDecimal(value: bigint): string {
+    if (value === 0n) {
+        return '0';
+    }
+
+    const sign = value < 0n ? '-' : '';
+    const absolute = value < 0n ? -value : value;
+    const whole = absolute / DECIMAL_SCALE;
+    const fraction = (absolute % DECIMAL_SCALE)
+        .toString()
+        .padStart(4, '0')
+        .replace(/0+$/, '');
+
+    return sign + whole + (fraction ? '.' + fraction : '');
+}
+
+export function sumDecimalAmounts(values: Iterable<string>): string {
+    let total = 0n;
+
+    for (const value of values) {
+        total += toScaledDecimal(value);
+    }
+
+    return fromScaledDecimal(total);
+}
+
+export function subtractDecimalAmounts(
+    minuend: string,
+    subtrahend: string,
+): string {
+    return fromScaledDecimal(
+        toScaledDecimal(minuend) - toScaledDecimal(subtrahend),
+    );
+}
+
 // Format the integer using BigInt; never convert the amount to Number.
 // Totals can contain more than 15 integer digits, so there is no account limit here.
 export function formatDecimalAmount(
@@ -35,7 +87,7 @@ export function formatDecimalAmount(
     currency: string,
     language: string,
 ): string {
-    const match = /^(-?)([0-9]+)(?:\.([0-9]{1,4}))?$/.exec(value);
+    const match = DECIMAL_AMOUNT_PATTERN.exec(value);
 
     if (!match) {
         throw new Error('Invalid decimal amount returned by the API.');

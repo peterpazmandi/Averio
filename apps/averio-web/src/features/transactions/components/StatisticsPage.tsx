@@ -9,7 +9,11 @@ import {
     subMonths,
 } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import {
+    formatDecimalAmount,
+    subtractDecimalAmounts,
+    sumDecimalAmounts,
+} from '../../../shared/money/decimalAmount';
 import { getCategoryDisplayName } from '../categoryLocalization';
 import { transactionQueries } from '../api/transactionQueries';
 import type {
@@ -176,17 +180,15 @@ export function StatisticsPage({
                     ]),
                 );
 
-                const income = periods.reduce(
-                    (sum, period) =>
-                        sum + Number(period.incomeAmount),
-                    0,
+                const income = sumDecimalAmounts(
+                    periods.map(period => period.incomeAmount),
                 );
 
-                const expenses = periods.reduce(
-                    (sum, period) =>
-                        sum + Number(period.expenseAmount),
-                    0,
+                const expenses = sumDecimalAmounts(
+                    periods.map(period => period.expenseAmount),
                 );
+
+                const net = subtractDecimalAmounts(income, expenses);
 
                 return (
                     <article
@@ -208,7 +210,7 @@ export function StatisticsPage({
                                     <dt>{t('statistics.income')}</dt>
                                     <dd>
                                         {formatDecimalAmount(
-                                            String(income),
+                                            income,
                                             currency,
                                             language,
                                         )}
@@ -218,7 +220,7 @@ export function StatisticsPage({
                                     <dt>{t('statistics.expenses')}</dt>
                                     <dd>
                                         {formatDecimalAmount(
-                                            String(expenses),
+                                            expenses,
                                             currency,
                                             language,
                                         )}
@@ -228,7 +230,7 @@ export function StatisticsPage({
                                     <dt>{t('transactionManagement.net')}</dt>
                                     <dd>
                                         {formatDecimalAmount(
-                                            String(income - expenses),
+                                            net,
                                             currency,
                                             language,
                                         )}
