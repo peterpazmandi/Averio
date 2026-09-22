@@ -108,7 +108,6 @@ export function CategoryPicker({
 
     useEffect(() => {
         if (!open) {
-            setPosition(null);
             return;
         }
 

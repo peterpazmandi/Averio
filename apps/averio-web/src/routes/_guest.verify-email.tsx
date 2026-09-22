@@ -66,6 +66,7 @@ function VerifyEmailPage() {
 			mutationFn:
 				verifyEmail,
 		});
+	const mutate = mutation.mutate;
 
 	useEffect(
 		() => {
@@ -79,7 +80,7 @@ function VerifyEmailPage() {
 
 			attempted.current = true;
 
-			mutation.mutate({
+			mutate({
 				userId:
 					search.userId,
 
@@ -88,6 +89,7 @@ function VerifyEmailPage() {
 			});
 		},
 		[
+			mutate,
 			search.userId,
 			search.token,
 		],

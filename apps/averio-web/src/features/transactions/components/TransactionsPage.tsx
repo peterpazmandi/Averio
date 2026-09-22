@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -52,12 +52,7 @@ export function TransactionsPage({
     const busy = mutations.create.isPending
         || mutations.update.isPending
         || mutations.void.isPending;
-
-    useEffect(() => {
-        if (!createRequested) return;
-        setEditor('new');
-        onCreateRequestHandled?.();
-    }, [createRequested, onCreateRequestHandled]);
+    const activeEditor = createRequested ? 'new' : editor;
 
     const monthOptions = useMemo(
         () => Array.from({ length: 12 }, (_, index) => {
@@ -154,37 +149,42 @@ export function TransactionsPage({
         searchInput.current?.focus();
     }
 
+    function closeEditor() {
+        setEditor(null);
+        if (createRequested) {
+            onCreateRequestHandled?.();
+        }
+    }
+
     async function save(
         request: TransactionInputDto,
         expectedUpdatedAt?: string,
     ) {
-        if (editor === 'new') {
+        if (activeEditor === 'new') {
             await mutations.create.mutateAsync(request);
             setNotice(t('transactionManagement.created'));
-        } else if (editor && expectedUpdatedAt) {
+        } else if (activeEditor && expectedUpdatedAt) {
             await mutations.update.mutateAsync({
-                id: editor.id,
+                id: activeEditor.id,
                 request: { ...request, expectedUpdatedAt },
             });
             setNotice(t('transactionManagement.edited'));
         }
 
-        setEditor(null);
+        closeEditor();
     }
 
     async function voidCurrent() {
-        if (!editor || editor === 'new') return;
+        if (!activeEditor || activeEditor === 'new') return;
 
         await mutations.void.mutateAsync({
-            id: editor.id,
-            expectedUpdatedAt: editor.updatedAt,
+            id: activeEditor.id,
+            expectedUpdatedAt: activeEditor.updatedAt,
         });
 
         setNotice(t('transactionManagement.voidedNotice'));
-        setEditor(null);
+        closeEditor();
     }
-
-    let previousDate = '';
 
     return (
         <section className="av-tx-page" aria-labelledby="transactions-title">
@@ -437,10 +437,11 @@ export function TransactionsPage({
                     className="av-timeline"
                     aria-label={t('transactionManagement.title')}
                 >
-                    {items.map(transaction => {
+                    {items.map((transaction, index) => {
                         const showDate =
-                            previousDate !== transaction.occurredOn;
-                        previousDate = transaction.occurredOn;
+                            index === 0
+                            || items[index - 1]?.occurredOn
+                                !== transaction.occurredOn;
 
                         const dateLabel = formatter.format(
                             new Date(
@@ -589,14 +590,14 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {editor && (
+            {activeEditor && (
                 <TransactionEditor
                     userId={userId}
                     householdId={householdId}
-                    transaction={editor === 'new' ? null : editor}
-                    onCancel={() => setEditor(null)}
+                    transaction={activeEditor === 'new' ? null : activeEditor}
+                    onCancel={closeEditor}
                     onSave={save}
-                    onVoid={editor === 'new'
+                    onVoid={activeEditor === 'new'
                         ? undefined
                         : voidCurrent}
                     busy={busy}

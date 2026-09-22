@@ -86,7 +86,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
                 return;
             }
 
-            void clear();
+            const timeout = window.setTimeout(
+                () => {
+                    void clear();
+                },
+                0,
+            );
+
+            return () => window.clearTimeout(timeout);
         },
         [
             clear,
