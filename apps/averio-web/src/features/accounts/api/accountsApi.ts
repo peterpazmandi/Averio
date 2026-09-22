@@ -1,45 +1,26 @@
 import {
     AccountsApi,
     AccountOwnerOptionsApi,
-    Configuration,
 } from '../../../shared/api/generated';
 import type {
     AccountResponse,
     CreateAccountRequest,
     UpdateAccountRequest,
 } from '../../../shared/api/generated';
-import { API_BASE_URL } from '../../../shared/api/apiConfiguration';
-import { apiFetch, apiFetchResponse } from '../../../shared/api/apiFetch';
+import { generatedApiConfiguration } from '../../../shared/api/generatedApiConfiguration';
 
-export type AccountData = AccountResponse & {
-    currentBalanceAmount: string;
-};
+export type AccountData = AccountResponse;
 
-// Keep the generated transport's serialization and the shared cookie/CSRF/error policy
-// for writes. Account reads deliberately use a small UI view model because the
-// transaction branch adds a derived currentBalanceAmount read-model field.
-const configuration = new Configuration({
-    basePath: API_BASE_URL,
-    fetchApi: (url, init) =>
-        apiFetchResponse(String(url).slice(API_BASE_URL.length), init),
-    middleware: [{
-        onError: async ({ error }) => {
-            throw error;
-        },
-    }],
-});
-
-const accounts = new AccountsApi(configuration);
-const owners = new AccountOwnerOptionsApi(configuration);
+const accounts = new AccountsApi(generatedApiConfiguration);
+const owners = new AccountOwnerOptionsApi(generatedApiConfiguration);
 
 export const getAccounts = (
     householdId: string,
     includeArchived = false,
     signal?: AbortSignal,
 ) => {
-    const id = encodeURIComponent(householdId);
-    return apiFetch<AccountData[]>(
-        `/api/v1/households/${id}/accounts?includeArchived=${includeArchived}`,
+    return accounts.apiV1HouseholdsHouseholdIdAccountsGet(
+        { householdId, includeArchived },
         { signal },
     );
 };
@@ -48,8 +29,8 @@ export const getAccount = (
     householdId: string,
     accountId: string,
     signal?: AbortSignal,
-) => apiFetch<AccountData>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/accounts/${encodeURIComponent(accountId)}`,
+) => accounts.apiV1HouseholdsHouseholdIdAccountsAccountIdGet(
+    { householdId, accountId },
     { signal },
 );
 

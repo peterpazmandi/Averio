@@ -1,52 +1,17 @@
-import { apiFetch } from '../../../shared/api/apiFetch';
-import type {
-    AccountResponse,
-    DashboardResponse,
-} from '../../../shared/api/generated';
+import { DashboardApi } from '../../../shared/api/generated';
+import type { DashboardResponse } from '../../../shared/api/generated';
+import { generatedApiConfiguration } from '../../../shared/api/generatedApiConfiguration';
 
-export interface DashboardCashFlowPeriod {
-    currency: string;
-    periodStart: string;
-    incomeAmount: string;
-    expenseAmount: string;
-    transactionCount: number;
-}
+export type DashboardData = DashboardResponse;
 
-export interface DashboardLatestTransaction {
-    id: string;
-    accountId: string;
-    accountName: string;
-    currency: string;
-    kind: 'Income' | 'Expense';
-    visibility: 'Household' | 'Private';
-    amount: string;
-    description: string;
-    note: string | null;
-    occurredOn: string;
-    status: 'Posted' | 'Voided';
-    createdAt: string;
-    updatedAt: string;
-    canModify: boolean;
-}
-
-export type DashboardAccount = AccountResponse & {
-    currentBalanceAmount: string;
-};
-
-export type DashboardData = Omit<DashboardResponse, 'accounts'> & {
-    accounts: DashboardAccount[];
-    cashFlow: DashboardCashFlowPeriod[];
-    latestTransactions: DashboardLatestTransaction[];
-};
+const dashboard = new DashboardApi(generatedApiConfiguration);
 
 export function getDashboard(
     householdId: string,
     signal?: AbortSignal,
 ): Promise<DashboardData> {
-    const id = encodeURIComponent(householdId);
-
-    return apiFetch<DashboardData>(
-        `/api/v1/households/${id}/dashboard`,
+    return dashboard.apiV1HouseholdsHouseholdIdDashboardGet(
+        { householdId },
         { signal },
     );
 }
