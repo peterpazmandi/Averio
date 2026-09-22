@@ -1,4 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+    type CSSProperties,
+    useEffect,
+    useId,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { getCategoryDisplayName } from '../categoryLocalization';
@@ -224,6 +231,10 @@ export function CategoryPicker({
                                 <section
                                     className="av-category-group"
                                     key={parent.id}
+                                    style={{
+                                        '--category-accent':
+                                            parent.accentColor,
+                                    } as CSSProperties}
                                 >
                                     <button
                                         type="button"

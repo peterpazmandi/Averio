@@ -195,9 +195,66 @@
 .av-ui .av-dashboard-bars { height:170px; display:flex; align-items:flex-end; gap:9px; padding:8px 3px 0; border-bottom:1px solid var(--border); }
 .av-ui .av-dashboard-month { flex:1; height:100%; min-width:34px; display:grid; grid-template-rows:1fr 18px; align-items:end; gap:3px; text-align:center; color:var(--muted); }
 .av-ui .av-dashboard-columns { height:100%; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
-.av-ui .av-dashboard-columns span { width:min(18px,38%); min-height:4px; border-radius:6px 6px 1px 1px; }
-.av-ui .av-dashboard-columns .income { background:var(--brand); }
-.av-ui .av-dashboard-columns .expense { background:#D92D20; }
+.av-ui .av-dashboard-bar {
+    position:relative;
+    width:min(18px,38%);
+    min-height:4px;
+    padding:0;
+    border:0;
+    border-radius:6px 6px 1px 1px;
+    cursor:pointer;
+    transition:transform .14s ease,filter .14s ease;
+}
+.av-ui .av-dashboard-bar.income { background:var(--brand); }
+.av-ui .av-dashboard-bar.expense { background:#D92D20; }
+.av-ui .av-dashboard-bar.is-zero { opacity:.35; }
+.av-ui .av-dashboard-bar:hover,
+.av-ui .av-dashboard-bar:focus-visible,
+.av-ui .av-dashboard-bar.is-active {
+    transform:translateY(-2px);
+    filter:brightness(1.08);
+    z-index:8;
+}
+.av-ui .av-dashboard-bar:focus-visible {
+    outline:2px solid var(--text);
+    outline-offset:2px;
+}
+.av-ui .av-dashboard-bar-tooltip {
+    position:absolute;
+    left:50%;
+    bottom:calc(100% + 8px);
+    transform:translate(-50%,4px);
+    z-index:30;
+    min-width:120px;
+    max-width:190px;
+    padding:8px 9px;
+    border:1px solid var(--border);
+    border-radius:9px;
+    background:var(--panel);
+    color:var(--text);
+    box-shadow:var(--shadow);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    text-align:left;
+    white-space:nowrap;
+    transition:opacity .12s ease,transform .12s ease,visibility .12s ease;
+}
+.av-ui .av-dashboard-bar-tooltip span,
+.av-ui .av-dashboard-bar-tooltip strong { display:block; }
+.av-ui .av-dashboard-bar-tooltip span {
+    color:var(--muted);
+    font-size:8px;
+    margin-bottom:2px;
+}
+.av-ui .av-dashboard-bar-tooltip strong { font-size:10px; }
+.av-ui .av-dashboard-bar:hover .av-dashboard-bar-tooltip,
+.av-ui .av-dashboard-bar:focus-visible .av-dashboard-bar-tooltip,
+.av-ui .av-dashboard-bar.is-active .av-dashboard-bar-tooltip {
+    opacity:1;
+    visibility:visible;
+    transform:translate(-50%,0);
+}
 .av-ui .av-chart-legend { display:flex; gap:14px; margin-top:10px; color:var(--muted); font-size:10px; }
 .av-ui .av-chart-legend i { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
 .av-ui .av-chart-legend i.income { background:var(--brand); }
