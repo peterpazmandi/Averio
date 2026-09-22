@@ -111,7 +111,11 @@ export function TransactionsPage({
             filters,
         ),
         initialPageParam: undefined as
-            | { cursorDate: string; cursorCreatedAt: string }
+            | {
+                cursorDate: string;
+                cursorCreatedAt: string;
+                cursorId: string;
+            }
             | undefined,
         queryFn: ({ pageParam, signal }) => getTransactions(
             householdId,
@@ -127,6 +131,7 @@ export function TransactionsPage({
             return {
                 cursorDate: last.occurredOn,
                 cursorCreatedAt: last.createdAt,
+                cursorId: last.id,
             };
         },
     });

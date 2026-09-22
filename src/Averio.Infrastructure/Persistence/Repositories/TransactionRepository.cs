@@ -72,17 +72,25 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                         && EF.Functions.ILike(label.Name, pattern))));
         }
 
-        if (query.CursorDate is not null && query.CursorCreatedAt is not null)
+        if (query.CursorDate is not null
+            && query.CursorCreatedAt is not null
+            && query.CursorId is not null)
         {
             filtered = filtered.Where(item =>
                 item.Transaction.OccurredOn < query.CursorDate
                 || (item.Transaction.OccurredOn == query.CursorDate
-                    && item.Transaction.CreatedAt < query.CursorCreatedAt));
+                    && (
+                        item.Transaction.CreatedAt < query.CursorCreatedAt
+                        || (item.Transaction.CreatedAt == query.CursorCreatedAt
+                            && item.Transaction.Id.CompareTo(
+                                query.CursorId.Value) < 0)
+                    )));
         }
 
         var rows = await filtered
             .OrderByDescending(item => item.Transaction.OccurredOn)
             .ThenByDescending(item => item.Transaction.CreatedAt)
+            .ThenByDescending(item => item.Transaction.Id)
             .Take(query.PageSize + 1)
             .Select(item => new TransactionBaseRow(
                 item.Transaction.Id,

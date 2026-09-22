@@ -34,7 +34,8 @@ public sealed record TransactionQuery(
     string? Search,
     int PageSize,
     DateOnly? CursorDate,
-    DateTimeOffset? CursorCreatedAt);
+    DateTimeOffset? CursorCreatedAt,
+    Guid? CursorId);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,

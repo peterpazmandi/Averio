@@ -20,6 +20,7 @@ public sealed class GetTransactionsHandler(
         int pageSize,
         DateOnly? cursorDate,
         DateTimeOffset? cursorCreatedAt,
+        Guid? cursorId,
         CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId
@@ -45,7 +46,8 @@ public sealed class GetTransactionsHandler(
                 string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
                 size,
                 cursorDate,
-                cursorCreatedAt),
+                cursorCreatedAt,
+                cursorId),
             cancellationToken);
 
         return new TransactionPageResult(

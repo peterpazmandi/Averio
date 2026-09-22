@@ -131,6 +131,7 @@ export interface TransactionFilters {
     pageSize?: number;
     cursorDate?: string;
     cursorCreatedAt?: string;
+    cursorId?: string;
 }
 
 function queryString<T extends object>(filters: T) {
