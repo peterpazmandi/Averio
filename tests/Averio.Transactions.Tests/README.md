@@ -1,42 +1,41 @@
-# Transaction regression checks
+# Transaction foundation verification
 
-Run from the repository root:
+Run the dependency-free transaction regression suite from the repository root:
 
 ```sh
 dotnet run --project tests/Averio.Transactions.Tests
 ```
 
-This follows the existing dependency-free executable regression-suite approach used by the account slice. It covers item-derived totals, category snapshots, reusable labels, optimistic concurrency, void semantics, privacy rules, the Category/Icon/Label EF model, and dimension-aware account/category aggregates.
+It covers transaction totals and validation, category snapshots, reusable
+labels, version advancement, void semantics, visibility rules, and the EF model
+for categories, icons, labels, transaction details, and dimension aggregates.
 
-The aggregate repository uses PostgreSQL-specific atomic upserts, so it still needs a disposable PostgreSQL integration check before release. Verify:
+## PostgreSQL integration suite
 
-1. Apply `20260921100602_AddTransactionLedger`, `20260921133000_AddTransactionDetails`, `20260921151000_AddReusableCatalogsAndDimensionAggregates`, and `20260921234000_LocalizeSystemCategories`.
-2. Verify exactly 100 base category rows and at least 200 icon-catalog rows are present. For every base row verify `system_key` is populated and `name` is null; for a custom row verify the inverse.
-3. Verify Category has no foreign key to Icons and changing the icon catalog does not mutate existing category icon values.
-4. Confirm the migration maps existing transaction items to a valid category, defaulting to Uncategorized when no base-category name matches.
-5. Confirm legacy transaction-attached label rows are deduplicated into reusable `labels` and linked through `transaction_labels`.
-6. Create Household and Account labels and verify the label list exposes Household labels plus only the selected account's Account labels.
-7. Create a multi-item transaction with items in different categories and verify `transactions.amount` equals the exact decimal sum.
-8. Verify account aggregates receive one transaction contribution while category aggregates receive item amounts/counts, without multiplying the account transaction count.
-9. Verify Day, Month, and Year aggregate rows are written atomically for create/edit/void.
-10. Change an item's category and verify the old category contribution is removed and the new category contribution is added exactly once.
-11. Change transaction date/type/account and verify both account and category buckets are reversed/reapplied correctly.
-12. Confirm private transactions do not enter household account or category aggregates.
-13. Confirm category-statistics queries still filter by the source account's current visibility/reporting participation.
-14. Verify EUR, USD, and HUF remain separate in account and category reporting.
-15. Race two edits and verify the losing write rolls back item/label/aggregate changes.
-16. Rebuild ledger-derived account/category totals independently and compare them with aggregate rows to detect drift.
+The provider-specific behavior is covered by a separate executable suite. Pass
+it a PostgreSQL server connection whose user may create temporary databases:
 
+```sh
+export AVERIO_TEST_CONNECTION_STRING='Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres'
+dotnet run --project tests/Averio.Persistence.Tests
+```
 
-## Frontend review checks added 2026-09-21
+The suite creates a uniquely named `averio_hardening_*` database, applies every
+migration, performs its checks, and drops the database in a `finally` block. It
+does not clear or reuse the database named in the connection string.
 
-- Category selection opens a Bento-style grouped picker instead of a 100-row native select.
-- Category picker search matches parent groups and child categories and works on desktop/mobile.
-- Transaction overview uses the same search + expandable filter-panel interaction as Accounts.
-- Statistics income/expense bars expose exact formatted values on hover and keyboard focus.
-- Clicking/tapping a statistics bar keeps that value visible until the same or another bar is clicked.
-- Create/edit/void invalidates Accounts and Dashboard queries so derived balances refresh immediately.
+The integration checks verify:
 
-- Verify all 100 system-category keys resolve to English, German, and Hungarian frontend strings.
-- Switch language while the category picker is open and confirm parent/child names and search results immediately use the selected language.
-- Confirm the trailing plus button is the only default label-creation control; opening it reveals the creator and Cancel collapses it without adding/selecting a label.
+- the migration chain through `20260921234000_LocalizeSystemCategories`
+- exactly 100 localized base categories and 240 catalog icons
+- rollback of the ledger write when an aggregate write fails
+- persisted items, labels, search, balances, and currency-separated aggregates
+- reversal/reapplication of aggregate buckets on edit
+- stale transaction-version conflicts
+- aggregate and balance reversal plus idempotency on void
+- private-account and private-transaction isolation for a non-owner member
+- PostgreSQL enforcement of the `updated_at` optimistic concurrency token
+
+GitHub Actions runs both suites, the account regression suite, the frontend
+build/lint, and generated-client drift verification for every pull request to
+`develop`.
