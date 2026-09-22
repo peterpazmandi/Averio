@@ -145,9 +145,24 @@ Describes who legally/physically holds an account when relevant. Holder informat
 
 ## Opening/balance anchor
 
-Accounts need a defined starting balance/date so users can begin tracking without fabricating all history before Averio.
+Accounts have a persisted starting balance/date so users can begin tracking without fabricating all financial history before Averio.
 
-The final persistence model may use an opening/anchor balance plus date and subsequent ledger movement.
+The anchor is immutable in the normal Account Management edit flow. It is the opening balance at the start of `BalanceAnchorDate`.
+
+**Current balance is a read model, not a second stored mutable balance.** For a requested as-of date:
+
+```text
+current balance
+= balance anchor
++ posted visible income from anchor date through as-of date
+- posted visible expense from anchor date through as-of date
+```
+
+Transactions before the anchor date do not change the current balance. Future-dated transactions do not change today's balance until their date is reached.
+
+Privacy is applied before the movement is added. Household-visible transactions are included for members allowed to see the account. Private transactions are included only for an account holder who is allowed to see them. This prevents a private transaction from leaking indirectly through a shared current-balance number.
+
+Creating, editing or voiding a transaction never rewrites the anchor. The UI invalidates account/dashboard reads so the derived balance is recalculated from the authoritative ledger.
 
 ## Money
 
@@ -165,117 +180,98 @@ Account currency is immutable. Cross-currency conversion is explicit, not an aut
 
 ## Transaction
 
-A ledger event recorded against one or more financial containers.
+An authoritative income/expense ledger entry associated with one account.
 
-Conceptual kinds:
+The implemented Transaction Management slice deliberately models **Income** and **Expense** only. A transaction uses the account's immutable currency and contains one or more ordered **TransactionItem** records. Its positive total is derived from the exact decimal sum of item amounts; the transaction kind supplies the cash-flow direction.
 
-- Income
-- Expense
-- Transfer
+A transaction may also contain free-text Merchant/Store, optional note, date, Household/Private visibility, creator membership, status/timestamps, and zero or more reusable labels.
 
-Typical data includes account, date/time, amount, currency, merchant/store, category, note, optional items, visibility/privacy, recurring linkage, receipt linkage, and timestamps.
+`Description` is a derived compact summary: Merchant/Store when available, otherwise the first item description.
+
+### TransactionItem
+
+A receipt or other transaction can be split into multiple items. Each item stores:
+
+- ordered position
+- description
+- CategoryId
+- CategoryName snapshot
+- CategoryIcon snapshot
+- amount in the transaction/account currency
+
+Every item must have a valid available Category. The base Uncategorized category provides a low-friction fallback.
+
+The Category ID is the classification identity. Name/icon snapshots preserve transaction-history presentation if the category display metadata changes later.
+
+### Transaction labels
+
+Transactions select reusable Label entities through a join table.
+
+Label scope:
+
+- **Household** — reusable throughout the household
+- **Account** — reusable only on the specific account
+
+The selected account controls which Account labels are valid. Label scope never grants transaction visibility and cannot bypass account/transaction privacy rules.
+
+## Category
+
+Category is a first-class classification entity for transaction items.
+
+Core fields include Id, optional HouseholdId, optional ParentId, SystemKey or Name, kind (Expense/Income/Both), Icon, AccentColor, SortOrder, base/archive flags, and timestamps.
+
+Categories support a parent-child tree through `ParentId`. The initial product seed contains exactly 100 system categories: 20 parent categories with four children each.
+
+System and custom category naming are intentionally different:
+
+- **System category:** `SystemKey` is required and `Name` is null. The database stores only a stable product localization key such as `groceries-supermarket`; it does not store an English display name.
+- **Custom household category:** `SystemKey` is null and `Name` contains the user-supplied category name.
+
+The database enforces this either/or rule. System categories are product-wide rows with no HouseholdId. Custom categories belong to one Household.
+
+The frontend owns translations for system-category keys. English, German, and Hungarian resources contain all 100 system category names. Changing UI language therefore changes category display/search text without rewriting financial data.
+
+Transaction item category snapshots store the stable system key for a system category or the custom name for a custom category, together with the copied icon. The live CategoryId remains the classification identity.
+
+### Category icons
+
+`icons` is a reusable icon chooser/catalog seeded with 240 values.
+
+Category does **not** reference an Icon row. The chosen icon value is copied into `Category.Icon`. This deliberate snapshot rule prevents future icon-catalog maintenance from changing existing categories unexpectedly.
+
+## Label
+
+Label is a reusable transaction-tag catalog scoped to the household context.
+
+A Household label has no AccountId. An Account label has exactly one AccountId. Normalized-name uniqueness is enforced inside each scope.
+
+Transactions relate to labels through `transaction_labels`; label text/scope is not duplicated into every transaction row.
 
 ## Transfer
 
 A transfer is paired movement between financial containers, not a normal expense/income pair.
 
-Transfer linkage must prevent double counting and orphaned counterpart movements.
+Transfers are intentionally outside the first Transaction Management slice. They must be implemented as linked movements with atomic creation/update/void behavior so they cannot be double-counted or orphaned. Cross-currency transfers additionally require explicit FX semantics.
 
-Cross-currency transfers require explicit FX semantics.
+## Reporting aggregates
 
-## Transaction privacy
+Statistics are derived/read-model data, not the authoritative ledger.
 
-Transaction visibility can become more restrictive than account-level visibility where needed, but must never bypass the account's privacy boundary.
+Averio synchronously maintains Account and Category aggregate dimensions at Day, Month, and Year grain.
 
-Private details are server-filtered before presentation/aggregation.
+Every aggregate retains the source AccountId so current account visibility/reporting participation can be applied before values are returned. This is important for Category aggregates: a category total must never reveal spending from a private or excluded account.
 
-## Transaction item
+Account aggregates use the transaction's full item-derived amount and count transactions. Category aggregates use item amounts grouped by directly assigned CategoryId and count categorized items.
 
-Optional receipt/import line item. May include description, quantity, unit price, total, and later category details.
+Parent/child category rollups are intentionally not persisted multiple times. Hierarchy rollups can be composed at read time from direct category rows.
 
-Itemization is not required for ordinary manual transactions.
-
-## Category
-
-Hierarchical classification with parent/subcategory support.
-
-Conceptual fields/behaviors:
-
-- ParentCategoryId
-- Name
-- Icon
-- optional accent color
-- SortOrder
-- Pinned
-- household/personal semantics when required
-
-System category localization must be separated from user-created names.
-
-## Recurring rule
-
-Represents expected repeated activity. It is not itself a completed transaction.
-
-A future system may distinguish user-created recurring rules from automatically inferred recurring patterns.
-
-## Goal
-
-A savings/financial target. Goals may be household/shared, personal, or private.
-
-Potential data: scope/owner, name, target amount/currency, target date, funding relationships, visibility, status.
-
-A private goal must not leak its target or activity without explicit sharing.
-
-## Personal money
-
-Personal money is a household-budget sub-ledger for individual autonomy.
-
-Conceptually:
-
-```text
-Allocation
-+ Carry-over
-- Chargeable personal spending
-= Available personal money
-```
-
-Example:
-
-```text
-Allocation: +€300
-Spend:       -€50
-Spend:       -€80
-Spend:       -€20
-----------------
-Available:   €150
-```
-
-Unused amount carries into the next period by default.
-
-### PersonalMoneyAllocation
-
-An allocation changes budget responsibility. It is not automatically a household expense.
-
-If €300 is allocated while money remains in a shared account, household cash has not left. Counting both the allocation and later purchase as expenses would double-count.
-
-### Crossing into a private account
-
-When real household cash moves into a private financial boundary, household reporting may intentionally stop at that boundary. Subsequent private merchant purchases must then not be counted again as separate household expenses.
-
-This preserves privacy and prevents double counting. The exact implementation should be finalized before the full personal-money feature is coded.
+Only posted Household-visible transaction contributions enter household reporting aggregates. Ledger and aggregate mutations are atomic. Currency series remain separate and are never directly summed.
 
 ## Goal funding vs ledger movement
 
 Moving money to a savings account linked to a goal is not automatically consumption. The goal contribution is planning semantics while the ledger movement may be a transfer.
 
 Keep planning semantics and cash-flow semantics distinct.
-
-## Reporting aggregates
-
-Statistics are derived/read-model data, not the authoritative ledger.
-
-Potential dimensions include period, category, account, merchant/store, and household/member scope.
-
-Private data must be filtered or intentionally anonymized before aggregation results reach a consumer.
 
 ## Domain relationships at a glance
 

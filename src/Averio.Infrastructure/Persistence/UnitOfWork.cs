@@ -1,7 +1,8 @@
 using Averio.Application.Common.Abstractions;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore;
 using Averio.Application.Common.Exceptions;
+using Averio.Domain.Transactions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Averio.Infrastructure.Persistence;
 
@@ -19,9 +20,18 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         {
             return await dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException exception)
         {
-            throw new ConflictException("account_changed", "Error_AccountChanged");
+            if (exception.Entries.Any(entry => entry.Entity is Transaction))
+            {
+                throw new ConflictException(
+                    "transaction_changed",
+                    "Error_TransactionChanged");
+            }
+
+            throw new ConflictException(
+                "account_changed",
+                "Error_AccountChanged");
         }
     }
 

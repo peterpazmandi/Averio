@@ -85,6 +85,12 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IHouseholdRepository, HouseholdRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IAccountBalanceReader, AccountBalanceReader>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IIconCatalogRepository, IconCatalogRepository>();
+        services.AddScoped<ILabelRepository, LabelRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<ITransactionAggregateRepository, TransactionAggregateRepository>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserSessionService, UserSessionService>();
         services.AddSingleton<IPasswordResetRequestThrottle, PasswordResetRequestThrottle>();

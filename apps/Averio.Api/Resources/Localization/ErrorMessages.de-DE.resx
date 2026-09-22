@@ -265,5 +265,33 @@
   </data>
   <data name="Error_AccountArchived" xml:space="preserve"><value>Aktiviere das Konto vor der Bearbeitung wieder.</value></data>
   <data name="Error_AccountChanged" xml:space="preserve"><value>Dieses Konto wurde geändert. Lade es neu und versuche es erneut.</value></data>
+  <data name="Validation_TransactionAccountRequired" xml:space="preserve"><value>Wähle ein Konto aus.</value></data>
+  <data name="Validation_TransactionKindInvalid" xml:space="preserve"><value>Wähle einen gültigen Transaktionstyp aus.</value></data>
+  <data name="Validation_TransactionVisibilityInvalid" xml:space="preserve"><value>Wähle eine gültige Sichtbarkeit aus.</value></data>
+  <data name="Validation_TransactionAmountInvalid" xml:space="preserve"><value>Gib einen positiven Betrag mit höchstens vier Dezimalstellen ein.</value></data>
+  <data name="Validation_TransactionDescriptionInvalid" xml:space="preserve"><value>Gib eine Beschreibung mit höchstens 160 Zeichen ein.</value></data>
+  <data name="Validation_TransactionNoteTooLong" xml:space="preserve"><value>Die Notiz darf höchstens 500 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionDateRequired" xml:space="preserve"><value>Wähle ein Transaktionsdatum aus.</value></data>
+  <data name="Validation_CashFlowDateRangeInvalid" xml:space="preserve"><value>Wähle einen gültigen Zeitraum für den Cashflow aus.</value></data>
+  <data name="Validation_CashFlowPeriodInvalid" xml:space="preserve"><value>Wähle eine gültige Cashflow-Periode aus.</value></data>
+  <data name="Error_TransactionVisibilityNotAllowed" xml:space="preserve"><value>Diese Sichtbarkeit ist für das ausgewählte Konto nicht zulässig.</value></data>
+  <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>Eine Transaktion kann nicht auf ein Konto mit einer anderen Währung verschoben werden.</value></data>
+  <data name="Error_TransactionChanged" xml:space="preserve"><value>Diese Transaktion wurde geändert. Lade sie neu und versuche es erneut.</value></data>
+  <data name="Error_TransactionVoided" xml:space="preserve"><value>Diese Transaktion wurde bereits storniert und kann nicht mehr bearbeitet werden.</value></data>
+  <data name="Validation_TransactionMerchantTooLong" xml:space="preserve"><value>Händler/Geschäft darf höchstens 160 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionItemsInvalid" xml:space="preserve"><value>Füge zwischen 1 und 100 Transaktionspositionen hinzu.</value></data>
+  <data name="Validation_TransactionItemDescriptionInvalid" xml:space="preserve"><value>Jede Position benötigt eine Beschreibung mit höchstens 160 Zeichen.</value></data>
+  <data name="Validation_TransactionItemCategoryTooLong" xml:space="preserve"><value>Eine Positionskategorie darf höchstens 80 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionTotalInvalid" xml:space="preserve"><value>Die Transaktionssumme muss positiv und innerhalb des unterstützten Wertebereichs liegen.</value></data>
+  <data name="Validation_TransactionLabelsTooMany" xml:space="preserve"><value>Eine Transaktion kann höchstens 20 Labels haben.</value></data>
+  <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Dasselbe Label kann im gleichen Bereich nicht doppelt hinzugefügt werden.</value></data>
+  <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>Ein Labelname ist erforderlich und darf höchstens 40 Zeichen enthalten.</value></data>
+  <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>Wähle Haushalt oder Konto als Label-Bereich.</value></data>
+  <data name="Validation_TransactionCategoryRequired" xml:space="preserve"><value>Wähle für jede Transaktionsposition eine Kategorie.</value></data>
+  <data name="Validation_TransactionCategoryInvalid" xml:space="preserve"><value>Eine oder mehrere ausgewählte Kategorien sind nicht verfügbar.</value></data>
+  <data name="Validation_TransactionCategoryKindInvalid" xml:space="preserve"><value>Die ausgewählte Kategorie kann für diesen Transaktionstyp nicht verwendet werden.</value></data>
+  <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Eine oder mehrere ausgewählte Labels sind für dieses Konto nicht verfügbar.</value></data>
+  <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>Konto-Labels benötigen ein Konto.</value></data>
+  <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>Haushalts-Labels dürfen nicht an ein Konto gebunden sein.</value></data>
 </root>
 

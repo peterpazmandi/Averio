@@ -147,7 +147,7 @@ Unless the repository changes after this status date, do not claim these are com
 - recurring transaction domain
 - category management domain
 - goals domain
-- dashboard financial aggregates
+- dashboard cash-flow aggregates
 - statistics/reporting domain
 - personal-money ledger/rollover
 - historical CSV/XLSX import
@@ -188,3 +188,31 @@ Personal-money allocation/rollover is also retained as an important future featu
 ## Recommended next implementation milestone
 
 Implement the Transaction/Transfer ledger foundation, including immutable currency handling, explicit transfer linkage, privacy-aware reporting, balance-anchor boundaries, and database-backed integration coverage. Scope-transfer and balance-reconciliation workflows are deliberately deferred until their financial-history semantics are settled.
+
+
+### Transaction Management review additions — 2026-09-21
+
+The current transaction-management branch now includes:
+
+- itemized Income/Expense transactions with transaction total derived from exact item amounts
+- free-text Merchant/Store
+- a first-class hierarchical Category model with exactly 100 seeded base categories
+- a 240-entry seeded icon catalog; categories store copied icon values and have no Icon foreign key
+- required per-item CategoryId plus category name/icon history snapshots
+- reusable Household and Account labels, selectable on every transaction form and creatable inline
+- label selection before item entry in the editor
+- four visually separated editor sections: basics, labels, items, details/privacy
+- green Income and red Expense visual semantics
+- header, dashboard and transaction-page Add transaction entry points opening the same editor
+- synchronous Account and Category aggregates at Day, Month and Year grain
+- yearly category statistics grouped by currency
+- source AccountId retained on Category aggregates so current privacy/reporting rules are enforced before statistics are returned
+- searchable Bento-style category selector in the transaction editor
+- system categories persist only stable localization keys; custom categories persist only their household-defined names
+- all 100 system-category names are localized in the React frontend for English, German, and Hungarian
+- label creation is collapsed behind the trailing plus button in the label chip row and can be cancelled without changing the transaction
+- transaction overview search/filter interaction aligned with Account Management
+- statistics chart bars reveal their exact value on hover/focus and remain visible when clicked/tapped
+- account/dashboard current balances are derived from the balance anchor plus posted requester-visible ledger movements; transaction mutations invalidate account and dashboard queries
+
+The full Category Management page (create/edit/reorder/archive/custom icons) is still a future UI slice. The persistence model and icon/category APIs now provide its foundation.

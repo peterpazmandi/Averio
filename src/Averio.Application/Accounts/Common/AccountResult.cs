@@ -16,12 +16,14 @@ public sealed record AccountResult(
     string Currency,
     decimal BalanceAnchorAmount,
     DateOnly BalanceAnchorDate,
+    decimal CurrentBalanceAmount,
     string Status,
     DateTimeOffset UpdatedAt)
 {
     public static AccountResult From(
         Account account,
-        IReadOnlyDictionary<Guid, string?> memberNames)
+        IReadOnlyDictionary<Guid, string?> memberNames,
+        decimal currentBalanceAmount)
     {
         var owners = account.Owners
             .OrderBy(owner => owner.HouseholdMemberId)
@@ -31,10 +33,19 @@ public sealed record AccountResult(
             .ToArray();
 
         return new AccountResult(
-            account.Id, account.HouseholdId, owners, account.Name,
-            account.Type.ToString(), account.Scope.ToString(),
-            account.Visibility.ToString(), account.IncludeInHouseholdReports,
-            account.Currency.Value, account.BalanceAnchorAmount,
-            account.BalanceAnchorDate, account.Status.ToString(), account.UpdatedAt);
+            account.Id,
+            account.HouseholdId,
+            owners,
+            account.Name,
+            account.Type.ToString(),
+            account.Scope.ToString(),
+            account.Visibility.ToString(),
+            account.IncludeInHouseholdReports,
+            account.Currency.Value,
+            account.BalanceAnchorAmount,
+            account.BalanceAnchorDate,
+            currentBalanceAmount,
+            account.Status.ToString(),
+            account.UpdatedAt);
     }
 }

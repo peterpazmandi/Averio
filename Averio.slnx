@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Averio.Accounts.Tests/Averio.Accounts.Tests.csproj" />
+    <Project Path="tests/Averio.Transactions.Tests/Averio.Transactions.Tests.csproj" />
   </Folder>
 </Solution>
 

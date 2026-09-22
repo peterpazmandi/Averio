@@ -265,5 +265,33 @@
   </data>
   <data name="Error_AccountArchived" xml:space="preserve"><value>Szerkesztés előtt aktiváld újra a számlát.</value></data>
   <data name="Error_AccountChanged" xml:space="preserve"><value>A számla megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
+  <data name="Validation_TransactionAccountRequired" xml:space="preserve"><value>Válassz számlát.</value></data>
+  <data name="Validation_TransactionKindInvalid" xml:space="preserve"><value>Válassz érvényes tranzakciótípust.</value></data>
+  <data name="Validation_TransactionVisibilityInvalid" xml:space="preserve"><value>Válassz érvényes láthatóságot.</value></data>
+  <data name="Validation_TransactionAmountInvalid" xml:space="preserve"><value>Adj meg pozitív összeget legfeljebb négy tizedesjeggyel.</value></data>
+  <data name="Validation_TransactionDescriptionInvalid" xml:space="preserve"><value>Adj meg legfeljebb 160 karakteres leírást.</value></data>
+  <data name="Validation_TransactionNoteTooLong" xml:space="preserve"><value>A megjegyzés legfeljebb 500 karakter lehet.</value></data>
+  <data name="Validation_TransactionDateRequired" xml:space="preserve"><value>Válassz tranzakciós dátumot.</value></data>
+  <data name="Validation_CashFlowDateRangeInvalid" xml:space="preserve"><value>Válassz érvényes cash-flow időszakot.</value></data>
+  <data name="Validation_CashFlowPeriodInvalid" xml:space="preserve"><value>Válassz érvényes cash-flow bontást.</value></data>
+  <data name="Error_TransactionVisibilityNotAllowed" xml:space="preserve"><value>A kiválasztott számlán ez a láthatóság nem engedélyezett.</value></data>
+  <data name="Error_TransactionCurrencyChangeNotAllowed" xml:space="preserve"><value>A tranzakció nem helyezhető át más pénznemű számlára.</value></data>
+  <data name="Error_TransactionChanged" xml:space="preserve"><value>A tranzakció megváltozott. Töltsd újra, és próbáld meg ismét.</value></data>
+  <data name="Error_TransactionVoided" xml:space="preserve"><value>Ezt a tranzakciót már sztornózták, ezért nem szerkeszthető.</value></data>
+  <data name="Validation_TransactionMerchantTooLong" xml:space="preserve"><value>A kereskedő/üzlet neve legfeljebb 160 karakter lehet.</value></data>
+  <data name="Validation_TransactionItemsInvalid" xml:space="preserve"><value>Adj hozzá 1 és 100 közötti tranzakciós tételt.</value></data>
+  <data name="Validation_TransactionItemDescriptionInvalid" xml:space="preserve"><value>Minden tételhez legfeljebb 160 karakteres leírás szükséges.</value></data>
+  <data name="Validation_TransactionItemCategoryTooLong" xml:space="preserve"><value>A tétel kategóriája legfeljebb 80 karakter lehet.</value></data>
+  <data name="Validation_TransactionTotalInvalid" xml:space="preserve"><value>A tranzakció végösszegének pozitívnak és a támogatott tartományon belülinek kell lennie.</value></data>
+  <data name="Validation_TransactionLabelsTooMany" xml:space="preserve"><value>Egy tranzakción legfeljebb 20 címke lehet.</value></data>
+  <data name="Validation_TransactionLabelsDuplicate" xml:space="preserve"><value>Ugyanaz a címke ugyanabban a hatókörben nem adható hozzá kétszer.</value></data>
+  <data name="Validation_TransactionLabelNameInvalid" xml:space="preserve"><value>A címke neve kötelező és legfeljebb 40 karakter lehet.</value></data>
+  <data name="Validation_TransactionLabelScopeInvalid" xml:space="preserve"><value>A címke hatóköreként válaszd a Háztartás vagy a Számla lehetőséget.</value></data>
+  <data name="Validation_TransactionCategoryRequired" xml:space="preserve"><value>Minden tranzakciós tételhez válassz kategóriát.</value></data>
+  <data name="Validation_TransactionCategoryInvalid" xml:space="preserve"><value>Egy vagy több kiválasztott kategória nem érhető el.</value></data>
+  <data name="Validation_TransactionCategoryKindInvalid" xml:space="preserve"><value>A kiválasztott kategória nem használható ehhez a tranzakciótípushoz.</value></data>
+  <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Egy vagy több kiválasztott címke nem érhető el ehhez a számlához.</value></data>
+  <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>A számlacímkéhez számla szükséges.</value></data>
+  <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>A háztartási címke nem köthető számlához.</value></data>
 </root>
 
