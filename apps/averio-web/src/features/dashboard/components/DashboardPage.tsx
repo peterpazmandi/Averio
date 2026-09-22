@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import {
+    formatDecimalAmount,
+    subtractDecimalAmounts,
+} from '../../../shared/money/decimalAmount';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import type { ConceptIconName } from '../../../shared/components/concept/ConceptIcon';
 import { AccountOwnershipSummary } from '../../accounts/components/AccountOwnershipSummary';
@@ -326,7 +329,10 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     ) : (
                         <div className="av-dashboard-month-totals">
                             {currentMonth.map(period => {
-                                const net = Number(period.incomeAmount) - Number(period.expenseAmount);
+                                const net = subtractDecimalAmounts(
+                                    period.incomeAmount,
+                                    period.expenseAmount,
+                                );
                                 return (
                                     <div key={period.currency} className="av-dashboard-currency-total">
                                         <span className="av-badge">{period.currency}</span>
@@ -341,7 +347,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                             </div>
                                             <div>
                                                 <dt className="av-label">{t('transactionManagement.net')}</dt>
-                                                <dd className="av-kpi">{money(String(net), period.currency)}</dd>
+                                                <dd className="av-kpi">{money(net, period.currency)}</dd>
                                             </div>
                                             <div>
                                                 <dt className="av-label">{t('navigation.transactions')}</dt>
