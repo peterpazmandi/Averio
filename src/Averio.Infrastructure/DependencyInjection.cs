@@ -89,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IIconCatalogRepository, IconCatalogRepository>();
         services.AddScoped<ILabelRepository, LabelRepository>();
+        services.AddScoped<Averio.Application.Transfers.ITransferRepository, TransferRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<ITransactionAggregateRepository, TransactionAggregateRepository>();
         services.AddScoped<IIdentityService, IdentityService>();

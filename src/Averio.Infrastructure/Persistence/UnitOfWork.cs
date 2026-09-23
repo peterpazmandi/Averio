@@ -22,6 +22,9 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Transfers.Transfer))
+                throw new ConflictException("transfer_changed", "Error_TransferChanged");
+
             if (exception.Entries.Any(entry =>
                 entry.Entity is Transaction
                     or TransactionItem

@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
@@ -205,6 +206,7 @@ export function TransactionsPage({
                 </button>
             </header>
 
+            <Link to="/app/transfers" className="av-btn"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
             <div
                 className="av-tx-search-shell"
                 role="search"

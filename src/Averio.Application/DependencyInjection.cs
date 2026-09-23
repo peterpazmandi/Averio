@@ -61,6 +61,7 @@ public static class DependencyInjection
 
         services.AddScoped<GetDashboardHandler>();
 
+        services.AddScoped<Transfers.TransferHandler>();
         services.AddScoped<Transactions.CreateTransaction.CreateTransactionHandler>();
         services.AddScoped<Transactions.UpdateTransaction.UpdateTransactionHandler>();
         services.AddScoped<Transactions.VoidTransaction.VoidTransactionHandler>();

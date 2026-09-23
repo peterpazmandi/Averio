@@ -56,6 +56,8 @@ export function AppShell({ children }: PropsWithChildren) {
     const householdName = household?.name || t('concept.household');
     const title = pathname.startsWith('/app/accounts')
         ? t('app.navigation.accounts')
+        : pathname.startsWith('/app/transfers')
+            ? t('transfers.title')
         : pathname.startsWith('/app/transactions')
             ? t('navigation.transactions')
             : pathname.startsWith('/app/statistics')

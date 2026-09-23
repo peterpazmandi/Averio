@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
+    ("transfer domain invariants and lifecycle", TransferChecks.Invariants),
+    ("transfer EF constraints and migration snapshot", TransferChecks.PersistenceModel),
     ("itemized income derives total", ItemizedIncomeDerivesTotal),
     ("reject invalid item amount", RejectInvalidItemAmount),
     ("category snapshot and reusable labels", CategorySnapshotAndReusableLabels),

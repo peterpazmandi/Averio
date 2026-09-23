@@ -293,5 +293,10 @@
   <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>One or more selected labels are not available for this account.</value></data>
   <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>Account labels require an account.</value></data>
   <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>Household labels cannot be tied to an account.</value></data>
+  <data name="Error_TransferDistinctAccounts" xml:space="preserve"><value>Choose two different accounts.</value></data>
+  <data name="Error_TransferAmountsMismatch" xml:space="preserve"><value>Sent and received amounts must match for the same currency. Record fees separately.</value></data>
+  <data name="Error_TransferChanged" xml:space="preserve"><value>This transfer changed. Reload it before saving again.</value></data>
+  <data name="Error_TransferVoided" xml:space="preserve"><value>A voided transfer cannot be edited.</value></data>
+  <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Check the date range and pagination parameters.</value></data>
 </root>
 

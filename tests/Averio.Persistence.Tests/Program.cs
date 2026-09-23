@@ -184,6 +184,8 @@ static async Task RunVerificationAsync(string connectionString)
     await CheckAsync(
         "PostgreSQL enforces optimistic concurrency",
         () => VerifyDatabaseConcurrencyAsync(provider, clock, fixture));
+
+    await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)

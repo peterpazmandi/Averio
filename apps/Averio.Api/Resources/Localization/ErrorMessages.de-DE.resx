@@ -293,5 +293,10 @@
   <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Eine oder mehrere ausgewählte Labels sind für dieses Konto nicht verfügbar.</value></data>
   <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>Konto-Labels benötigen ein Konto.</value></data>
   <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>Haushalts-Labels dürfen nicht an ein Konto gebunden sein.</value></data>
+  <data name="Error_TransferDistinctAccounts" xml:space="preserve"><value>Wähle zwei unterschiedliche Konten.</value></data>
+  <data name="Error_TransferAmountsMismatch" xml:space="preserve"><value>Bei gleicher Währung müssen gesendeter und empfangener Betrag übereinstimmen. Erfasse Gebühren separat.</value></data>
+  <data name="Error_TransferChanged" xml:space="preserve"><value>Diese Umbuchung wurde geändert. Lade sie vor dem Speichern erneut.</value></data>
+  <data name="Error_TransferVoided" xml:space="preserve"><value>Eine stornierte Umbuchung kann nicht bearbeitet werden.</value></data>
+  <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Prüfe den Zeitraum und die Seitenparameter.</value></data>
 </root>
 

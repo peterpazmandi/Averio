@@ -14,3 +14,4 @@ export * from './SecurityApi';
 export * from './StatisticsApi';
 export * from './SystemApi';
 export * from './TransactionsApi';
+export * from './TransfersApi';

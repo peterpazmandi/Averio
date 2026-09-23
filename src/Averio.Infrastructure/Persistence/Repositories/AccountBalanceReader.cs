@@ -1,5 +1,6 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Domain.Transactions;
+using Averio.Domain.Accounts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Averio.Infrastructure.Persistence.Repositories;
@@ -23,7 +24,9 @@ internal sealed class AccountBalanceReader(AverioDbContext dbContext)
             .AsNoTracking()
             .Where(account =>
                 account.HouseholdId == householdId
-                && ids.Contains(account.Id))
+                && ids.Contains(account.Id)
+                && (account.Visibility == AccountVisibility.Household
+                    || account.Owners.Any(o => o.HouseholdMemberId == householdMemberId)))
             .Select(account => new
             {
                 account.Id,
@@ -67,6 +70,26 @@ internal sealed class AccountBalanceReader(AverioDbContext dbContext)
                 ? balance + movement.Amount
                 : balance - movement.Amount;
         }
+
+        // Each visible leg contributes in its own account currency and anchor window.
+        // Never inspect the other account to derive this account's balance.
+        var visibleAccounts = dbContext.Accounts.AsNoTracking().Where(a =>
+            a.HouseholdId == householdId && ids.Contains(a.Id)
+            && (a.Visibility == AccountVisibility.Household
+                || a.Owners.Any(o => o.HouseholdMemberId == householdMemberId)));
+        var postedTransfers = dbContext.Transfers.AsNoTracking().Where(t =>
+            t.HouseholdId == householdId && t.VoidedAt == null && t.OccurredOn <= asOf);
+        var outgoing = await (from t in postedTransfers
+            join a in visibleAccounts on t.SourceAccountId equals a.Id
+            where t.OccurredOn >= a.BalanceAnchorDate
+            select new { AccountId = a.Id, Amount = -t.SentAmount }).ToListAsync(cancellationToken);
+        var incoming = await (from t in postedTransfers
+            join a in visibleAccounts on t.DestinationAccountId equals a.Id
+            where t.OccurredOn >= a.BalanceAnchorDate
+            select new { AccountId = a.Id, Amount = t.ReceivedAmount }).ToListAsync(cancellationToken);
+        foreach (var leg in outgoing.Concat(incoming))
+            if (balances.TryGetValue(leg.AccountId, out var balance))
+                balances[leg.AccountId] = balance + leg.Amount;
 
         return balances;
     }

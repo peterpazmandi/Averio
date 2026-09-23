@@ -24,6 +24,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppAccountsRouteImport } from './routes/_authenticated.app.accounts'
 import { Route as AuthenticatedAppStatisticsRouteImport } from './routes/_authenticated.app.statistics'
 import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated.app.transactions'
+import { Route as AuthenticatedAppTransfersRouteImport } from './routes/_authenticated.app.transfers'
 import { Route as AuthenticatedAppAccountsIndexRouteImport } from './routes/_authenticated.app.accounts.index'
 import { Route as AuthenticatedAppAccountsNewRouteImport } from './routes/_authenticated.app.accounts.new'
 import { Route as AuthenticatedAppAccountsAccountIdEditRouteImport } from './routes/_authenticated.app.accounts.$accountId.edit'
@@ -104,6 +105,12 @@ const AuthenticatedAppTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppTransfersRoute =
+  AuthenticatedAppTransfersRouteImport.update({
+    id: '/transfers',
+    path: '/transfers',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAccountsIndexRoute =
   AuthenticatedAppAccountsIndexRouteImport.update({
     id: '/',
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/app/transfers': typeof AuthenticatedAppTransfersRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
   '/app/accounts/': typeof AuthenticatedAppAccountsIndexRoute
@@ -152,6 +160,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof GuestVerifyEmailRoute
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/app/transfers': typeof AuthenticatedAppTransfersRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
   '/app/accounts': typeof AuthenticatedAppAccountsIndexRoute
@@ -173,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
   '/_authenticated/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/_authenticated/app/transfers': typeof AuthenticatedAppTransfersRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/accounts/new': typeof AuthenticatedAppAccountsNewRoute
   '/_authenticated/app/accounts/': typeof AuthenticatedAppAccountsIndexRoute
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/app/accounts'
     | '/app/statistics'
     | '/app/transactions'
+    | '/app/transfers'
     | '/app/'
     | '/app/accounts/new'
     | '/app/accounts/'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/app/statistics'
     | '/app/transactions'
+    | '/app/transfers'
     | '/app'
     | '/app/accounts/new'
     | '/app/accounts'
@@ -229,6 +241,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/accounts'
     | '/_authenticated/app/statistics'
     | '/_authenticated/app/transactions'
+    | '/_authenticated/app/transfers'
     | '/_authenticated/app/'
     | '/_authenticated/app/accounts/new'
     | '/_authenticated/app/accounts/'
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTransactionsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/transfers': {
+      id: '/_authenticated/app/transfers'
+      path: '/transfers'
+      fullPath: '/app/transfers'
+      preLoaderRoute: typeof AuthenticatedAppTransfersRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/accounts/': {
       id: '/_authenticated/app/accounts/'
       path: '/'
@@ -395,6 +415,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAccountsRoute: typeof AuthenticatedAppAccountsRouteWithChildren
   AuthenticatedAppStatisticsRoute: typeof AuthenticatedAppStatisticsRoute
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
+  AuthenticatedAppTransfersRoute: typeof AuthenticatedAppTransfersRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
@@ -402,6 +423,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAccountsRoute: AuthenticatedAppAccountsRouteWithChildren,
   AuthenticatedAppStatisticsRoute: AuthenticatedAppStatisticsRoute,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
+  AuthenticatedAppTransfersRoute: AuthenticatedAppTransfersRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 
