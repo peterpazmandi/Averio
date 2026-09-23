@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
@@ -119,11 +119,8 @@ export function TransactionEditor({
     const [newLabelOpen, setNewLabelOpen] = useState(false);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        if (!accountId && writableAccounts[0]) setAccountId(writableAccounts[0].id);
-    }, [accountId, writableAccounts]);
-
-    const account = writableAccounts.find(item => item.id === accountId);
+    const resolvedAccountId = accountId || writableAccounts[0]?.id || '';
+    const account = writableAccounts.find(item => item.id === resolvedAccountId);
     const forcedVisibility: TransactionVisibility | undefined =
         account?.visibility === 'Private'
             ? 'Private'
@@ -135,7 +132,11 @@ export function TransactionEditor({
     const language = i18n.resolvedLanguage ?? i18n.language;
 
     const categories = useQuery(transactionQueries.categories(userId, householdId, kind));
-    const labels = useQuery(transactionQueries.labels(userId, householdId, accountId || undefined));
+    const labels = useQuery(transactionQueries.labels(
+        userId,
+        householdId,
+        resolvedAccountId || undefined,
+    ));
 
     const categoriesById = useMemo(
         () => new Map((categories.data ?? []).map(category => [category.id, category])),
@@ -148,29 +149,28 @@ export function TransactionEditor({
         [categories.data],
     );
 
-    useEffect(() => {
-        if (!uncategorizedId) return;
-
-        setItems(current => current.map(item => {
+    const resolvedItems = useMemo(
+        () => items.map(item => {
             const selected = categoriesById.get(item.categoryId);
-            if (!item.categoryId || !selected) {
+            if (uncategorizedId && (!item.categoryId || !selected)) {
                 return { ...item, categoryId: uncategorizedId };
             }
             return item;
-        }));
-    }, [categoriesById, uncategorizedId]);
+        }),
+        [categoriesById, items, uncategorizedId],
+    );
 
-    useEffect(() => {
-        if (!labels.data) return;
+    const resolvedLabelIds = useMemo(() => {
+        if (!labels.data) return selectedLabelIds;
         const available = new Set(labels.data.map(label => label.id));
-        setSelectedLabelIds(current => current.filter(id => available.has(id)));
-    }, [labels.data]);
+        return selectedLabelIds.filter(id => available.has(id));
+    }, [labels.data, selectedLabelIds]);
 
     const createLabelMutation = useMutation({
         mutationFn: () => createLabel(householdId, {
             name: newLabelName.trim(),
             scope: newLabelScope,
-            accountId: newLabelScope === 'Account' ? accountId : null,
+            accountId: newLabelScope === 'Account' ? resolvedAccountId : null,
         }),
         onSuccess: async result => {
             setSelectedLabelIds(current =>
@@ -182,7 +182,7 @@ export function TransactionEditor({
                 queryKey: transactionQueryKeys.labels(
                     userId,
                     householdId,
-                    accountId || undefined,
+                    resolvedAccountId || undefined,
                 ),
             });
         },
@@ -190,12 +190,12 @@ export function TransactionEditor({
 
     const total = useMemo(() => {
         let sum = 0n;
-        for (const item of items) {
+        for (const item of resolvedItems) {
             const value = amountToScaled(item.amount);
             if (value !== null) sum += value;
         }
         return scaledToAmount(sum);
-    }, [items]);
+    }, [resolvedItems]);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
         setItems(current => current.map(item =>
@@ -227,12 +227,12 @@ export function TransactionEditor({
         event.preventDefault();
         setError('');
 
-        if (!accountId || !occurredOn || items.length === 0) {
+        if (!resolvedAccountId || !occurredOn || resolvedItems.length === 0) {
             setError(t('transactionManagement.formInvalid'));
             return;
         }
 
-        const mappedItems = items.map(item => ({
+        const mappedItems = resolvedItems.map(item => ({
             description: item.description.trim(),
             categoryId: item.categoryId,
             amount: normalizeAmount(item.amount),
@@ -251,14 +251,14 @@ export function TransactionEditor({
 
         try {
             await onSave({
-                accountId,
+                accountId: resolvedAccountId,
                 kind,
                 visibility: effectiveVisibility,
                 merchant: merchant.trim() || null,
                 note: note.trim() || null,
                 occurredOn,
                 items: mappedItems,
-                labelIds: selectedLabelIds,
+                labelIds: resolvedLabelIds,
             }, transaction?.updatedAt);
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : t('errors.genericDescription'));
@@ -308,7 +308,7 @@ export function TransactionEditor({
                         <div className="av-tx-form-grid">
                             <label>
                                 <span>{t('transactionManagement.account')}</span>
-                                <select className="av-select" value={accountId} disabled={busy}
+                                <select className="av-select" value={resolvedAccountId} disabled={busy}
                                     onChange={event => setAccountId(event.target.value)} required>
                                     <option value="" disabled>{t('transactionManagement.account')}</option>
                                     {writableAccounts.map(item => (
@@ -359,7 +359,7 @@ export function TransactionEditor({
 
                         <div className="av-tx-label-catalog">
                             {(labels.data ?? []).map(label => {
-                                const selected = selectedLabelIds.includes(
+                                const selected = resolvedLabelIds.includes(
                                     label.id,
                                 );
 
@@ -394,7 +394,7 @@ export function TransactionEditor({
                                     className="av-tx-label-add"
                                     disabled={
                                         busy
-                                        || !accountId
+                                        || !resolvedAccountId
                                         || labels.isPending
                                     }
                                     aria-label={t(
@@ -474,7 +474,7 @@ export function TransactionEditor({
                                             busy
                                             || createLabelMutation.isPending
                                             || !newLabelName.trim()
-                                            || !accountId
+                                            || !resolvedAccountId
                                         }
                                         onClick={() =>
                                             createLabelMutation.mutate()}
@@ -524,13 +524,13 @@ export function TransactionEditor({
                                 <p>{t('transactionManagement.itemsHelp')}</p>
                             </div>
                             <button type="button" className="av-btn av-compact av-tx-section-action"
-                                onClick={addItem} disabled={busy || items.length >= 100}>
+                                onClick={addItem} disabled={busy || resolvedItems.length >= 100}>
                                 + {t('transactionManagement.addItem')}
                             </button>
                         </div>
 
                         <div className="av-tx-item-list">
-                            {items.map((item, index) => (
+                            {resolvedItems.map((item, index) => (
                                 <div className="av-tx-item-row" key={item.key}>
                                     <span className="av-tx-item-number">{index + 1}</span>
                                     <label className="av-tx-item-description">
@@ -568,7 +568,7 @@ export function TransactionEditor({
                                         </div>
                                     </label>
                                     <button type="button" className="av-icon-btn av-tx-remove-item"
-                                        disabled={busy || items.length === 1}
+                                        disabled={busy || resolvedItems.length === 1}
                                         onClick={() => removeItem(item.key)}
                                         aria-label={t('transactionManagement.removeItem')}>×</button>
                                 </div>

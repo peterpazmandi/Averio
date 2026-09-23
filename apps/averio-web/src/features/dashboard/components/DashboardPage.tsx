@@ -370,7 +370,11 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                             <h3>{t('transactionManagement.latest')}</h3>
                             <p>{t('concept.transactionsHelp')}</p>
                         </div>
-                        <Link className="av-btn" to="/app/transactions">
+                        <Link
+                            className="av-btn"
+                            to="/app/transactions"
+                            search={{ create: undefined }}
+                        >
                             {t('transactionManagement.viewAll')}
                         </Link>
                     </div>
@@ -382,7 +386,12 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     ) : (
                         <div className="av-list">
                             {dashboard.latestTransactions.map(transaction => (
-                                <Link key={transaction.id} to="/app/transactions" className="av-list-row">
+                                <Link
+                                    key={transaction.id}
+                                    to="/app/transactions"
+                                    search={{ create: undefined }}
+                                    className="av-list-row"
+                                >
                                     <span className="av-tx-icon">
                                         {transaction.kind === 'Income' ? '↙' : '↗'}
                                     </span>

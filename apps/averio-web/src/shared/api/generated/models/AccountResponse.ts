@@ -74,6 +74,10 @@ export interface AccountResponse {
     /**
      * 
      */
+    currentBalanceAmount: string;
+    /**
+     * 
+     */
     status: string;
     /**
      * 
@@ -96,6 +100,7 @@ export function instanceOfAccountResponse(value: object): value is AccountRespon
     if (!('currency' in value) || value['currency'] === undefined) return false;
     if (!('balanceAnchorAmount' in value) || value['balanceAnchorAmount'] === undefined) return false;
     if (!('balanceAnchorDate' in value) || value['balanceAnchorDate'] === undefined) return false;
+    if (!('currentBalanceAmount' in value) || value['currentBalanceAmount'] === undefined) return false;
     if (!('status' in value) || value['status'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
     return true;
@@ -122,6 +127,7 @@ export function AccountResponseFromJSONTyped(json: any, ignoreDiscriminator: boo
         'currency': json['currency'],
         'balanceAnchorAmount': json['balanceAnchorAmount'],
         'balanceAnchorDate': json['balanceAnchorDate'],
+        'currentBalanceAmount': json['currentBalanceAmount'],
         'status': json['status'],
         'updatedAt': json['updatedAt'],
     };
@@ -149,6 +155,7 @@ export function AccountResponseToJSONTyped(value?: AccountResponse | null, ignor
         'currency': value['currency'],
         'balanceAnchorAmount': value['balanceAnchorAmount'],
         'balanceAnchorDate': value['balanceAnchorDate'],
+        'currentBalanceAmount': value['currentBalanceAmount'],
         'status': value['status'],
         'updatedAt': value['updatedAt'],
     };

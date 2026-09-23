@@ -1,13 +1,14 @@
 # Averio Current State
 
-**Status date:** 2026-09-19  
+**Status date:** 2026-09-22
 **Scope:** restarted implementation on the `develop` branch
 
-This file intentionally describes only the restarted codebase. Pre-restart features are not counted as implemented.
+This document describes only the restarted codebase. Features from the earlier
+implementation are not counted unless they exist in the current repository.
 
-## Repository foundation — implemented
+## Repository and platform foundation — implemented
 
-Current high-level projects:
+The solution is a .NET 10 modular monolith with explicit application handlers:
 
 ```text
 apps/Averio.Api
@@ -18,201 +19,148 @@ src/Averio.Domain
 src/Averio.Infrastructure
 ```
 
-The backend uses explicit application handlers. MediatR is not part of the accepted architecture.
+The backend foundation includes ASP.NET Core, PostgreSQL/EF Core migrations,
+FluentValidation, localized Problem Details, cookie authentication, CSRF
+protection, rate limiting, OpenAPI, and Scalar. MediatR is not used.
 
-## Backend platform foundation — implemented
+The frontend uses React, TypeScript, Vite, Tailwind, TanStack Router, TanStack
+Query, and react-i18next. English, German, and Hungarian are supported.
 
-Established baseline includes:
+The backend OpenAPI document is the authoritative frontend contract. The
+generated TypeScript client covers every implemented API area, and CI fails if
+regeneration produces a diff. Handwritten feature adapters may narrow UI-only
+literal types, but do not duplicate API DTO shapes.
 
-- .NET 10 solution structure
-- ASP.NET Core Web API host
-- Application / Contracts / Domain / Infrastructure layers
-- PostgreSQL/EF Core persistence foundation
-- migrations
-- global exception handling
-- localized errors/resources
-- FluentValidation
-- OpenAPI/Scalar setup
-- rate-limiting/security infrastructure where required by auth flows
+## Identity and authentication — implemented foundation
 
-## Identity/authentication — implemented foundation
+Implemented flows include:
 
-The restarted repository contains flows/components for:
+- registration and email verification
+- resend verification
+- login, logout, cookie session, and current-user state
+- forgot-password and password reset
+- localized auth pages and errors
 
-- registration
-- email verification
-- resend email verification
-- login
-- logout/session handling
-- forgot/request password reset
-- reset password
-- cookie authentication
-- current-user/session state
+## Household and onboarding — implemented
 
-The frontend has the related guest/auth pages and generated API client types.
+The current model includes `Household`, `HouseholdMember`, identity membership,
+profile/household onboarding, and first-account setup. The first-account use
+case retains explicit transaction handling and household-row locking.
 
-## Household foundation — implemented
+The household context is the authorization boundary used by account,
+transaction, dashboard, and statistics use cases.
 
-The restarted domain/persistence layer contains:
+## Account Management — implemented
 
-- `Household`
-- `HouseholdMember`
-- relationship from identity user to household membership
-- EF configuration/migrations for household membership
-- repository support for membership lookup
-- household membership information exposed in current-user/auth contracts
+Account Management provides:
 
-The current product design assumes the user's household context drives onboarding and authorization.
+- active and optional archived account lists
+- dedicated create and edit routes with direct-link loading
+- household and personal economic scope
+- explicit personal-account holders
+- household/private visibility and reporting participation
+- immutable currency and balance-anchor fields after creation
+- archive and restore without deleting financial history
+- server-side visibility and modification checks
+- optimistic concurrency through `updated_at`
+- current balances derived from each account's anchor plus posted, visible
+  ledger movements on or after the anchor date
 
-## Onboarding and Account Management — implemented on this branch
+Household-scope accounts are household-visible and included in reports.
+Personal accounts require at least one holder. Private accounts are personal,
+excluded from household reports, and remain inaccessible to other household
+members. Household role does not grant access to another member's private
+account.
 
-Onboarding establishes profile, household, and the first account. The first-account handler retains its explicit transaction and household-row locking behavior.
+## Transaction Management — implemented foundation
 
-Account Management now provides:
+The transaction slice includes:
 
-- visible active-account list, optional archived accounts, name/scope/currency filters
-- dedicated create (`/app/accounts/new`) and edit (`/app/accounts/$accountId/edit`) pages, with direct-link loading through the account detail query
-- readable icon-led account details, primary-color active badges, aligned controls, and accessible explanations for fixed fields in English, German, and Hungarian
-- additional account creation using the same domain validation as onboarding
-- edit name, type, holders, visibility and household reporting participation
-- archive/reactivate with confirmation; historical records are retained
-- server-side household membership, visibility and modification checks
-- stale-edit detection and EF optimistic concurrency using the existing updated_at column
-- generated OpenAPI transport, scoped TanStack Query invalidation, EN/DE/HU strings
-- responsive cards and forms using the existing application shell and design
-- executable account regression suite under tests/Averio.Accounts.Tests
+- itemized Income and Expense transactions
+- exact four-decimal amounts with totals derived from item values
+- merchant, note, occurrence date, status, and optimistic version fields
+- Household and Private transaction visibility constrained by account rules
+- edit and non-destructive void workflows
+- searchable, cursor-paginated transaction history
+- a hierarchical category model with exactly 100 seeded system categories
+- stable category localization keys with EN/DE/HU frontend names
+- category name/icon snapshots on transaction items
+- a 240-entry icon catalog; categories copy icon values and have no icon FK
+- reusable Household and Account labels
+- synchronous Account and Category aggregates at Day, Month, and Year grain
+- currency-separated cash-flow and category-statistics read models
+- account and dashboard balances derived from posted requester-visible entries
+- shared transaction editor entry points from the header, dashboard, and list
+- a searchable grouped category picker and responsive statistics UI
 
-Current implementation boundaries:
+Aggregate writes participate in the same PostgreSQL transaction as ledger
+create, update, and void operations. Private transactions do not contribute to
+household aggregates. Category statistics retain the source account dimension
+so current account visibility/reporting rules are applied when reading them.
 
-- account currency is immutable (ADR-006)
-- economic scope and balance anchors are not changed by the edit endpoint; scope transfer and balance reconciliation need separate semantics
-- account_owners continues to store the named holders used by the current access rules; economic scope remains separate
-- household-scope accounts are household-visible and included in reports
-- personal accounts require at least one holder; the acting member must remain a holder when creating/editing personal accounts
-- private accounts are personal and excluded from household reports
-- household administrative role gives no extra access to personal accounts
-- active lists are sorted by name and ID; account pinning and custom order are not introduced
-- balances are recorded anchors, not transaction-derived live balances; currencies are never summed together
+## Dashboard and statistics — implemented foundation
 
-Verification: backend and frontend builds, executable regression suite, changed-feature lint, and browser workflows with mocked API responses. Live PostgreSQL migration, round-trip persistence and concurrency require a database environment and have not been verified here. Repository-wide frontend lint still reports pre-existing errors outside this slice.
+The dashboard endpoint returns visible accounts with current balances,
+household balances by currency, six months of cash flow, and the latest visible
+transactions. The statistics page presents monthly cash flow and yearly
+category totals without combining currencies.
 
-## Frontend foundation — implemented
+## Verification and CI — implemented
 
-The restarted frontend uses:
+The repository has three executable backend verification suites:
 
-- React + TypeScript + Vite
-- Tailwind
-- TanStack Router
-- TanStack Query
-- react-i18next
-- generated OpenAPI API client
+- `tests/Averio.Accounts.Tests` for account domain/application/EF regressions
+- `tests/Averio.Transactions.Tests` for transaction domain and EF-model checks
+- `tests/Averio.Persistence.Tests` for disposable PostgreSQL integration checks
 
-Auth UI work already covered responsive behavior and light/dark handling. The official Averio brand/logo direction and primary color `#10B981` are established.
+The PostgreSQL suite creates an isolated temporary database and verifies the
+complete migration chain, seeded catalogs, transactional rollback, persisted
+transaction details, aggregate and balance changes across create/update/void,
+privacy boundaries, stale-write handling, idempotent voiding, and database
+optimistic concurrency. It always removes its temporary database.
 
-## Localization — implemented foundation
+GitHub Actions now verifies:
 
-Supported languages:
+- solution restore and Release build
+- all three executable backend suites against PostgreSQL 17
+- frontend clean install, production build, and repository-wide lint
+- deterministic OpenAPI client regeneration
 
-- English
-- German
-- Hungarian
+## Canonical UI concept
 
-Auth translation gaps were iteratively fixed, including password strength/requirements, login, forgot-password, verify-email, and resend-verification keys.
+`docs/ui/averio-ui-concept.html` remains the canonical design reference. It is
+a product/UI specification, not evidence that every illustrated feature has
+been implemented.
 
-Any new feature must provide all three languages.
+## Current boundaries
 
-## Canonical application UI concept — available
+The following are not yet treated as implemented:
 
-`docs/ui/averio-ui-concept.html` is the canonical design reference for:
-
-- Dashboard
-- Accounts
-- Goals
-- Statistics
-- Transactions
-- Recurring Transactions
-- Categories/icon handling
-- Household Settings
-- User Profile
-
-It is a design specification/prototype, not proof that those features are implemented.
-
-## Not yet treated as implemented in the restarted codebase
-
-Unless the repository changes after this status date, do not claim these are complete:
-
+- transfers and transfer linkage
 - household invitations/partner invite lifecycle
-- transaction ledger
-- transfers
-- recurring transaction domain
-- category management domain
-- goals domain
-- dashboard cash-flow aggregates
-- statistics/reporting domain
-- personal-money ledger/rollover
+- recurring transaction domain and worker execution
+- full category management UI (create/edit/reorder/archive/custom icons)
+- goals
+- personal-money allocation and rollover
 - historical CSV/XLSX import
 - AI receipt scanning
 - bank connections
-- 2FA
-- Google/Facebook auth
+- 2FA and social login
 - production Worker project
 
-Some existed or were discussed before the restart; that does not make them present in the restarted implementation.
+Aggregate repair/rebuild tooling is also not present yet. Current aggregate
+maintenance is synchronous and transactional.
 
-## Infrastructure status / target
+## Infrastructure status and target
 
-Averio previously ran/deployed using AWS EC2, Docker, Nginx/Cloudflare, Neon, and ECR during the earlier implementation. Those lessons remain useful.
-
-The current target architecture remains:
-
-- Cloudflare for domain/frontend edge/static hosting
-- AWS EC2 + Docker Compose for API and later Worker
-- Neon PostgreSQL
-- ECR for images where used
-- GitHub Actions for CI/CD after the deployment path is stable
-
-Do not assume old deployed containers represent the restarted app's current production readiness.
-
-## Product research decisions already influencing the domain
-
-Reddit/customer research reinforced that couples frequently need mixed shared/private finances. Current design therefore explicitly separates:
-
-- household membership
-- economic account ownership/scope
-- legal holder
-- visibility
-- reporting participation
-
-Personal-money allocation/rollover is also retained as an important future feature.
+The target remains Cloudflare for frontend edge/static hosting, AWS EC2 with
+Docker Compose for the API and future Worker, Neon PostgreSQL, and ECR where
+container images are used. Earlier deployed containers do not represent the
+restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Implement the Transaction/Transfer ledger foundation, including immutable currency handling, explicit transfer linkage, privacy-aware reporting, balance-anchor boundaries, and database-backed integration coverage. Scope-transfer and balance-reconciliation workflows are deliberately deferred until their financial-history semantics are settled.
-
-
-### Transaction Management review additions — 2026-09-21
-
-The current transaction-management branch now includes:
-
-- itemized Income/Expense transactions with transaction total derived from exact item amounts
-- free-text Merchant/Store
-- a first-class hierarchical Category model with exactly 100 seeded base categories
-- a 240-entry seeded icon catalog; categories store copied icon values and have no Icon foreign key
-- required per-item CategoryId plus category name/icon history snapshots
-- reusable Household and Account labels, selectable on every transaction form and creatable inline
-- label selection before item entry in the editor
-- four visually separated editor sections: basics, labels, items, details/privacy
-- green Income and red Expense visual semantics
-- header, dashboard and transaction-page Add transaction entry points opening the same editor
-- synchronous Account and Category aggregates at Day, Month and Year grain
-- yearly category statistics grouped by currency
-- source AccountId retained on Category aggregates so current privacy/reporting rules are enforced before statistics are returned
-- searchable Bento-style category selector in the transaction editor
-- system categories persist only stable localization keys; custom categories persist only their household-defined names
-- all 100 system-category names are localized in the React frontend for English, German, and Hungarian
-- label creation is collapsed behind the trailing plus button in the label chip row and can be cancelled without changing the transaction
-- transaction overview search/filter interaction aligned with Account Management
-- statistics chart bars reveal their exact value on hover/focus and remain visible when clicked/tapped
-- account/dashboard current balances are derived from the balance anchor plus posted requester-visible ledger movements; transaction mutations invalidate account and dashboard queries
-
-The full Category Management page (create/edit/reorder/archive/custom icons) is still a future UI slice. The persistence model and icon/category APIs now provide its foundation.
+Implement transfer semantics on top of the hardened transaction foundation.
+The design must preserve immutable account currencies, link both transfer legs,
+define cross-currency behavior explicitly, keep privacy enforcement server-side,
+and extend the PostgreSQL integration suite before adding UI workflows.

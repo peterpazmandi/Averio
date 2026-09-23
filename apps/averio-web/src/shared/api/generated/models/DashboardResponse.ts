@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { TransactionResponse } from './TransactionResponse';
+import {
+    TransactionResponseFromJSON,
+    TransactionResponseFromJSONTyped,
+    TransactionResponseToJSON,
+    TransactionResponseToJSONTyped,
+} from './TransactionResponse';
 import type { HouseholdBalanceResponse } from './HouseholdBalanceResponse';
 import {
     HouseholdBalanceResponseFromJSON,
@@ -27,6 +34,13 @@ import {
     AccountResponseToJSON,
     AccountResponseToJSONTyped,
 } from './AccountResponse';
+import type { DashboardCashFlowPeriodResponse } from './DashboardCashFlowPeriodResponse';
+import {
+    DashboardCashFlowPeriodResponseFromJSON,
+    DashboardCashFlowPeriodResponseFromJSONTyped,
+    DashboardCashFlowPeriodResponseToJSON,
+    DashboardCashFlowPeriodResponseToJSONTyped,
+} from './DashboardCashFlowPeriodResponse';
 
 /**
  * 
@@ -50,6 +64,14 @@ export interface DashboardResponse {
      * 
      */
     accounts: Array<AccountResponse>;
+    /**
+     * 
+     */
+    cashFlow: Array<DashboardCashFlowPeriodResponse>;
+    /**
+     * 
+     */
+    latestTransactions: Array<TransactionResponse>;
 }
 
 /**
@@ -60,6 +82,8 @@ export function instanceOfDashboardResponse(value: object): value is DashboardRe
     if (!('reportingCurrency' in value) || value['reportingCurrency'] === undefined) return false;
     if (!('householdBalances' in value) || value['householdBalances'] === undefined) return false;
     if (!('accounts' in value) || value['accounts'] === undefined) return false;
+    if (!('cashFlow' in value) || value['cashFlow'] === undefined) return false;
+    if (!('latestTransactions' in value) || value['latestTransactions'] === undefined) return false;
     return true;
 }
 
@@ -77,6 +101,8 @@ export function DashboardResponseFromJSONTyped(json: any, ignoreDiscriminator: b
         'reportingCurrency': json['reportingCurrency'],
         'householdBalances': ((json['householdBalances'] as Array<any>).map(HouseholdBalanceResponseFromJSON)),
         'accounts': ((json['accounts'] as Array<any>).map(AccountResponseFromJSON)),
+        'cashFlow': ((json['cashFlow'] as Array<any>).map(DashboardCashFlowPeriodResponseFromJSON)),
+        'latestTransactions': ((json['latestTransactions'] as Array<any>).map(TransactionResponseFromJSON)),
     };
 }
 
@@ -95,6 +121,8 @@ export function DashboardResponseToJSONTyped(value?: DashboardResponse | null, i
         'reportingCurrency': value['reportingCurrency'],
         'householdBalances': ((value['householdBalances'] as Array<any>).map(HouseholdBalanceResponseToJSON)),
         'accounts': ((value['accounts'] as Array<any>).map(AccountResponseToJSON)),
+        'cashFlow': ((value['cashFlow'] as Array<any>).map(DashboardCashFlowPeriodResponseToJSON)),
+        'latestTransactions': ((value['latestTransactions'] as Array<any>).map(TransactionResponseToJSON)),
     };
 }
 

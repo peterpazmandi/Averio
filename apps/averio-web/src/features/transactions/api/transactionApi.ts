@@ -1,126 +1,63 @@
-import { apiFetch } from '../../../shared/api/apiFetch';
+import {
+    CategoriesApi,
+    LabelsApi,
+    StatisticsApi,
+    TransactionsApi,
+} from '../../../shared/api/generated';
+import type {
+    CashFlowPeriodResponse,
+    CashFlowResponse,
+    CategoryCashFlowPeriodResponse,
+    CategoryCashFlowResponse,
+    CategoryResponse,
+    CreateLabelRequest,
+    CreateTransactionRequest,
+    LabelResponse,
+    TransactionItemRequest,
+    TransactionPageResponse,
+    TransactionResponse,
+    UpdateTransactionRequest,
+} from '../../../shared/api/generated';
+import { generatedApiConfiguration } from '../../../shared/api/generatedApiConfiguration';
 
 export type TransactionKind = 'Income' | 'Expense';
 export type TransactionVisibility = 'Household' | 'Private';
-export type TransactionStatus = 'Posted' | 'Voided';
 export type LabelScope = 'Household' | 'Account';
-export type CategoryKind = 'Income' | 'Expense' | 'Both';
 export type AggregatePeriod = 'Day' | 'Month' | 'Year';
 
-export interface CategoryDto {
-    id: string;
-    parentId: string | null;
-    systemKey: string | null;
-    name: string | null;
-    kind: CategoryKind;
-    icon: string;
-    accentColor: string;
-    sortOrder: number;
-    isSystem: boolean;
-}
-
-export interface LabelDto {
-    id: string;
-    name: string;
-    scope: LabelScope;
-    accountId: string | null;
-}
-
-export interface TransactionItemDto {
-    id: string;
-    position: number;
-    description: string;
-    categoryId: string;
-    categoryName: string;
-    categoryIcon: string;
-    amount: string;
-}
-
-export interface TransactionLabelDto {
-    id: string;
-    name: string;
-    scope: LabelScope;
-}
-
-export interface TransactionDto {
-    id: string;
-    accountId: string;
-    accountName: string;
-    currency: string;
+export type CategoryDto = CategoryResponse;
+export type LabelDto = LabelResponse;
+export type TransactionDto = Omit<
+    TransactionResponse,
+    'kind' | 'visibility'
+> & {
     kind: TransactionKind;
     visibility: TransactionVisibility;
-    amount: string;
-    description: string;
-    merchant: string | null;
-    note: string | null;
-    occurredOn: string;
-    status: TransactionStatus;
-    createdAt: string;
-    updatedAt: string;
-    canModify: boolean;
-    items: TransactionItemDto[];
-    labels: TransactionLabelDto[];
-}
-
-export interface TransactionPageDto {
+};
+export type TransactionPageDto = Omit<TransactionPageResponse, 'items'> & {
     items: TransactionDto[];
-    hasMore: boolean;
-}
-
-export interface TransactionItemInputDto {
-    description: string;
-    categoryId: string;
-    amount: string;
-}
-
-export interface TransactionInputDto {
-    accountId: string;
+};
+export type TransactionItemInputDto = TransactionItemRequest;
+export type TransactionInputDto = Omit<
+    CreateTransactionRequest,
+    'kind' | 'visibility' | 'labelIds'
+> & {
     kind: TransactionKind;
     visibility: TransactionVisibility;
-    merchant: string | null;
-    note: string | null;
-    occurredOn: string;
-    items: TransactionItemInputDto[];
     labelIds: string[];
-}
-
-export interface UpdateTransactionInputDto extends TransactionInputDto {
-    expectedUpdatedAt: string;
-}
-
-export interface CashFlowPeriodDto {
-    currency: string;
-    periodStart: string;
-    incomeAmount: string;
-    expenseAmount: string;
-    transactionCount: number;
-}
-
-export interface CashFlowDto {
-    from: string;
-    to: string;
-    period: AggregatePeriod;
-    periods: CashFlowPeriodDto[];
-}
-
-export interface CategoryCashFlowPeriodDto {
-    categoryId: string;
-    categorySystemKey: string | null;
-    categoryName: string | null;
-    categoryIcon: string;
-    currency: string;
-    periodStart: string;
-    incomeAmount: string;
-    expenseAmount: string;
-    itemCount: number;
-}
-
-export interface CategoryCashFlowDto {
-    from: string;
-    to: string;
-    period: AggregatePeriod;
-    periods: CategoryCashFlowPeriodDto[];
-}
+};
+export type UpdateTransactionInputDto = Omit<
+    UpdateTransactionRequest,
+    'kind' | 'visibility' | 'labelIds'
+> & {
+    kind: TransactionKind;
+    visibility: TransactionVisibility;
+    labelIds: string[];
+};
+export type CashFlowPeriodDto = CashFlowPeriodResponse;
+export type CashFlowDto = CashFlowResponse;
+export type CategoryCashFlowPeriodDto = CategoryCashFlowPeriodResponse;
+export type CategoryCashFlowDto = CategoryCashFlowResponse;
 
 export interface TransactionFilters {
     from?: string;
@@ -134,65 +71,65 @@ export interface TransactionFilters {
     cursorId?: string;
 }
 
-function queryString<T extends object>(filters: T) {
-    const query = new URLSearchParams();
-    Object.entries(filters as Record<string, unknown>).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') query.set(key, String(value));
-    });
-    const value = query.toString();
-    return value ? `?${value}` : '';
-}
+const transactions = new TransactionsApi(generatedApiConfiguration);
+const categories = new CategoriesApi(generatedApiConfiguration);
+const labels = new LabelsApi(generatedApiConfiguration);
+const statistics = new StatisticsApi(generatedApiConfiguration);
 
 export const getTransactions = (
     householdId: string,
     filters: TransactionFilters,
     signal?: AbortSignal,
-) => apiFetch<TransactionPageDto>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/transactions${queryString(filters)}`,
-    { signal },
-);
+): Promise<TransactionPageDto> =>
+    transactions.apiV1HouseholdsHouseholdIdTransactionsGet(
+        { householdId, ...filters },
+        { signal },
+    ) as Promise<TransactionPageDto>;
 
 export const getTransaction = (
     householdId: string,
     transactionId: string,
     signal?: AbortSignal,
-) => apiFetch<TransactionDto>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/transactions/${encodeURIComponent(transactionId)}`,
-    { signal },
-);
+): Promise<TransactionDto> =>
+    transactions.apiV1HouseholdsHouseholdIdTransactionsTransactionIdGet(
+        { householdId, transactionId },
+        { signal },
+    ) as Promise<TransactionDto>;
 
 export const createTransaction = (
     householdId: string,
     request: TransactionInputDto,
-) => apiFetch<{ id: string }>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/transactions`,
-    { method: 'POST', body: JSON.stringify(request) },
-);
+) => transactions.apiV1HouseholdsHouseholdIdTransactionsPost({
+    householdId,
+    createTransactionRequest: request,
+});
 
 export const updateTransaction = (
     householdId: string,
     transactionId: string,
     request: UpdateTransactionInputDto,
-) => apiFetch<void>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/transactions/${encodeURIComponent(transactionId)}`,
-    { method: 'PUT', body: JSON.stringify(request) },
-);
+) => transactions.apiV1HouseholdsHouseholdIdTransactionsTransactionIdPut({
+    householdId,
+    transactionId,
+    updateTransactionRequest: request,
+});
 
 export const voidTransaction = (
     householdId: string,
     transactionId: string,
     expectedUpdatedAt: string,
-) => apiFetch<void>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/transactions/${encodeURIComponent(transactionId)}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`,
-    { method: 'DELETE' },
-);
+) => transactions.apiV1HouseholdsHouseholdIdTransactionsTransactionIdDelete({
+    householdId,
+    transactionId,
+    expectedUpdatedAt,
+});
 
 export const getCategories = (
     householdId: string,
     kind?: TransactionKind,
     signal?: AbortSignal,
-) => apiFetch<CategoryDto[]>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/categories${queryString({ kind })}`,
+) => categories.apiV1HouseholdsHouseholdIdCategoriesGet(
+    { householdId, kind },
     { signal },
 );
 
@@ -200,18 +137,18 @@ export const getLabels = (
     householdId: string,
     accountId?: string,
     signal?: AbortSignal,
-) => apiFetch<LabelDto[]>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/labels${queryString({ accountId })}`,
+) => labels.apiV1HouseholdsHouseholdIdLabelsGet(
+    { householdId, accountId },
     { signal },
 );
 
 export const createLabel = (
     householdId: string,
-    request: { name: string; scope: LabelScope; accountId: string | null },
-) => apiFetch<{ id: string }>(
-    `/api/v1/households/${encodeURIComponent(householdId)}/labels`,
-    { method: 'POST', body: JSON.stringify(request) },
-);
+    request: CreateLabelRequest,
+) => labels.apiV1HouseholdsHouseholdIdLabelsPost({
+    householdId,
+    createLabelRequest: request,
+});
 
 export const getCashFlow = (
     householdId: string,
@@ -219,13 +156,10 @@ export const getCashFlow = (
     to: string,
     period: AggregatePeriod = 'Month',
     signal?: AbortSignal,
-) => {
-    const query = new URLSearchParams({ from, to, period });
-    return apiFetch<CashFlowDto>(
-        `/api/v1/households/${encodeURIComponent(householdId)}/statistics/cash-flow?${query}`,
-        { signal },
-    );
-};
+) => statistics.apiV1HouseholdsHouseholdIdStatisticsCashFlowGet(
+    { householdId, from, to, period },
+    { signal },
+);
 
 export const getCategoryCashFlow = (
     householdId: string,
@@ -233,10 +167,7 @@ export const getCategoryCashFlow = (
     to: string,
     period: AggregatePeriod = 'Month',
     signal?: AbortSignal,
-) => {
-    const query = new URLSearchParams({ from, to, period });
-    return apiFetch<CategoryCashFlowDto>(
-        `/api/v1/households/${encodeURIComponent(householdId)}/statistics/category-cash-flow?${query}`,
-        { signal },
-    );
-};
+) => statistics.apiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGet(
+    { householdId, from, to, period },
+    { signal },
+);

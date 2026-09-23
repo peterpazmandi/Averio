@@ -6,7 +6,11 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    'src/routeTree.gen.ts',
+    'src/shared/api/generated/**',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,6 +21,15 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+    },
+  },
+  {
+    files: [
+      'src/routes/**/*.tsx',
+      'src/**/*Provider.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

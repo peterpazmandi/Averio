@@ -31,7 +31,7 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}>
                 <ConceptIcon name="accounts" />{t('app.navigation.accounts')}
             </Link>
-            <Link to="/app/transactions" className="av-nav-item"
+            <Link to="/app/transactions" search={{ create: undefined }} className="av-nav-item"
                 activeProps={{ className: 'active', 'aria-current': 'page' }}
                 onClick={onNavigate}>
                 <ConceptIcon name="transactions" />{t('navigation.transactions')}

@@ -25,13 +25,6 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
                 preferred_currency IS NULL
                 OR preferred_currency IN ('HUF', 'EUR', 'USD')
                 """);
-
-            table.HasCheckConstraint(
-                "ck_households_preferred_currency",
-                """
-                preferred_currency IS NULL
-                OR preferred_currency IN ('HUF', 'EUR', 'USD')
-                """);
         });
         builder.HasKey(x => x.Id).HasName("pk_households");
         builder.Property(x => x.Id).HasColumnName("id");

@@ -1,0 +1,148 @@
+name: Verify
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      AVERIO_TEST_CONNECTION_STRING: >-
+        Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+      ConnectionStrings__AverioDatabase: >-
+        Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Restore backend
+        run: dotnet restore Averio.slnx
+
+      - name: Build backend
+        run: dotnet build Averio.slnx --configuration Release --no-restore
+
+      - name: Run account regression suite
+        run: >-
+          dotnet run
+          --project tests/Averio.Accounts.Tests/Averio.Accounts.Tests.csproj
+          --configuration Release
+          --no-build
+
+      - name: Run transaction regression suite
+        run: >-
+          dotnet run
+          --project tests/Averio.Transactions.Tests/Averio.Transactions.Tests.csproj
+          --configuration Release
+          --no-build
+
+      - name: Run PostgreSQL persistence suite
+        run: >-
+          dotnet run
+          --project tests/Averio.Persistence.Tests/Averio.Persistence.Tests.csproj
+          --configuration Release
+          --no-build
+
+      - name: Install frontend dependencies
+        working-directory: apps/averio-web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/averio-web
+        run: npm run build
+
+      - name: Lint frontend
+        working-directory: apps/averio-web
+        run: npm run lint
+
+      - name: Verify generated OpenAPI client
+        working-directory: apps/averio-web
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5180
+        run: |
+          set -euo pipefail
+
+          dotnet run \
+            --project ../../apps/Averio.Api/Averio.Api.csproj \
+            --configuration Release \
+            --no-build \
+            --no-launch-profile \
+            >/tmp/averio-api.log 2>&1 &
+          api_pid=$!
+
+          cleanup() {
+            kill "$api_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent \
+              http://localhost:5180/openapi/v1.json \
+              >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            tail -100 /tmp/averio-api.log
+            exit 1
+          fi
+
+          npm run api:generate
+
+          if [ -n "$(git status --porcelain -- src/shared/api/generated)" ]; then
+            git diff -- src/shared/api/generated
+            git status --short -- src/shared/api/generated
+            echo "Generated API client is out of date."
+            exit 1
+          fi
