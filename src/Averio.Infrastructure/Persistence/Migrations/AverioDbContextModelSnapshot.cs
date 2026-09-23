@@ -581,7 +581,6 @@ namespace Averio.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Averio.Domain.Transactions.TransactionItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 

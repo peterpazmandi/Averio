@@ -22,7 +22,10 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            if (exception.Entries.Any(entry => entry.Entity is Transaction))
+            if (exception.Entries.Any(entry =>
+                entry.Entity is Transaction
+                    or TransactionItem
+                    or TransactionLabel))
             {
                 throw new ConflictException(
                     "transaction_changed",

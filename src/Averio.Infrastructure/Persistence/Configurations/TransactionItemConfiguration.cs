@@ -17,7 +17,9 @@ public sealed class TransactionItemConfiguration
         });
 
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.Id)
+            .HasColumnName("id")
+            .ValueGeneratedNever();
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");
         builder.Property(x => x.TransactionId).HasColumnName("transaction_id");
         builder.Property(x => x.Position).HasColumnName("position");

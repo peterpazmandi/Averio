@@ -596,6 +596,7 @@ static async Task VerifyUpdateAsync(
     var updated = await services.GetRequiredService<GetTransactionHandler>()
         .HandleAsync(fixture.HouseholdId, transactionId, CancellationToken.None);
     Equal(30m, updated.Amount);
+    Equal(1, updated.Items.Count);
     Equal(new DateOnly(2026, 10, 5), updated.OccurredOn);
     True(updated.UpdatedAt > originalVersion);
 

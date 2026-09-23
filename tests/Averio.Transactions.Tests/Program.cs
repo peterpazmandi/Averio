@@ -6,6 +6,7 @@ using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
@@ -275,6 +276,9 @@ static void TransactionDetailModel()
     var item = context.Model.FindEntityType(typeof(TransactionItem))
         ?? throw new Exception("TransactionItem entity is missing.");
     Equal("transaction_items", item.GetTableName());
+    Equal(
+        ValueGenerated.Never,
+        item.FindProperty(nameof(TransactionItem.Id))?.ValueGenerated);
     True(item.FindProperty(nameof(TransactionItem.CategoryId)) is not null);
     True(item.FindProperty(nameof(TransactionItem.CategoryIcon)) is not null);
     True(item.GetIndexes().Any(index =>
