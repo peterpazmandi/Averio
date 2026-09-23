@@ -136,7 +136,6 @@ been implemented.
 
 The following are not yet treated as implemented:
 
-- transfers and transfer linkage
 - household invitations/partner invite lifecycle
 - recurring transaction domain and worker execution
 - full category management UI (create/edit/reorder/archive/custom icons)
@@ -160,10 +159,9 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Implement transfer semantics on top of the hardened transaction foundation.
-The design must preserve immutable account currencies, link both transfer legs,
-define cross-currency behavior explicitly, keep privacy enforcement server-side,
-and extend the PostgreSQL integration suite before adding UI workflows.
+Complete category management (create/edit/archive and hierarchy controls) on top
+of the existing catalog, then define the recurring transaction lifecycle and
+worker execution/idempotency before scheduling financial writes.
 
 
 ## Transfer Management — 2026-09-23

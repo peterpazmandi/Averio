@@ -23,3 +23,9 @@
     .av-transfer-movement { gap: 10px; }
     .av-transfer-card { padding: 16px; }
 }
+.av-ui .av-transfer-form .av-input, .av-ui .av-transfer-filters .av-input {
+    min-height: 42px; width: 100%; min-width: 0; max-width: 100%;
+    border: 1px solid var(--border); border-radius: 11px; padding: 8px 12px;
+    background: var(--panel); color: var(--text); font: inherit;
+}
+.av-transfer-form fieldset:disabled { opacity: .65; }
