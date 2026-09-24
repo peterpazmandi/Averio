@@ -155,6 +155,15 @@ Support light mode, dark mode, mobile/responsive layouts, keyboard use, accessib
 
 Do not invent a second design language for new features.
 
+### Tailwind and reusable components
+
+- Always implement new or changed UI styling with Tailwind CSS utilities. Do not add feature stylesheets, new `av-*` styling rules, or inline presentation styles to reproduce the HTML concept.
+- Treat the canonical HTML as a visual reference; translate its appearance into Tailwind rather than copying its CSS.
+- Reuse the Tailwind-based primitives under `shared/components/ui`: `AverioButton`, `AverioInput`, `AverioSelect`, `AverioTextarea`, `AverioField`, and `AverioDialog`. Extract additional shared components when they encapsulate repeated styling or meaningful behavior; do not create one-off wrappers without value.
+- Preserve native props, refs, form association, labels, keyboard behavior, disabled/error states, responsive layouts and light/dark styling. Keep product copy localized at the call site.
+- Existing legacy CSS is not a precedent for new work. Migrate the relevant component when modifying its styling; avoid unrelated whole-application restyling.
+- Global Tailwind imports/theme tokens and genuine runtime behavior (for example, temporarily locking body scroll for a modal) remain appropriate. They are not substitutes for Tailwind component styling.
+
 ## Localization
 
 Supported UI languages:

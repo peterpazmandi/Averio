@@ -30,7 +30,7 @@ export type ConceptIconName = keyof typeof paths;
 
 export function ConceptIcon({ name }: { name: ConceptIconName }) {
     return (
-        <svg className="av-icon" viewBox="0 0 24 24" fill="none"
+        <svg className="av-icon size-[18px] shrink-0" strokeWidth={1.8} viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
             aria-hidden="true" focusable="false">
             <path d={paths[name]} />

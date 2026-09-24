@@ -125,6 +125,10 @@ Show server-side validation/domain errors in a useful localized way. Prevent dou
 
 ### Components
 
+Always use Tailwind CSS utilities for new or changed UI styling. Do not add feature CSS files or copy `av-*` rules from the HTML concept; reproduce the canonical appearance with utilities.
+
+Use `shared/components/ui` for Averio-specific controls: AverioButton, AverioInput, AverioSelect, AverioTextarea, AverioField and AverioDialog. Preserve native props/ref forwarding, accessible names, focus handling, disabled states and light/dark behavior. Extract further components for repeated presentation or shared behavior where useful. Legacy stylesheets are not a precedent for new feature styling.
+
 Prefer shared primitives and feature components over copied markup.
 
 Avoid route files that become large all-purpose components.
