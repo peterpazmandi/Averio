@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import type { CreateTransferRequest, TransferResponse, TransferSideResponse } from '../../shared/api/generated';
+import type { CreateTransferRequest, TransferResponse } from '../../shared/api/generated';
 import { accountsQueries } from '../accounts/api/accountsQueries';
-import { formatDecimalAmount } from '../../shared/money/decimalAmount';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { TransferEditor } from './TransferEditor';
+import { TransferTimeline } from './TransferTimeline';
+import { AverioFilterPanel } from '../../shared/components/ui/AverioFilterPanel';
 import { transferApi, transferKeys, useTransferMutations } from './transferQueries';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
@@ -39,12 +40,6 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
     const rows = transfers.data?.pages.flatMap(p => p.items) ?? [];
     const language = i18n.resolvedLanguage ?? i18n.language;
     const dateFormat = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeZone: 'UTC' });
-    function side(value: TransferSideResponse | null | undefined) {
-        return <div className="grid min-w-0 gap-2 wrap-anywhere last:text-right">
-            <span>{value?.accountName ?? t('transfers.privateAccount')}</span>
-            {value && <strong className="text-[clamp(16px,3vw,23px)] tabular-nums group-data-[voided=true]:line-through">{formatDecimalAmount(value.amount, value.currency, language)}</strong>}
-        </div>;
-    }
     async function save(request: CreateTransferRequest) {
         if (editor === 'new') await mutations.create.mutateAsync(request);
         else if (editor) await mutations.update.mutateAsync({ id: editor.id, request: {
@@ -64,14 +59,25 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
             <AverioButton variant="primary" type="button" disabled={accounts.isPending || owners.isPending || accounts.isError || owners.isError}
                 onClick={() => setEditor('new')}><ConceptIcon name="plus" />{t('transfers.add')}</AverioButton>
         </header>
-        <div className="min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] grid grid-cols-1 gap-4 p-5 min-[621px]:grid-cols-3">
-            <AverioField>{t('transfers.account')}<AverioSelect value={accountId} onChange={e => setAccountId(e.target.value)}>
-                <option value="">{t('transfers.allAccounts')}</option>
-                {(accounts.data ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </AverioSelect></AverioField>
-            <AverioField>{t('transfers.fromDate')}<AverioInput type="date" value={from} onChange={e => setFrom(e.target.value)} /></AverioField>
-            <AverioField>{t('transfers.toDate')}<AverioInput type="date" value={to} onChange={e => setTo(e.target.value)} /></AverioField>
-        </div>
+        <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to)}
+            labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),
+                reset: t('transactionManagement.reset'), summary: t('transactionManagement.filterSummary') }}
+            onReset={() => { setAccountId(''); setFrom(''); setTo(''); }}
+            summary={<>
+                <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{accounts.data?.find(a => a.id === accountId)?.name ?? t('transfers.allAccounts')}</span>
+                {!from && !to && <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{t('transactionManagement.allDates')}</span>}
+                {from && <span>{t('transfers.fromDate')}: {dateFormat.format(new Date(from + 'T00:00:00Z'))}</span>}
+                {to && <span>{t('transfers.toDate')}: {dateFormat.format(new Date(to + 'T00:00:00Z'))}</span>}
+            </>}>
+            <div className="grid grid-cols-1 gap-4 min-[761px]:grid-cols-3">
+                <AverioField>{t('transfers.account')}<AverioSelect value={accountId} onChange={e => setAccountId(e.target.value)}>
+                    <option value="">{t('transfers.allAccounts')}</option>
+                    {(accounts.data ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </AverioSelect></AverioField>
+                <AverioField>{t('transfers.fromDate')}<AverioInput type="date" value={from} onChange={e => setFrom(e.target.value)} /></AverioField>
+                <AverioField>{t('transfers.toDate')}<AverioInput type="date" value={to} onChange={e => setTo(e.target.value)} /></AverioField>
+            </div>
+        </AverioFilterPanel>
         {notice && <p role="status">{notice}</p>}
         {!validDates && <p role="alert">{t('transfers.invalidDates')}</p>}
         {(accounts.isError || owners.isError || transfers.isError) && <div role="alert">
@@ -82,17 +88,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         {transfers.isSuccess && rows.length === 0 && <div className="min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] grid justify-items-start gap-3 p-[22px]">
             <ConceptIcon name="transfers" /><h3>{t('transfers.empty')}</h3><p>{t('transfers.emptyHelp')}</p>
         </div>}
-        <div className="grid gap-3.5">
-            {rows.map(row => <article data-voided={row.isVoided} className="group min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] p-4 min-[621px]:p-[22px] [&_p]:text-[13px] [&_p]:leading-relaxed [&_p]:wrap-anywhere" key={row.id}>
-                <header className="flex items-center justify-between gap-3 text-[13px]"><time dateTime={row.occurredOn}>{dateFormat.format(new Date(row.occurredOn + 'T12:00:00Z'))}</time>
-                    <span className="rounded-full border border-[#E4E7EC] px-2 py-1 text-xs dark:border-[#233044]">{t(row.isVoided ? 'transfers.voided' : 'transfers.posted')}</span></header>
-                <div className="my-[18px] grid grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)] items-center gap-2.5 min-[621px]:gap-[18px] [&>svg]:text-primary-500">{side(row.source)}<ConceptIcon name="transfers" />{side(row.destination)}</div>
-                {row.note && <p>{row.note}</p>}
-                {(!row.source || !row.destination) && <p>{t('transfers.redactedHelp')}</p>}
-                {row.canModify && !row.isVoided && <AverioButton disabled={!accounts.isSuccess || !owners.isSuccess}
-                    onClick={() => setEditor(row)}>{t('transfers.edit')}</AverioButton>}
-            </article>)}
-        </div>
+        {rows.length > 0 && <TransferTimeline rows={rows} canEdit={accounts.isSuccess && owners.isSuccess} onEdit={setEditor} />}
         {transfers.hasNextPage && <AverioButton disabled={transfers.isFetchingNextPage}
             onClick={() => { void transfers.fetchNextPage(); }}>{t('transfers.loadMore')}</AverioButton>}
         {editor === 'new' && writable.filter(a => a.status === 'Active').length < 2
