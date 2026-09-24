@@ -1,7 +1,7 @@
 # Averio Architecture
 
 **Status:** Authoritative architecture reference  
-**Updated:** 2026-09-16
+**Updated:** 2026-09-24
 
 ## Architectural style
 
@@ -118,11 +118,23 @@ src/
 │   └── transactions/
 ├── routes/
 ├── shared/
+│   └── components/
+│       └── ui/          # Reusable Averio Tailwind components
 ├── query/
 └── i18n/
 ```
 
 Avoid giant route files that combine networking, validation, transformation, state, and rendering.
+
+### Reusable UI components
+
+`apps/averio-web/src/shared/components/ui` is the standard location for reusable Averio UI components styled with Tailwind CSS. Feature-specific components stay within their feature folders and compose these shared primitives.
+
+The shared controls are `AverioButton`, `AverioInput`, `AverioSelect`, `AverioTextarea`, `AverioField`, `AverioDialog`, and `AverioFilterPanel`. The filter panel provides an initially collapsed disclosure, active-filter count, selection summary, reset action, and focus restoration when showing results. Reuse or extend them when implementing forms and dialogs; extract additional shared components when repeated styling or behavior justifies it.
+
+Always implement new or changed UI styling with Tailwind utilities, following the canonical HTML concept as the visual reference. Do not add feature stylesheets or copy its `av-*` CSS rules. Existing legacy CSS is not a precedent for new styling.
+
+Shared components preserve native props and refs, accessible labels and focus behavior, disabled/error states, responsive layouts, and light/dark appearance. Keep business logic, API calls, and localized product copy in feature components and pass them through props.
 
 ## Server-state/data access
 
