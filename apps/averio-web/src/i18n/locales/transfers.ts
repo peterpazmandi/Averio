@@ -1,5 +1,7 @@
 export const transfersEN = {
     "title": "Transfers",
+    "movementSection": "Accounts and amounts",
+    "detailsSection": "Transfer details",
     "description": "Move money between accounts without inflating income or spending.",
     "add": "Add transfer",
     "edit": "Edit transfer",
@@ -46,6 +48,8 @@ export const transfersEN = {
 };
 export const transfersDE: typeof transfersEN = {
     "title": "Umbuchungen",
+    "movementSection": "Konten und Beträge",
+    "detailsSection": "Details zur Umbuchung",
     "description": "Verschiebe Geld zwischen Konten, ohne Einnahmen oder Ausgaben zu erhöhen.",
     "add": "Umbuchung hinzufügen",
     "edit": "Umbuchung bearbeiten",
@@ -92,6 +96,8 @@ export const transfersDE: typeof transfersEN = {
 };
 export const transfersHU: typeof transfersEN = {
     "title": "Átvezetések",
+    "movementSection": "Számlák és összegek",
+    "detailsSection": "Átvezetés részletei",
     "description": "Mozgass pénzt a számláid között a bevételek és kiadások növelése nélkül.",
     "add": "Új átvezetés",
     "edit": "Átvezetés szerkesztése",

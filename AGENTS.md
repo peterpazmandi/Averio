@@ -164,6 +164,12 @@ Do not invent a second design language for new features.
 - Existing legacy CSS is not a precedent for new work. Migrate the relevant component when modifying its styling; avoid unrelated whole-application restyling.
 - Global Tailwind imports/theme tokens and genuine runtime behavior (for example, temporarily locking body scroll for a modal) remain appropriate. They are not substitutes for Tailwind component styling.
 
+### Empty states and cards
+
+- Follow `docs/ui/component-patterns.md` for all new or changed empty states and cards, including create/edit dialogs.
+- Empty states combine a lightweight Averio illustration, localized title/help, and a contextual action. Distinguish first-use from no filter matches; never render failures or loading as empty results.
+- Cards follow the selected menu item's visual language: one rounded, subtly tinted surface with an emerald left accent. Keep related content and its footer together. Reuse `shared/components/ui/AverioCard` for form groups.
+
 ## Localization
 
 Supported UI languages:

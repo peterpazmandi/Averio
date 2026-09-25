@@ -3,6 +3,8 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import type { AccountResponse, CreateTransferRequest, TransferResponse } from '../../shared/api/generated';
 import { AverioDialog } from '../../shared/components/ui/AverioDialog';
+import { AverioCard } from '../../shared/components/ui/AverioCard';
+import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect, AverioTextarea } from '../../shared/components/ui/AverioFormControls';
 
@@ -65,39 +67,47 @@ export function TransferEditor({ transfer, accounts, busy, onClose, onSave, onVo
             {transfer && <p>{t('transfers.fixedAccounts')}</p>}
             {transfer && !activePair && <p role="status">{t('transfers.archivedHelp')}</p>}
             <fieldset disabled={busy || !editable} className="grid min-w-0 gap-4 border-0 p-0 disabled:opacity-65">
-                <div className="grid grid-cols-1 gap-4 min-[621px]:grid-cols-2">
-                    <AverioField>{t('transfers.fromAccount')}
-                        <AverioSelect required value={sourceId} disabled={!!transfer}
-                            onChange={e => { setSourceId(e.target.value); setReceived(''); }}>
-                            <option value="">{t('transfers.chooseAccount')}</option>
-                            {accounts.filter(a => a.status === 'Active' || a.id === sourceId).map(a =>
-                                <option key={a.id} value={a.id} disabled={a.id === destinationId}>{a.name} · {a.currency}</option>)}
-                        </AverioSelect>
-                    </AverioField>
-                    <AverioField>{t('transfers.toAccount')}
-                        <AverioSelect required value={destinationId} disabled={!!transfer}
-                            onChange={e => { setDestinationId(e.target.value); setReceived(''); }}>
-                            <option value="">{t('transfers.chooseAccount')}</option>
-                            {accounts.filter(a => a.status === 'Active' || a.id === destinationId).map(a =>
-                                <option key={a.id} value={a.id} disabled={a.id === sourceId}>{a.name} · {a.currency}</option>)}
-                        </AverioSelect>
-                    </AverioField>
-                    <AverioField>{t('transfers.sent')} {source?.currency}
-                        <AverioInput inputMode="decimal" required maxLength={20}
-                            pattern="[0-9]+([.,][0-9]{1,4})?" value={sent} onChange={e => setSent(e.target.value)} />
-                    </AverioField>
-                    {!sameCurrency && <AverioField>{t('transfers.received')} {destination?.currency}
-                        <AverioInput inputMode="decimal" required maxLength={20}
-                            pattern="[0-9]+([.,][0-9]{1,4})?" value={received} onChange={e => setReceived(e.target.value)} />
-                    </AverioField>}
-                    <AverioField>{t('transfers.date')}
-                        <AverioInput type="date" required value={date} onChange={e => setDate(e.target.value)} />
-                    </AverioField>
-                </div>
-                {source && destination && !sameCurrency && <p>{t('transfers.fxHelp')}</p>}
-                <AverioField>{t('transfers.note')}
-                    <AverioTextarea maxLength={500} value={note} onChange={e => setNote(e.target.value)} />
-                </AverioField>
+                <AverioCard role="group" aria-labelledby={`${formId}-movement`}>
+                    <h3 id={`${formId}-movement`} className="mb-4 flex items-center gap-2 text-sm font-bold"><ConceptIcon name="transfers" />{t('transfers.movementSection')}</h3>
+                    <div className="grid grid-cols-1 gap-4 min-[621px]:grid-cols-2">
+                        <AverioField>{t('transfers.fromAccount')}
+                            <AverioSelect required value={sourceId} disabled={!!transfer}
+                                onChange={e => { setSourceId(e.target.value); setReceived(''); }}>
+                                <option value="">{t('transfers.chooseAccount')}</option>
+                                {accounts.filter(a => a.status === 'Active' || a.id === sourceId).map(a =>
+                                    <option key={a.id} value={a.id} disabled={a.id === destinationId}>{a.name} · {a.currency}</option>)}
+                            </AverioSelect>
+                        </AverioField>
+                        <AverioField>{t('transfers.toAccount')}
+                            <AverioSelect required value={destinationId} disabled={!!transfer}
+                                onChange={e => { setDestinationId(e.target.value); setReceived(''); }}>
+                                <option value="">{t('transfers.chooseAccount')}</option>
+                                {accounts.filter(a => a.status === 'Active' || a.id === destinationId).map(a =>
+                                    <option key={a.id} value={a.id} disabled={a.id === sourceId}>{a.name} · {a.currency}</option>)}
+                            </AverioSelect>
+                        </AverioField>
+                        <AverioField>{t('transfers.sent')} {source?.currency}
+                            <AverioInput inputMode="decimal" required maxLength={20}
+                                pattern="[0-9]+([.,][0-9]{1,4})?" value={sent} onChange={e => setSent(e.target.value)} />
+                        </AverioField>
+                        {!sameCurrency && <AverioField>{t('transfers.received')} {destination?.currency}
+                            <AverioInput inputMode="decimal" required maxLength={20}
+                                pattern="[0-9]+([.,][0-9]{1,4})?" value={received} onChange={e => setReceived(e.target.value)} />
+                        </AverioField>}
+                    </div>
+                    {source && destination && !sameCurrency && <p className="mt-3 text-[#667085] dark:text-[#AAB4C4]">{t('transfers.fxHelp')}</p>}
+                </AverioCard>
+                <AverioCard role="group" aria-labelledby={`${formId}-details`}>
+                    <h3 id={`${formId}-details`} className="mb-4 flex items-center gap-2 text-sm font-bold"><ConceptIcon name="receipt" />{t('transfers.detailsSection')}</h3>
+                    <div className="grid gap-4">
+                        <AverioField>{t('transfers.date')}
+                            <AverioInput type="date" required value={date} onChange={e => setDate(e.target.value)} />
+                        </AverioField>
+                        <AverioField>{t('transfers.note')}
+                            <AverioTextarea maxLength={500} value={note} onChange={e => setNote(e.target.value)} />
+                        </AverioField>
+                    </div>
+                </AverioCard>
             </fieldset>
             <p>{t('transfers.privacyHelp')}</p>
             {confirmVoid && <div className="flex flex-wrap gap-2 rounded-[14px] border border-red-500 p-3.5 [&>p]:w-full" role="group" aria-label={t('transfers.void')}>

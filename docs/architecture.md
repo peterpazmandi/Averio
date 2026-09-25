@@ -136,6 +136,8 @@ Always implement new or changed UI styling with Tailwind utilities, following th
 
 Shared components preserve native props and refs, accessible labels and focus behavior, disabled/error states, responsive layouts, and light/dark appearance. Keep business logic, API calls, and localized product copy in feature components and pass them through props.
 
+`AverioCard` provides the menu-inspired card surface for related content and form groups. `AverioTransferIllustration` is a reusable, decorative SVG composition that reuses `AverioLogo`. Empty-state messages and actions belong to feature components. See [UI component patterns](ui/component-patterns.md) for the required card and empty-state behavior.
+
 ## Server-state/data access
 
 TanStack Query is the default server-state mechanism. Query keys should be centralized/separated consistently.

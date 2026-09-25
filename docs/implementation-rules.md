@@ -157,6 +157,8 @@ When a new feature is absent from the prototype, extend the established design r
 
 Use the official Averio logo through a shared component.
 
+For new or changed empty states and cards, follow [UI component patterns](ui/component-patterns.md). Use illustrated, contextual empty states and the menu-inspired card treatment in both overviews and create/edit dialogs. Reuse the shared Tailwind components; preserve form semantics and privacy-aware data boundaries.
+
 ## Domain-change rules
 
 When a change affects ownership, privacy, transfer semantics, personal money, multi-currency, household membership, or authorization:
