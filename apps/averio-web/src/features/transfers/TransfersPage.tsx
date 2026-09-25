@@ -8,6 +8,7 @@ import { TransferEditor } from './TransferEditor';
 import { TransferTimeline } from './TransferTimeline';
 import { AverioFilterPanel } from '../../shared/components/ui/AverioFilterPanel';
 import { transferApi, transferKeys, useTransferMutations } from './transferQueries';
+import { AverioTransferIllustration } from '../../shared/components/ui/AverioTransferIllustration';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 
@@ -24,6 +25,9 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         || a.owners.some(o => o.householdMemberId === owners.data?.currentMemberId));
     const mutations = useTransferMutations(userId, householdId);
     const busy = mutations.create.isPending || mutations.update.isPending || mutations.void.isPending;
+    const hasFilters = !!(accountId || from || to);
+    const canCreate = accounts.isSuccess && owners.isSuccess;
+    function resetFilters() { setAccountId(''); setFrom(''); setTo(''); }
     const validDates = !from || !to || from <= to;
     const transfers = useInfiniteQuery({
         queryKey: transferKeys.list(userId, householdId, accountId, from, to),
@@ -60,7 +64,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
                 <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to)}
                     labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),
                         reset: t('transactionManagement.reset'), summary: t('transactionManagement.filterSummary'), close: t('transfers.close') }}
-                    onReset={() => { setAccountId(''); setFrom(''); setTo(''); }}
+                    onReset={resetFilters}
                     summary={<>
                         <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{accounts.data?.find(a => a.id === accountId)?.name ?? t('transfers.allAccounts')}</span>
                         {!from && !to && <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{t('transactionManagement.allDates')}</span>}
@@ -88,8 +92,15 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
                 void accounts.refetch(); void owners.refetch(); void transfers.refetch();
             }}>{t('transfers.retry')}</AverioButton></div>}
         {transfers.isPending && validDates && <p role="status">{t('transfers.loading')}</p>}
-        {transfers.isSuccess && rows.length === 0 && <div className="min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] grid justify-items-start gap-3 p-[22px]">
-            <ConceptIcon name="transfers" /><h3>{t('transfers.empty')}</h3><p>{t('transfers.emptyHelp')}</p>
+        {validDates && transfers.isSuccess && rows.length === 0 && !accounts.isError && !owners.isError && <div className="grid min-w-0 justify-items-center gap-4 rounded-[18px] border border-[#E4E7EC] bg-white px-5 py-10 text-center dark:border-[#233044] dark:bg-[#0D1726] min-[621px]:py-14">
+            <AverioTransferIllustration />
+            <div className="max-w-sm">
+                <h3 className="m-0 text-xl font-bold tracking-tight">{t(hasFilters ? 'transfers.noMatches' : 'transfers.empty')}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#667085] dark:text-[#AAB4C4]">{t(hasFilters ? 'transfers.noMatchesHelp' : 'transfers.emptyHelp')}</p>
+            </div>
+            {hasFilters
+                ? <AverioButton onClick={resetFilters}><ConceptIcon name="filters" />{t('transfers.resetFilters')}</AverioButton>
+                : <AverioButton variant="primary" disabled={!canCreate} onClick={() => setEditor('new')}><ConceptIcon name="plus" />{t('transfers.add')}</AverioButton>}
         </div>}
         {rows.length > 0 && <TransferTimeline rows={rows} canEdit={accounts.isSuccess && owners.isSuccess} onEdit={setEditor} />}
         {transfers.hasNextPage && <AverioButton disabled={transfers.isFetchingNextPage}
