@@ -56,28 +56,31 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
     return <section className="grid min-w-0 gap-5" aria-labelledby="transfer-title">
         <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight">{t('transfers.title')}</h2>
             <p className="mt-1.5 max-w-[780px] text-xs leading-relaxed text-[#667085] dark:text-[#AAB4C4]">{t('transfers.description')}</p></div>
-            <AverioButton variant="primary" type="button" disabled={accounts.isPending || owners.isPending || accounts.isError || owners.isError}
-                onClick={() => setEditor('new')}><ConceptIcon name="plus" />{t('transfers.add')}</AverioButton>
-        </header>
-        <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to)}
-            labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),
-                reset: t('transactionManagement.reset'), summary: t('transactionManagement.filterSummary') }}
-            onReset={() => { setAccountId(''); setFrom(''); setTo(''); }}
-            summary={<>
-                <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{accounts.data?.find(a => a.id === accountId)?.name ?? t('transfers.allAccounts')}</span>
-                {!from && !to && <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{t('transactionManagement.allDates')}</span>}
-                {from && <span>{t('transfers.fromDate')}: {dateFormat.format(new Date(from + 'T00:00:00Z'))}</span>}
-                {to && <span>{t('transfers.toDate')}: {dateFormat.format(new Date(to + 'T00:00:00Z'))}</span>}
-            </>}>
-            <div className="grid grid-cols-1 gap-4 min-[761px]:grid-cols-3">
-                <AverioField>{t('transfers.account')}<AverioSelect value={accountId} onChange={e => setAccountId(e.target.value)}>
-                    <option value="">{t('transfers.allAccounts')}</option>
-                    {(accounts.data ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </AverioSelect></AverioField>
-                <AverioField>{t('transfers.fromDate')}<AverioInput type="date" value={from} onChange={e => setFrom(e.target.value)} /></AverioField>
-                <AverioField>{t('transfers.toDate')}<AverioInput type="date" value={to} onChange={e => setTo(e.target.value)} /></AverioField>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to)}
+                    labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),
+                        reset: t('transactionManagement.reset'), summary: t('transactionManagement.filterSummary'), close: t('transfers.close') }}
+                    onReset={() => { setAccountId(''); setFrom(''); setTo(''); }}
+                    summary={<>
+                        <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{accounts.data?.find(a => a.id === accountId)?.name ?? t('transfers.allAccounts')}</span>
+                        {!from && !to && <span className="rounded-full border border-[#E4E7EC] px-2.5 py-1 dark:border-[#233044]">{t('transactionManagement.allDates')}</span>}
+                        {from && <span>{t('transfers.fromDate')}: {dateFormat.format(new Date(from + 'T00:00:00Z'))}</span>}
+                        {to && <span>{t('transfers.toDate')}: {dateFormat.format(new Date(to + 'T00:00:00Z'))}</span>}
+                    </>}>
+                    <div className="grid grid-cols-1 gap-4">
+                        <AverioField>{t('transfers.account')}<AverioSelect value={accountId} onChange={e => setAccountId(e.target.value)}>
+                            <option value="">{t('transfers.allAccounts')}</option>
+                            {(accounts.data ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </AverioSelect></AverioField>
+                        <AverioField>{t('transfers.fromDate')}<AverioInput type="date" value={from} onChange={e => setFrom(e.target.value)} /></AverioField>
+                        <AverioField>{t('transfers.toDate')}<AverioInput type="date" value={to} onChange={e => setTo(e.target.value)} /></AverioField>
+                        {!validDates && <p role="alert">{t('transfers.invalidDates')}</p>}
+                    </div>
+                </AverioFilterPanel>
+                <AverioButton variant="primary" type="button" disabled={accounts.isPending || owners.isPending || accounts.isError || owners.isError}
+                    onClick={() => setEditor('new')}><ConceptIcon name="plus" />{t('transfers.add')}</AverioButton>
             </div>
-        </AverioFilterPanel>
+        </header>
         {notice && <p role="status">{notice}</p>}
         {!validDates && <p role="alert">{t('transfers.invalidDates')}</p>}
         {(accounts.isError || owners.isError || transfers.isError) && <div role="alert">
