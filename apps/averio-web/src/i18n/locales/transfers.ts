@@ -1,4 +1,6 @@
 export const transfersEN = {
+    "conflictHelp": "The transfer or its accounts have changed. Reload the latest version before continuing. Reloading discards your unsaved changes.",
+    "reloadLatest": "Reload latest version",
     "title": "Transfers",
     "movementSection": "Accounts and amounts",
     "detailsSection": "Transfer details",
@@ -47,6 +49,8 @@ export const transfersEN = {
     "needAccounts": "You need two active accounts you can manage. Create or reactivate an account on the Accounts page first."
 };
 export const transfersDE: typeof transfersEN = {
+    "conflictHelp": "Die Umbuchung oder ihre Konten wurden geändert. Lade vor dem Fortfahren die aktuelle Version. Deine ungespeicherten Änderungen werden dabei verworfen.",
+    "reloadLatest": "Aktuelle Version laden",
     "title": "Umbuchungen",
     "movementSection": "Konten und Beträge",
     "detailsSection": "Details zur Umbuchung",
@@ -95,6 +99,8 @@ export const transfersDE: typeof transfersEN = {
     "needAccounts": "Du brauchst zwei aktive Konten, die du verwalten darfst. Erstelle oder reaktiviere zuerst ein Konto auf der Kontenseite."
 };
 export const transfersHU: typeof transfersEN = {
+    "conflictHelp": "Az átvezetés vagy a számlái megváltoztak. A folytatáshoz töltsd be a legfrissebb verziót. Ezzel a nem mentett módosításaid elvesznek.",
+    "reloadLatest": "Legfrissebb verzió betöltése",
     "title": "Átvezetések",
     "movementSection": "Számlák és összegek",
     "detailsSection": "Átvezetés részletei",

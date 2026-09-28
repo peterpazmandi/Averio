@@ -125,6 +125,9 @@ static async Task RunVerificationAsync(string connectionString)
     services.AddLogging();
     services.AddApplication();
     services.AddInfrastructure(configuration);
+    services.AddSingleton<TransferReadInterceptor>();
+    services.AddDbContext<AverioDbContext>((sp, options) =>
+        options.AddInterceptors(sp.GetRequiredService<TransferReadInterceptor>()));
     services.AddSingleton<ICurrentUser>(currentUser);
     services.AddSingleton<TimeProvider>(clock);
 

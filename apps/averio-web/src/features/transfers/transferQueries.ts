@@ -1,3 +1,4 @@
+import { ApiError } from '../../shared/api/ApiError';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { TransfersApi } from '../../shared/api/generated';
 import type { CreateTransferRequest, UpdateTransferRequest } from '../../shared/api/generated';
@@ -19,6 +20,9 @@ export function useTransferMutations(userId: string, householdId: string) {
         client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
         client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
     ]);
+    const refreshOnConflict = async (error: Error) => {
+        if (error instanceof ApiError && error.status === 409) await invalidate();
+    };
     return {
         create: useMutation({
             mutationFn: (request: CreateTransferRequest) => transferApi.apiV1HouseholdsHouseholdIdTransfersPost({
@@ -28,12 +32,12 @@ export function useTransferMutations(userId: string, householdId: string) {
         update: useMutation({
             mutationFn: ({ id, request }: { id: string; request: UpdateTransferRequest }) =>
                 transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdPut({ householdId, transferId: id, updateTransferRequest: request }),
-            onSuccess: invalidate,
+            onSuccess: invalidate, onError: refreshOnConflict,
         }),
         void: useMutation({
             mutationFn: ({ id, expectedUpdatedAt }: { id: string; expectedUpdatedAt: string }) =>
                 transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdDelete({ householdId, transferId: id, expectedUpdatedAt }),
-            onSuccess: invalidate,
+            onSuccess: invalidate, onError: refreshOnConflict,
         }),
     };
 }

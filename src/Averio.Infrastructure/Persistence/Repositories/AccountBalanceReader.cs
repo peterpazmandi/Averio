@@ -79,15 +79,17 @@ internal sealed class AccountBalanceReader(AverioDbContext dbContext)
                 || a.Owners.Any(o => o.HouseholdMemberId == householdMemberId)));
         var postedTransfers = dbContext.Transfers.AsNoTracking().Where(t =>
             t.HouseholdId == householdId && t.VoidedAt == null && t.OccurredOn <= asOf);
-        var outgoing = await (from t in postedTransfers
+        var outgoing = (from t in postedTransfers
             join a in visibleAccounts on t.SourceAccountId equals a.Id
             where t.OccurredOn >= a.BalanceAnchorDate
-            select new { AccountId = a.Id, Amount = -t.SentAmount }).ToListAsync(cancellationToken);
-        var incoming = await (from t in postedTransfers
+            select new { AccountId = a.Id, Amount = -t.SentAmount });
+        var incoming = (from t in postedTransfers
             join a in visibleAccounts on t.DestinationAccountId equals a.Id
             where t.OccurredOn >= a.BalanceAnchorDate
-            select new { AccountId = a.Id, Amount = t.ReceivedAmount }).ToListAsync(cancellationToken);
-        foreach (var leg in outgoing.Concat(incoming))
+            select new { AccountId = a.Id, Amount = t.ReceivedAmount });
+        // UNION ALL keeps both legs in one PostgreSQL statement snapshot.
+        var legs = await outgoing.Concat(incoming).ToListAsync(cancellationToken);
+        foreach (var leg in legs)
             if (balances.TryGetValue(leg.AccountId, out var balance))
                 balances[leg.AccountId] = balance + leg.Amount;
 

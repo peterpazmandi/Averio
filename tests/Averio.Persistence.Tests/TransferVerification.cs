@@ -124,6 +124,36 @@ internal static class TransferVerification
         }
         Equal(24m, await BalanceAsync(provider, fixture, fxId));
 
+        // Commit an edit after the transfer SELECT starts but before its results are consumed.
+        // Separate outgoing/incoming commands would mix old debits with new credits.
+        var sourceBefore = await BalanceAsync(provider, fixture, fixture.HouseholdAccountId);
+        var destinationBefore = await BalanceAsync(provider, fixture, destinationId);
+        var interceptor = provider.GetRequiredService<TransferReadInterceptor>();
+        interceptor.AfterTransferRead = async () =>
+        {
+            await using var writerScope = provider.CreateAsyncScope();
+            var writer = writerScope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            await writer.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE transfers SET sent_amount = 175, received_amount = 175 WHERE id = {id}");
+        };
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var balances = await scope.ServiceProvider.GetRequiredService<IAccountBalanceReader>()
+                .GetCurrentBalancesAsync(fixture.HouseholdId, fixture.OwnerMemberId,
+                    [fixture.HouseholdAccountId, destinationId], Date, Ct);
+            True(interceptor.AfterTransferRead == null);
+            Equal(sourceBefore, balances[fixture.HouseholdAccountId]);
+            Equal(destinationBefore, balances[destinationId]);
+        }
+        Equal(sourceBefore - 25m, await BalanceAsync(provider, fixture, fixture.HouseholdAccountId));
+        Equal(destinationBefore + 25m, await BalanceAsync(provider, fixture, destinationId));
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE transfers SET sent_amount = 150, received_amount = 150 WHERE id = {id}");
+        }
+        Console.WriteLine("PASS transfer balance read stays consistent across a concurrent committed edit");
+
         // Archived accounts reject new transfers/edits but preserve the ability to void mistakes.
         await using (var scope = provider.CreateAsyncScope())
         {

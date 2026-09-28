@@ -18,6 +18,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
     const [editor, setEditor] = useState<TransferResponse | 'new' | null>(null);
+    const [editorRevision, setEditorRevision] = useState(0);
     const [notice, setNotice] = useState('');
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
@@ -56,6 +57,14 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         if (!editor || editor === 'new') return;
         await mutations.void.mutateAsync({ id: editor.id, expectedUpdatedAt: editor.updatedAt });
         setEditor(null); setNotice(t('transfers.voidedNotice'));
+    }
+    async function reloadCurrent() {
+        if (!editor || editor === 'new') return;
+        const latest = await transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdGet({ householdId, transferId: editor.id });
+        await Promise.all([accounts.refetch({ throwOnError: true }), owners.refetch({ throwOnError: true })]);
+        setEditor(latest);
+        // Explicitly discard stale fields along with their concurrency token.
+        setEditorRevision(value => value + 1);
     }
     return <section className="grid min-w-0 gap-5" aria-labelledby="transfer-title">
         <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight">{t('transfers.title')}</h2>
@@ -108,8 +117,8 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         {editor === 'new' && writable.filter(a => a.status === 'Active').length < 2
             ? <div className="min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] grid justify-items-start gap-3 p-[22px]" role="status"><p>{t('transfers.needAccounts')}</p>
                 <AverioButton onClick={() => setEditor(null)}>{t('transfers.close')}</AverioButton></div>
-            : editor && <TransferEditor key={editor === 'new' ? 'new' : editor.id}
+            : editor && <TransferEditor key={`${editor === 'new' ? 'new' : editor.id}:${editorRevision}`}
                 transfer={editor === 'new' ? null : editor} accounts={writable} busy={busy}
-                onClose={() => setEditor(null)} onSave={save} onVoid={voidCurrent} />}
+                onClose={() => setEditor(null)} onSave={save} onVoid={voidCurrent} onReload={reloadCurrent} />}
     </section>;
 }
