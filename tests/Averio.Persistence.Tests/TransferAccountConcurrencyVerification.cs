@@ -132,9 +132,9 @@ internal static class TransferAccountConcurrencyVerification
                 var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
                 await using var transaction = await db.Database.BeginTransactionAsync();
                 await db.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '500ms'");
-                var error = await ThrowsAsync<DbUpdateException>(() =>
+                var error = await ThrowsAsync<Exception>(() =>
                     ChangeAccountAsync(db, f, clock, accountId, accountId == seed.Source));
-                Check(error.InnerException is PostgresException { SqlState: PostgresErrorCodes.LockNotAvailable },
+                Check(error.GetBaseException() is PostgresException { SqlState: PostgresErrorCodes.LockNotAvailable },
                     "Account edit must wait for the transfer's row lock.");
                 await transaction.RollbackAsync();
             }
