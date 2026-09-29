@@ -21,6 +21,12 @@ Transfer visibility follows current account visibility, independently for each s
 
 Edits and voids use the observed UpdatedAt token, advanced at PostgreSQL microsecond precision and enforced by EF optimistic concurrency. Authorized repeated voids are idempotent. History is never hard-deleted. Lists use date/creation/ID cursor ordering, with account and date filters.
 
+## Account concurrency enforcement
+
+Create, edit and void hold a database transaction from account locking through the transfer write. Both account rows are locked in database ID order, then status, visibility and owners are reread without tracked snapshots. Account edits advance the parent account version in the same `SaveChanges` transaction as owner changes, so archival or ownership removal cannot commit between transfer authorization and persistence. If an account change commits first, the transfer uses its new state; if the transfer locks first, the account change waits. Void remains allowed for archived accounts but always requires current write access to both sides. Transfer-row optimistic concurrency still rejects stale edits.
+
+Creation errors caused by account conflicts or lost access refresh account choices while preserving the draft. Unavailable selections require replacement; editing conflicts retain the explicit reload-and-discard flow.
+
 ## Consequences and boundaries
 
 - Transfers have a dedicated page linked from the money navigation and Transactions page, extending the canonical visual language.

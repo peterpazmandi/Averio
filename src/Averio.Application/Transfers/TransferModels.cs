@@ -1,4 +1,5 @@
 using Averio.Domain.Transfers;
+using Averio.Domain.Accounts;
 using FluentValidation;
 
 namespace Averio.Application.Transfers;
@@ -32,6 +33,8 @@ public sealed record TransferPage(IReadOnlyList<TransferResult> Items, bool HasM
 public interface ITransferRepository
 {
     void Add(Transfer transfer);
+    // Requires an application transaction; locks are held until commit/rollback.
+    Task<IReadOnlyList<Account>> GetLockedAccountsAsync(Guid householdId, Guid sourceId, Guid destinationId, CancellationToken ct);
     Task<Transfer?> GetForUpdateAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct);
     Task<TransferResult?> GetVisibleAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct);
     Task<TransferPage> GetPageAsync(Guid householdId, Guid memberId, TransferQuery query, CancellationToken ct);

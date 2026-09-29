@@ -1,4 +1,6 @@
 export const transfersEN = {
+    "accountsChangedHelp": "An account is no longer available for this transfer. Choose active accounts you can manage. Your amounts, date and note have been kept.",
+    "refreshAccounts": "Refresh accounts",
     "conflictHelp": "The transfer or its accounts have changed. Reload the latest version before continuing. Reloading discards your unsaved changes.",
     "reloadLatest": "Reload latest version",
     "title": "Transfers",
@@ -49,6 +51,8 @@ export const transfersEN = {
     "needAccounts": "You need two active accounts you can manage. Create or reactivate an account on the Accounts page first."
 };
 export const transfersDE: typeof transfersEN = {
+    "accountsChangedHelp": "Ein Konto ist für diese Umbuchung nicht mehr verfügbar. Wähle aktive Konten, die du verwalten darfst. Beträge, Datum und Notiz bleiben erhalten.",
+    "refreshAccounts": "Konten aktualisieren",
     "conflictHelp": "Die Umbuchung oder ihre Konten wurden geändert. Lade vor dem Fortfahren die aktuelle Version. Deine ungespeicherten Änderungen werden dabei verworfen.",
     "reloadLatest": "Aktuelle Version laden",
     "title": "Umbuchungen",
@@ -99,6 +103,8 @@ export const transfersDE: typeof transfersEN = {
     "needAccounts": "Du brauchst zwei aktive Konten, die du verwalten darfst. Erstelle oder reaktiviere zuerst ein Konto auf der Kontenseite."
 };
 export const transfersHU: typeof transfersEN = {
+    "accountsChangedHelp": "Az egyik számla már nem használható ehhez az átvezetéshez. Válassz aktív, általad kezelhető számlákat. Az összegeket, dátumot és megjegyzést megőriztük.",
+    "refreshAccounts": "Számlák frissítése",
     "conflictHelp": "Az átvezetés vagy a számlái megváltoztak. A folytatáshoz töltsd be a legfrissebb verziót. Ezzel a nem mentett módosításaid elvesznek.",
     "reloadLatest": "Legfrissebb verzió betöltése",
     "title": "Átvezetések",

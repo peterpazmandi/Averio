@@ -20,24 +20,24 @@ export function useTransferMutations(userId: string, householdId: string) {
         client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
         client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
     ]);
-    const refreshOnConflict = async (error: Error) => {
-        if (error instanceof ApiError && error.status === 409) await invalidate();
+    const refreshOnAccountOrTransferChange = async (error: Error) => {
+        if (error instanceof ApiError && [403, 404, 409].includes(error.status)) await invalidate();
     };
     return {
         create: useMutation({
             mutationFn: (request: CreateTransferRequest) => transferApi.apiV1HouseholdsHouseholdIdTransfersPost({
                 householdId, createTransferRequest: request,
-            }), onSuccess: invalidate,
+            }), onSuccess: invalidate, onError: refreshOnAccountOrTransferChange,
         }),
         update: useMutation({
             mutationFn: ({ id, request }: { id: string; request: UpdateTransferRequest }) =>
                 transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdPut({ householdId, transferId: id, updateTransferRequest: request }),
-            onSuccess: invalidate, onError: refreshOnConflict,
+            onSuccess: invalidate, onError: refreshOnAccountOrTransferChange,
         }),
         void: useMutation({
             mutationFn: ({ id, expectedUpdatedAt }: { id: string; expectedUpdatedAt: string }) =>
                 transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdDelete({ householdId, transferId: id, expectedUpdatedAt }),
-            onSuccess: invalidate, onError: refreshOnConflict,
+            onSuccess: invalidate, onError: refreshOnAccountOrTransferChange,
         }),
     };
 }

@@ -22,17 +22,20 @@ interface Props {
 export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose, onSave, onVoid, onReload }: Props) {
     const { t } = useTranslation();
     const formId = useId();
-    const [sourceId, setSourceId] = useState(transfer ? transfer.source?.accountId ?? '' : accounts.find(a => a.status === 'Active')?.id ?? '');
-    const [destinationId, setDestinationId] = useState(transfer?.destination?.accountId ?? '');
+    const [draftSourceId, setSourceId] = useState(transfer ? transfer.source?.accountId ?? '' : accounts.find(a => a.status === 'Active')?.id ?? '');
+    const [draftDestinationId, setDestinationId] = useState(transfer?.destination?.accountId ?? '');
     const [sent, setSent] = useState(transfer?.source?.amount ?? '');
     const [received, setReceived] = useState(transfer?.destination?.amount ?? '');
     const [date, setDate] = useState(transfer?.occurredOn ?? format(new Date(), 'yyyy-MM-dd'));
     const [note, setNote] = useState(transfer?.note ?? '');
     const [error, setError] = useState('');
     const [conflict, setConflict] = useState(false);
+    const [accountChange, setAccountChange] = useState(false);
     const [reloading, setReloading] = useState(false);
     const busy = mutationBusy || reloading;
     const [confirmVoid, setConfirmVoid] = useState(false);
+    const sourceId = transfer || accounts.some(a => a.id === draftSourceId && a.status === 'Active') ? draftSourceId : '';
+    const destinationId = transfer || accounts.some(a => a.id === draftDestinationId && a.status === 'Active') ? draftDestinationId : '';
     const source = accounts.find(a => a.id === sourceId);
     const destination = accounts.find(a => a.id === destinationId);
     const sameCurrency = source?.currency === destination?.currency;
@@ -49,7 +52,10 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
                 occurredOn: date, note: note.trim() || null });
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : t('transfers.failed'));
-            if (transfer && failure instanceof ApiError && failure.status === 409) setConflict(true);
+            if (failure instanceof ApiError && [403, 404, 409].includes(failure.status)) {
+                if (transfer) setConflict(true);
+                else setAccountChange(true);
+            }
         }
     }
 
@@ -59,7 +65,10 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
         try { await onVoid(); }
         catch (failure) {
             setError(failure instanceof Error ? failure.message : t('transfers.failed'));
-            if (transfer && failure instanceof ApiError && failure.status === 409) setConflict(true);
+            if (failure instanceof ApiError && [403, 404, 409].includes(failure.status)) {
+                if (transfer) setConflict(true);
+                else setAccountChange(true);
+            }
         }
     }
 
@@ -87,6 +96,11 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
                 <p>{t('transfers.conflictHelp')}</p>
                 <AverioButton type="button" disabled={busy} onClick={() => { void reload(); }}>{t('transfers.reloadLatest')}</AverioButton>
             </div>}
+            {accountChange && <div role="status" className="grid justify-items-start gap-2">
+                <p>{t('transfers.accountsChangedHelp')}</p>
+                <AverioButton type="button" disabled={busy} onClick={() => { void reload(); }}>{t('transfers.refreshAccounts')}</AverioButton>
+            </div>}
+            {!transfer && accounts.filter(a => a.status === 'Active').length < 2 && <p role="status">{t('transfers.needAccounts')}</p>}
             {transfer && <p>{t('transfers.fixedAccounts')}</p>}
             {transfer && !activePair && <p role="status">{t('transfers.archivedHelp')}</p>}
             <fieldset disabled={busy || conflict || !editable} className="grid min-w-0 gap-4 border-0 p-0 disabled:opacity-65">

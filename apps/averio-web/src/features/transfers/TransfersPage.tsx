@@ -59,7 +59,11 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         setEditor(null); setNotice(t('transfers.voidedNotice'));
     }
     async function reloadCurrent() {
-        if (!editor || editor === 'new') return;
+        if (!editor) return;
+        if (editor === 'new') {
+            await Promise.all([accounts.refetch({ throwOnError: true }), owners.refetch({ throwOnError: true })]);
+            return;
+        }
         const latest = await transferApi.apiV1HouseholdsHouseholdIdTransfersTransferIdGet({ householdId, transferId: editor.id });
         await Promise.all([accounts.refetch({ throwOnError: true }), owners.refetch({ throwOnError: true })]);
         setEditor(latest);
@@ -114,10 +118,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         {rows.length > 0 && <TransferTimeline rows={rows} canEdit={accounts.isSuccess && owners.isSuccess} onEdit={setEditor} />}
         {transfers.hasNextPage && <AverioButton disabled={transfers.isFetchingNextPage}
             onClick={() => { void transfers.fetchNextPage(); }}>{t('transfers.loadMore')}</AverioButton>}
-        {editor === 'new' && writable.filter(a => a.status === 'Active').length < 2
-            ? <div className="min-w-0 rounded-[18px] border border-[#E4E7EC] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)] dark:border-[#233044] dark:bg-[#0D1726] dark:shadow-[0_10px_34px_rgba(0,0,0,0.2)] grid justify-items-start gap-3 p-[22px]" role="status"><p>{t('transfers.needAccounts')}</p>
-                <AverioButton onClick={() => setEditor(null)}>{t('transfers.close')}</AverioButton></div>
-            : editor && <TransferEditor key={`${editor === 'new' ? 'new' : editor.id}:${editorRevision}`}
+        {editor && <TransferEditor key={`${editor === 'new' ? 'new' : editor.id}:${editorRevision}`}
                 transfer={editor === 'new' ? null : editor} accounts={writable} busy={busy}
                 onClose={() => setEditor(null)} onSave={save} onVoid={voidCurrent} onReload={reloadCurrent} />}
     </section>;

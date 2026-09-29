@@ -9,7 +9,7 @@ using FluentValidation;
 namespace Averio.Application.Transfers;
 
 public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdRepository households,
-    IAccountRepository accounts, ITransferRepository transfers, IValidator<TransferInput> validator,
+    ITransferRepository transfers, IValidator<TransferInput> validator,
     IUnitOfWork unitOfWork, TimeProvider timeProvider)
 {
     public async Task<Guid> CreateAsync(Guid householdId, Guid sourceId, Guid destinationId,
@@ -19,8 +19,10 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         var member = await GetMemberAsync(householdId, ct);
         if (sourceId == destinationId)
             throw new BusinessRuleException("transfer_accounts_invalid", "Error_TransferDistinctAccounts");
-        var source = await GetWritableAccountAsync(member, sourceId, true, ct);
-        var destination = await GetWritableAccountAsync(member, destinationId, true, ct);
+        await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
+        var locked = await transfers.GetLockedAccountsAsync(householdId, sourceId, destinationId, ct);
+        var source = GetWritableAccount(member, locked, sourceId, true);
+        var destination = GetWritableAccount(member, locked, destinationId, true);
         ValidateAmounts(source, destination, input);
         var transfer = Transfer.Create(householdId, sourceId, destinationId, member.Id,
             source.Currency, destination.Currency, input.SentAmount, input.ReceivedAmount,
@@ -28,6 +30,7 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         transfers.Add(transfer);
         // Both legs are columns of one row: one SaveChanges is an atomic financial mutation.
         await unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return transfer.Id;
     }
 
@@ -36,28 +39,34 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
     {
         await validator.ValidateAndThrowAsync(input, ct);
         var member = await GetMemberAsync(householdId, ct);
+        await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
         var transfer = await GetWritableAsync(member, id, ct);
         CheckVersion(transfer, expectedUpdatedAt);
         if (transfer.VoidedAt is not null)
             throw new ConflictException("transfer_voided", "Error_TransferVoided");
-        var source = await GetWritableAccountAsync(member, transfer.SourceAccountId, true, ct);
-        var destination = await GetWritableAccountAsync(member, transfer.DestinationAccountId, true, ct);
+        var locked = await transfers.GetLockedAccountsAsync(householdId, transfer.SourceAccountId, transfer.DestinationAccountId, ct);
+        var source = GetWritableAccount(member, locked, transfer.SourceAccountId, true);
+        var destination = GetWritableAccount(member, locked, transfer.DestinationAccountId, true);
         ValidateAmounts(source, destination, input);
         transfer.Update(input.SentAmount, input.ReceivedAmount, input.OccurredOn,
             input.Note, timeProvider.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 
     public async Task VoidAsync(Guid householdId, Guid id, DateTimeOffset expectedUpdatedAt, CancellationToken ct)
     {
         var member = await GetMemberAsync(householdId, ct);
+        await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
         var transfer = await GetWritableAsync(member, id, ct);
-        await GetWritableAccountAsync(member, transfer.SourceAccountId, false, ct);
-        await GetWritableAccountAsync(member, transfer.DestinationAccountId, false, ct);
+        var locked = await transfers.GetLockedAccountsAsync(householdId, transfer.SourceAccountId, transfer.DestinationAccountId, ct);
+        GetWritableAccount(member, locked, transfer.SourceAccountId, false);
+        GetWritableAccount(member, locked, transfer.DestinationAccountId, false);
         if (transfer.VoidedAt is not null) return; // Authorized retries are idempotent.
         CheckVersion(transfer, expectedUpdatedAt);
         transfer.Void(timeProvider.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 
     public async Task<TransferResult> GetAsync(Guid householdId, Guid id, CancellationToken ct)
@@ -86,9 +95,12 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         return household.Members.Single(member => member.UserId == userId);
     }
 
-    private async Task<Account> GetWritableAccountAsync(HouseholdMember member, Guid id, bool requireActive, CancellationToken ct)
+    private static Account GetWritableAccount(HouseholdMember member, IReadOnlyList<Account> locked,
+        Guid id, bool requireActive)
     {
-        var account = await accounts.GetVisibleByIdAsync(member.HouseholdId, member.Id, id, ct)
+        var account = locked.SingleOrDefault(a => a.Id == id
+            && (a.Visibility == AccountVisibility.Household
+                || a.Owners.Any(o => o.HouseholdMemberId == member.Id)))
             ?? throw new NotFoundException("account", id);
         if (!AccountAccess.CanModify(account, member)) throw new ForbiddenException();
         if (requireActive && account.Status != AccountStatus.Active)

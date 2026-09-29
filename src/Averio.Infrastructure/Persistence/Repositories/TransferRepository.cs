@@ -9,6 +9,28 @@ internal sealed class TransferRepository(AverioDbContext db) : ITransferReposito
 {
     public void Add(Transfer transfer) => db.Transfers.Add(transfer);
 
+    public async Task<IReadOnlyList<Account>> GetLockedAccountsAsync(
+        Guid householdId, Guid sourceId, Guid destinationId, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Transfer account locks require a transaction.");
+
+        var ids = new[] { sourceId, destinationId };
+        // Stable ordering prevents opposite-direction transfers from deadlocking.
+        // Account edits always update the parent version in the same SaveChanges
+        // transaction as owner changes, so neither can commit while these locks are held.
+        await db.Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value" FROM accounts
+            WHERE household_id = {householdId} AND id = ANY ({ids})
+            ORDER BY id FOR UPDATE
+            """).ToListAsync(ct);
+
+        // Read after acquiring the locks, including after waiting for an account edit.
+        // Never reuse tracked account/owner snapshots from earlier in the request.
+        return await db.Accounts.AsNoTracking().Include(a => a.Owners)
+            .Where(a => a.HouseholdId == householdId && ids.Contains(a.Id)).ToListAsync(ct);
+    }
+
     private IQueryable<Account> VisibleAccounts(Guid householdId, Guid memberId)
         => db.Accounts.Where(a => a.HouseholdId == householdId
             && (a.Visibility == AccountVisibility.Household
