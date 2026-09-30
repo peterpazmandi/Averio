@@ -93,6 +93,10 @@ jobs:
         working-directory: apps/averio-web
         run: npm ci
 
+      - name: Run transfer recovery regression tests
+        working-directory: apps/averio-web
+        run: node --test tests/transfer-recovery.test.mjs
+
       - name: Build frontend
         working-directory: apps/averio-web
         run: npm run build

@@ -125,6 +125,9 @@ static async Task RunVerificationAsync(string connectionString)
     services.AddLogging();
     services.AddApplication();
     services.AddInfrastructure(configuration);
+    services.AddSingleton<TransferReadInterceptor>();
+    services.ConfigureDbContext<AverioDbContext>((sp, options) =>
+        options.AddInterceptors(sp.GetRequiredService<TransferReadInterceptor>()), ServiceLifetime.Singleton);
     services.AddSingleton<ICurrentUser>(currentUser);
     services.AddSingleton<TimeProvider>(clock);
 
@@ -184,6 +187,9 @@ static async Task RunVerificationAsync(string connectionString)
     await CheckAsync(
         "PostgreSQL enforces optimistic concurrency",
         () => VerifyDatabaseConcurrencyAsync(provider, clock, fixture));
+
+    await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
+    await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)

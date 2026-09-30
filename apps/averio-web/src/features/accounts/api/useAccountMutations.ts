@@ -1,3 +1,4 @@
+import { transferKeys } from '../../transfers/transferQueries';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateAccountRequest, UpdateAccountRequest } from '../../../shared/api/generated';
 import { ApiError } from '../../../shared/api/ApiError';
@@ -9,6 +10,7 @@ export function useAccountMutations(userId: string, householdId: string) {
     const client = useQueryClient();
     async function refresh() {
         await Promise.all([
+            client.invalidateQueries({ queryKey: transferKeys.all(userId, householdId) }),
             client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
             client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
         ]);

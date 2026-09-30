@@ -136,7 +136,6 @@ been implemented.
 
 The following are not yet treated as implemented:
 
-- transfers and transfer linkage
 - household invitations/partner invite lifecycle
 - recurring transaction domain and worker execution
 - full category management UI (create/edit/reorder/archive/custom icons)
@@ -160,7 +159,20 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Implement transfer semantics on top of the hardened transaction foundation.
-The design must preserve immutable account currencies, link both transfer legs,
-define cross-currency behavior explicitly, keep privacy enforcement server-side,
-and extend the PostgreSQL integration suite before adding UI workflows.
+Complete category management (create/edit/archive and hierarchy controls) on top
+of the existing catalog, then define the recurring transaction lifecycle and
+worker execution/idempotency before scheduling financial writes.
+
+
+## Transfer Management — 2026-09-23
+
+Implemented in the Transfer Management branch (ADR-018):
+
+- Atomic create, edit and void of paired account movements; preserved history and optimistic concurrency.
+- Same-currency and explicitly entered cross-currency settlement amounts, without cash-flow double counting.
+- Server-side per-side privacy, hidden counterparty/note redaction and authorized account filters.
+- Anchor/as-of-aware balance projection; archived-account void support.
+- Generated OpenAPI client, localized EN/DE/HU transfer page, filters, editor and confirmation dialog.
+- AddTransfers EF migration, database constraints/indexes and PostgreSQL regression coverage.
+
+Deployment requires explicitly applying the AddTransfers migration. This does not implement bank execution, recurring transfers, fees as part of a transfer, personal-money attribution or FX reporting.

@@ -156,6 +156,8 @@ current balance
 = balance anchor
 + posted visible income from anchor date through as-of date
 - posted visible expense from anchor date through as-of date
++ posted incoming transfers in the account currency within the same window
+- posted outgoing transfers in the account currency within the same window
 ```
 
 Transactions before the anchor date do not change the current balance. Future-dated transactions do not change today's balance until their date is reached.
@@ -251,7 +253,11 @@ Transactions relate to labels through `transaction_labels`; label text/scope is 
 
 A transfer is paired movement between financial containers, not a normal expense/income pair.
 
-Transfers are intentionally outside the first Transaction Management slice. They must be implemented as linked movements with atomic creation/update/void behavior so they cannot be double-counted or orphaned. Cross-currency transfers additionally require explicit FX semantics.
+Transfer Management now implements this through a separate, single-row aggregate owning both sides (ADR-018). Create/edit/void is atomic; accounts/currencies are immutable, amounts are positive decimals, and same-currency amounts must match. Cross-currency transfers retain explicitly entered actual settlement amounts in both currencies; their directional ratio is the effective conversion, sourced from the user's settlement information and dated by the transfer date. There is no market-rate or report-conversion service.
+
+The actor must be able to manage both accounts. Current account visibility applies separately to each side. An inaccessible side is returned as null, and the note is hidden unless both accounts are visible. Hidden account IDs cannot be used to filter history. Voiding retains history and reverses both posted balance effects; stale edits are rejected.
+
+Transfers contribute to each account's balance within that account's anchor/as-of window but never enter income/expense/category aggregates. Transfers across household/personal scope do not yet consume personal-money allocations or produce boundary cash-flow metrics. Fees are separate expenses.
 
 ## Reporting aggregates
 

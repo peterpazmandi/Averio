@@ -24,6 +24,7 @@ public sealed class AverioDbContext(
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<IconCatalogEntry> Icons => Set<IconCatalogEntry>();
     public DbSet<Label> Labels => Set<Label>();
+    public DbSet<Averio.Domain.Transfers.Transfer> Transfers => Set<Averio.Domain.Transfers.Transfer>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<TransactionItem> TransactionItems => Set<TransactionItem>();
     public DbSet<TransactionLabel> TransactionLabels => Set<TransactionLabel>();

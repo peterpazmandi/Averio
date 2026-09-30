@@ -293,5 +293,10 @@
   <data name="Validation_TransactionLabelInvalid" xml:space="preserve"><value>Egy vagy több kiválasztott címke nem érhető el ehhez a számlához.</value></data>
   <data name="Validation_TransactionLabelAccountRequired" xml:space="preserve"><value>A számlacímkéhez számla szükséges.</value></data>
   <data name="Validation_TransactionLabelHouseholdAccountInvalid" xml:space="preserve"><value>A háztartási címke nem köthető számlához.</value></data>
+  <data name="Error_TransferDistinctAccounts" xml:space="preserve"><value>Válassz két különböző számlát.</value></data>
+  <data name="Error_TransferAmountsMismatch" xml:space="preserve"><value>Azonos pénznemnél a küldött és fogadott összegnek egyeznie kell. A díjakat külön rögzítsd.</value></data>
+  <data name="Error_TransferChanged" xml:space="preserve"><value>Az átvezetés megváltozott. Mentés előtt töltsd be újra.</value></data>
+  <data name="Error_TransferVoided" xml:space="preserve"><value>A sztornózott átvezetés nem szerkeszthető.</value></data>
+  <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Ellenőrizd a dátumtartományt és a lapozási paramétereket.</value></data>
 </root>
 

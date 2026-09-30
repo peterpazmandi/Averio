@@ -1,4 +1,5 @@
 const paths = {
+    transfers: 'M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4',
     bank: 'M3 9h18L12 3 3 9ZM5 10v8M10 10v8M14 10v8M19 10v8M3 21h18M3 18h18',
     savings: 'M4 10c0-3 3-5 7-5h3l4-3v5l3 3v5h-3l-1 5h-3l-1-3H9l-1 3H5l-1-6H2v-4h2ZM9 8h4M16 10h.01',
     cash: 'M3 5h18v14H3zM3 9c2 0 4-2 4-4M17 5c0 2 2 4 4 4M3 15c2 0 4 2 4 4M17 19c0-2 2-4 4-4M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
@@ -29,7 +30,7 @@ export type ConceptIconName = keyof typeof paths;
 
 export function ConceptIcon({ name }: { name: ConceptIconName }) {
     return (
-        <svg className="av-icon" viewBox="0 0 24 24" fill="none"
+        <svg className="av-icon size-[18px] shrink-0" strokeWidth={1.8} viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
             aria-hidden="true" focusable="false">
             <path d={paths[name]} />

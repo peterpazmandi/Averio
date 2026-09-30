@@ -36,6 +36,10 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}>
                 <ConceptIcon name="transactions" />{t('navigation.transactions')}
             </Link>
+            <Link to="/app/transfers" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
+                <ConceptIcon name="transfers" />{t('transfers.title')}
+            </Link>
             {(['recurring', 'categories'] as const).map(unavailable)}
 
             <div className="av-nav-label">{t('concept.planning')}</div>

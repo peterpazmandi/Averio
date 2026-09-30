@@ -1,7 +1,7 @@
 # Averio Architecture
 
 **Status:** Authoritative architecture reference  
-**Updated:** 2026-09-16
+**Updated:** 2026-09-24
 
 ## Architectural style
 
@@ -118,11 +118,25 @@ src/
 │   └── transactions/
 ├── routes/
 ├── shared/
+│   └── components/
+│       └── ui/          # Reusable Averio Tailwind components
 ├── query/
 └── i18n/
 ```
 
 Avoid giant route files that combine networking, validation, transformation, state, and rendering.
+
+### Reusable UI components
+
+`apps/averio-web/src/shared/components/ui` is the standard location for reusable Averio UI components styled with Tailwind CSS. Feature-specific components stay within their feature folders and compose these shared primitives.
+
+The shared controls are `AverioButton`, `AverioInput`, `AverioSelect`, `AverioTextarea`, `AverioField`, `AverioDialog`, and `AverioFilterPanel`. The filter panel uses a compact toolbar button with an active-filter count. It opens an AverioDialog (a bottom sheet on mobile) containing the filter controls, selection summary, and reset action, with focus restored on dismissal. Filter changes apply immediately; closing the dialog preserves the selection. Reuse or extend them when implementing forms and dialogs; extract additional shared components when repeated styling or behavior justifies it.
+
+Always implement new or changed UI styling with Tailwind utilities, following the canonical HTML concept as the visual reference. Do not add feature stylesheets or copy its `av-*` CSS rules. Existing legacy CSS is not a precedent for new styling.
+
+Shared components preserve native props and refs, accessible labels and focus behavior, disabled/error states, responsive layouts, and light/dark appearance. Keep business logic, API calls, and localized product copy in feature components and pass them through props.
+
+`AverioCard` provides the menu-inspired card surface for related content and form groups. `AverioTransferIllustration` is a reusable, decorative SVG composition that reuses `AverioLogo`. Empty-state messages and actions belong to feature components. See [UI component patterns](ui/component-patterns.md) for the required card and empty-state behavior.
 
 ## Server-state/data access
 
@@ -276,3 +290,4 @@ Create an ADR before finalizing major choices such as:
 - background scheduler
 - billing/subscription provider
 - advanced permission model
+
