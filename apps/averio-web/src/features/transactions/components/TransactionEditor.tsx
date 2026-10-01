@@ -152,12 +152,14 @@ export function TransactionEditor({
     const resolvedItems = useMemo(
         () => items.map(item => {
             const selected = categoriesById.get(item.categoryId);
-            if (uncategorizedId && (!item.categoryId || !selected)) {
+            const original = transaction?.items.find(old => old.id === item.key);
+            const retained = original?.categoryId === item.categoryId && transaction?.kind === kind;
+            if (uncategorizedId && (!item.categoryId || (!selected && !retained))) {
                 return { ...item, categoryId: uncategorizedId };
             }
             return item;
         }),
-        [categoriesById, items, uncategorizedId],
+        [categoriesById, items, uncategorizedId, transaction, kind],
     );
 
     const resolvedLabelIds = useMemo(() => {
@@ -233,6 +235,7 @@ export function TransactionEditor({
         }
 
         const mappedItems = resolvedItems.map(item => ({
+            existingItemId: transaction?.items.some(old => old.id === item.key) ? item.key : null,
             description: item.description.trim(),
             categoryId: item.categoryId,
             amount: normalizeAmount(item.amount),
@@ -549,6 +552,7 @@ export function TransactionEditor({
                                         <CategoryPicker
                                             categories={categories.data ?? []}
                                             value={item.categoryId}
+                                            fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                                             disabled={busy || categories.isPending}
                                             label={t('transactionManagement.category')}
                                             onChange={categoryId => updateItem(item.key, {
@@ -657,3 +661,4 @@ export function TransactionEditor({
         </div>
     );
 }
+

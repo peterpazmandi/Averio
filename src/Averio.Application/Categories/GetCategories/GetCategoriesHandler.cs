@@ -13,7 +13,7 @@ public sealed class GetCategoriesHandler(
     public async Task<IReadOnlyList<CategoryResult>> HandleAsync(
         Guid householdId,
         TransactionKind? kind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool includeArchived = false)
     {
         var userId = currentUser.UserId ?? throw new AuthenticationFailedException();
 
@@ -22,7 +22,7 @@ public sealed class GetCategoriesHandler(
             ?? throw new NotFoundException("household", householdId);
 
         var categories = await categoryRepository.GetAvailableAsync(
-            household.Id, kind, cancellationToken);
+            household.Id, kind, cancellationToken, includeArchived);
 
         return categories.Select(category => new CategoryResult(
             category.Id,
@@ -33,7 +33,7 @@ public sealed class GetCategoriesHandler(
             category.Icon,
             category.AccentColor,
             category.SortOrder,
-            category.IsBase)).ToArray();
+            category.IsBase, category.IsArchived, category.UpdatedAt)).ToArray();
     }
 }
 
@@ -46,4 +46,5 @@ public sealed record CategoryResult(
     string Icon,
     string AccentColor,
     int SortOrder,
-    bool IsSystem);
+    bool IsSystem, bool IsArchived, DateTimeOffset UpdatedAt);
+

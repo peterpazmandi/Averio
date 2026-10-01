@@ -298,5 +298,18 @@
   <data name="Error_TransferChanged" xml:space="preserve"><value>This transfer changed. Reload it before saving again.</value></data>
   <data name="Error_TransferVoided" xml:space="preserve"><value>A voided transfer cannot be edited.</value></data>
   <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Check the date range and pagination parameters.</value></data>
+  <data name="Validation_CategoryName" xml:space="preserve"><value>Enter a category name of at most 100 characters.</value></data>
+  <data name="Validation_CategoryKind" xml:space="preserve"><value>Choose Income, Expense, or Both.</value></data>
+  <data name="Validation_CategoryIcon" xml:space="preserve"><value>Choose an icon from the catalog.</value></data>
+  <data name="Validation_CategoryColor" xml:space="preserve"><value>Use a six-digit hex color, for example #10B981.</value></data>
+  <data name="Error_CategoryParent" xml:space="preserve"><value>Choose an active, compatible top-level category from this household or the system catalog.</value></data>
+  <data name="Error_CategoryChanged" xml:space="preserve"><value>This category changed. Reload it before saving again.</value></data>
+  <data name="Error_CategoryArchived" xml:space="preserve"><value>Restore this category before editing it.</value></data>
+  <data name="Error_CategoryKindImmutable" xml:space="preserve"><value>The category type cannot change after creation.</value></data>
+  <data name="Error_CategoryHasChildren" xml:space="preserve"><value>A category with subcategories cannot become a subcategory.</value></data>
+  <data name="Error_CategoryActiveChildren" xml:space="preserve"><value>Archive the active subcategories first.</value></data>
+  <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archived categories can only be retained on their existing transaction items.</value></data>
+  <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>The original transaction item is invalid or was supplied more than once. Reload the transaction.</value></data>
 </root>
+
 

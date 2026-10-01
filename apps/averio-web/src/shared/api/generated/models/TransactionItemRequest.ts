@@ -31,6 +31,10 @@ export interface TransactionItemRequest {
      * 
      */
     amount: string;
+    /**
+     * 
+     */
+    existingItemId?: string | null;
 }
 
 /**
@@ -56,6 +60,7 @@ export function TransactionItemRequestFromJSONTyped(json: any, ignoreDiscriminat
         'description': json['description'],
         'categoryId': json['categoryId'],
         'amount': json['amount'],
+        'existingItemId': json['existingItemId'] === undefined ? undefined : json['existingItemId'] === null ? null : json['existingItemId'],
     };
 }
 
@@ -73,6 +78,7 @@ export function TransactionItemRequestToJSONTyped(value?: TransactionItemRequest
         'description': value['description'],
         'categoryId': value['categoryId'],
         'amount': value['amount'],
+        'existingItemId': value['existingItemId'],
     };
 }
 

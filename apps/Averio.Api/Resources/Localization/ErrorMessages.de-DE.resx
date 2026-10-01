@@ -298,5 +298,18 @@
   <data name="Error_TransferChanged" xml:space="preserve"><value>Diese Umbuchung wurde geändert. Lade sie vor dem Speichern erneut.</value></data>
   <data name="Error_TransferVoided" xml:space="preserve"><value>Eine stornierte Umbuchung kann nicht bearbeitet werden.</value></data>
   <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Prüfe den Zeitraum und die Seitenparameter.</value></data>
+  <data name="Validation_CategoryName" xml:space="preserve"><value>Gib einen Kategorienamen mit höchstens 100 Zeichen ein.</value></data>
+  <data name="Validation_CategoryKind" xml:space="preserve"><value>Wähle Einnahme, Ausgabe oder beides.</value></data>
+  <data name="Validation_CategoryIcon" xml:space="preserve"><value>Wähle ein Symbol aus dem Katalog.</value></data>
+  <data name="Validation_CategoryColor" xml:space="preserve"><value>Verwende eine sechsstellige Hex-Farbe, zum Beispiel #10B981.</value></data>
+  <data name="Error_CategoryParent" xml:space="preserve"><value>Wähle eine aktive, passende Hauptkategorie aus diesem Haushalt oder dem Systemkatalog.</value></data>
+  <data name="Error_CategoryChanged" xml:space="preserve"><value>Diese Kategorie wurde geändert. Lade sie vor dem erneuten Speichern neu.</value></data>
+  <data name="Error_CategoryArchived" xml:space="preserve"><value>Stelle diese Kategorie vor dem Bearbeiten wieder her.</value></data>
+  <data name="Error_CategoryKindImmutable" xml:space="preserve"><value>Der Kategorietyp kann nach dem Anlegen nicht geändert werden.</value></data>
+  <data name="Error_CategoryHasChildren" xml:space="preserve"><value>Eine Kategorie mit Unterkategorien kann keine Unterkategorie werden.</value></data>
+  <data name="Error_CategoryActiveChildren" xml:space="preserve"><value>Archiviere zuerst die aktiven Unterkategorien.</value></data>
+  <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archivierte Kategorien können nur bei ihren bestehenden Buchungsposten beibehalten werden.</value></data>
+  <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>Der ursprüngliche Buchungsposten ist ungültig oder wurde mehrfach übermittelt. Lade die Buchung neu.</value></data>
 </root>
+
 

@@ -208,6 +208,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnName("system_key");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
@@ -233,6 +234,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_categories_kind", "kind IN ('Expense', 'Income', 'Both')");
 
                             t.HasCheckConstraint("ck_categories_name_source", "(is_base AND system_key IS NOT NULL AND name IS NULL) OR (NOT is_base AND system_key IS NULL AND name IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_categories_not_self_parent", "parent_id IS NULL OR parent_id <> id");
 
                             t.HasCheckConstraint("ck_categories_scope", "(is_base AND household_id IS NULL) OR (NOT is_base AND household_id IS NOT NULL)");
                         });

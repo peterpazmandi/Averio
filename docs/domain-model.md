@@ -294,3 +294,14 @@ HouseholdMember 1 ── * PersonalMoneyPeriod/Allocation (future implementation
 ```
 
 Exact physical cardinalities can evolve through ADRs/migrations; the semantic separations above are the important invariants.
+
+
+
+## Category management lifecycle (ADR-019)
+
+System category definitions are globally shared and immutable through household APIs.
+Custom categories belong to one household and all its members may manage them. Names are shared data; there is no private-category scope.
+The hierarchy is limited to a parent and direct children. Kind is immutable; parents must be active, available to the household, and type-compatible.
+Archive/restore preserves IDs and financial history. Archive parents only after active children; restore parents before children.
+Category edits use UpdatedAt concurrency. ExistingItemId in transaction input identifies a previously authorized item whose unchanged category retains its name/icon snapshot. Archived categories cannot be newly assigned.
+Reports continue to use stable category IDs and current category display data; persisted totals do not change on category edits. Parent rollups remain a future read-model feature.

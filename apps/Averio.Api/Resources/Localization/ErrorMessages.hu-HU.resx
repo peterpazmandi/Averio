@@ -298,5 +298,18 @@
   <data name="Error_TransferChanged" xml:space="preserve"><value>Az átvezetés megváltozott. Mentés előtt töltsd be újra.</value></data>
   <data name="Error_TransferVoided" xml:space="preserve"><value>A sztornózott átvezetés nem szerkeszthető.</value></data>
   <data name="Error_TransferQueryInvalid" xml:space="preserve"><value>Ellenőrizd a dátumtartományt és a lapozási paramétereket.</value></data>
+  <data name="Validation_CategoryName" xml:space="preserve"><value>Adj meg legfeljebb 100 karakteres kategórianevet.</value></data>
+  <data name="Validation_CategoryKind" xml:space="preserve"><value>Válassz bevételt, kiadást vagy mindkettőt.</value></data>
+  <data name="Validation_CategoryIcon" xml:space="preserve"><value>Válassz ikont az ikonkatalógusból.</value></data>
+  <data name="Validation_CategoryColor" xml:space="preserve"><value>Hatjegyű hexadecimális színt adj meg, például #10B981.</value></data>
+  <data name="Error_CategoryParent" xml:space="preserve"><value>Válassz aktív, megfelelő típusú főkategóriát ebből a háztartásból vagy a rendszerkatalógusból.</value></data>
+  <data name="Error_CategoryChanged" xml:space="preserve"><value>A kategória megváltozott. Mentés előtt töltsd újra.</value></data>
+  <data name="Error_CategoryArchived" xml:space="preserve"><value>Szerkesztés előtt állítsd vissza ezt a kategóriát.</value></data>
+  <data name="Error_CategoryKindImmutable" xml:space="preserve"><value>A kategória típusa létrehozás után nem módosítható.</value></data>
+  <data name="Error_CategoryHasChildren" xml:space="preserve"><value>Alkategóriákkal rendelkező kategória nem lehet alkategória.</value></data>
+  <data name="Error_CategoryActiveChildren" xml:space="preserve"><value>Előbb archiváld az aktív alkategóriákat.</value></data>
+  <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archivált kategória csak a hozzá tartozó korábbi tranzakciótételen tartható meg.</value></data>
+  <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>A korábbi tranzakciótétel érvénytelen vagy többször szerepel. Töltsd újra a tranzakciót.</value></data>
 </root>
+
 

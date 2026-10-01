@@ -18,6 +18,7 @@ interface Props {
     onChange: (categoryId: string) => void;
     disabled?: boolean;
     label: string;
+    fallback?: { categoryName: string; categoryIcon: string };
 }
 
 interface PickerPosition {
@@ -43,6 +44,7 @@ export function CategoryPicker({
     onChange,
     disabled = false,
     label,
+    fallback,
 }: Props) {
     const { t } = useTranslation();
     const root = useRef<HTMLDivElement>(null);
@@ -222,7 +224,7 @@ export function CategoryPicker({
 
     const selectedDisplayName = selected
         ? getCategoryDisplayName(selected, t)
-        : t('transactionManagement.selectCategory');
+        : fallback?.categoryName ?? t('transactionManagement.selectCategory');
 
     const selectedParentName = selectedParent
         ? getCategoryDisplayName(selectedParent, t)
@@ -408,7 +410,7 @@ export function CategoryPicker({
                         className="av-category-picker-icon"
                         aria-hidden="true"
                     >
-                        {selected?.icon ?? '🗂️'}
+                        {selected?.icon ?? fallback?.categoryIcon ?? '🗂️'}
                     </span>
                     <span className="av-category-picker-copy">
                         <strong>
@@ -434,7 +436,9 @@ export function CategoryPicker({
                 </button>
             </div>
 
+            {!selected && fallback && <p className="mt-2 text-xs text-[#667085] dark:text-[#AAB4C4]">{t('categoryManagement.historicalAssignment')}</p>}
             {pickerPanel}
         </>
     );
 }
+

@@ -78,6 +78,9 @@ public sealed class CreateTransactionHandler(
                 "Error_TransactionVisibilityNotAllowed");
         }
 
+        await using var databaseTransaction =
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var items = await referenceResolver.ResolveItemsAsync(
             household.Id,
             command.Kind,
@@ -103,9 +106,6 @@ public sealed class CreateTransactionHandler(
             items,
             labelIds,
             timeProvider.GetUtcNow());
-
-        await using var databaseTransaction =
-            await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         try
         {

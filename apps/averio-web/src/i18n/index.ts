@@ -1,3 +1,4 @@
+import { categoryManagementEN, categoryManagementDE, categoryManagementHU } from './locales/categoryManagement';
 import { transfersEN, transfersDE, transfersHU } from './locales/transfers';
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
@@ -25,13 +26,13 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, systemCategories: systemCategoriesEN, concept: conceptEN },
+                translation: { ...en, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, systemCategories: systemCategoriesDE, concept: conceptDE },
+                translation: { ...de, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, systemCategories: systemCategoriesHU, concept: conceptHU },
+                translation: { ...hu, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 
@@ -78,3 +79,4 @@ i18n.on('initialized', () => {
 i18n.on('languageChanged', syncDocumentLang);
 
 export default i18n;
+

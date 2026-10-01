@@ -22,6 +22,7 @@ import { Route as GuestResetPasswordRouteImport } from './routes/_guest.reset-pa
 import { Route as GuestVerifyEmailRouteImport } from './routes/_guest.verify-email'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppAccountsRouteImport } from './routes/_authenticated.app.accounts'
+import { Route as AuthenticatedAppCategoriesRouteImport } from './routes/_authenticated.app.categories'
 import { Route as AuthenticatedAppStatisticsRouteImport } from './routes/_authenticated.app.statistics'
 import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated.app.transactions'
 import { Route as AuthenticatedAppTransfersRouteImport } from './routes/_authenticated.app.transfers'
@@ -93,6 +94,12 @@ const AuthenticatedAppAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppCategoriesRoute =
+  AuthenticatedAppCategoriesRouteImport.update({
+    id: '/categories',
+    path: '/categories',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppStatisticsRoute =
   AuthenticatedAppStatisticsRouteImport.update({
     id: '/statistics',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
   '/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
+  '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -158,6 +166,7 @@ export interface FileRoutesByTo {
   '/resend-verification': typeof GuestResendVerificationRoute
   '/reset-password': typeof GuestResetPasswordRoute
   '/verify-email': typeof GuestVerifyEmailRoute
+  '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -180,6 +189,7 @@ export interface FileRoutesById {
   '/_guest/reset-password': typeof GuestResetPasswordRoute
   '/_guest/verify-email': typeof GuestVerifyEmailRoute
   '/_authenticated/app/accounts': typeof AuthenticatedAppAccountsRouteWithChildren
+  '/_authenticated/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/_authenticated/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/_authenticated/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/app/accounts'
+    | '/app/categories'
     | '/app/statistics'
     | '/app/transactions'
     | '/app/transfers'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/resend-verification'
     | '/reset-password'
     | '/verify-email'
+    | '/app/categories'
     | '/app/statistics'
     | '/app/transactions'
     | '/app/transfers'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/_guest/reset-password'
     | '/_guest/verify-email'
     | '/_authenticated/app/accounts'
+    | '/_authenticated/app/categories'
     | '/_authenticated/app/statistics'
     | '/_authenticated/app/transactions'
     | '/_authenticated/app/transfers'
@@ -347,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAccountsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/categories': {
+      id: '/_authenticated/app/categories'
+      path: '/categories'
+      fullPath: '/app/categories'
+      preLoaderRoute: typeof AuthenticatedAppCategoriesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/statistics': {
       id: '/_authenticated/app/statistics'
       path: '/statistics'
@@ -413,6 +433,7 @@ const AuthenticatedAppAccountsRouteWithChildren =
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAccountsRoute: typeof AuthenticatedAppAccountsRouteWithChildren
+  AuthenticatedAppCategoriesRoute: typeof AuthenticatedAppCategoriesRoute
   AuthenticatedAppStatisticsRoute: typeof AuthenticatedAppStatisticsRoute
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
   AuthenticatedAppTransfersRoute: typeof AuthenticatedAppTransfersRoute
@@ -421,6 +442,7 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAccountsRoute: AuthenticatedAppAccountsRouteWithChildren,
+  AuthenticatedAppCategoriesRoute: AuthenticatedAppCategoriesRoute,
   AuthenticatedAppStatisticsRoute: AuthenticatedAppStatisticsRoute,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
   AuthenticatedAppTransfersRoute: AuthenticatedAppTransfersRoute,

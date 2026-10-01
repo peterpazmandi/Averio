@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-09-22
+**Status date:** 2026-09-30
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -138,7 +138,7 @@ The following are not yet treated as implemented:
 
 - household invitations/partner invite lifecycle
 - recurring transaction domain and worker execution
-- full category management UI (create/edit/reorder/archive/custom icons)
+- category pinning/reordering, system-category preferences, and private categories
 - goals
 - personal-money allocation and rollover
 - historical CSV/XLSX import
@@ -159,14 +159,12 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Complete category management (create/edit/archive and hierarchy controls) on top
-of the existing catalog, then define the recurring transaction lifecycle and
-worker execution/idempotency before scheduling financial writes.
+Define the household invitation/joining lifecycle next, including existing users with financial history. Recurring execution remains a later milestone requiring idempotency and worker design.
 
 
 ## Transfer Management — 2026-09-23
 
-Implemented in the Transfer Management branch (ADR-018):
+Merged into develop through PR #7 (ADR-018):
 
 - Atomic create, edit and void of paired account movements; preserved history and optimistic concurrency.
 - Same-currency and explicitly entered cross-currency settlement amounts, without cash-flow double counting.
@@ -176,3 +174,15 @@ Implemented in the Transfer Management branch (ADR-018):
 - AddTransfers EF migration, database constraints/indexes and PostgreSQL regression coverage.
 
 Deployment requires explicitly applying the AddTransfers migration. This does not implement bank execution, recurring transfers, fees as part of a transfer, personal-money attribution or FX reporting.
+
+
+
+## Category Management — 2026-09-30
+
+Implemented on the category-management feature branch (ADR-019):
+- Household custom categories: create, edit, archive and restore; system definitions stay read-only.
+- Two-level hierarchy with household/type/parent lifecycle validation and optimistic concurrency.
+- Localized management page with filters, shared Tailwind cards/dialogs, catalog icons and colors.
+- Existing item references preserve category snapshots, including archived assignments, through transaction edits.
+- Category validation holds PostgreSQL shared row locks through ledger commit to serialize with archival.
+- No ledger deletion, aggregate rewrite, private-category semantics, system preference overrides, pinning or drag ordering.

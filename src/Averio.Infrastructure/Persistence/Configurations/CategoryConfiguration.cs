@@ -11,6 +11,7 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         builder.ToTable("categories", table =>
         {
+            table.HasCheckConstraint("ck_categories_not_self_parent", "parent_id IS NULL OR parent_id <> id");
             table.HasCheckConstraint("ck_categories_kind", "kind IN ('Expense', 'Income', 'Both')");
             table.HasCheckConstraint(
                 "ck_categories_scope",
@@ -37,7 +38,7 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(x => x.IsBase).HasColumnName("is_base");
         builder.Property(x => x.IsArchived).HasColumnName("is_archived");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").IsConcurrencyToken();
 
         builder.HasOne<Household>().WithMany()
             .HasForeignKey(x => x.HouseholdId)
