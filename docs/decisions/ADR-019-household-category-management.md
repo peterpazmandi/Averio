@@ -27,3 +27,7 @@ Add a self-parent check and category concurrency metadata through an EF migratio
 ## Boundaries
 
 This slice does not implement pinning, drag ordering, global system customization, private categories, parent report rollups or personal-money attribution. Those are independent extensions, not implied by the visual prototype.
+
+## Follow-up
+
+ADR-020 extends the original boundary with personal category pins and localized ordering. Shared system definitions remain immutable.

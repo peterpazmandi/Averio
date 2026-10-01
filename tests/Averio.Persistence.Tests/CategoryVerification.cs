@@ -31,6 +31,9 @@ internal static class CategoryVerification
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             var icons = await db.Icons.OrderBy(i => i.Id).Take(2).ToListAsync();
+            Check(await db.Icons.CountAsync() == 240, "Icon catalog size changed");
+            Check(!await db.Icons.AnyAsync(i => i.Name.StartsWith("icon-")), "Icons still have placeholder names");
+            Check(await db.Icons.AnyAsync(i => i.Id == 21 && i.Name == "Shopping cart"), "Icon name migration missing");
             icon = icons[0].Value;
             otherIcon = icons[1].Value;
             systemRoot = await db.Categories.Where(c => c.IsBase && c.ParentId == null).Select(c => c.Id).FirstAsync();
@@ -57,6 +60,22 @@ internal static class CategoryVerification
 
         var parent = await Create(provider, f.HouseholdId, new("Family", CategoryKind.Expense, icon, "#10B981", null));
         var child = await Create(provider, f.HouseholdId, new("School meals", CategoryKind.Expense, icon, "#10B981", parent));
+        var unpinnedVersion = (await Read(provider, child)).UpdatedAt;
+        await Task.WhenAll(Pin(provider, f.HouseholdId, child, true), Pin(provider, f.HouseholdId, child, true));
+        await Pin(provider, f.HouseholdId, systemRoot, true);
+        await CheckPins(provider, f.HouseholdId, child, systemRoot);
+        Check((await Read(provider, child)).UpdatedAt == unpinnedVersion, "Personal pin changed shared category version");
+        user.UserId = f.MemberUserId;
+        await CheckPins(provider, f.HouseholdId);
+        await Pin(provider, f.HouseholdId, parent, true);
+        await CheckPins(provider, f.HouseholdId, parent);
+        user.UserId = f.OwnerUserId;
+        await CheckPins(provider, f.HouseholdId, child, systemRoot);
+        await Pin(provider, f.HouseholdId, systemRoot, false);
+        await Pin(provider, f.HouseholdId, systemRoot, false);
+        await CheckPins(provider, f.HouseholdId, child);
+        await Throws<NotFoundException>(() => Pin(provider, f.HouseholdId, foreignCategory, true));
+        await Throws<NotFoundException>(() => Pin(provider, foreignHousehold, foreignCategory, true));
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Too deep", CategoryKind.Expense, icon, "#10B981", child)));
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Wrong kind", CategoryKind.Income, icon, "#10B981", parent)));
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Foreign", CategoryKind.Expense, icon, "#10B981", foreignCategory)));
@@ -94,6 +113,8 @@ internal static class CategoryVerification
         }
         await EditTransaction(provider, f, transactionId, child, "Changed note", false);
         await Archive(provider, f.HouseholdId, child, true);
+        await CheckPins(provider, f.HouseholdId, child);
+        await Throws<ConflictException>(() => Pin(provider, f.HouseholdId, child, true));
         await EditTransaction(provider, f, transactionId, child, "Archived note", false);
         await EditTransaction(provider, f, transactionId, child, "Invalid duplicate", true);
         await using (var scope = provider.CreateAsyncScope())
@@ -111,6 +132,9 @@ internal static class CategoryVerification
         await Throws<BusinessRuleException>(() => Archive(provider, f.HouseholdId, child, false));
         await Archive(provider, f.HouseholdId, parent, false);
         await Archive(provider, f.HouseholdId, child, false);
+        await CheckPins(provider, f.HouseholdId, child);
+        await Pin(provider, f.HouseholdId, child, false);
+        await CheckPins(provider, f.HouseholdId);
 
         // A shared category is editable by another member, but never in another household.
         user.UserId = f.MemberUserId;
@@ -144,6 +168,18 @@ internal static class CategoryVerification
                 .HandleAsync(f.HouseholdId, transactionId, ledger.UpdatedAt, Ct);
         }
         Console.WriteLine("PASS category management, hierarchy, privacy, historical snapshots and concurrency");
+    }
+
+    private static async Task Pin(IServiceProvider provider, Guid householdId, Guid id, bool pinned)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<CategoryPinHandler>().HandleAsync(householdId, id, pinned, Ct);
+    }
+    private static async Task CheckPins(IServiceProvider provider, Guid householdId, params Guid[] expected)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var categories = await scope.ServiceProvider.GetRequiredService<GetCategoriesHandler>().HandleAsync(householdId, null, Ct, true);
+        Check(categories.Where(c => c.IsPinned).Select(c => c.Id).ToHashSet().SetEquals(expected), "Pins were lost or leaked across users");
     }
 
     private static async Task EditTransaction(IServiceProvider provider, Fixture f, Guid id, Guid categoryId, string note, bool duplicate)

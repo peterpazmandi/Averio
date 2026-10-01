@@ -12,7 +12,7 @@ namespace Averio.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/v1/households/{householdId:guid}/categories")]
-public sealed class CategoriesController(GetCategoriesHandler reader, CategoryManagementHandler writer) : ControllerBase
+public sealed class CategoriesController(GetCategoriesHandler reader, CategoryManagementHandler writer, CategoryPinHandler pins) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> List(
@@ -23,7 +23,7 @@ public sealed class CategoriesController(GetCategoriesHandler reader, CategoryMa
             : EnumParser.Parse<TransactionKind>(kind, nameof(kind), "Validation_TransactionKindInvalid");
         var result = await reader.HandleAsync(householdId, parsedKind, cancellationToken, includeArchived);
         return Ok(result.Select(c => new CategoryResponse(c.Id, c.ParentId, c.SystemKey, c.Name,
-            c.Kind.ToString(), c.Icon, c.AccentColor, c.SortOrder, c.IsSystem, c.IsArchived, c.UpdatedAt)));
+            c.Kind.ToString(), c.Icon, c.AccentColor, c.SortOrder, c.IsSystem, c.IsArchived, c.UpdatedAt, c.IsPinned)));
     }
 
     [HttpPost]
@@ -50,6 +50,13 @@ public sealed class CategoriesController(GetCategoriesHandler reader, CategoryMa
         CategoryArchiveRequest request, CancellationToken ct)
     {
         await writer.SetArchivedAsync(householdId, categoryId, request.IsArchived, request.ExpectedUpdatedAt, ct);
+        return NoContent();
+    }
+
+    [HttpPut("{categoryId:guid}/pin")]
+    public async Task<IActionResult> SetPin(Guid householdId, Guid categoryId, CategoryPinRequest request, CancellationToken ct)
+    {
+        await pins.HandleAsync(householdId, categoryId, request.IsPinned, ct);
         return NoContent();
     }
 

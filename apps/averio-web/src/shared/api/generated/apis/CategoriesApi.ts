@@ -24,6 +24,11 @@ import {
     CategoryCreatedResponseToJSON,
 } from '../models/CategoryCreatedResponse';
 import {
+    type CategoryPinRequest,
+    CategoryPinRequestFromJSON,
+    CategoryPinRequestToJSON,
+} from '../models/CategoryPinRequest';
+import {
     type CategoryResponse,
     CategoryResponseFromJSON,
     CategoryResponseToJSON,
@@ -52,6 +57,21 @@ export interface ApiV1HouseholdsHouseholdIdCategoriesCategoryIdArchivePutRequest
      * 
      */
     categoryArchiveRequest: CategoryArchiveRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    categoryId: string;
+    /**
+     * 
+     */
+    categoryPinRequest: CategoryPinRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdCategoriesCategoryIdPutRequest {
@@ -158,6 +178,66 @@ export class CategoriesApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdCategoriesCategoryIdArchivePut(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesCategoryIdArchivePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdCategoriesCategoryIdArchivePutRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut().'
+            );
+        }
+
+        if (requestParameters['categoryId'] == null) {
+            throw new runtime.RequiredError(
+                'categoryId',
+                'Required parameter "categoryId" was null or undefined when calling apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut().'
+            );
+        }
+
+        if (requestParameters['categoryPinRequest'] == null) {
+            throw new runtime.RequiredError(
+                'categoryPinRequest',
+                'Required parameter "categoryPinRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/categories/{categoryId}/pin`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{categoryId}', encodeURIComponent(String(requestParameters['categoryId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CategoryPinRequestToJSON(requestParameters['categoryPinRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPutRaw(requestParameters, initOverrides);
     }
 
     /**

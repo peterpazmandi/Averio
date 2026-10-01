@@ -241,6 +241,27 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Categories.CategoryPin", b =>
+                {
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("HouseholdMemberId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("category_pins", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Categories.IconCatalogEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -1046,6 +1067,21 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_categories_parent");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Categories.CategoryPin", b =>
+                {
+                    b.HasOne("Averio.Domain.Categories.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>

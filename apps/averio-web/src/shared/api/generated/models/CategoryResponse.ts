@@ -63,6 +63,10 @@ export interface CategoryResponse {
      * 
      */
     updatedAt: string;
+    /**
+     * 
+     */
+    isPinned: boolean;
 }
 
 /**
@@ -80,6 +84,7 @@ export function instanceOfCategoryResponse(value: object): value is CategoryResp
     if (!('isSystem' in value) || value['isSystem'] === undefined) return false;
     if (!('isArchived' in value) || value['isArchived'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
+    if (!('isPinned' in value) || value['isPinned'] === undefined) return false;
     return true;
 }
 
@@ -104,6 +109,7 @@ export function CategoryResponseFromJSONTyped(json: any, ignoreDiscriminator: bo
         'isSystem': json['isSystem'],
         'isArchived': json['isArchived'],
         'updatedAt': json['updatedAt'],
+        'isPinned': json['isPinned'],
     };
 }
 
@@ -129,6 +135,7 @@ export function CategoryResponseToJSONTyped(value?: CategoryResponse | null, ign
         'isSystem': value['isSystem'],
         'isArchived': value['isArchived'],
         'updatedAt': value['updatedAt'],
+        'isPinned': value['isPinned'],
     };
 }
 

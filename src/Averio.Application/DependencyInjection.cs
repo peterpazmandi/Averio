@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<Statistics.GetCashFlow.GetCashFlowHandler>();
         services.AddScoped<Statistics.GetCategoryCashFlow.GetCategoryCashFlowHandler>();
         services.AddScoped<Categories.ManageCategories.CategoryManagementHandler>();
+        services.AddScoped<Categories.ManageCategories.CategoryPinHandler>();
         services.AddScoped<Categories.GetCategories.GetCategoriesHandler>();
         services.AddScoped<Categories.GetIcons.GetIconsHandler>();
         services.AddScoped<Labels.GetLabels.GetLabelsHandler>();

@@ -1,3 +1,4 @@
+import { sortCategories } from './categoryOrdering';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +15,7 @@ import { CategoryIllustration } from './CategoryIllustration';
 import { categoryQueries, useCategoryMutations } from './categoryQueries';
 
 export function CategoriesPage({ userId, householdId }: { userId: string; householdId: string }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const query = useQuery(categoryQueries.management(userId, householdId));
     const mutations = useCategoryMutations(userId, householdId);
     const [search, setSearch] = useState('');
@@ -27,8 +28,9 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
     const [archiveError, setArchiveError] = useState('');
     const [archiveConflict, setArchiveConflict] = useState(false);
     const [reloadBusy, setReloadBusy] = useState(false);
-    const categories = query.data ?? [];
-    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending;
+    const [pinError, setPinError] = useState('');
+    const categories = sortCategories(query.data ?? [], t, i18n.resolvedLanguage ?? i18n.language, false);
+    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.pin.isPending;
     const count = Number(Boolean(search.trim())) + Number(Boolean(kind)) + Number(Boolean(source)) + Number(status !== 'active');
     const reset = () => { setSearch(''); setKind(''); setSource(''); setStatus('active'); };
     const matches = (c: CategoryResponse) => (!kind || c.kind === kind || c.kind === 'Both')
@@ -39,6 +41,12 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
         parent, parentMatches: matches(parent),
         children: categories.filter(c => c.parentId === parent.id && matches(c)),
     })).filter(g => g.parentMatches || g.children.length > 0);
+    const pinned = categories.filter(c => c.isPinned && matches(c));
+    async function changePin(category: CategoryResponse) {
+        setPinError('');
+        try { await mutations.pin.mutateAsync(category); }
+        catch (reason) { setPinError(reason instanceof ApiError ? reason.message : t('errors.genericDescription')); }
+    }
     async function save(request: CreateCategoryRequest) {
         if (editor?.category) {
             await mutations.update.mutateAsync({ id: editor.category.id,
@@ -74,18 +82,25 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
         } catch { setArchiveError(t('errors.genericDescription')); }
         finally { setReloadBusy(false); }
     }
-    function row(c: CategoryResponse, contextOnly = false) {
-        return <div key={c.id} className={`flex min-w-0 flex-wrap items-center gap-3 py-3 ${c.parentId ? 'ml-5 border-l border-primary-500/30 pl-3' : ''}`}>
+    function row(c: CategoryResponse, contextOnly = false, shortcut = false) {
+        const parent = shortcut ? categories.find(parent => parent.id === c.parentId) : undefined;
+        return <div key={c.id} className={`flex min-w-0 flex-wrap items-center gap-3 py-3 ${c.parentId && !shortcut ? 'ml-5 border-l border-primary-500/30 pl-3' : ''}`}>
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl dark:bg-[#0D1726]" aria-hidden="true">{c.icon}</span>
             <svg className="size-3 shrink-0" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill={c.accentColor} /></svg>
             <div className="min-w-0 flex-1">
                 <h3 className="break-words font-semibold">{getCategoryDisplayName(c, t)}</h3>
+                {parent && <p className="text-xs">{getCategoryDisplayName(parent, t)}</p>}
                 <p className="text-xs text-[#667085] dark:text-[#AAB4C4]">
                     {t('categoryManagement.' + c.kind)} · {t(c.isSystem ? 'categoryManagement.system' : 'categoryManagement.custom')}
                     {c.isArchived && <> · {t('categoryManagement.archived')}</>}
                     {contextOnly && <> · {t('categoryManagement.parentContext')}</>}
                 </p>
             </div>
+            {!contextOnly && (!c.isArchived || c.isPinned) && <AverioButton disabled={busy}
+                aria-pressed={c.isPinned} aria-label={t(c.isPinned ? 'categoryManagement.unpinNamed' : 'categoryManagement.pinNamed', { name: getCategoryDisplayName(c, t) })}
+                onClick={() => void changePin(c)}>
+                <span aria-hidden="true">📌</span> {t(c.isPinned ? 'categoryManagement.unpin' : 'categoryManagement.pin')}
+            </AverioButton>}
             {!contextOnly && !c.isSystem && <div className="flex flex-wrap gap-2">
                 {!c.isArchived && <AverioButton disabled={busy} onClick={() => setEditor({ category: c })}
                     aria-label={t('categoryManagement.editNamed', { name: getCategoryDisplayName(c, t) })}>
@@ -139,6 +154,14 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
                 </div>
             </AverioFilterPanel>
         </div>
+        {pinError && <p role="alert" className="text-red-700 dark:text-red-300">{pinError}</p>}
+        {query.isSuccess && pinned.length > 0 && <AverioCard>
+            <section aria-label={t('categoryManagement.pinned')}>
+                <h3 className="font-bold">{t('categoryManagement.pinned')}</h3>
+                <p className="text-xs">{t('categoryManagement.pinHelp')}</p>
+                {pinned.map(c => row(c, false, true))}
+            </section>
+        </AverioCard>}
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
         {query.isError && <AverioCard>
             <p role="alert">{t('errors.genericDescription')}</p>

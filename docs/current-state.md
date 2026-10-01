@@ -91,7 +91,7 @@ The transaction slice includes:
 - currency-separated cash-flow and category-statistics read models
 - account and dashboard balances derived from posted requester-visible entries
 - shared transaction editor entry points from the header, dashboard, and list
-- a searchable grouped category picker and responsive statistics UI
+- a searchable category picker with parent context and responsive statistics UI
 
 Aggregate writes participate in the same PostgreSQL transaction as ledger
 create, update, and void operations. Private transactions do not contribute to
@@ -138,7 +138,7 @@ The following are not yet treated as implemented:
 
 - household invitations/partner invite lifecycle
 - recurring transaction domain and worker execution
-- category pinning/reordering, system-category preferences, and private categories
+- category drag reordering, shared system-category customization, and private categories
 - goals
 - personal-money allocation and rollover
 - historical CSV/XLSX import
@@ -185,4 +185,8 @@ Implemented on the category-management feature branch (ADR-019):
 - Localized management page with filters, shared Tailwind cards/dialogs, catalog icons and colors.
 - Existing item references preserve category snapshots, including archived assignments, through transaction edits.
 - Category validation holds PostgreSQL shared row locks through ledger commit to serialize with archival.
-- No ledger deletion, aggregate rewrite, private-category semantics, system preference overrides, pinning or drag ordering.
+- No ledger deletion, aggregate rewrite, private-category semantics, shared system preference overrides or drag ordering.
+
+### Category preferences follow-up - 2026-10-01
+
+ADR-020 adds database-backed personal category pins (including system categories), localized alphabetical ordering, shared category selectors, and a responsive named icon picker with 240 EN/DE/HU names. Pins always precede eligible unpinned choices; archived assignments remain subject to the existing lifecycle rules.

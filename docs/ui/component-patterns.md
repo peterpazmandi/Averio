@@ -26,3 +26,10 @@ One logical item must read as one card. Related account sides, amounts, status, 
 Create/edit dialogs follow the same treatment. Group related controls into cards with localized headings and accessible names, retaining labels, validation, required/disabled controls, native form submission, and logical keyboard order. Stack groups on small screens; use columns only when controls fit without clipping. Keep dialog actions in the shared dialog footer and destructive confirmation visually distinct.
 
 Reference: the transfer overview's unified cards and the transfer editor's “Accounts and amounts” and “Transfer details” groups. Use the same grouping for create and update; account immutability and financial behavior must not change as part of presentation work.
+
+
+## Category and icon choices
+
+Use `AverioCategorySelect` for every category choice, including parent selection and transaction items. Filter eligibility first; sort personal pins first and displayed names alphabetically using the current UI locale. Include parent context for children. Category overviews keep alphabetical trees and a pinned shortcut section. Use the shared `categoryOrdering` helper rather than seed order or untranslated keys.
+
+Use `AverioIconPicker` for icon selection: localized named tiles, name search, current selection preview, native radio keyboard behavior and clear focus states. Preserve saved icons missing from the current catalog. New catalog entries need meaningful API names and EN/DE/HU translations.

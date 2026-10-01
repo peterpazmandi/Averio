@@ -7,7 +7,8 @@ import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
-import { getCategoryDisplayName } from '../transactions/categoryLocalization';
+import { AverioIconPicker } from '../../shared/components/ui/AverioIconPicker';
+import { AverioCategorySelect } from '../../shared/components/ui/AverioCategorySelect';
 import { categoryQueries } from './categoryQueries';
 
 interface Props {
@@ -27,7 +28,6 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
     const [parentId, setParentId] = useState(category?.parentId ?? '');
     const [icon, setIcon] = useState(category?.icon ?? '🛒');
     const [accentColor, setAccentColor] = useState(category?.accentColor ?? '#10B981');
-    const [iconSearch, setIconSearch] = useState('');
     const [error, setError] = useState('');
     const [conflict, setConflict] = useState(false);
     const [reloadBusy, setReloadBusy] = useState(false);
@@ -35,9 +35,6 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
     const parents = categories.filter(c => !c.parentId && !c.isArchived && c.id !== category?.id
         && (c.kind === 'Both' || c.kind === kind));
     const invalidParent = Boolean(parentId && !parents.some(c => c.id === parentId));
-    const choices = (icons.data ?? []).filter(i => i.value === icon
-        || i.name.toLocaleLowerCase().includes(iconSearch.toLocaleLowerCase().trim())
-        || i.value.includes(iconSearch.trim()));
     async function submit(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         if (busy || conflict || invalidParent || !icons.isSuccess) return;
@@ -84,14 +81,11 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
                     </AverioSelect>
                 </AverioField>
                 {category && <p className="text-xs">{t('categoryManagement.kindFixed')}</p>}
-                <AverioField>{t('categoryManagement.parent')}
-                    <AverioSelect value={parentId} disabled={busy || hasChildren} aria-invalid={invalidParent}
-                        onChange={e => setParentId(e.target.value)}>
-                        <option value="">{t('categoryManagement.noParent')}</option>
-                        {invalidParent && <option value={parentId} disabled>{t('categoryManagement.unavailableParent')}</option>}
-                        {parents.map(c => <option key={c.id} value={c.id}>{getCategoryDisplayName(c, t)}</option>)}
-                    </AverioSelect>
-                </AverioField>
+                <div className="grid gap-2">
+                    <p className="text-[13px] font-semibold">{t('categoryManagement.parent')}</p>
+                    <AverioCategorySelect categories={parents} value={parentId} onChange={setParentId}
+                        disabled={busy || hasChildren} label={t('categoryManagement.parent')} noneLabel={t('categoryManagement.noParent')} />
+                </div>
                 <p className="text-xs">{t(hasChildren ? 'categoryManagement.childrenHelp' : 'categoryManagement.parentHelp')}</p>
             </AverioCard>
             <AverioCard className="grid gap-4">
@@ -101,15 +95,7 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
                     <p>{t('errors.genericDescription')}</p>
                     <AverioButton onClick={() => void icons.refetch()}>{t('common.actions.retry')}</AverioButton>
                 </div>}
-                <AverioField>{t('categoryManagement.iconSearch')}
-                    <AverioInput type="search" value={iconSearch} disabled={busy} onChange={e => setIconSearch(e.target.value)} />
-                </AverioField>
-                <AverioField>{t('categoryManagement.icon')}
-                    <AverioSelect value={icon} disabled={busy || !icons.isSuccess} onChange={e => setIcon(e.target.value)}>
-                        {!choices.some(i => i.value === icon) && <option value={icon}>{icon}</option>}
-                        {choices.map(i => <option key={i.id} value={i.value}>{i.value} {i.name}</option>)}
-                    </AverioSelect>
-                </AverioField>
+                <AverioIconPicker icons={icons.data ?? []} value={icon} onChange={setIcon} disabled={busy || !icons.isSuccess} />
                 <AverioField>{t('categoryManagement.color')}
                     <AverioInput type="color" value={accentColor} disabled={busy} onChange={e => setAccentColor(e.target.value)} />
                 </AverioField>
