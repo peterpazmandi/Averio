@@ -86,3 +86,15 @@ test('deep tree keeps ancestor context and excludes all descendants from parent 
     assert.equal(categoryPath(items[0], items, i18n.t), 'Root / Branch / Leaf');
     assert.equal([...descendantsOf('a', items)].sort().join(), 'a,b,c');
 });
+
+test('existing assignments survive filtered choices and require explicit replacement', () => {
+    const { resolveItemCategory } = load('../src/features/transactions/resolveItemCategory.ts');
+    // The API accepts compatible kinds or rejects an incompatible kind without
+    // saving; the UI must never substitute Uncategorized silently.
+    assert.equal(resolveItemCategory('archived-both', 'archived-both', false, 'uncategorized'), 'archived-both');
+    assert.equal(resolveItemCategory('archived-expense', 'archived-expense', false, 'uncategorized'), 'archived-expense');
+    assert.equal(resolveItemCategory('new-choice', 'archived-both', true, 'uncategorized'), 'new-choice');
+    assert.equal(resolveItemCategory('unavailable-new', undefined, false, 'uncategorized'), 'uncategorized');
+    assert.equal(resolveItemCategory('', undefined, false, 'uncategorized'), 'uncategorized');
+    assert.equal(resolveItemCategory('original', 'original', false, ''), 'original');
+});

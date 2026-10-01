@@ -130,6 +130,7 @@ internal static class CategoryVerification
         await Archive(provider, f.HouseholdId, child, true);
         await CheckPins(provider, f.HouseholdId, child);
         await Throws<ConflictException>(() => Pin(provider, f.HouseholdId, child, true));
+        await Throws<BusinessRuleException>(() => EditTransaction(provider, f, transactionId, child, "Wrong kind", false, TransactionKind.Income));
         await EditTransaction(provider, f, transactionId, child, "Archived note", false);
         await EditTransaction(provider, f, transactionId, child, "Invalid duplicate", true);
         await using (var scope = provider.CreateAsyncScope())
@@ -182,6 +183,29 @@ internal static class CategoryVerification
             await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>()
                 .HandleAsync(f.HouseholdId, transactionId, ledger.UpdatedAt, Ct);
         }
+
+        // Retaining an archived Both category remains valid when correcting the transaction kind.
+        var both = await Create(provider, f.HouseholdId, new("Original both", CategoryKind.Both, icon, "#10B981", null));
+        Guid bothTransactionId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            bothTransactionId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(
+                new(f.HouseholdId, f.HouseholdAccountId, TransactionKind.Expense, TransactionVisibility.Household,
+                    null, null, new DateOnly(2026, 9, 24), [new("Original item", both, 12.5m)], []), Ct);
+        }
+        await Update(provider, f.HouseholdId, both, new("Renamed both", CategoryKind.Both, otherIcon, "#6366F1", null));
+        await Archive(provider, f.HouseholdId, both, true);
+        await EditTransaction(provider, f, bothTransactionId, both, "Corrected kind", false, TransactionKind.Income);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var ledger = await db.Transactions.Include(t => t.Items).SingleAsync(t => t.Id == bothTransactionId);
+            var item = ledger.Items.Single();
+            Check(ledger.Kind == TransactionKind.Income && item.CategoryId == both, "Archived Both assignment lost on kind change");
+            Check(item.CategoryName == "Original both" && item.CategoryIcon == icon, "Kind change rewrote historical snapshot");
+            await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>()
+                .HandleAsync(f.HouseholdId, bothTransactionId, ledger.UpdatedAt, Ct);
+        }
         Console.WriteLine("PASS category management, hierarchy, privacy, historical snapshots and concurrency");
     }
 
@@ -202,7 +226,7 @@ internal static class CategoryVerification
         Check(categories.Where(c => c.IsPinned).Select(c => c.Id).ToHashSet().SetEquals(expected), "Pins were lost or leaked across users");
     }
 
-    private static async Task EditTransaction(IServiceProvider provider, Fixture f, Guid id, Guid categoryId, string note, bool duplicate)
+    private static async Task EditTransaction(IServiceProvider provider, Fixture f, Guid id, Guid categoryId, string note, bool duplicate, TransactionKind kind = TransactionKind.Expense)
     {
         await using var scope = provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
@@ -210,7 +234,7 @@ internal static class CategoryVerification
         var original = transaction.Items.Single();
         var item = new TransactionItemInput("Meal", categoryId, 12.5m, original.Id);
         var command = new UpdateTransactionCommand(f.HouseholdId, id, f.HouseholdAccountId,
-            TransactionKind.Expense, TransactionVisibility.Household, "School", note, transaction.OccurredOn,
+            kind, TransactionVisibility.Household, "School", note, transaction.OccurredOn,
             duplicate ? [item, item] : [item], [], transaction.UpdatedAt);
         var handler = scope.ServiceProvider.GetRequiredService<UpdateTransactionHandler>();
         if (duplicate) await Throws<BusinessRuleException>(() => handler.HandleAsync(command, Ct));

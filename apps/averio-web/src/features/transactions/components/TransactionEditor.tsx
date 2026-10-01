@@ -7,6 +7,7 @@ import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { createLabel } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { CategoryPicker } from './CategoryPicker';
+import { resolveItemCategory } from '../resolveItemCategory';
 import type {
     LabelScope,
     TransactionDto,
@@ -153,13 +154,11 @@ export function TransactionEditor({
         () => items.map(item => {
             const selected = categoriesById.get(item.categoryId);
             const original = transaction?.items.find(old => old.id === item.key);
-            const retained = original?.categoryId === item.categoryId && transaction?.kind === kind;
-            if (uncategorizedId && (!item.categoryId || (!selected && !retained))) {
-                return { ...item, categoryId: uncategorizedId };
-            }
-            return item;
+            return { ...item, categoryId: resolveItemCategory(
+                item.categoryId, original?.categoryId, Boolean(selected), uncategorizedId,
+            ) };
         }),
-        [categoriesById, items, uncategorizedId, transaction, kind],
+        [categoriesById, items, uncategorizedId, transaction],
     );
 
     const resolvedLabelIds = useMemo(() => {
