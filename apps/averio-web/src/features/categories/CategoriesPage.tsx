@@ -77,6 +77,7 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
     function row(c: CategoryResponse, contextOnly = false) {
         return <div key={c.id} className={`flex min-w-0 flex-wrap items-center gap-3 py-3 ${c.parentId ? 'ml-5 border-l border-primary-500/30 pl-3' : ''}`}>
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl dark:bg-[#0D1726]" aria-hidden="true">{c.icon}</span>
+            <svg className="size-3 shrink-0" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill={c.accentColor} /></svg>
             <div className="min-w-0 flex-1">
                 <h3 className="break-words font-semibold">{getCategoryDisplayName(c, t)}</h3>
                 <p className="text-xs text-[#667085] dark:text-[#AAB4C4]">

@@ -115,6 +115,7 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
                 </AverioField>
                 <div className="flex items-center gap-3 rounded-xl border border-primary-500/25 p-3">
                     <span className="text-3xl" aria-hidden="true">{icon}</span>
+                    <svg className="size-3 shrink-0" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill={accentColor} /></svg>
                     <span className="min-w-0 break-words font-semibold">{name || t('categoryManagement.preview')}</span>
                 </div>
             </AverioCard>
