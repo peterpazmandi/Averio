@@ -31,7 +31,8 @@ export function AverioIconPicker({ icons, value, onChange, disabled = false }: P
         </AverioButton>
         {open && !disabled && <div id={id} className="grid min-w-0 gap-3"
             onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false); trigger.current?.focus(); } }}>
-            <AverioInput autoFocus type="search" aria-label={t('categoryManagement.iconSearch')} value={search}
+            <AverioInput onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}
+                autoFocus type="search" aria-label={t('categoryManagement.iconSearch')} value={search}
                 placeholder={t('categoryManagement.iconSearchHint')} onChange={e => setSearch(e.target.value)} />
             <p className="text-xs" role="status">{t('categoryManagement.iconCount', { count: choices.length })}</p>
             <fieldset className="min-w-0 border-0 p-0">
