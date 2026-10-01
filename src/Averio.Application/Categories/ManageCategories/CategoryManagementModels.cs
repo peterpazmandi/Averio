@@ -12,7 +12,7 @@ public sealed class CategoryInputValidator : AbstractValidator<CategoryInput>
         RuleFor(x => x.Name).NotEmpty().WithErrorCode("Validation_CategoryName").MaximumLength(100).WithErrorCode("Validation_CategoryName");
         RuleFor(x => x.Kind).IsInEnum().WithErrorCode("Validation_CategoryKind");
         RuleFor(x => x.Icon).NotEmpty().WithErrorCode("Validation_CategoryIcon").MaximumLength(32).WithErrorCode("Validation_CategoryIcon");
-        RuleFor(x => x.AccentColor).NotEmpty().WithErrorCode("Validation_CategoryColor").Matches("^#[0-9A-Fa-f]{6}$").WithErrorCode("Validation_CategoryColor");
+        RuleFor(x => x.AccentColor).NotEmpty().WithErrorCode("Validation_CategoryColor").Matches(@"\A#[0-9A-Fa-f]{6}\z").WithErrorCode("Validation_CategoryColor");
         RuleFor(x => x.ParentId).Must(id => id is null || id != Guid.Empty).WithErrorCode("Error_CategoryParent");
     }
 }

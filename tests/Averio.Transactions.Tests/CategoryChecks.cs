@@ -1,4 +1,5 @@
 using Averio.Domain.Categories;
+using Averio.Application.Categories.ManageCategories;
 using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,16 @@ internal static class CategoryChecks
         var household = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         var root = Category.Create(household, " Family ", CategoryKind.Both, "icon", "#10b981", null, now);
+        var validator = new CategoryInputValidator();
+        foreach (var invalidColor in new[] { "#10B981\n", "#10B981\r\n", "#10B981 ", " #10B981", "#10B98" })
+        {
+            var validation = validator.Validate(new CategoryInput("Color", CategoryKind.Both, "icon", invalidColor, null));
+            Check(!validation.IsValid && validation.Errors.Any(e => e.ErrorCode == "Validation_CategoryColor"));
+            Reject(() => Category.Create(household, "Color", CategoryKind.Both, "icon", invalidColor, null, now));
+            Reject(() => root.Update("Color", "icon", invalidColor, null, now));
+            Check(root.Name == "Family" && root.AccentColor == "#10B981");
+        }
+        Check(validator.Validate(new CategoryInput("Color", CategoryKind.Both, "icon", "#10b981", null)).IsValid);
         var child = Category.Create(household, "School", CategoryKind.Expense, "icon", "#10B981", root, now);
         Check(root.Name == "Family" && root.AccentColor == "#10B981");
         Check(child.ParentId == root.Id && child.HouseholdId == household);

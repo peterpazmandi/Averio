@@ -70,7 +70,7 @@ public sealed class Category
         ArgumentException.ThrowIfNullOrWhiteSpace(icon);
         if (name.Trim().Length > 100 || icon.Trim().Length > 32)
             throw new ArgumentOutOfRangeException(nameof(name));
-        if (accentColor is null || !Regex.IsMatch(accentColor, "^#[0-9A-Fa-f]{6}$"))
+        if (accentColor is null || !Regex.IsMatch(accentColor, @"\A#[0-9A-Fa-f]{6}\z"))
             throw new ArgumentException("Use a six-digit hex color.");
         if (parent is not null && !CanHaveParent(parent))
             throw new InvalidOperationException("Invalid category parent.");
