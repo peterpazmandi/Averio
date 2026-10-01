@@ -181,7 +181,7 @@ Deployment requires explicitly applying the AddTransfers migration. This does no
 
 Implemented on the category-management feature branch (ADR-019):
 - Household custom categories: create, edit, archive and restore; system definitions stay read-only.
-- Two-level hierarchy with household/type/parent lifecycle validation and optimistic concurrency.
+- Nested hierarchy with household/type/parent lifecycle validation and optimistic concurrency.
 - Localized management page with filters, shared Tailwind cards/dialogs, catalog icons and colors.
 - Existing item references preserve category snapshots, including archived assignments, through transaction edits.
 - Category validation holds PostgreSQL shared row locks through ledger commit to serialize with archival.
@@ -190,3 +190,7 @@ Implemented on the category-management feature branch (ADR-019):
 ### Category preferences follow-up - 2026-10-01
 
 ADR-020 adds database-backed personal category pins (including system categories), localized alphabetical ordering, shared category selectors, and a responsive named icon picker with 240 EN/DE/HU names. Pins always precede eligible unpinned choices; archived assignments remain subject to the existing lifecycle rules.
+
+### Category tree and pin sequence follow-up - 2026-10-01
+
+ADR-021 enables subcategory parents with cycle protection, saved personal pin sequences with stale-write protection, and popup-based hierarchical selectors. Category selection uses the shared AverioDialog and does not expand transaction forms. New migration: AddCategoryPinOrder.

@@ -24,6 +24,11 @@ import {
     CategoryCreatedResponseToJSON,
 } from '../models/CategoryCreatedResponse';
 import {
+    type CategoryPinOrderRequest,
+    CategoryPinOrderRequestFromJSON,
+    CategoryPinOrderRequestToJSON,
+} from '../models/CategoryPinOrderRequest';
+import {
     type CategoryPinRequest,
     CategoryPinRequestFromJSON,
     CategoryPinRequestToJSON,
@@ -102,6 +107,17 @@ export interface ApiV1HouseholdsHouseholdIdCategoriesGetRequest {
      * 
      */
     includeArchived?: boolean;
+}
+
+export interface ApiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    categoryPinOrderRequest: CategoryPinOrderRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdCategoriesPostRequest {
@@ -349,6 +365,58 @@ export class CategoriesApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdCategoriesGet(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CategoryResponse>> {
         const response = await this.apiV1HouseholdsHouseholdIdCategoriesGetRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdCategoriesPinsOrderPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdCategoriesPinsOrderPut().'
+            );
+        }
+
+        if (requestParameters['categoryPinOrderRequest'] == null) {
+            throw new runtime.RequiredError(
+                'categoryPinOrderRequest',
+                'Required parameter "categoryPinOrderRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdCategoriesPinsOrderPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/categories/pins/order`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CategoryPinOrderRequestToJSON(requestParameters['categoryPinOrderRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdCategoriesPinsOrderPut(requestParameters: ApiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdCategoriesPinsOrderPutRaw(requestParameters, initOverrides);
     }
 
     /**

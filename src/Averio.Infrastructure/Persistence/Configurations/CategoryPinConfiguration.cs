@@ -9,10 +9,11 @@ public sealed class CategoryPinConfiguration : IEntityTypeConfiguration<Category
 {
     public void Configure(EntityTypeBuilder<CategoryPin> builder)
     {
-        builder.ToTable("category_pins");
+        builder.ToTable("category_pins", table => table.HasCheckConstraint("ck_category_pins_sort_order", "sort_order >= 0"));
         builder.HasKey(x => new { x.HouseholdMemberId, x.CategoryId });
         builder.Property(x => x.HouseholdMemberId).HasColumnName("household_member_id");
         builder.Property(x => x.CategoryId).HasColumnName("category_id");
+        builder.Property(x => x.SortOrder).HasColumnName("sort_order");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.HasOne<HouseholdMember>().WithMany().HasForeignKey(x => x.HouseholdMemberId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Cascade);

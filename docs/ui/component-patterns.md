@@ -30,6 +30,6 @@ Reference: the transfer overview's unified cards and the transfer editor's “Ac
 
 ## Category and icon choices
 
-Use `AverioCategorySelect` for every category choice, including parent selection and transaction items. Filter eligibility first; sort personal pins first and displayed names alphabetically using the current UI locale. Include parent context for children. Category overviews keep alphabetical trees and a pinned shortcut section. Use the shared `categoryOrdering` helper rather than seed order or untranslated keys.
+Use `AverioCategorySelect` for every category choice, including parent selection and transaction items. Filter eligibility first; show personal pins in their saved sequence first, then an alphabetical category tree using the current UI locale. Include parent context for children. Category overviews keep alphabetical trees and an ordered pinned shortcut section. Category choices open in AverioDialog; never expand a transaction form inline. Clearly mark main categories and subcategories with branch lines, indentation, and full ancestor paths. Nested dialogs must isolate Escape/Tab events and share a counted scroll lock. Use the shared `categoryOrdering` helper rather than seed order or untranslated keys.
 
 Use `AverioIconPicker` for icon selection: localized named tiles, name search, current selection preview, native radio keyboard behavior and clear focus states. Preserve saved icons missing from the current catalog. New catalog entries need meaningful API names and EN/DE/HU translations.

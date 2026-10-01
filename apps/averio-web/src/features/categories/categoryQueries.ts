@@ -29,6 +29,11 @@ export function useCategoryMutations(userId: string, householdId: string) {
         client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
     ]);
     return {
+        reorder: useMutation({
+            mutationFn: ({ categoryIds, expectedCategoryIds }: { categoryIds: string[]; expectedCategoryIds: string[] }) =>
+                api.apiV1HouseholdsHouseholdIdCategoriesPinsOrderPut({ householdId, categoryPinOrderRequest: { categoryIds, expectedCategoryIds } }),
+            onSettled: invalidate,
+        }),
         pin: useMutation({
             mutationFn: (category: CategoryResponse) => api.apiV1HouseholdsHouseholdIdCategoriesCategoryIdPinPut({
                 householdId, categoryId: category.id, categoryPinRequest: { isPinned: !category.isPinned },

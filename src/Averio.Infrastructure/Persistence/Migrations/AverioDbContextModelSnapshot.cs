@@ -255,11 +255,18 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
                     b.HasKey("HouseholdMemberId", "CategoryId");
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("category_pins", (string)null);
+                    b.ToTable("category_pins", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_category_pins_sort_order", "sort_order >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Averio.Domain.Categories.IconCatalogEntry", b =>

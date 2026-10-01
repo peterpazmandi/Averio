@@ -60,7 +60,7 @@ public sealed class Category
     }
 
     public bool CanHaveParent(Category parent)
-        => parent.Id != Id && parent.ParentId is null && !parent.IsArchived
+        => parent.Id != Id && !parent.IsArchived
             && parent.IsAvailableTo(HouseholdId!.Value)
             && (parent.Kind == CategoryKind.Both || parent.Kind == Kind);
 

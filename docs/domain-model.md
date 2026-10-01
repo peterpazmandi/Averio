@@ -305,3 +305,7 @@ The hierarchy is limited to a parent and direct children. Kind is immutable; par
 Archive/restore preserves IDs and financial history. Archive parents only after active children; restore parents before children.
 Category edits use UpdatedAt concurrency. ExistingItemId in transaction input identifies a previously authorized item whose unchanged category retains its name/icon snapshot. Archived categories cannot be newly assigned.
 Reports continue to use stable category IDs and current category display data; persisted totals do not change on category edits. Parent rollups remain a future read-model feature.
+
+## Category hierarchy and preferences update (ADR-021)
+
+Categories support deeper nesting. A compatible active subcategory may be a parent; self/descendant moves are rejected under a household lock. Personal pins carry a persisted sequence. Shared definitions and financial snapshots remain independent of these preferences.

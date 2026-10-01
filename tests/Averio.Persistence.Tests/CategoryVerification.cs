@@ -64,6 +64,15 @@ internal static class CategoryVerification
         await Task.WhenAll(Pin(provider, f.HouseholdId, child, true), Pin(provider, f.HouseholdId, child, true));
         await Pin(provider, f.HouseholdId, systemRoot, true);
         await CheckPins(provider, f.HouseholdId, child, systemRoot);
+        await ReorderPins(provider, f.HouseholdId, [systemRoot, child], [child, systemRoot]);
+        await using (var pinScope = provider.CreateAsyncScope())
+        {
+            var ordered = await pinScope.ServiceProvider.GetRequiredService<GetCategoriesHandler>().HandleAsync(f.HouseholdId, null, Ct, true);
+            Check(ordered.Single(c => c.Id == systemRoot).PinOrder < ordered.Single(c => c.Id == child).PinOrder, "Pin sequence was not saved");
+        }
+        await Throws<ConflictException>(() => ReorderPins(provider, f.HouseholdId, [child, systemRoot], [child, systemRoot]));
+        await Throws<BusinessRuleException>(() => ReorderPins(provider, f.HouseholdId, [child, child], [systemRoot, child]));
+        await Throws<BusinessRuleException>(() => ReorderPins(provider, f.HouseholdId, [child, foreignCategory], [systemRoot, child]));
         Check((await Read(provider, child)).UpdatedAt == unpinnedVersion, "Personal pin changed shared category version");
         user.UserId = f.MemberUserId;
         await CheckPins(provider, f.HouseholdId);
@@ -76,7 +85,13 @@ internal static class CategoryVerification
         await CheckPins(provider, f.HouseholdId, child);
         await Throws<NotFoundException>(() => Pin(provider, f.HouseholdId, foreignCategory, true));
         await Throws<NotFoundException>(() => Pin(provider, foreignHousehold, foreignCategory, true));
-        await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Too deep", CategoryKind.Expense, icon, "#10B981", child)));
+        var grandchild = await Create(provider, f.HouseholdId, new("Grandchild", CategoryKind.Expense, icon, "#10B981", child));
+        await Throws<BusinessRuleException>(() => Update(provider, f.HouseholdId, parent, new("Cycle", CategoryKind.Expense, icon, "#10B981", grandchild)));
+        var anotherRoot = await Create(provider, f.HouseholdId, new("Another root", CategoryKind.Expense, icon, "#10B981", null));
+        await Update(provider, f.HouseholdId, parent, new("Family", CategoryKind.Expense, icon, "#10B981", anotherRoot));
+        Check((await Read(provider, parent)).ParentId == anotherRoot, "Subtree move failed");
+        await Update(provider, f.HouseholdId, parent, new("Family", CategoryKind.Expense, icon, "#10B981", null));
+        await Archive(provider, f.HouseholdId, grandchild, true);
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Wrong kind", CategoryKind.Income, icon, "#10B981", parent)));
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Foreign", CategoryKind.Expense, icon, "#10B981", foreignCategory)));
         await Throws<BusinessRuleException>(() => Create(provider, f.HouseholdId, new("Bad icon", CategoryKind.Expense, "not-a-catalog-icon", "#10B981", null)));
@@ -170,6 +185,11 @@ internal static class CategoryVerification
         Console.WriteLine("PASS category management, hierarchy, privacy, historical snapshots and concurrency");
     }
 
+    private static async Task ReorderPins(IServiceProvider provider, Guid householdId, Guid[] ids, Guid[] expected)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<CategoryPinHandler>().ReorderAsync(householdId, ids, expected, Ct);
+    }
     private static async Task Pin(IServiceProvider provider, Guid householdId, Guid id, bool pinned)
     {
         await using var scope = provider.CreateAsyncScope();

@@ -31,3 +31,5 @@ This slice does not implement pinning, drag ordering, global system customizatio
 ## Follow-up
 
 ADR-020 extends the original boundary with personal category pins and localized ordering. Shared system definitions remain immutable.
+
+ADR-021 supersedes the original two-level hierarchy and alphabetical pin-order restrictions, and requires modal category selection.

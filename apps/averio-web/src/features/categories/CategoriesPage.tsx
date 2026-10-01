@@ -1,3 +1,4 @@
+import { categoryTree, categoryIndent } from './categoryTree';
 import { sortCategories } from './categoryOrdering';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -30,18 +31,28 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
     const [reloadBusy, setReloadBusy] = useState(false);
     const [pinError, setPinError] = useState('');
     const categories = sortCategories(query.data ?? [], t, i18n.resolvedLanguage ?? i18n.language, false);
-    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.pin.isPending;
+    const busy = mutations.create.isPending || mutations.update.isPending || mutations.archive.isPending || mutations.pin.isPending || mutations.reorder.isPending;
     const count = Number(Boolean(search.trim())) + Number(Boolean(kind)) + Number(Boolean(source)) + Number(status !== 'active');
     const reset = () => { setSearch(''); setKind(''); setSource(''); setStatus('active'); };
     const matches = (c: CategoryResponse) => (!kind || c.kind === kind || c.kind === 'Both')
         && (!source || (source === 'system' ? c.isSystem : !c.isSystem))
         && (status === 'all' || c.isArchived === (status === 'archived'))
         && (!search.trim() || getCategoryDisplayName(c, t).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
-    const groups = categories.filter(c => !c.parentId).map(parent => ({
-        parent, parentMatches: matches(parent),
-        children: categories.filter(c => c.parentId === parent.id && matches(c)),
-    })).filter(g => g.parentMatches || g.children.length > 0);
-    const pinned = categories.filter(c => c.isPinned && matches(c));
+    const tree = categoryTree(categories, t, i18n.resolvedLanguage ?? i18n.language, matches);
+    const allPins = sortCategories(categories.filter(c => c.isPinned), t, i18n.resolvedLanguage ?? i18n.language);
+    const pinned = allPins.filter(matches);
+    async function movePin(category: CategoryResponse, direction: number) {
+        const index = pinned.findIndex(c => c.id === category.id);
+        const neighbor = pinned[index + direction];
+        if (!neighbor || busy) return;
+        const expectedCategoryIds = allPins.map(c => c.id);
+        const categoryIds = [...expectedCategoryIds];
+        const a = categoryIds.indexOf(category.id), b = categoryIds.indexOf(neighbor.id);
+        [categoryIds[a], categoryIds[b]] = [categoryIds[b], categoryIds[a]];
+        setPinError('');
+        try { await mutations.reorder.mutateAsync({ categoryIds, expectedCategoryIds }); }
+        catch (reason) { setPinError(reason instanceof ApiError ? reason.message : t('errors.genericDescription')); }
+    }
     async function changePin(category: CategoryResponse) {
         setPinError('');
         try { await mutations.pin.mutateAsync(category); }
@@ -96,6 +107,10 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
                     {contextOnly && <> · {t('categoryManagement.parentContext')}</>}
                 </p>
             </div>
+            {shortcut && <div className="flex gap-1">
+                <AverioButton size="icon" disabled={busy || pinned[0]?.id === c.id} aria-label={t('categoryManagement.moveUp', { name: getCategoryDisplayName(c, t) })} onClick={() => void movePin(c, -1)}>↑</AverioButton>
+                <AverioButton size="icon" disabled={busy || pinned.at(-1)?.id === c.id} aria-label={t('categoryManagement.moveDown', { name: getCategoryDisplayName(c, t) })} onClick={() => void movePin(c, 1)}>↓</AverioButton>
+            </div>}
             {!contextOnly && (!c.isArchived || c.isPinned) && <AverioButton disabled={busy}
                 aria-pressed={c.isPinned} aria-label={t(c.isPinned ? 'categoryManagement.unpinNamed' : 'categoryManagement.pinNamed', { name: getCategoryDisplayName(c, t) })}
                 onClick={() => void changePin(c)}>
@@ -167,7 +182,7 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
             <p role="alert">{t('errors.genericDescription')}</p>
             <AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('common.actions.retry')}</AverioButton>
         </AverioCard>}
-        {query.isSuccess && groups.length === 0 && <AverioCard className="py-10 text-center">
+        {query.isSuccess && tree.length === 0 && <AverioCard className="py-10 text-center">
             <CategoryIllustration />
             <h3 className="text-lg font-bold">{t(count ? 'categoryManagement.noMatches' : 'categoryManagement.empty')}</h3>
             <p className="mx-auto my-3 max-w-md text-sm">{t(count ? 'categoryManagement.noMatchesHelp' : 'categoryManagement.emptyHelp')}</p>
@@ -175,10 +190,9 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
                 {t(count ? 'categoryManagement.reset' : 'categoryManagement.create')}
             </AverioButton>
         </AverioCard>}
-        {query.isSuccess && groups.map(g => <AverioCard key={g.parent.id}>
-            {row(g.parent, !g.parentMatches)}
-            {g.children.length > 0 && <div className="border-t border-primary-500/15">{g.children.map(c => row(c))}</div>}
-        </AverioCard>)}
+        {query.isSuccess && tree.length > 0 && <AverioCard>
+            {tree.map(({ category, depth, contextOnly }) => <div key={category.id} className={categoryIndent[Math.min(depth, 4)]}>{row(category, contextOnly)}</div>)}
+        </AverioCard>}
         {editor && <CategoryEditor key={editorRevision + (editor.category ? editor.category.id + editor.category.updatedAt : 'new')}
             category={editor.category} categories={categories} busy={busy} onClose={() => setEditor(null)}
             onSave={save} onReload={reloadEditor} />}

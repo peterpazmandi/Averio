@@ -24,3 +24,5 @@ The category management follow-up requests alphabetical overviews/selectors, mea
 Apply AddCategoryPinsAndIconNames explicitly before deploying the new API. No startup production migration is introduced. API category responses add IsPinned; regenerate the TypeScript client.
 
 Manual drag ordering, shared category preferences and parent financial rollups remain separate features.
+
+ADR-021 supersedes the original two-level hierarchy and alphabetical pin-order restrictions, and requires modal category selection.

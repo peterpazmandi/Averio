@@ -67,6 +67,10 @@ export interface CategoryResponse {
      * 
      */
     isPinned: boolean;
+    /**
+     * 
+     */
+    pinOrder: number;
 }
 
 /**
@@ -85,6 +89,7 @@ export function instanceOfCategoryResponse(value: object): value is CategoryResp
     if (!('isArchived' in value) || value['isArchived'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
     if (!('isPinned' in value) || value['isPinned'] === undefined) return false;
+    if (!('pinOrder' in value) || value['pinOrder'] === undefined) return false;
     return true;
 }
 
@@ -110,6 +115,7 @@ export function CategoryResponseFromJSONTyped(json: any, ignoreDiscriminator: bo
         'isArchived': json['isArchived'],
         'updatedAt': json['updatedAt'],
         'isPinned': json['isPinned'],
+        'pinOrder': json['pinOrder'],
     };
 }
 
@@ -136,6 +142,7 @@ export function CategoryResponseToJSONTyped(value?: CategoryResponse | null, ign
         'isArchived': value['isArchived'],
         'updatedAt': value['updatedAt'],
         'isPinned': value['isPinned'],
+        'pinOrder': value['pinOrder'],
     };
 }
 

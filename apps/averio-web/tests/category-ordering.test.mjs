@@ -64,3 +64,25 @@ test('all 240 seeded icons have meaningful EN DE HU names', () => {
     assert.equal(names.iconNamesDE['103'], 'Kaffee');
     assert.equal(names.iconNamesHU['103'], 'Kávé');
 });
+
+test('saved pin sequence overrides alphabetical ordering', async () => {
+    const i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: {} });
+    const items = [{ ...category('1', 'Apple', true), pinOrder: 3 }, { ...category('2', 'Zoo', true), pinOrder: 0 }, category('3', 'Aardvark')];
+    assert.equal(sortCategories(items, i18n.t, 'en').map(c => c.id).join(), '2,1,3');
+});
+
+test('deep tree keeps ancestor context and excludes all descendants from parent choices', async () => {
+    const i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: {} });
+    const { categoryTree, categoryPath, descendantsOf } = load('../src/features/categories/categoryTree.ts', {
+        '../transactions/categoryLocalization': localization, './categoryOrdering': { sortCategories },
+    });
+    const items = [
+        { ...category('c', 'Leaf'), parentId: 'b' }, { ...category('a', 'Root'), parentId: null },
+        { ...category('b', 'Branch'), parentId: 'a' }, { ...category('d', 'Other'), parentId: null },
+    ];
+    const tree = categoryTree(items, i18n.t, 'en', c => c.id === 'c');
+    assert.equal(tree.map(n => n.category.id).join(), 'a,b,c');
+    assert.equal(tree.map(n => n.depth).join(), '0,1,2');
+    assert.equal(categoryPath(items[0], items, i18n.t), 'Root / Branch / Leaf');
+    assert.equal([...descendantsOf('a', items)].sort().join(), 'a,b,c');
+});

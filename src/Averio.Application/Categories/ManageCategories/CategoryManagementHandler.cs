@@ -18,7 +18,7 @@ public sealed class CategoryManagementHandler(
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
         await categories.LockHouseholdAsync(householdId, ct);
         var parent = await ParentAsync(householdId, input.ParentId, ct);
-        ValidateParent(parent, input.Kind, Guid.Empty);
+        await ValidateParentAsync(householdId, parent, input.Kind, Guid.Empty, ct);
         var category = Category.Create(householdId, input.Name, input.Kind,
             input.Icon, input.AccentColor, parent, clock.GetUtcNow());
         categories.Add(category);
@@ -40,9 +40,7 @@ public sealed class CategoryManagementHandler(
             throw new BusinessRuleException("category_kind_immutable", "Error_CategoryKindImmutable");
         await ValidateIconAsync(input.Icon, category.Icon, ct);
         var parent = await ParentAsync(householdId, input.ParentId, ct);
-        ValidateParent(parent, input.Kind, id);
-        if (input.ParentId is not null && await categories.HasChildrenAsync(id, false, ct))
-            throw new BusinessRuleException("category_has_children", "Error_CategoryHasChildren");
+        await ValidateParentAsync(householdId, parent, input.Kind, id, ct);
         category.Update(input.Name, input.Icon, input.AccentColor, parent, clock.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -60,7 +58,7 @@ public sealed class CategoryManagementHandler(
         if (!archived)
         {
             var parent = await ParentAsync(householdId, category.ParentId, ct);
-            ValidateParent(parent, category.Kind, id);
+            await ValidateParentAsync(householdId, parent, category.Kind, id, ct);
         }
         category.SetArchived(archived, clock.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
@@ -90,11 +88,19 @@ public sealed class CategoryManagementHandler(
         => id is null ? null : await categories.GetAsync(householdId, id.Value, ct)
             ?? throw new BusinessRuleException("category_parent_invalid", "Error_CategoryParent");
 
-    private static void ValidateParent(Category? parent, CategoryKind kind, Guid id)
+    private async Task ValidateParentAsync(Guid householdId, Category? parent, CategoryKind kind, Guid id, CancellationToken ct)
     {
-        if (parent is not null && (parent.Id == id || parent.ParentId is not null || parent.IsArchived
-            || (parent.Kind != CategoryKind.Both && parent.Kind != kind)))
+        if (parent is not null && parent.Kind != CategoryKind.Both && parent.Kind != kind)
             throw new BusinessRuleException("category_parent_invalid", "Error_CategoryParent");
+        // The household lock serializes moves. Walk the complete chain to prevent moving
+        // a subtree under itself and to reject unavailable ancestors.
+        var visited = new HashSet<Guid> { id };
+        while (parent is not null)
+        {
+            if (!visited.Add(parent.Id) || parent.IsArchived)
+                throw new BusinessRuleException("category_parent_invalid", "Error_CategoryParent");
+            parent = await ParentAsync(householdId, parent.ParentId, ct);
+        }
     }
 
     private async Task ValidateIconAsync(string icon, string? existingIcon, CancellationToken ct)

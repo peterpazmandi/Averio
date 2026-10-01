@@ -302,7 +302,7 @@
   <data name="Validation_CategoryKind" xml:space="preserve"><value>Wähle Einnahme, Ausgabe oder beides.</value></data>
   <data name="Validation_CategoryIcon" xml:space="preserve"><value>Wähle ein Symbol aus dem Katalog.</value></data>
   <data name="Validation_CategoryColor" xml:space="preserve"><value>Verwende eine sechsstellige Hex-Farbe, zum Beispiel #10B981.</value></data>
-  <data name="Error_CategoryParent" xml:space="preserve"><value>Wähle eine aktive, passende Hauptkategorie aus diesem Haushalt oder dem Systemkatalog.</value></data>
+  <data name="Error_CategoryParent" xml:space="preserve"><value>Wähle eine aktive, passende übergeordnete Kategorie. Eine Kategorie darf nicht ihr eigener Vorfahr sein.</value></data>
   <data name="Error_CategoryChanged" xml:space="preserve"><value>Diese Kategorie wurde geändert. Lade sie vor dem erneuten Speichern neu.</value></data>
   <data name="Error_CategoryArchived" xml:space="preserve"><value>Stelle diese Kategorie vor dem Bearbeiten wieder her.</value></data>
   <data name="Error_CategoryKindImmutable" xml:space="preserve"><value>Der Kategorietyp kann nach dem Anlegen nicht geändert werden.</value></data>
@@ -310,6 +310,7 @@
   <data name="Error_CategoryActiveChildren" xml:space="preserve"><value>Archiviere zuerst die aktiven Unterkategorien.</value></data>
   <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archivierte Kategorien können nur bei ihren bestehenden Buchungsposten beibehalten werden.</value></data>
   <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>Der ursprüngliche Buchungsposten ist ungültig oder wurde mehrfach übermittelt. Lade die Buchung neu.</value></data>
+  <data name="Error_CategoryPinOrder" xml:space="preserve"><value>Die Reihenfolge wurde geändert oder ist ungültig. Die aktuelle Reihenfolge wurde geladen; versuche es erneut.</value></data>
 </root>
 
 

@@ -26,7 +26,7 @@ public sealed class GetCategoriesHandler(
             household.Id, kind, cancellationToken, includeArchived);
 
         var memberId = household.Members.Single(member => member.UserId == userId).Id;
-        var pinned = await pins.GetPinnedIdsAsync(memberId, cancellationToken);
+        var pinned = await pins.GetPinsAsync(memberId, cancellationToken);
         return categories.Select(category => new CategoryResult(
             category.Id,
             category.ParentId,
@@ -36,7 +36,7 @@ public sealed class GetCategoriesHandler(
             category.Icon,
             category.AccentColor,
             category.SortOrder,
-            category.IsBase, category.IsArchived, category.UpdatedAt, pinned.Contains(category.Id))).ToArray();
+            category.IsBase, category.IsArchived, category.UpdatedAt, pinned.ContainsKey(category.Id), pinned.TryGetValue(category.Id, out var order) ? order : null)).ToArray();
     }
 }
 
@@ -49,5 +49,5 @@ public sealed record CategoryResult(
     string Icon,
     string AccentColor,
     int SortOrder,
-    bool IsSystem, bool IsArchived, DateTimeOffset UpdatedAt, bool IsPinned);
+    bool IsSystem, bool IsArchived, DateTimeOffset UpdatedAt, bool IsPinned, int? PinOrder);
 

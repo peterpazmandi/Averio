@@ -1,3 +1,4 @@
+import { descendantsOf } from './categoryTree';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -31,8 +32,8 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
     const [error, setError] = useState('');
     const [conflict, setConflict] = useState(false);
     const [reloadBusy, setReloadBusy] = useState(false);
-    const hasChildren = Boolean(category && categories.some(c => c.parentId === category.id));
-    const parents = categories.filter(c => !c.parentId && !c.isArchived && c.id !== category?.id
+    const excluded = category ? descendantsOf(category.id, categories) : new Set<string>();
+    const parents = categories.filter(c => !c.isArchived && !excluded.has(c.id)
         && (c.kind === 'Both' || c.kind === kind));
     const invalidParent = Boolean(parentId && !parents.some(c => c.id === parentId));
     async function submit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -83,10 +84,10 @@ export function CategoryEditor({ category, categories, busy, onClose, onSave, on
                 {category && <p className="text-xs">{t('categoryManagement.kindFixed')}</p>}
                 <div className="grid gap-2">
                     <p className="text-[13px] font-semibold">{t('categoryManagement.parent')}</p>
-                    <AverioCategorySelect categories={parents} value={parentId} onChange={setParentId}
-                        disabled={busy || hasChildren} label={t('categoryManagement.parent')} noneLabel={t('categoryManagement.noParent')} />
+                    <AverioCategorySelect categories={parents} contextCategories={categories} value={parentId} onChange={setParentId}
+                        disabled={busy} label={t('categoryManagement.parent')} noneLabel={t('categoryManagement.noParent')} />
                 </div>
-                <p className="text-xs">{t(hasChildren ? 'categoryManagement.childrenHelp' : 'categoryManagement.parentHelp')}</p>
+                <p className="text-xs">{t('categoryManagement.parentHelp')}</p>
             </AverioCard>
             <AverioCard className="grid gap-4">
                 <h3 className="font-bold">{t('categoryManagement.appearance')}</h3>

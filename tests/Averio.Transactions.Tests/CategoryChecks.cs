@@ -12,7 +12,8 @@ internal static class CategoryChecks
         var child = Category.Create(household, "School", CategoryKind.Expense, "icon", "#10B981", root, now);
         Check(root.Name == "Family" && root.AccentColor == "#10B981");
         Check(child.ParentId == root.Id && child.HouseholdId == household);
-        Reject(() => Category.Create(household, "Deep", CategoryKind.Expense, "icon", "#10B981", child, now));
+        var grandchild = Category.Create(household, "Deep", CategoryKind.Expense, "icon", "#10B981", child, now);
+        Check(grandchild.ParentId == child.Id);
         Reject(() => Category.Create(Guid.NewGuid(), "Foreign", CategoryKind.Expense, "icon", "#10B981", root, now));
         Reject(() => root.Update("Self", "icon", "#10B981", root, now));
         var version = child.UpdatedAt;

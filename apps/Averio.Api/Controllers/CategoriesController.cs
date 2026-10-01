@@ -23,7 +23,7 @@ public sealed class CategoriesController(GetCategoriesHandler reader, CategoryMa
             : EnumParser.Parse<TransactionKind>(kind, nameof(kind), "Validation_TransactionKindInvalid");
         var result = await reader.HandleAsync(householdId, parsedKind, cancellationToken, includeArchived);
         return Ok(result.Select(c => new CategoryResponse(c.Id, c.ParentId, c.SystemKey, c.Name,
-            c.Kind.ToString(), c.Icon, c.AccentColor, c.SortOrder, c.IsSystem, c.IsArchived, c.UpdatedAt, c.IsPinned)));
+            c.Kind.ToString(), c.Icon, c.AccentColor, c.SortOrder, c.IsSystem, c.IsArchived, c.UpdatedAt, c.IsPinned, c.PinOrder)));
     }
 
     [HttpPost]
@@ -57,6 +57,13 @@ public sealed class CategoriesController(GetCategoriesHandler reader, CategoryMa
     public async Task<IActionResult> SetPin(Guid householdId, Guid categoryId, CategoryPinRequest request, CancellationToken ct)
     {
         await pins.HandleAsync(householdId, categoryId, request.IsPinned, ct);
+        return NoContent();
+    }
+
+    [HttpPut("pins/order")]
+    public async Task<IActionResult> SetPinOrder(Guid householdId, CategoryPinOrderRequest request, CancellationToken ct)
+    {
+        await pins.ReorderAsync(householdId, request.CategoryIds, request.ExpectedCategoryIds, ct);
         return NoContent();
     }
 

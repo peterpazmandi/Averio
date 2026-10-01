@@ -9,6 +9,7 @@ export * from './CategoryArchiveRequest';
 export * from './CategoryCashFlowPeriodResponse';
 export * from './CategoryCashFlowResponse';
 export * from './CategoryCreatedResponse';
+export * from './CategoryPinOrderRequest';
 export * from './CategoryPinRequest';
 export * from './CategoryResponse';
 export * from './CompleteOnboardingRequest';
