@@ -34,7 +34,15 @@ internal static class CategoryVerification
             icon = icons[0].Value;
             otherIcon = icons[1].Value;
             systemRoot = await db.Categories.Where(c => c.IsBase && c.ParentId == null).Select(c => c.Id).FirstAsync();
-            var outsider = new ApplicationUser { Id = Guid.NewGuid(), UserName = "category-outsider", Email = "category-outsider@example.test" };
+            var outsider = new ApplicationUser
+            {
+                Id = Guid.NewGuid(), UserName = "category-outsider@example.test",
+                NormalizedUserName = "CATEGORY-OUTSIDER@EXAMPLE.TEST",
+                Email = "category-outsider@example.test", NormalizedEmail = "CATEGORY-OUTSIDER@EXAMPLE.TEST",
+                EmailConfirmed = true, DisplayName = "Category outsider", PreferredCulture = "en-US",
+                CreatedAtUtc = clock.GetUtcNow(), SecurityStamp = Guid.NewGuid().ToString("N"),
+                ConcurrencyStamp = Guid.NewGuid().ToString("N")
+            };
             var other = Household.CreateForUser(outsider.Id, clock.GetUtcNow());
             other.CompleteOnboarding("Other household", "HU", CurrencyCode.Eur, clock.GetUtcNow());
             other.CompleteFinancialSetup(clock.GetUtcNow());
