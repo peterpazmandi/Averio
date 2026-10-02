@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-09-22
+**Status date:** 2026-09-30
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -91,7 +91,7 @@ The transaction slice includes:
 - currency-separated cash-flow and category-statistics read models
 - account and dashboard balances derived from posted requester-visible entries
 - shared transaction editor entry points from the header, dashboard, and list
-- a searchable grouped category picker and responsive statistics UI
+- a searchable category picker with parent context and responsive statistics UI
 
 Aggregate writes participate in the same PostgreSQL transaction as ledger
 create, update, and void operations. Private transactions do not contribute to
@@ -138,7 +138,7 @@ The following are not yet treated as implemented:
 
 - household invitations/partner invite lifecycle
 - recurring transaction domain and worker execution
-- full category management UI (create/edit/reorder/archive/custom icons)
+- category drag reordering, shared system-category customization, and private categories
 - goals
 - personal-money allocation and rollover
 - historical CSV/XLSX import
@@ -159,14 +159,12 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Complete category management (create/edit/archive and hierarchy controls) on top
-of the existing catalog, then define the recurring transaction lifecycle and
-worker execution/idempotency before scheduling financial writes.
+Define the household invitation/joining lifecycle next, including existing users with financial history. Recurring execution remains a later milestone requiring idempotency and worker design.
 
 
 ## Transfer Management — 2026-09-23
 
-Implemented in the Transfer Management branch (ADR-018):
+Merged into develop through PR #7 (ADR-018):
 
 - Atomic create, edit and void of paired account movements; preserved history and optimistic concurrency.
 - Same-currency and explicitly entered cross-currency settlement amounts, without cash-flow double counting.
@@ -176,3 +174,23 @@ Implemented in the Transfer Management branch (ADR-018):
 - AddTransfers EF migration, database constraints/indexes and PostgreSQL regression coverage.
 
 Deployment requires explicitly applying the AddTransfers migration. This does not implement bank execution, recurring transfers, fees as part of a transfer, personal-money attribution or FX reporting.
+
+
+
+## Category Management — 2026-09-30
+
+Implemented on the category-management feature branch (ADR-019):
+- Household custom categories: create, edit, archive and restore; system definitions stay read-only.
+- Nested hierarchy with household/type/parent lifecycle validation and optimistic concurrency.
+- Localized management page with filters, shared Tailwind cards/dialogs, catalog icons and colors.
+- Existing item references preserve category snapshots, including archived assignments, through transaction edits.
+- Category validation holds PostgreSQL shared row locks through ledger commit to serialize with archival.
+- No ledger deletion, aggregate rewrite, private-category semantics, shared system preference overrides or drag ordering.
+
+### Category preferences follow-up - 2026-10-01
+
+ADR-020 adds database-backed personal category pins (including system categories), localized alphabetical ordering, shared category selectors, and a responsive named icon picker with 240 EN/DE/HU names. Pins always precede eligible unpinned choices; archived assignments remain subject to the existing lifecycle rules.
+
+### Category tree and pin sequence follow-up - 2026-10-01
+
+ADR-021 enables subcategory parents with cycle protection, saved personal pin sequences with stale-write protection, and popup-based hierarchical selectors. Category selection uses the shared AverioDialog and does not expand transaction forms. New migration: AddCategoryPinOrder.

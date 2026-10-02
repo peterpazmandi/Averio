@@ -190,6 +190,7 @@ static async Task RunVerificationAsync(string connectionString)
 
     await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
+    await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)

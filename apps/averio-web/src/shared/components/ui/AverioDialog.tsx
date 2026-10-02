@@ -4,6 +4,9 @@ import { createPortal } from 'react-dom';
 import { ConceptIcon } from '../concept/ConceptIcon';
 import { AverioButton } from './AverioButton';
 
+let openDialogCount = 0;
+let originalBodyOverflow = '';
+
 interface AverioDialogProps {
     open: boolean;
     title: string;
@@ -23,13 +26,15 @@ export function AverioDialog({ open, title, closeLabel, children, actions, onDis
         const dialog = dialogRef.current;
         if (!open || !dialog) return;
         const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        const previousOverflow = document.body.style.overflow;
         dialog.showModal();
-        document.body.style.overflow = 'hidden';
+        if (openDialogCount++ === 0) {
+            originalBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+        }
         initialFocusRef?.current?.focus();
         return () => {
             dialog.close();
-            document.body.style.overflow = previousOverflow;
+            if (--openDialogCount === 0) document.body.style.overflow = originalBodyOverflow;
             if (previousFocus?.isConnected) previousFocus.focus();
         };
     }, [open, initialFocusRef]);
@@ -37,6 +42,7 @@ export function AverioDialog({ open, title, closeLabel, children, actions, onDis
     return createPortal(
         <dialog ref={dialogRef} className="fixed inset-x-0 top-auto bottom-0 m-0 h-fit max-h-dvh w-full max-w-none min-w-0 overflow-hidden rounded-t-[20px] border border-[#E4E7EC] bg-white p-0 text-[#152033] shadow-[0_24px_80px_rgba(0,0,0,0.25)] backdrop:bg-[#030A1699] open:flex open:flex-col dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] min-[601px]:inset-0 min-[601px]:m-auto min-[601px]:max-h-[calc(100dvh-48px)] min-[601px]:w-[min(560px,calc(100vw-48px))] min-[601px]:rounded-[20px]" aria-labelledby={titleId} aria-busy={busy}
             onKeyDown={event => {
+                event.stopPropagation();
                 if (event.key !== 'Tab') return;
                 const controls = [...event.currentTarget.querySelectorAll<HTMLElement>(
                     'button, a[href], input, select, textarea, [tabindex]',
@@ -49,7 +55,7 @@ export function AverioDialog({ open, title, closeLabel, children, actions, onDis
                     event.preventDefault(); first?.focus();
                 }
             }}
-            onCancel={event => { event.preventDefault(); if (!busy) onDismiss(); }}>
+            onCancel={event => { event.stopPropagation(); event.preventDefault(); if (!busy) onDismiss(); }}>
             <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[#E4E7EC] px-5 py-4 dark:border-[#233044] min-[601px]:px-6">
                 <h2 id={titleId} className="m-0 text-xl leading-snug font-bold wrap-anywhere">{title}</h2>
                 <AverioButton size="icon" disabled={busy} aria-label={closeLabel} onClick={onDismiss}>
@@ -61,3 +67,4 @@ export function AverioDialog({ open, title, closeLabel, children, actions, onDis
         </dialog>, document.body,
     );
 }
+

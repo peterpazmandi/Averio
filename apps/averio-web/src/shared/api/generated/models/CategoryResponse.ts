@@ -55,6 +55,22 @@ export interface CategoryResponse {
      * 
      */
     isSystem: boolean;
+    /**
+     * 
+     */
+    isArchived: boolean;
+    /**
+     * 
+     */
+    updatedAt: string;
+    /**
+     * 
+     */
+    isPinned: boolean;
+    /**
+     * 
+     */
+    pinOrder: number;
 }
 
 /**
@@ -70,6 +86,10 @@ export function instanceOfCategoryResponse(value: object): value is CategoryResp
     if (!('accentColor' in value) || value['accentColor'] === undefined) return false;
     if (!('sortOrder' in value) || value['sortOrder'] === undefined) return false;
     if (!('isSystem' in value) || value['isSystem'] === undefined) return false;
+    if (!('isArchived' in value) || value['isArchived'] === undefined) return false;
+    if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
+    if (!('isPinned' in value) || value['isPinned'] === undefined) return false;
+    if (!('pinOrder' in value) || value['pinOrder'] === undefined) return false;
     return true;
 }
 
@@ -92,6 +112,10 @@ export function CategoryResponseFromJSONTyped(json: any, ignoreDiscriminator: bo
         'accentColor': json['accentColor'],
         'sortOrder': json['sortOrder'],
         'isSystem': json['isSystem'],
+        'isArchived': json['isArchived'],
+        'updatedAt': json['updatedAt'],
+        'isPinned': json['isPinned'],
+        'pinOrder': json['pinOrder'],
     };
 }
 
@@ -115,6 +139,10 @@ export function CategoryResponseToJSONTyped(value?: CategoryResponse | null, ign
         'accentColor': value['accentColor'],
         'sortOrder': value['sortOrder'],
         'isSystem': value['isSystem'],
+        'isArchived': value['isArchived'],
+        'updatedAt': value['updatedAt'],
+        'isPinned': value['isPinned'],
+        'pinOrder': value['pinOrder'],
     };
 }
 

@@ -6,7 +6,7 @@ namespace Averio.Application.Transactions.Common;
 public sealed record TransactionItemInput(
     string Description,
     Guid CategoryId,
-    decimal Amount);
+    decimal Amount, Guid? ExistingItemId = null);
 
 public sealed record TransactionInput(
     Guid AccountId,

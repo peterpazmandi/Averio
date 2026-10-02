@@ -208,6 +208,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnName("system_key");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
@@ -234,7 +235,37 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_categories_name_source", "(is_base AND system_key IS NOT NULL AND name IS NULL) OR (NOT is_base AND system_key IS NULL AND name IS NOT NULL)");
 
+                            t.HasCheckConstraint("ck_categories_not_self_parent", "parent_id IS NULL OR parent_id <> id");
+
                             t.HasCheckConstraint("ck_categories_scope", "(is_base AND household_id IS NULL) OR (NOT is_base AND household_id IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Categories.CategoryPin", b =>
+                {
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.HasKey("HouseholdMemberId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("category_pins", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_category_pins_sort_order", "sort_order >= 0");
                         });
                 });
 
@@ -1043,6 +1074,21 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_categories_parent");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Categories.CategoryPin", b =>
+                {
+                    b.HasOne("Averio.Domain.Categories.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdMember", b =>

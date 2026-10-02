@@ -270,3 +270,15 @@ Stable architecture/domain decisions belong in `docs/decisions/ADR-xxx-short-tit
 Statuses: Proposed, Accepted, Superseded, Deprecated.
 
 Never rewrite history by silently replacing an old accepted ADR. Add a new ADR and mark the earlier one superseded.
+
+
+
+## Commit messages
+
+All future commits must follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+Use `<type>[optional scope][!]: <description>`. Use `feat` for new features and `fix` for bug fixes; other useful types include `docs`, `test`, `refactor`, `perf`, `build`, `ci`, and `chore`.
+Use lowercase types/scopes consistently in Averio. A scope identifies the affected area, such as `categories`.
+Separate an optional body and footers with blank lines. Mark breaking changes with `!` before the colon or an uppercase `BREAKING CHANGE: <explanation>` footer.
+Split unrelated changes into separate commits where practical. PR titles and squash-merge messages must also follow this convention.
+Examples: `feat(categories): add household category management`, `fix(transactions): retain archived category assignments`, `docs(contributing): require conventional commits`.
+Do not rewrite already published history merely to apply this rule retroactively.

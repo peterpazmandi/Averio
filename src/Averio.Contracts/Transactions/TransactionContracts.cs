@@ -5,7 +5,7 @@ namespace Averio.Contracts.Transactions;
 public sealed record TransactionItemRequest(
     string Description,
     Guid CategoryId,
-    [property: JsonRequired] string Amount);
+    [property: JsonRequired] string Amount, Guid? ExistingItemId = null);
 
 public sealed record CreateTransactionRequest(
     Guid AccountId,

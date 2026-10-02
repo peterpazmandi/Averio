@@ -40,7 +40,11 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
                 <ConceptIcon name="transfers" />{t('transfers.title')}
             </Link>
-            {(['recurring', 'categories'] as const).map(unavailable)}
+            {unavailable('recurring')}
+            <Link to="/app/categories" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
+                <ConceptIcon name="categories" />{t('categoryManagement.title')}
+            </Link>
 
             <div className="av-nav-label">{t('concept.planning')}</div>
             {unavailable('goals')}
@@ -55,3 +59,4 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
         </nav>
     );
 }
+
