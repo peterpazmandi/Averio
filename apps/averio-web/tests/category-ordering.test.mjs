@@ -87,14 +87,27 @@ test('deep tree keeps ancestor context and excludes all descendants from parent 
     assert.equal([...descendantsOf('a', items)].sort().join(), 'a,b,c');
 });
 
-test('existing assignments survive filtered choices and require explicit replacement', () => {
+test('existing assignments and explicit draft choices are never defaulted', () => {
     const { resolveItemCategory } = load('../src/features/transactions/resolveItemCategory.ts');
-    // The API accepts compatible kinds or rejects an incompatible kind without
-    // saving; the UI must never substitute Uncategorized silently.
-    assert.equal(resolveItemCategory('archived-both', 'archived-both', false, 'uncategorized'), 'archived-both');
-    assert.equal(resolveItemCategory('archived-expense', 'archived-expense', false, 'uncategorized'), 'archived-expense');
-    assert.equal(resolveItemCategory('new-choice', 'archived-both', true, 'uncategorized'), 'new-choice');
-    assert.equal(resolveItemCategory('unavailable-new', undefined, false, 'uncategorized'), 'uncategorized');
-    assert.equal(resolveItemCategory('', undefined, false, 'uncategorized'), 'uncategorized');
-    assert.equal(resolveItemCategory('original', 'original', false, ''), 'original');
+    for (const id of ['archived-both', 'archived-expense', 'new-choice', 'reassigned-choice']) {
+        assert.equal(resolveItemCategory(id, 'uncategorized'), id);
+        assert.equal(resolveItemCategory(id, ''), id);
+    }
+    assert.equal(resolveItemCategory('', 'uncategorized'), 'uncategorized');
+    assert.equal(resolveItemCategory('', ''), '');
+});
+
+test('category refetch after archival preserves new and reassigned draft IDs', () => {
+    const { resolveItemCategory } = load('../src/features/transactions/resolveItemCategory.ts');
+    const before = [{ id: 'chosen' }, { id: 'default', systemKey: 'uncategorized' }];
+    const after = before.filter(c => c.id !== 'chosen');
+    for (const draft of [
+        { key: 'new-item', categoryId: 'chosen' },
+        { key: 'existing-item', categoryId: 'chosen' },
+    ]) {
+        const resolve = catalog => resolveItemCategory(draft.categoryId,
+            catalog.find(c => c.systemKey === 'uncategorized')?.id ?? '');
+        assert.equal(resolve(before), 'chosen');
+        assert.equal(resolve(after), 'chosen');
+    }
 });

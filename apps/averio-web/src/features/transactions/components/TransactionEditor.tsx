@@ -139,10 +139,6 @@ export function TransactionEditor({
         resolvedAccountId || undefined,
     ));
 
-    const categoriesById = useMemo(
-        () => new Map((categories.data ?? []).map(category => [category.id, category])),
-        [categories.data],
-    );
     const uncategorizedId = useMemo(
         () => (categories.data ?? []).find(
             category => category.systemKey === 'uncategorized',
@@ -151,14 +147,10 @@ export function TransactionEditor({
     );
 
     const resolvedItems = useMemo(
-        () => items.map(item => {
-            const selected = categoriesById.get(item.categoryId);
-            const original = transaction?.items.find(old => old.id === item.key);
-            return { ...item, categoryId: resolveItemCategory(
-                item.categoryId, original?.categoryId, Boolean(selected), uncategorizedId,
-            ) };
-        }),
-        [categoriesById, items, uncategorizedId, transaction],
+        () => items.map(item => ({
+            ...item, categoryId: resolveItemCategory(item.categoryId, uncategorizedId),
+        })),
+        [items, uncategorizedId],
     );
 
     const resolvedLabelIds = useMemo(() => {
