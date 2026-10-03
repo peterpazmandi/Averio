@@ -16,6 +16,8 @@ Activities and their names are personal to the current household member. Another
 
 ## Interpreting the result
 
+Choose **Transaction chart** on any activity to see income and expenses grouped by transaction date. Select a currency to view its bars independently. Each pair of bars represents one date with eligible transactions; dates without transactions are omitted, so horizontal spacing is categorical rather than elapsed time. Long timelines scroll horizontally. Hover a bar for its amount or expand **View exact daily amounts** for the accessible table (also available on touch screens). The chart works for open and closed activities and follows the same actual-result and visibility rules below.
+
 - Net = posted income − posted expenses through today (UTC).
 - Future-dated and voided entries remain available in the linked history but do not contribute to the result.
 - Activity dates describe the activity; they do not limit which assigned transactions count.
@@ -32,6 +34,7 @@ This release tracks actual amounts, not promised reimbursements. Split a combine
 Under `/api/v1/households/{householdId}`:
 
 - `GET /activities` returns personal activities with exact decimal strings per currency.
+- `GET /activities/{activityId}/timeline` returns daily income, expenses and counts by original currency, ordered by transaction date. It verifies personal activity ownership and current ledger visibility, and excludes future/voided transactions. Amounts are exact decimal strings; the browser only converts scaled bar coordinates to numbers. Data loads when the chart dialog opens and shares activity cache invalidation after ledger/assignment changes.
 - `POST /activities` creates an activity.
 - `PUT /activities/{activityId}` updates details/status with `expectedUpdatedAt`.
 - `PUT /activities/assignments` atomically assigns/removes 1–100 visible posted transactions, each with `expectedVersion`.

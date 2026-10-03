@@ -1,4 +1,13 @@
 export const activitiesEN = {
+    "chart": "Transaction chart",
+    "chartTitle": "Transactions · {{name}}",
+    "chartCurrency": "Currency",
+    "chartHelp": "Daily income and expenses through today (UTC). Only dates with visible posted transactions are shown, in date order; gaps are omitted. Future and voided entries are excluded. Scroll to see more dates.",
+    "chartDescription": "Daily income and expenses in {{currency}}. Exact amounts are available in the data table below.",
+    "chartScroll": "Transaction dates chart. Scroll horizontally for more dates.",
+    "chartValues": "View exact daily amounts",
+    "chartDate": "Transaction date",
+    "chartEmpty": "No transactions to chart yet",
     "title": "Activities",
     "description": "See what a trip, event or project actually cost you.",
     "create": "Create activity",
@@ -40,6 +49,15 @@ export const activitiesEN = {
 };
 
 export const activitiesDE = {
+    "chart": "Buchungsdiagramm",
+    "chartTitle": "Buchungen · {{name}}",
+    "chartCurrency": "Währung",
+    "chartHelp": "Tägliche Einnahmen und Ausgaben bis heute (UTC). Nur Tage mit sichtbaren gebuchten Transaktionen werden chronologisch angezeigt; Lücken werden ausgelassen. Zukünftige und stornierte Buchungen sind ausgeschlossen. Scrolle für weitere Tage.",
+    "chartDescription": "Tägliche Einnahmen und Ausgaben in {{currency}}. Genaue Beträge stehen in der Datentabelle darunter.",
+    "chartScroll": "Diagramm der Buchungstage. Für weitere Tage horizontal scrollen.",
+    "chartValues": "Genaue Tagesbeträge anzeigen",
+    "chartDate": "Buchungsdatum",
+    "chartEmpty": "Noch keine Buchungen für das Diagramm",
     "title": "Aktivitäten",
     "description": "Sieh, was eine Reise, Veranstaltung oder ein Projekt tatsächlich gekostet hat.",
     "create": "Aktivität erstellen",
@@ -81,6 +99,15 @@ export const activitiesDE = {
 };
 
 export const activitiesHU = {
+    "chart": "Tranzakciódiagram",
+    "chartTitle": "Tranzakciók · {{name}}",
+    "chartCurrency": "Pénznem",
+    "chartHelp": "Napi bevételek és kiadások a mai napig (UTC). Csak a látható, könyvelt tranzakciókat tartalmazó napok jelennek meg időrendben; a köztes üres napok kimaradnak. A jövőbeli és érvénytelenített tételek nem szerepelnek. További napokért görgess oldalra.",
+    "chartDescription": "Napi bevételek és kiadások {{currency}} pénznemben. A pontos összegek az alábbi táblázatban érhetők el.",
+    "chartScroll": "Tranzakciók dátum szerinti diagramja. További napokért görgess vízszintesen.",
+    "chartValues": "Pontos napi összegek megtekintése",
+    "chartDate": "Tranzakció dátuma",
+    "chartEmpty": "Még nincs megjeleníthető tranzakció",
     "title": "Tevékenységek",
     "description": "Nézd meg, mennyibe került egy utazás, esemény vagy projekt.",
     "create": "Tevékenység létrehozása",

@@ -10,6 +10,7 @@ import { formatDecimalAmount } from '../../shared/money/decimalAmount';
 import { activityQueries } from './activityQueries';
 import { ActivityEditor } from './ActivityEditor';
 import { ActivityIllustration } from './ActivityIllustration';
+import { ActivityTimeline } from './ActivityTimeline';
 
 export function ActivitiesPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
@@ -17,6 +18,7 @@ export function ActivitiesPage({ userId, householdId }: { userId: string; househ
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState('all');
     const [editor, setEditor] = useState<ActivityResponse | 'new' | null>(null);
+    const [chart, setChart] = useState<ActivityResponse | null>(null);
     const filtered = search.trim() !== '' || status !== 'all';
     const rows = (query.data ?? []).filter(x => (status === 'all' || x.isClosed === (status === 'closed'))
         && x.name.toLocaleLowerCase(i18n.language).includes(search.trim().toLocaleLowerCase(i18n.language)))
@@ -64,9 +66,11 @@ export function ActivitiesPage({ userId, householdId }: { userId: string; househ
                         className="inline-flex min-h-11 items-center rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
                         {t('activities.viewTransactions')}</Link>
                     <AverioButton onClick={() => setEditor(activity)}>{t('common.actions.edit')}</AverioButton>
+                    <AverioButton onClick={() => setChart(activity)}>{t('activities.chart')}</AverioButton>
                 </footer>
             </AverioCard>)}
         </div>
         {editor && <ActivityEditor userId={userId} householdId={householdId} activity={editor === 'new' ? undefined : editor} onClose={() => setEditor(null)} />}
+        {chart && <ActivityTimeline userId={userId} householdId={householdId} activity={chart} onClose={() => setChart(null)} />}
     </section>;
 }

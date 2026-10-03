@@ -39,7 +39,7 @@ internal static class ActivityVerification
         var id = await Call(h => h.CreateAsync(f.HouseholdId, new("St. Ingbert", day, day.AddDays(3)), Ct));
         await Throws<ValidationException>(() => Call(h => h.CreateAsync(f.HouseholdId, new(" ", null, null), Ct)));
         await Throws<ValidationException>(() => Call(h => h.CreateAsync(f.HouseholdId, new("Dates", day, day.AddDays(-1)), Ct)));
-        var expense = await Create(eur, TransactionKind.Expense, 575.1234m, day, id);
+        var expense = await Create(eur, TransactionKind.Expense, 575.1234m, day.AddDays(-2), id);
         var income = await Create(eur, TransactionKind.Income, 620m, day, id);
         var dollars = await Create(usd, TransactionKind.Expense, 12.3456m, day, id);
         var future = await Create(eur, TransactionKind.Income, 999m, day.AddDays(1), id);
@@ -49,6 +49,13 @@ internal static class ActivityVerification
         Check(totals.Single(x => x.Currency == "EUR").Net == 32.8766m, "Actual EUR net or future exclusion is wrong");
         Check(totals.Single(x => x.Currency == "USD").Net == -12.3456m, "Currencies were combined");
         Check(totals.Single(x => x.Currency == "EUR").TransactionCount == 4, "Count is incorrect");
+        var timeline = await Call(h => h.TimelineAsync(f.HouseholdId, id, Ct));
+        Check(timeline.Count == 3 && timeline[0].Date == day.AddDays(-2), "Timeline grouping or order is wrong");
+        Check(timeline.Where(x => x.Currency == "EUR").Sum(x => x.Income - x.Expenses) == 32.8766m,
+            "Timeline differs from actual totals or includes future entries");
+        Check(timeline.Single(x => x.Currency == "EUR" && x.Date == day).TransactionCount == 3,
+            "Same-day transactions were not grouped");
+        Check(timeline.Single(x => x.Currency == "USD").Expenses == 12.3456m, "Timeline combined currencies");
         var before = await Detail(expense);
         Check(before.ActivityId == id && before.ActivityName == "St. Ingbert", "Detail assignment missing");
         await using (var scope = provider.CreateAsyncScope())
@@ -59,6 +66,8 @@ internal static class ActivityVerification
         }
         user.UserId = f.MemberUserId;
         Check((await Call(h => h.ListAsync(f.HouseholdId, Ct))).Count == 0, "Other member sees activity");
+        await Throws<NotFoundException>(() => Call(h => h.TimelineAsync(f.HouseholdId, id, Ct)));
+        await Throws<NotFoundException>(() => Call(h => h.TimelineAsync(Guid.NewGuid(), id, Ct)));
         Check((await Detail(expense)).ActivityId is null, "Shared transaction leaks private assignment");
         await Throws<NotFoundException>(() => Assign(id, new ActivityAssignmentChange(expense, Guid.Empty)));
         await Throws<NotFoundException>(() => Assign(null, new ActivityAssignmentChange(hidden, Guid.Empty)));
@@ -78,6 +87,8 @@ internal static class ActivityVerification
         }
         user.UserId = f.MemberUserId;
         Check((await Call(h => h.ListAsync(f.HouseholdId, Ct))).Single().Totals.Count == 0, "Hidden account leaked through totals");
+        Check((await Call(h => h.TimelineAsync(f.HouseholdId, memberActivity, Ct))).Count == 0,
+            "Hidden account leaked through timeline");
         await using (var scope = provider.CreateAsyncScope())
         {
             var page = await scope.ServiceProvider.GetRequiredService<GetTransactionsHandler>().HandleAsync(
@@ -115,6 +126,10 @@ internal static class ActivityVerification
             await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>().HandleAsync(f.HouseholdId, income, d.UpdatedAt, Ct);
         }
         Check((await Read()).Totals.Single(x => x.Currency == "EUR").Net == -512m, "Void still contributes");
+        timeline = await Call(h => h.TimelineAsync(f.HouseholdId, id, Ct));
+        Check(timeline.All(x => x.Date == day) && timeline.Single(x => x.Currency == "EUR").Income == 0m
+            && timeline.Single(x => x.Currency == "EUR").Expenses == 512m,
+            "Closed activity timeline failed to follow corrected dates, amounts or voids");
         activity = (await Read()).Activity;
         await Command(h => h.UpdateAsync(f.HouseholdId, id, new("Trip reopened", day, null), activity.UpdatedAt, Ct));
         // Bulk rollback: first entry is valid, second is inaccessible/nonexistent.

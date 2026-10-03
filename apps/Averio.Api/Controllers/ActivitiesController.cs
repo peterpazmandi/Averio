@@ -23,6 +23,10 @@ public sealed class ActivitiesController(ActivityHandler handler) : ControllerBa
         var id = await handler.CreateAsync(householdId, new ActivityInput(request.Name, request.StartsOn, request.EndsOn), ct);
         return StatusCode(StatusCodes.Status201Created, new CreateActivityResponse(id));
     }
+    [HttpGet("{activityId:guid}/timeline")]
+    public async Task<ActionResult<IReadOnlyList<ActivityDayResponse>>> Timeline(Guid householdId, Guid activityId, CancellationToken ct)
+        => Ok((await handler.TimelineAsync(householdId, activityId, ct)).Select(x => new ActivityDayResponse(
+            x.Date, x.Currency, DecimalAmountMapper.Format(x.Income), DecimalAmountMapper.Format(x.Expenses), x.TransactionCount)).ToArray());
     [HttpPut("{activityId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Update(Guid householdId, Guid activityId, UpdateActivityRequest request, CancellationToken ct)

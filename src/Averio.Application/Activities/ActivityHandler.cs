@@ -24,6 +24,14 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
         await unitOfWork.SaveChangesAsync(ct);
         return activity.Id;
     }
+    public async Task<IReadOnlyList<ActivityDayResult>> TimelineAsync(Guid householdId, Guid id, CancellationToken ct)
+    {
+        var memberId = await AuthorizeAsync(householdId, ct);
+        _ = await activities.GetAsync(householdId, memberId, id, ct)
+            ?? throw new NotFoundException("activity", id);
+        return await activities.TimelineAsync(householdId, memberId, id,
+            DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime), ct);
+    }
     public async Task UpdateAsync(Guid householdId, Guid id, ActivityInput input, DateTimeOffset expected, CancellationToken ct)
     {
         var memberId = await AuthorizeAsync(householdId, ct);

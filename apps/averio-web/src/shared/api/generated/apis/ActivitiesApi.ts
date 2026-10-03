@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type ActivityDayResponse,
+    ActivityDayResponseFromJSON,
+    ActivityDayResponseToJSON,
+} from '../models/ActivityDayResponse';
+import {
     type ActivityResponse,
     ActivityResponseFromJSON,
     ActivityResponseToJSON,
@@ -52,6 +57,17 @@ export interface ApiV1HouseholdsHouseholdIdActivitiesActivityIdPutRequest {
      * 
      */
     updateActivityRequest: UpdateActivityRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    activityId: string;
 }
 
 export interface ApiV1HouseholdsHouseholdIdActivitiesAssignmentsPutRequest {
@@ -146,6 +162,57 @@ export class ActivitiesApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdActivitiesActivityIdPut(requestParameters: ApiV1HouseholdsHouseholdIdActivitiesActivityIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdActivitiesActivityIdPutRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGet().'
+            );
+        }
+
+        if (requestParameters['activityId'] == null) {
+            throw new runtime.RequiredError(
+                'activityId',
+                'Required parameter "activityId" was null or undefined when calling apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/activities/{activityId}/timeline`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{activityId}', encodeURIComponent(String(requestParameters['activityId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ActivityDayResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ActivityDayResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGet(requestParameters: ApiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ActivityDayResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGetRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

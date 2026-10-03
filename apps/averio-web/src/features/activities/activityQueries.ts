@@ -5,6 +5,10 @@ import { generatedApiConfiguration } from '../../shared/api/generatedApiConfigur
 export const activityApi = new ActivitiesApi(generatedApiConfiguration);
 export const activityKeys = { all: (userId: string, householdId: string) => ['activities', userId, householdId] as const };
 export const activityQueries = {
+    timeline: (userId: string, householdId: string, activityId: string) => queryOptions({
+        queryKey: [...activityKeys.all(userId, householdId), 'timeline', activityId],
+        queryFn: ({ signal }) => activityApi.apiV1HouseholdsHouseholdIdActivitiesActivityIdTimelineGet({ householdId, activityId }, { signal }),
+    }),
     list: (userId: string, householdId: string) => queryOptions({
         queryKey: activityKeys.all(userId, householdId),
         queryFn: ({ signal }) => activityApi.apiV1HouseholdsHouseholdIdActivitiesGet({ householdId }, { signal }),

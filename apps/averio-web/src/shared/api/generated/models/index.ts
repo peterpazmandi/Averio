@@ -6,6 +6,7 @@ export * from './AccountResponse';
 export * from './ActivityAssignmentChangeRequest';
 export * from './ActivityAssignmentRequest';
 export * from './ActivityCurrencyResponse';
+export * from './ActivityDayResponse';
 export * from './ActivityResponse';
 export * from './AssignActivitiesRequest';
 export * from './CashFlowPeriodResponse';

@@ -37,6 +37,22 @@ internal sealed class ActivityRepository(AverioDbContext db) : IActivityReposito
     public Task<ActivityAssignment?> GetAssignmentAsync(Guid householdId, Guid memberId, Guid transactionId, CancellationToken ct)
         => db.Set<ActivityAssignment>().SingleOrDefaultAsync(x => x.HouseholdId == householdId
             && x.HouseholdMemberId == memberId && x.TransactionId == transactionId, ct);
+    public async Task<IReadOnlyList<ActivityDayResult>> TimelineAsync(Guid householdId, Guid memberId, Guid activityId,
+        DateOnly through, CancellationToken ct)
+    {
+        var days = await (
+            from link in db.Set<ActivityAssignment>().AsNoTracking()
+            join transaction in db.VisibleTransactions(householdId, memberId).AsNoTracking() on link.TransactionId equals transaction.Id
+            where link.HouseholdId == householdId && link.HouseholdMemberId == memberId && link.ActivityId == activityId
+                && transaction.Status == TransactionStatus.Posted && transaction.OccurredOn <= through
+            group transaction by new { transaction.OccurredOn, transaction.Currency } into g
+            orderby g.Key.OccurredOn
+            select new { g.Key.OccurredOn, g.Key.Currency,
+                Income = g.Sum(x => x.Kind == TransactionKind.Income ? x.Amount : 0m),
+                Expenses = g.Sum(x => x.Kind == TransactionKind.Expense ? x.Amount : 0m), Count = g.LongCount() }).ToListAsync(ct);
+        return days.Select(x => new ActivityDayResult(x.OccurredOn, x.Currency.Value, x.Income, x.Expenses, x.Count))
+            .OrderBy(x => x.Date).ThenBy(x => x.Currency, StringComparer.Ordinal).ToArray();
+    }
     public async Task<ActivityAssignmentResult?> ReadAssignmentAsync(Guid householdId, Guid memberId, Guid transactionId, CancellationToken ct)
         => await (from link in db.Set<ActivityAssignment>().AsNoTracking()
             join activity in db.Set<Activity>() on link.ActivityId equals activity.Id into matches
