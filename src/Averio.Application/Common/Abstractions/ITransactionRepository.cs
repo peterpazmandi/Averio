@@ -35,7 +35,8 @@ public sealed record TransactionQuery(
     int PageSize,
     DateOnly? CursorDate,
     DateTimeOffset? CursorCreatedAt,
-    Guid? CursorId);
+    Guid? CursorId,
+    Guid? ActivityId = null);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,
@@ -72,4 +73,5 @@ public sealed record TransactionReadModel(
     DateTimeOffset UpdatedAt,
     bool CanModify,
     IReadOnlyList<TransactionItemReadModel> Items,
-    IReadOnlyList<TransactionLabelReadModel> Labels);
+    IReadOnlyList<TransactionLabelReadModel> Labels,
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default);

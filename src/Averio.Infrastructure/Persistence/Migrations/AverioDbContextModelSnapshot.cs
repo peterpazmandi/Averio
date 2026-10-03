@@ -148,6 +148,96 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.ToTable("account_owners", (string)null);
                 });
 
+            modelBuilder.Entity("Averio.Domain.Activities.Activity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ends_on");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_closed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly?>("StartsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("starts_on");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "IsClosed", "Name");
+
+                    b.ToTable("activities", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_activities_dates", "ends_on IS NULL OR starts_on IS NULL OR ends_on >= starts_on");
+
+                            t.HasCheckConstraint("ck_activities_name", "length(btrim(name)) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Activities.ActivityAssignment", b =>
+                {
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("activity_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
+                    b.HasKey("HouseholdMemberId", "TransactionId");
+
+                    b.HasIndex("HouseholdId", "TransactionId");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "ActivityId");
+
+                    b.ToTable("activity_assignments", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Categories.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1059,6 +1149,39 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_account_owners_members");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Activities.Activity", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Activities.ActivityAssignment", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Activities.Activity", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId", "ActivityId")
+                        .HasPrincipalKey("HouseholdId", "HouseholdMemberId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Averio.Domain.Categories.Category", b =>

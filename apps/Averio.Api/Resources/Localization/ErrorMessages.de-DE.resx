@@ -311,6 +311,12 @@
   <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archivierte Kategorien können nur bei ihren bestehenden Buchungsposten beibehalten werden.</value></data>
   <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>Der ursprüngliche Buchungsposten ist ungültig oder wurde mehrfach übermittelt. Lade die Buchung neu.</value></data>
   <data name="Error_CategoryPinOrder" xml:space="preserve"><value>Die Reihenfolge wurde geändert oder ist ungültig. Die aktuelle Reihenfolge wurde geladen; versuche es erneut.</value></data>
+  <data name="Validation_ActivityName" xml:space="preserve"><value>Gib einen Aktivitätsnamen mit maximal 100 Zeichen ein.</value></data>
+  <data name="Validation_ActivityDates" xml:space="preserve"><value>Das Enddatum darf nicht vor dem Startdatum liegen.</value></data>
+  <data name="Validation_ActivitySelection" xml:space="preserve"><value>Wähle zwischen 1 und 100 unterschiedliche Buchungen aus.</value></data>
+  <data name="Error_ActivityChanged" xml:space="preserve"><value>Die Aktivität oder Zuordnung wurde geändert. Lade die Seite neu und versuche es erneut.</value></data>
+  <data name="Error_ActivityClosed" xml:space="preserve"><value>Öffne diese Aktivität erneut, bevor du Buchungen hinzufügst.</value></data>
 </root>
+
 
 

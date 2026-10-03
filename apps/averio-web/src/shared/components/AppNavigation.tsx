@@ -47,6 +47,10 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
             </Link>
 
             <div className="av-nav-label">{t('concept.planning')}</div>
+            <Link to="/app/activities" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
+                <ConceptIcon name="goals" />{t('activities.title')}
+            </Link>
             {unavailable('goals')}
             <Link to="/app/statistics" className="av-nav-item"
                 activeProps={{ className: 'active', 'aria-current': 'page' }}
@@ -59,4 +63,5 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
         </nav>
     );
 }
+
 

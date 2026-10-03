@@ -27,7 +27,7 @@ internal static class TransactionMapper
             request.Note,
             request.OccurredOn,
             MapItems(request.Items),
-            request.LabelIds ?? []);
+            request.LabelIds ?? [], MapAssignment(request.ActivityAssignment));
 
     public static UpdateTransactionCommand ToCommand(
         Guid householdId,
@@ -49,7 +49,7 @@ internal static class TransactionMapper
             request.OccurredOn,
             MapItems(request.Items),
             request.LabelIds ?? [],
-            request.ExpectedUpdatedAt);
+            request.ExpectedUpdatedAt, MapAssignment(request.ActivityAssignment));
 
     public static TransactionResponse From(TransactionResult result) => new(
         result.Id,
@@ -78,7 +78,8 @@ internal static class TransactionMapper
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
             label.Name,
-            label.Scope.ToString())).ToArray());
+            label.Scope.ToString())).ToArray(),
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion);
 
     public static TransactionResponse From(TransactionDetailResult result) => new(
         result.Id,
@@ -107,7 +108,11 @@ internal static class TransactionMapper
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
             label.Name,
-            label.Scope.ToString())).ToArray());
+            label.Scope.ToString())).ToArray(),
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion);
+
+    private static Averio.Application.Activities.ActivityAssignmentInput? MapAssignment(Averio.Contracts.Activities.ActivityAssignmentRequest? input)
+        => input is null ? null : new(input.ActivityId, input.ExpectedVersion);
 
     private static IReadOnlyList<TransactionItemInput> MapItems(
         IReadOnlyList<TransactionItemRequest> items)
@@ -117,4 +122,5 @@ internal static class TransactionMapper
             DecimalAmountMapper.ParseTransactionAmount(item.Amount), item.ExistingItemId))
             .ToArray();
 }
+
 

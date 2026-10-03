@@ -102,6 +102,18 @@ export interface TransactionResponse {
      * 
      */
     labels: Array<TransactionLabelResponse>;
+    /**
+     * 
+     */
+    activityId: string | null;
+    /**
+     * 
+     */
+    activityName: string | null;
+    /**
+     * 
+     */
+    activityAssignmentVersion: string;
 }
 
 /**
@@ -125,6 +137,9 @@ export function instanceOfTransactionResponse(value: object): value is Transacti
     if (!('canModify' in value) || value['canModify'] === undefined) return false;
     if (!('items' in value) || value['items'] === undefined) return false;
     if (!('labels' in value) || value['labels'] === undefined) return false;
+    if (!('activityId' in value) || value['activityId'] === undefined) return false;
+    if (!('activityName' in value) || value['activityName'] === undefined) return false;
+    if (!('activityAssignmentVersion' in value) || value['activityAssignmentVersion'] === undefined) return false;
     return true;
 }
 
@@ -155,6 +170,9 @@ export function TransactionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'canModify': json['canModify'],
         'items': ((json['items'] as Array<any>).map(TransactionItemResponseFromJSON)),
         'labels': ((json['labels'] as Array<any>).map(TransactionLabelResponseFromJSON)),
+        'activityId': json['activityId'],
+        'activityName': json['activityName'],
+        'activityAssignmentVersion': json['activityAssignmentVersion'],
     };
 }
 
@@ -186,6 +204,9 @@ export function TransactionResponseToJSONTyped(value?: TransactionResponse | nul
         'canModify': value['canModify'],
         'items': ((value['items'] as Array<any>).map(TransactionItemResponseToJSON)),
         'labels': ((value['labels'] as Array<any>).map(TransactionLabelResponseToJSON)),
+        'activityId': value['activityId'],
+        'activityName': value['activityName'],
+        'activityAssignmentVersion': value['activityAssignmentVersion'],
     };
 }
 

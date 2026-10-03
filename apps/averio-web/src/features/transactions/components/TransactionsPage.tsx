@@ -1,4 +1,8 @@
 import { Link } from '@tanstack/react-router';
+import { ActivitySelect } from '../../activities/ActivitySelect';
+import { AssignActivityDialog } from '../../activities/AssignActivityDialog';
+import { emptyAssignmentVersion } from '../../activities/activityQueries';
+import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
@@ -22,6 +26,7 @@ interface Props {
     userId: string;
     householdId: string;
     createRequested?: boolean;
+    initialActivityId?: string;
     onCreateRequestHandled?: () => void;
 }
 
@@ -29,6 +34,7 @@ export function TransactionsPage({
     userId,
     householdId,
     createRequested = false,
+    initialActivityId,
     onCreateRequestHandled,
 }: Props) {
     const { t, i18n } = useTranslation();
@@ -36,9 +42,13 @@ export function TransactionsPage({
     const defaultMonth = format(new Date(), 'yyyy-MM');
 
     const [search, setSearch] = useState('');
+    const [activityId, setActivityId] = useState(initialActivityId ?? '');
+    const [selecting, setSelecting] = useState(false);
+    const [selected, setSelected] = useState<Record<string, string>>({});
+    const [assigning, setAssigning] = useState(false);
     const [accountId, setAccountId] = useState('');
     const [kind, setKind] = useState<'' | TransactionKind>('');
-    const [month, setMonth] = useState(defaultMonth);
+    const [month, setMonth] = useState(initialActivityId ? '' : defaultMonth);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [editor, setEditor] = useState<TransactionDto | 'new' | null>(null);
     const [notice, setNotice] = useState('');
@@ -79,12 +89,13 @@ export function TransactionsPage({
 
     const filterCount = Number(accountId !== '')
         + Number(kind !== '')
-        + Number(month !== defaultMonth);
+        + Number(month !== defaultMonth) + Number(activityId !== '');
 
     const hasCriteria = search.trim().length > 0 || filterCount > 0;
 
     const filters = useMemo<TransactionFilters>(() => {
         const result: TransactionFilters = {
+            activityId: activityId || undefined,
             accountId: accountId || undefined,
             kind: kind || undefined,
             search: search.trim() || undefined,
@@ -98,7 +109,7 @@ export function TransactionsPage({
         }
 
         return result;
-    }, [accountId, kind, month, search]);
+    }, [accountId, kind, month, search, activityId]);
 
     const transactions = useInfiniteQuery({
         queryKey: transactionQueryKeys.list(
@@ -144,6 +155,8 @@ export function TransactionsPage({
 
     function resetFilters() {
         setSearch('');
+        setActivityId('');
+        setSelected({});
         setAccountId('');
         setKind('');
         setMonth(defaultMonth);
@@ -228,7 +241,7 @@ export function TransactionsPage({
                             autoComplete="off"
                             value={search}
                             placeholder={t('transactionManagement.searchPlaceholder')}
-                            onChange={event => setSearch(event.target.value)}
+                            onChange={event => { setSearch(event.target.value); setSelected({}); }}
                         />
                         {search && (
                             <button
@@ -237,6 +250,7 @@ export function TransactionsPage({
                                 aria-label={t('transactionManagement.clearSearch')}
                                 onClick={() => {
                                     setSearch('');
+                                    setSelected({});
                                     searchInput.current?.focus();
                                 }}
                             >
@@ -269,12 +283,15 @@ export function TransactionsPage({
                     hidden={!filtersOpen}
                 >
                     <div className="av-tx-filter-grid">
+                        <ActivitySelect userId={userId} householdId={householdId} value={activityId}
+                            onChange={id => { setActivityId(id); setSelected({}); if (id) setMonth(''); }}
+                            includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
                         <label>
                             <span>{t('transactionManagement.filterMonth')}</span>
                             <select
                                 className="av-select"
                                 value={month}
-                                onChange={event => setMonth(event.target.value)}
+                                onChange={event => { setMonth(event.target.value); setSelected({}); }}
                             >
                                 <option value="">
                                     {t('transactionManagement.allDates')}
@@ -295,8 +312,7 @@ export function TransactionsPage({
                             <select
                                 className="av-select"
                                 value={accountId}
-                                onChange={event =>
-                                    setAccountId(event.target.value)}
+                                onChange={event => { setAccountId(event.target.value); setSelected({}); }}
                             >
                                 <option value="">
                                     {t('transactionManagement.allAccounts')}
@@ -318,7 +334,7 @@ export function TransactionsPage({
                                 <button
                                     type="button"
                                     className={!kind ? 'active' : ''}
-                                    onClick={() => setKind('')}
+                                    onClick={() => { setKind(''); setSelected({}); }}
                                 >
                                     {t('transactionManagement.all')}
                                 </button>
@@ -329,7 +345,7 @@ export function TransactionsPage({
                                             ? 'active income'
                                             : 'income'
                                     }
-                                    onClick={() => setKind('Income')}
+                                    onClick={() => { setKind('Income'); setSelected({}); }}
                                 >
                                     {t('transactionManagement.income')}
                                 </button>
@@ -340,7 +356,7 @@ export function TransactionsPage({
                                             ? 'active expense'
                                             : 'expense'
                                     }
-                                    onClick={() => setKind('Expense')}
+                                    onClick={() => { setKind('Expense'); setSelected({}); }}
                                 >
                                     {t('transactionManagement.expense')}
                                 </button>
@@ -434,6 +450,15 @@ export function TransactionsPage({
                 </div>
             )}
 
+            {transactions.isSuccess && items.length > 0 && <div className="flex flex-wrap items-center gap-3">
+                <AverioButton onClick={() => { setSelecting(!selecting); setSelected({}); }}>
+                    {t(selecting ? 'common.actions.cancel' : 'activities.selectTransactions')}</AverioButton>
+                {selecting && <><span className="text-sm">{t('activities.selected', { count: Object.keys(selected).length })}</span>
+                    <AverioButton disabled={Object.keys(selected).length === 0} onClick={() => setAssigning(true)}>{t('activities.assign')}</AverioButton></>}
+            </div>}
+            {assigning && <AssignActivityDialog userId={userId} householdId={householdId}
+                transactions={Object.entries(selected).map(([transactionId, expectedVersion]) => ({ transactionId, expectedVersion }))}
+                onClose={() => setAssigning(false)} onSaved={() => { setAssigning(false); setSelected({}); setSelecting(false); setNotice(t('activities.assigned')); }} />}
             {items.length > 0 && (
                 <div
                     className="av-timeline"
@@ -460,6 +485,16 @@ export function TransactionsPage({
 
                         return (
                             <div key={transaction.id}>
+                                {selecting && transaction.status === 'Posted' && <label className="flex min-h-11 items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={transaction.id in selected}
+                                        disabled={!(transaction.id in selected) && Object.keys(selected).length >= 100}
+                                        onChange={event => setSelected(current => {
+                                            const next = { ...current };
+                                            if (event.target.checked) next[transaction.id] = transaction.activityAssignmentVersion ?? emptyAssignmentVersion;
+                                            else delete next[transaction.id];
+                                            return next;
+                                        })} />{t('activities.selectTransaction', { name: title })}
+                                </label>}
                                 {showDate && (
                                     <div className="av-timeline-date">
                                         <span>{dateLabel}</span>
@@ -511,6 +546,7 @@ export function TransactionsPage({
                                             {title}
                                         </strong>
 
+                                        {transaction.activityName && <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{transaction.activityName}</span>}
                                         {transaction.items.length > 1 && (
                                             <span className="av-tx-item-count">
                                                 {t('transactionManagement.itemCount', {

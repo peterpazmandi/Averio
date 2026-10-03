@@ -18,7 +18,8 @@ public sealed record UpdateTransactionCommand(
     DateOnly OccurredOn,
     IReadOnlyList<TransactionItemInput> Items,
     IReadOnlyList<Guid> LabelIds,
-    DateTimeOffset ExpectedUpdatedAt);
+    DateTimeOffset ExpectedUpdatedAt,
+    Averio.Application.Activities.ActivityAssignmentInput? ActivityAssignment = null);
 
 public sealed class UpdateTransactionHandler(
     ICurrentUser currentUser,
@@ -29,7 +30,8 @@ public sealed class UpdateTransactionHandler(
     TransactionReferenceResolver referenceResolver,
     TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    Averio.Application.Activities.ActivityHandler activities)
 {
     public async Task HandleAsync(
         UpdateTransactionCommand command,
@@ -134,6 +136,7 @@ public sealed class UpdateTransactionHandler(
 
         try
         {
+            await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
 
             transaction.Update(
@@ -159,3 +162,4 @@ public sealed class UpdateTransactionHandler(
         }
     }
 }
+

@@ -22,6 +22,9 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Activities.Activity or Averio.Domain.Activities.ActivityAssignment))
+                throw new ConflictException("activity_changed", "Error_ActivityChanged");
+
             if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Categories.Category))
                 throw new ConflictException("category_changed", "Error_CategoryChanged");
 
@@ -56,3 +59,4 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
             => transaction.DisposeAsync();
     }
 }
+
