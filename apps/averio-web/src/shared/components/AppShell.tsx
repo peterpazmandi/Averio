@@ -58,6 +58,8 @@ export function AppShell({ children }: PropsWithChildren) {
         ? t('app.navigation.accounts')
         : pathname.startsWith('/app/transfers')
             ? t('transfers.title')
+        : pathname.startsWith('/app/activities')
+            ? t('activities.title')
         : pathname.startsWith('/app/transactions')
             ? t('navigation.transactions')
             : pathname.startsWith('/app/statistics')
