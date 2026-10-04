@@ -311,6 +311,12 @@
   <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archivált kategória csak a hozzá tartozó korábbi tranzakciótételen tartható meg.</value></data>
   <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>A korábbi tranzakciótétel érvénytelen vagy többször szerepel. Töltsd újra a tranzakciót.</value></data>
   <data name="Error_CategoryPinOrder" xml:space="preserve"><value>A kitűzések sorrendje megváltozott vagy érvénytelen. Betöltöttük az aktuális sorrendet; próbáld újra.</value></data>
+  <data name="Validation_ActivityName" xml:space="preserve"><value>Adj meg egy legfeljebb 100 karakteres tevékenységnevet.</value></data>
+  <data name="Validation_ActivityDates" xml:space="preserve"><value>A záró dátum nem előzheti meg a kezdő dátumot.</value></data>
+  <data name="Validation_ActivitySelection" xml:space="preserve"><value>Válassz ki 1–100 különböző tranzakciót.</value></data>
+  <data name="Error_ActivityChanged" xml:space="preserve"><value>A tevékenység vagy hozzárendelés megváltozott. Frissítsd az oldalt, és próbáld újra.</value></data>
+  <data name="Error_ActivityClosed" xml:space="preserve"><value>Nyisd újra a tevékenységet, mielőtt tranzakciókat rendelsz hozzá.</value></data>
 </root>
+
 
 

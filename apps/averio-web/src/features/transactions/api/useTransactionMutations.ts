@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { activityKeys } from '../../activities/activityQueries';
 import { createTransaction, updateTransaction, voidTransaction } from './transactionApi';
 import type { TransactionInputDto, UpdateTransactionInputDto } from './transactionApi';
 import { transactionQueryKeys } from './transactionQueries';
@@ -10,6 +11,7 @@ export function useTransactionMutations(userId: string, householdId: string) {
 
     async function invalidate() {
         await Promise.all([
+            queryClient.invalidateQueries({ queryKey: activityKeys.all(userId, householdId) }),
             queryClient.invalidateQueries({
                 queryKey: transactionQueryKeys.all(userId, householdId),
             }),

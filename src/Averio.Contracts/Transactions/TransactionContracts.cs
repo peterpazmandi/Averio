@@ -15,7 +15,8 @@ public sealed record CreateTransactionRequest(
     string? Note,
     DateOnly OccurredOn,
     [property: JsonRequired] IReadOnlyList<TransactionItemRequest> Items,
-    IReadOnlyList<Guid>? LabelIds);
+    IReadOnlyList<Guid>? LabelIds,
+    Averio.Contracts.Activities.ActivityAssignmentRequest? ActivityAssignment = null);
 
 public sealed record UpdateTransactionRequest(
     Guid AccountId,
@@ -26,7 +27,8 @@ public sealed record UpdateTransactionRequest(
     DateOnly OccurredOn,
     [property: JsonRequired] IReadOnlyList<TransactionItemRequest> Items,
     IReadOnlyList<Guid>? LabelIds,
-    [property: JsonRequired] DateTimeOffset ExpectedUpdatedAt);
+    [property: JsonRequired] DateTimeOffset ExpectedUpdatedAt,
+    Averio.Contracts.Activities.ActivityAssignmentRequest? ActivityAssignment = null);
 
 public sealed record CreateTransactionResponse(Guid Id);
 
@@ -61,8 +63,10 @@ public sealed record TransactionResponse(
     DateTimeOffset UpdatedAt,
     bool CanModify,
     IReadOnlyList<TransactionItemResponse> Items,
-    IReadOnlyList<TransactionLabelResponse> Labels);
+    IReadOnlyList<TransactionLabelResponse> Labels,
+    Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion);
 
 public sealed record TransactionPageResponse(
     IReadOnlyList<TransactionResponse> Items,
     bool HasMore);
+

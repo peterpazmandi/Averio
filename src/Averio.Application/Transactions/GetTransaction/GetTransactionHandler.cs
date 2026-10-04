@@ -12,7 +12,8 @@ public sealed class GetTransactionHandler(
     IHouseholdRepository householdRepository,
     IAccountRepository accountRepository,
     ILabelRepository labelRepository,
-    ITransactionRepository transactionRepository)
+    ITransactionRepository transactionRepository,
+    Averio.Application.Activities.IActivityRepository activities)
 {
     public async Task<TransactionDetailResult> HandleAsync(
         Guid householdId,
@@ -52,6 +53,8 @@ public sealed class GetTransactionHandler(
                 labelIds,
                 cancellationToken);
 
+        var assignment = await activities.ReadAssignmentAsync(household.Id, membership.Id, transaction.Id, cancellationToken);
+
         return new TransactionDetailResult(
             transaction.Id,
             transaction.AccountId,
@@ -86,7 +89,7 @@ public sealed class GetTransactionHandler(
                     label.Id,
                     label.Name,
                     label.Scope))
-                .ToArray());
+                .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty);
     }
 }
 
@@ -107,4 +110,5 @@ public sealed record TransactionDetailResult(
     DateTimeOffset UpdatedAt,
     bool CanModify,
     IReadOnlyList<TransactionItemResult> Items,
-    IReadOnlyList<TransactionLabelResult> Labels);
+    IReadOnlyList<TransactionLabelResult> Labels,
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default);

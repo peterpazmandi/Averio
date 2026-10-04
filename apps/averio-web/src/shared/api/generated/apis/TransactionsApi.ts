@@ -80,6 +80,10 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
      * 
      */
     cursorId?: string;
+    /**
+     * 
+     */
+    activityId?: string;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
@@ -186,6 +190,10 @@ export class TransactionsApi extends runtime.BaseAPI {
 
         if (requestParameters['cursorId'] != null) {
             queryParameters['cursorId'] = requestParameters['cursorId'];
+        }
+
+        if (requestParameters['activityId'] != null) {
+            queryParameters['activityId'] = requestParameters['activityId'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

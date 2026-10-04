@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { ActivitySelect } from '../../activities/ActivitySelect';
+import { emptyAssignmentVersion } from '../../activities/activityQueries';
+import { AverioCard } from '../../../shared/components/ui/AverioCard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
@@ -94,6 +97,7 @@ export function TransactionEditor({
     );
     const [merchant, setMerchant] = useState(transaction?.merchant ?? '');
     const [note, setNote] = useState(transaction?.note ?? '');
+    const [activityId, setActivityId] = useState(transaction?.activityId ?? '');
     const [occurredOn, setOccurredOn] = useState(transaction?.occurredOn ?? todayIso());
     const [items, setItems] = useState<EditorItem[]>(() =>
         transaction?.items.length
@@ -253,6 +257,9 @@ export function TransactionEditor({
                 occurredOn,
                 items: mappedItems,
                 labelIds: resolvedLabelIds,
+                activityAssignment: activityId !== (transaction?.activityId ?? '')
+                    ? { activityId: activityId || null, expectedVersion: transaction?.activityAssignmentVersion ?? emptyAssignmentVersion }
+                    : null,
             }, transaction?.updatedAt);
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : t('errors.genericDescription'));
@@ -581,6 +588,10 @@ export function TransactionEditor({
                         </div>
                     </section>
 
+                    <AverioCard className="grid gap-3 p-4">
+                        <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
+                        <p className="text-xs text-[#667085] dark:text-[#AAB4C4]">{t('activities.privateHelp')}</p>
+                    </AverioCard>
                     <section className="av-tx-form-section av-tx-section-details">
                         <div className="av-tx-form-section-head">
                             <span className="av-tx-section-number">4</span>
@@ -652,4 +663,5 @@ export function TransactionEditor({
         </div>
     );
 }
+
 

@@ -309,3 +309,8 @@ Reports continue to use stable category IDs and current category display data; p
 ## Category hierarchy and preferences update (ADR-021)
 
 Categories support deeper nesting. A compatible active subcategory may be a parent; self/descendant moves are rejected under a household lock. Personal pins carry a persisted sequence. Shared definitions and financial snapshots remain independent of these preferences.
+
+
+## Personal activities
+
+`Activity` belongs to one household member and has a name, optional dates, open/closed status and concurrency timestamp. `ActivityAssignment` links a visible transaction to at most one activity per member, with an independent version retained after removal. Assignments are private metadata, not ledger mutations. Results sum currently visible posted income minus expenses through today's UTC date, separately per original currency; transfers and future/voided transactions do not contribute. Closed activities reject new assignments but retain live correction/void effects. See [ADR-022](decisions/ADR-022-personal-activities.md) and [Activities](activities.md).

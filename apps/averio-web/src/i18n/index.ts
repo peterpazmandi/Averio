@@ -1,3 +1,4 @@
+import { activitiesEN, activitiesDE, activitiesHU } from './locales/activities';
 import { iconNamesEN, iconNamesDE, iconNamesHU } from './locales/iconNames';
 import { categoryManagementEN, categoryManagementDE, categoryManagementHU } from './locales/categoryManagement';
 import { transfersEN, transfersDE, transfersHU } from './locales/transfers';
@@ -27,13 +28,13 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
+                translation: { ...en, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
+                translation: { ...de, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
+                translation: { ...hu, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 
@@ -80,4 +81,5 @@ i18n.on('initialized', () => {
 i18n.on('languageChanged', syncDocumentLang);
 
 export default i18n;
+
 

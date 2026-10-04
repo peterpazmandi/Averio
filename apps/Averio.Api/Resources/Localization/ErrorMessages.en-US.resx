@@ -311,6 +311,12 @@
   <data name="Error_TransactionCategoryArchived" xml:space="preserve"><value>Archived categories can only be retained on their existing transaction items.</value></data>
   <data name="Validation_TransactionExistingItem" xml:space="preserve"><value>The original transaction item is invalid or was supplied more than once. Reload the transaction.</value></data>
   <data name="Error_CategoryPinOrder" xml:space="preserve"><value>The pin order changed or is invalid. The latest order has been loaded; try again.</value></data>
+  <data name="Validation_ActivityName" xml:space="preserve"><value>Enter an activity name of up to 100 characters.</value></data>
+  <data name="Validation_ActivityDates" xml:space="preserve"><value>The end date cannot precede the start date.</value></data>
+  <data name="Validation_ActivitySelection" xml:space="preserve"><value>Select between 1 and 100 distinct transactions.</value></data>
+  <data name="Error_ActivityChanged" xml:space="preserve"><value>The activity or assignment has changed. Reload and try again.</value></data>
+  <data name="Error_ActivityClosed" xml:space="preserve"><value>Reopen this activity before adding transactions.</value></data>
 </root>
+
 
 

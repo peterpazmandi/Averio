@@ -2,6 +2,7 @@
 /* eslint-disable */
 export * from './AccountOwnerOptionsApi';
 export * from './AccountsApi';
+export * from './ActivitiesApi';
 export * from './AuthApi';
 export * from './CategoriesApi';
 export * from './DashboardApi';

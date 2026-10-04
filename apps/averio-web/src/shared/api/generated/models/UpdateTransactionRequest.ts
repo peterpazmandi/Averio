@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ActivityAssignmentRequest } from './ActivityAssignmentRequest';
+import {
+    ActivityAssignmentRequestFromJSON,
+    ActivityAssignmentRequestFromJSONTyped,
+    ActivityAssignmentRequestToJSON,
+    ActivityAssignmentRequestToJSONTyped,
+} from './ActivityAssignmentRequest';
 import type { TransactionItemRequest } from './TransactionItemRequest';
 import {
     TransactionItemRequestFromJSON,
@@ -63,6 +70,10 @@ export interface UpdateTransactionRequest {
      * 
      */
     expectedUpdatedAt: string;
+    /**
+     * 
+     */
+    activityAssignment?: ActivityAssignmentRequest | null;
 }
 
 /**
@@ -100,6 +111,7 @@ export function UpdateTransactionRequestFromJSONTyped(json: any, ignoreDiscrimin
         'items': ((json['items'] as Array<any>).map(TransactionItemRequestFromJSON)),
         'labelIds': json['labelIds'] == null ? null : json['labelIds'],
         'expectedUpdatedAt': json['expectedUpdatedAt'],
+        'activityAssignment': json['activityAssignment'] === undefined ? undefined : json['activityAssignment'] === null ? null : ActivityAssignmentRequestFromJSON(json['activityAssignment']),
     };
 }
 
@@ -123,6 +135,7 @@ export function UpdateTransactionRequestToJSONTyped(value?: UpdateTransactionReq
         'items': ((value['items'] as Array<any>).map(TransactionItemRequestToJSON)),
         'labelIds': value['labelIds'],
         'expectedUpdatedAt': value['expectedUpdatedAt'],
+        'activityAssignment': ActivityAssignmentRequestToJSON(value['activityAssignment']),
     };
 }
 

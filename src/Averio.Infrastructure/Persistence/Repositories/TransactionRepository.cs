@@ -18,7 +18,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         Guid transactionId,
         CancellationToken cancellationToken)
     {
-        return VisibleTransactions(householdId, householdMemberId)
+        return dbContext.VisibleTransactions(householdId, householdMemberId)
             .Include(transaction => transaction.Items)
             .Include(transaction => transaction.Labels)
             .AsSplitQuery()
@@ -33,7 +33,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         TransactionQuery query,
         CancellationToken cancellationToken)
     {
-        var filtered = VisibleTransactions(householdId, householdMemberId)
+        var filtered = dbContext.VisibleTransactions(householdId, householdMemberId)
             .AsNoTracking()
             .Join(
                 dbContext.Accounts.AsNoTracking(),
@@ -44,6 +44,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     Transaction = transaction,
                     Account = account
                 });
+
+        if (query.ActivityId is Guid activityId)
+            filtered = filtered.Where(item => dbContext.Set<Averio.Domain.Activities.ActivityAssignment>().Any(link =>
+                link.HouseholdId == householdId && link.HouseholdMemberId == householdMemberId
+                && link.TransactionId == item.Transaction.Id && link.ActivityId == activityId));
 
         if (query.From is not null)
             filtered = filtered.Where(item => item.Transaction.OccurredOn >= query.From);
@@ -117,7 +122,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
             rows.RemoveAt(rows.Count - 1);
 
         return new TransactionReadPage(
-            await LoadDetailsAsync(rows, cancellationToken),
+            await LoadDetailsAsync(rows, householdId, householdMemberId, cancellationToken),
             hasMore);
     }
 
@@ -127,7 +132,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         int take,
         CancellationToken cancellationToken)
     {
-        var rows = await VisibleTransactions(householdId, householdMemberId)
+        var rows = await dbContext.VisibleTransactions(householdId, householdMemberId)
             .AsNoTracking()
             .Where(transaction => transaction.Status == TransactionStatus.Posted)
             .Join(
@@ -162,17 +167,25 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                         owner.HouseholdMemberId == householdMemberId)))
             .ToListAsync(cancellationToken);
 
-        return await LoadDetailsAsync(rows, cancellationToken);
+        return await LoadDetailsAsync(rows, householdId, householdMemberId, cancellationToken);
     }
 
     private async Task<IReadOnlyList<TransactionReadModel>> LoadDetailsAsync(
         IReadOnlyList<TransactionBaseRow> rows,
+        Guid householdId, Guid householdMemberId,
         CancellationToken cancellationToken)
     {
         if (rows.Count == 0)
             return [];
 
         var ids = rows.Select(row => row.Id).ToArray();
+
+        var assignments = await (from link in dbContext.Set<Averio.Domain.Activities.ActivityAssignment>().AsNoTracking()
+            join activity in dbContext.Set<Averio.Domain.Activities.Activity>() on link.ActivityId equals activity.Id into matches
+            from activity in matches.DefaultIfEmpty()
+            where link.HouseholdId == householdId && link.HouseholdMemberId == householdMemberId && ids.Contains(link.TransactionId)
+            select new { link.TransactionId, link.ActivityId, Name = activity == null ? null : activity.Name, link.Version })
+            .ToDictionaryAsync(x => x.TransactionId, cancellationToken);
 
         var items = await dbContext.TransactionItems
             .AsNoTracking()
@@ -241,35 +254,11 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 row.UpdatedAt,
                 row.CanModify,
                 itemsByTransaction.GetValueOrDefault(row.Id, []),
-                labelsByTransaction.GetValueOrDefault(row.Id, [])))
+                labelsByTransaction.GetValueOrDefault(row.Id, []),
+                assignments.GetValueOrDefault(row.Id)?.ActivityId,
+                assignments.GetValueOrDefault(row.Id)?.Name,
+                assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty))
             .ToArray();
-    }
-
-    private IQueryable<Transaction> VisibleTransactions(
-        Guid householdId,
-        Guid householdMemberId)
-    {
-        return dbContext.Transactions
-            .Join(
-                dbContext.Accounts.Include(account => account.Owners),
-                transaction => new { transaction.HouseholdId, transaction.AccountId },
-                account => new { account.HouseholdId, AccountId = account.Id },
-                (transaction, account) => new
-                {
-                    Transaction = transaction,
-                    Account = account
-                })
-            .Where(item =>
-                item.Transaction.HouseholdId == householdId
-                && (
-                    item.Account.Visibility == AccountVisibility.Household
-                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
-                )
-                && (
-                    item.Transaction.Visibility == TransactionVisibility.Household
-                    || item.Account.Owners.Any(owner => owner.HouseholdMemberId == householdMemberId)
-                ))
-            .Select(item => item.Transaction);
     }
 
     private sealed record TransactionBaseRow(

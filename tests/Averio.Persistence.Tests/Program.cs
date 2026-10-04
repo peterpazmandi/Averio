@@ -191,6 +191,7 @@ static async Task RunVerificationAsync(string connectionString)
     await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
+    await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -355,7 +356,8 @@ static async Task VerifyAtomicRollbackAsync(
             services.GetRequiredService<TransactionReferenceResolver>(),
             new TransactionAggregateWriter(new FailingAggregateRepository()),
             services.GetRequiredService<IUnitOfWork>(),
-            services.GetRequiredService<TimeProvider>());
+            services.GetRequiredService<TimeProvider>(),
+            services.GetRequiredService<Averio.Application.Activities.ActivityHandler>());
 
         await ThrowsAsync<AggregateWriteFailedException>(() => handler.HandleAsync(
             new CreateTransactionCommand(
@@ -857,3 +859,4 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
+

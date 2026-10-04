@@ -21,7 +21,8 @@ public sealed class GetTransactionsHandler(
         DateOnly? cursorDate,
         DateTimeOffset? cursorCreatedAt,
         Guid? cursorId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? activityId = null)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -47,7 +48,7 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId),
+                cursorId, activityId),
             cancellationToken);
 
         return new TransactionPageResult(
@@ -91,7 +92,8 @@ public sealed record TransactionResult(
     DateTimeOffset UpdatedAt,
     bool CanModify,
     IReadOnlyList<TransactionItemResult> Items,
-    IReadOnlyList<TransactionLabelResult> Labels)
+    IReadOnlyList<TransactionLabelResult> Labels,
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,
@@ -120,5 +122,6 @@ public sealed record TransactionResult(
         model.Labels.Select(label => new TransactionLabelResult(
             label.Id,
             label.Name,
-            label.Scope)).ToArray());
+            label.Scope)).ToArray(),
+        model.ActivityId, model.ActivityName, model.ActivityAssignmentVersion);
 }

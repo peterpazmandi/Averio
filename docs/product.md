@@ -299,3 +299,7 @@ Do not prematurely optimize for:
 - dozens of currencies before EUR/USD/HUF semantics are correct
 
 The near-term goal is a trustworthy household-finance foundation that a solo developer can realistically build and operate.
+
+## Activity outcomes
+
+Personal activities group related income and expenses, such as a trip's costs and reimbursements, to show whether the activity ended positive or negative. The first slice provides actual net results separately by currency, private member-owned grouping, transaction drilldown and close/reopen. It does not change account balances or reporting participation. Expected amounts, partial attribution, shared activities and FX conversion are future scope. See [Activities](activities.md).

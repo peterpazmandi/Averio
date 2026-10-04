@@ -194,3 +194,12 @@ ADR-020 adds database-backed personal category pins (including system categories
 ### Category tree and pin sequence follow-up - 2026-10-01
 
 ADR-021 enables subcategory parents with cycle protection, saved personal pin sequences with stale-write protection, and popup-based hierarchical selectors. Category selection uses the shared AverioDialog and does not expand transaction forms. New migration: AddCategoryPinOrder.
+
+
+## Personal Activities — 2026-10-03
+
+Activity cards also provide an on-demand transaction chart: daily income/expense bars, a currency selector, horizontally scrollable date labels, and an exact-value table. The private timeline endpoint aggregates all eligible assigned transactions server-side, independently of transaction-list pagination. No additional migration is required for the chart.
+
+Implemented in the activity-tracking change (ADR-022): personal activities, optional dates, close/reopen, exact per-currency income/expenses/net, transaction editor assignment, atomic bulk assignment/removal, and activity-filtered history. Names and assignments remain private to each member; current transaction/account visibility is enforced server-side. Future and voided entries do not contribute to results; corrections still affect closed activities.
+
+Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration and PostgreSQL regression coverage. Apply the migration explicitly before deploying the API. Expected reimbursements, shared activities, partial allocation and currency conversion remain deferred. See [Activities](activities.md) for use, semantics and deployment.

@@ -61,6 +61,7 @@ public static class DependencyInjection
 
         services.AddScoped<GetDashboardHandler>();
 
+        services.AddScoped<Activities.ActivityHandler>();
         services.AddScoped<Transfers.TransferHandler>();
         services.AddScoped<Transactions.CreateTransaction.CreateTransactionHandler>();
         services.AddScoped<Transactions.UpdateTransaction.UpdateTransactionHandler>();
@@ -89,3 +90,4 @@ public static class DependencyInjection
         return services;
     }
 }
+
