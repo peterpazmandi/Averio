@@ -53,7 +53,7 @@ export function ActivityTimeline({ userId, householdId, activity, onClose }: {
                 </div>
                 <div tabIndex={0} role="region" aria-label={t('activities.chartScroll')}
                     className="overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-primary-500">
-                    <svg width={width} height={270} viewBox={`0 0 ${width} 270`} role="img" aria-labelledby={titleId} className="max-w-none min-w-full">
+                    <svg width={width} height={270} viewBox={`0 0 ${width} 270`} role="img" aria-labelledby={titleId} className="max-w-none! min-w-full">
                         <title id={titleId}>{t('activities.chartDescription', { currency })}</title>
                         <text x={12} y={14} className="fill-current text-[10px]">{amount(rows.find(day => day.incomeHeight === 160)?.income
                             ?? rows.find(day => day.expenseHeight === 160)?.expenses ?? '0')}</text>
