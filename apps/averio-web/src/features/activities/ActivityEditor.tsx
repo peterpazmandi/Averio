@@ -44,7 +44,12 @@ export function ActivityEditor({ userId, householdId, activity, onClose, onCreat
         closeLabel={t('common.actions.close')} onDismiss={onClose} busy={save.isPending}
         actions={<><AverioButton onClick={onClose} disabled={save.isPending}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton variant="primary" type="submit" form={formId} disabled={save.isPending}>{t('common.actions.save')}</AverioButton></>}>
-        <form id={formId} onSubmit={e => { e.preventDefault(); if (!save.isPending) save.mutate(); }} className="grid gap-4">
+        <form id={formId} onSubmit={e => {
+            e.preventDefault();
+            // Portal events still bubble through the transaction editor's React tree.
+            e.stopPropagation();
+            if (!save.isPending) save.mutate();
+        }} className="grid gap-4">
             <AverioCard className="grid gap-4 p-4">
                 <p className="text-sm">{t('activities.privateHelp')}</p>
                 <AverioField>{t('activities.name')}<AverioInput required maxLength={100} value={name}
