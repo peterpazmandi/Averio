@@ -20,6 +20,8 @@ public sealed class Household
 
     public Guid Id { get; private set; }
 
+    public Guid Version { get; private set; } = Guid.NewGuid();
+
     public string? Name { get; private set; }
 
     public string? CountryCode { get; private set; }
@@ -50,7 +52,11 @@ public sealed class Household
             throw new InvalidOperationException("Household setup must be completed first.");
         }
 
-        FinancialSetupCompletedAtUtc ??= now;
+        if (FinancialSetupCompletedAtUtc is null)
+        {
+            FinancialSetupCompletedAtUtc = now;
+            Version = Guid.NewGuid();
+        }
     }
 
     public static Household CreateForUser(
@@ -119,5 +125,6 @@ public sealed class Household
         Name = normalizedName;
         CountryCode = normalizedCountryCode;
         ReportingCurrency = preferredCurrency;
+        Version = Guid.NewGuid();
     }
 }

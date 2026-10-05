@@ -1,3 +1,4 @@
+import { householdKeys } from '../../household/householdQueries';
 import type { QueryClient } from '@tanstack/react-query';
 import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
 import { authQueryKeys } from './authQueryKeys';
@@ -6,6 +7,7 @@ import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
 
 export async function clearCachedAuthState(queryClient: QueryClient): Promise<void> {
     await Promise.all([
+        queryClient.cancelQueries({ queryKey: householdKeys.all }),
         queryClient.cancelQueries({
             queryKey: authQueryKeys.all,
         }),
@@ -21,6 +23,8 @@ export async function clearCachedAuthState(queryClient: QueryClient): Promise<vo
             queryKey: dashboardQueryKeys.all,
         }),
     ]);
+
+    queryClient.removeQueries({ queryKey: householdKeys.all });
 
     queryClient.removeQueries({
         queryKey: authQueryKeys.all,

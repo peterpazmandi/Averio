@@ -31,6 +31,10 @@ export interface UpdateHouseholdRequest {
      * 
      */
     preferredCurrency: string | null;
+    /**
+     * 
+     */
+    expectedVersion: string;
 }
 
 /**
@@ -40,6 +44,7 @@ export function instanceOfUpdateHouseholdRequest(value: object): value is Update
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('countryCode' in value) || value['countryCode'] === undefined) return false;
     if (!('preferredCurrency' in value) || value['preferredCurrency'] === undefined) return false;
+    if (!('expectedVersion' in value) || value['expectedVersion'] === undefined) return false;
     return true;
 }
 
@@ -56,6 +61,7 @@ export function UpdateHouseholdRequestFromJSONTyped(json: any, ignoreDiscriminat
         'name': json['name'],
         'countryCode': json['countryCode'],
         'preferredCurrency': json['preferredCurrency'],
+        'expectedVersion': json['expectedVersion'],
     };
 }
 
@@ -73,6 +79,7 @@ export function UpdateHouseholdRequestToJSONTyped(value?: UpdateHouseholdRequest
         'name': value['name'],
         'countryCode': value['countryCode'],
         'preferredCurrency': value['preferredCurrency'],
+        'expectedVersion': value['expectedVersion'],
     };
 }
 

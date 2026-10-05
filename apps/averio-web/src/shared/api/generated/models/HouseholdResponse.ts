@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { HouseholdMemberResponse } from './HouseholdMemberResponse';
+import {
+    HouseholdMemberResponseFromJSON,
+    HouseholdMemberResponseFromJSONTyped,
+    HouseholdMemberResponseToJSON,
+    HouseholdMemberResponseToJSONTyped,
+} from './HouseholdMemberResponse';
+
 /**
  * 
  * @export
@@ -43,6 +51,14 @@ export interface HouseholdResponse {
      * 
      */
     role: string;
+    /**
+     * 
+     */
+    version: string;
+    /**
+     * 
+     */
+    members: Array<HouseholdMemberResponse>;
 }
 
 /**
@@ -55,6 +71,8 @@ export function instanceOfHouseholdResponse(value: object): value is HouseholdRe
     if (!('preferredCurrency' in value) || value['preferredCurrency'] === undefined) return false;
     if (!('onboardingCompleted' in value) || value['onboardingCompleted'] === undefined) return false;
     if (!('role' in value) || value['role'] === undefined) return false;
+    if (!('version' in value) || value['version'] === undefined) return false;
+    if (!('members' in value) || value['members'] === undefined) return false;
     return true;
 }
 
@@ -74,6 +92,8 @@ export function HouseholdResponseFromJSONTyped(json: any, ignoreDiscriminator: b
         'preferredCurrency': json['preferredCurrency'],
         'onboardingCompleted': json['onboardingCompleted'],
         'role': json['role'],
+        'version': json['version'],
+        'members': ((json['members'] as Array<any>).map(HouseholdMemberResponseFromJSON)),
     };
 }
 
@@ -94,6 +114,8 @@ export function HouseholdResponseToJSONTyped(value?: HouseholdResponse | null, i
         'preferredCurrency': value['preferredCurrency'],
         'onboardingCompleted': value['onboardingCompleted'],
         'role': value['role'],
+        'version': value['version'],
+        'members': ((value['members'] as Array<any>).map(HouseholdMemberResponseToJSON)),
     };
 }
 

@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-09-30
+**Status date:** 2026-10-05
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -159,7 +159,18 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Define the household invitation/joining lifecycle next, including existing users with financial history. Recurring execution remains a later milestone requiring idempotency and worker design.
+Implement invitations and acceptance under ADR-023 next. Household settings and the member directory now establish the administrative foundation; the joining policy explicitly protects users with existing history. Recurring execution remains a later milestone requiring idempotency and worker design.
+
+## Household settings — 2026-10-05
+
+- Household profile and member directory at `/app/household`, following the canonical UI with EN/DE/HU text, responsive Tailwind cards and light/dark states.
+- Members can view their own household's profile, display names, roles and join dates. The directory does not expose login emails or financial data.
+- Owner-only settings writes require an expected UUID version; stale requests and database races return localized conflicts. Completed financial onboarding cannot overwrite these settings through the onboarding endpoints.
+- Preferred reporting currency changes no ledger amounts or account currencies.
+- `AddHouseholdVersion` migration, regenerated OpenAPI client and PostgreSQL regression coverage.
+- ADR-023 accepts the invitation/joining policy. Invitations and membership transitions are not implemented in this slice.
+
+See [Household settings](household-settings.md) for API compatibility and deployment.
 
 
 ## Transfer Management — 2026-09-23

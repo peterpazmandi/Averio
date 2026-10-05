@@ -8,6 +8,9 @@ namespace Averio.Application.Households.UpdateHousehold
     {
         public UpdateHouseholdValidator()
         {
+            RuleFor(x => x.ExpectedVersion).NotEmpty()
+                .WithErrorCode("Validation_HouseholdVersionRequired");
+
             RuleFor(x => x.Name)
                 .Must(value => value is null || value.Trim().Length >= 2)
                 .WithErrorCode("Validation_HouseholdNameTooShort")

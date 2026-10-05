@@ -316,6 +316,9 @@
   <data name="Validation_ActivitySelection" xml:space="preserve"><value>Wähle zwischen 1 und 100 unterschiedliche Buchungen aus.</value></data>
   <data name="Error_ActivityChanged" xml:space="preserve"><value>Die Aktivität oder Zuordnung wurde geändert. Lade die Seite neu und versuche es erneut.</value></data>
   <data name="Error_ActivityClosed" xml:space="preserve"><value>Öffne diese Aktivität erneut, bevor du Buchungen hinzufügst.</value></data>
+  <data name="Error_HouseholdChanged" xml:space="preserve"><value>Die Haushaltseinstellungen wurden geändert. Lade die aktuellen Einstellungen, bevor du erneut speicherst.</value></data>
+  <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Lade die Haushaltseinstellungen vor dem Speichern neu.</value></data>
+  <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>Der Haushalt ist eingerichtet. Änderungen sind in den Haushaltseinstellungen möglich.</value></data>
 </root>
 
 

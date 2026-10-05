@@ -29,6 +29,9 @@ public sealed class SaveOnboardingHouseholdHandler(
                 cancellationToken)
             ?? throw new HouseholdRequiredException();
 
+        if (household.IsFinancialSetupCompleted)
+            throw new ConflictException("household_setup_completed", "Error_HouseholdSetupCompleted");
+
         var membership = household.Members.Single(
             member => member.UserId == userId);
 

@@ -29,7 +29,11 @@ public sealed class HouseholdsController(
                 result.CountryCode,
                 result.PreferredCurrency,
                 result.OnboardingCompleted,
-                result.Role));
+                result.Role,
+                result.Version,
+                result.Members.Select(member => new HouseholdMemberResponse(
+                    member.Id, member.DisplayName, member.Role, member.JoinedAtUtc,
+                    member.IsCurrentUser)).ToArray()));
     }
 
     [HttpPatch("{householdId:guid}")]
@@ -44,7 +48,8 @@ public sealed class HouseholdsController(
                 householdId,
                 request.Name,
                 request.CountryCode,
-                request.PreferredCurrency),
+                request.PreferredCurrency,
+                request.ExpectedVersion),
             cancellationToken);
 
         return NoContent();
