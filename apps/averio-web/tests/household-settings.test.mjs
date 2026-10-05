@@ -85,3 +85,66 @@ test('household drafts keep their original version and reject duplicate/conflict
     assert.deepEqual(invalidations.map(k => k[0]).sort(), ['auth', 'dashboard', 'household-settings', 'onboarding']);
     assert.equal(saved, 1);
 });
+
+test('household page blocks stale drafts until explicit reload succeeds, including failed reload retries', async () => {
+    const state = [];
+    let cursor = 0;
+    let finishReload;
+    let reloadPromise;
+    const original = { id: 'h', name: 'Original', countryCode: 'HU', preferredCurrency: 'EUR', role: 'owner', version: 'v1', members: [] };
+    const query = {
+        data: original, isPending: false, isError: false, isFetching: false,
+        refetch() {
+            query.isFetching = true;
+            reloadPromise = new Promise(resolve => { finishReload = resolve; });
+            return reloadPromise;
+        },
+    };
+    const { HouseholdPage } = load('../src/features/household/HouseholdPage.tsx', {
+        react: { useState: initial => { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], value => { state[i] = value; }]; } },
+        'react/jsx-runtime': jsxRuntime,
+        'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
+        '@tanstack/react-query': { useQuery: () => query },
+        '../../shared/components/ui/AverioCard': { AverioCard: 'section' },
+        '../../shared/components/ui/AverioButton': { AverioButton: 'button' },
+        '../../shared/components/concept/ConceptIcon': { ConceptIcon: 'icon' },
+        './householdQueries': { householdQueries: { detail: () => ({}) } },
+        './HouseholdEditor': { HouseholdEditor: 'editor' },
+    });
+    function render() { cursor = 0; return HouseholdPage({ userId: 'u', householdId: 'h' }); }
+    function find(tree, type, text) {
+        if (!tree || typeof tree !== 'object') return undefined;
+        if (Array.isArray(tree)) return tree.map(child => find(child, type, text)).find(Boolean);
+        if (tree.type === type && (text === undefined || tree.props.children === text)) return tree;
+        return find(tree.props?.children, type, text);
+    }
+    const edit = () => find(render(), 'button', 'householdSettings.edit');
+    async function completeReload(success, data = query.data) {
+        query.isFetching = false;
+        query.isError = !success;
+        query.data = data;
+        finishReload({ isSuccess: success, data });
+        await reloadPromise;
+        await Promise.resolve();
+    }
+
+    edit().props.onClick();
+    assert.equal(find(render(), 'editor').props.household.version, 'v1');
+    find(render(), 'editor').props.onCancel();
+    assert.equal(edit().props.disabled, true, 'Cannot reopen during delayed reload');
+    edit().props.onClick();
+    assert.equal(find(render(), 'editor'), undefined, 'Reopen handler also rejects stale data');
+    await completeReload(true, { ...original, name: 'Latest', version: 'v2' });
+    assert.equal(edit().props.disabled, false);
+    edit().props.onClick();
+    assert.equal(find(render(), 'editor').props.household.version, 'v2');
+
+    find(render(), 'editor').props.onCancel();
+    await completeReload(false);
+    assert.equal(edit().props.disabled, true, 'Cached data must remain uneditable after failed reload');
+    find(render(), 'button', 'common.actions.retry').props.onClick();
+    assert.equal(edit().props.disabled, true);
+    await completeReload(true, { ...original, version: 'v3' });
+    edit().props.onClick();
+    assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Retry releases editor only with refreshed version');
+});

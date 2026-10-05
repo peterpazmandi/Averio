@@ -13,13 +13,22 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
     const query = useQuery(householdQueries.detail(userId, householdId));
     const [draft, setDraft] = useState<HouseholdResponse | null>(null);
     const [saved, setSaved] = useState(false);
+    const [reloadRequired, setReloadRequired] = useState(false);
+    async function reloadLatest() {
+        setReloadRequired(true);
+        setDraft(null);
+        const result = await query.refetch();
+        // A failed refresh retains cached data. Do not turn it into a new draft.
+        if (result.isSuccess) setReloadRequired(false);
+    }
+    const retry = () => { void (reloadRequired ? reloadLatest() : query.refetch()); };
     const language = i18n.resolvedLanguage ?? i18n.language;
     const muted = 'text-sm text-slate-600 dark:text-slate-300';
 
     if (query.isPending) return <p role="status">{t('common.status.loading')}</p>;
     if (!query.data) return <AverioCard className="space-y-4 p-5">
         <p role="alert">{t('householdSettings.loadError')}</p>
-        <AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('common.actions.retry')}</AverioButton>
+        <AverioButton disabled={query.isFetching} onClick={retry}>{t('common.actions.retry')}</AverioButton>
     </AverioCard>;
     const household = query.data;
     const owner = household.role === 'owner';
@@ -34,7 +43,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
         </header>
         {query.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-red-700 dark:text-red-300">
             <p>{t('householdSettings.loadError')}</p>
-            <AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('common.actions.retry')}</AverioButton>
+            <AverioButton disabled={query.isFetching} onClick={retry}>{t('common.actions.retry')}</AverioButton>
         </div>}
         <div className="grid items-start gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
             <AverioCard role="navigation" aria-label={t('householdSettings.sections')} className="flex flex-wrap gap-1 p-3 lg:sticky lg:top-4 lg:flex-col">
@@ -47,11 +56,12 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                 <AverioCard id="household-profile" className="scroll-mt-6 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.profile')}</h3><p className={muted}>{t('householdSettings.profileHelp')}</p></div>
-                        {owner && !draft && <AverioButton onClick={() => { setDraft(household); setSaved(false); }}>{t('householdSettings.edit')}</AverioButton>}
+                        {owner && !draft && <AverioButton disabled={reloadRequired || query.isFetching}
+                            onClick={() => { if (reloadRequired || query.isFetching) return; setDraft(household); setSaved(false); }}>{t('householdSettings.edit')}</AverioButton>}
                     </div>
                     {saved && <p role="status" className="text-sm text-emerald-800 dark:text-emerald-200">{t('householdSettings.saved')}</p>}
                     {draft && owner ? <HouseholdEditor household={draft} userId={userId} onSaved={() => { setDraft(null); setSaved(true); }}
-                        onCancel={() => { setDraft(null); void query.refetch(); }} /> : <dl className="grid gap-5 sm:grid-cols-2">
+                        onCancel={() => { void reloadLatest(); }} /> : <dl className="grid gap-5 sm:grid-cols-2">
                         <div className="sm:col-span-2"><dt className={muted}>{t('householdSettings.name')}</dt><dd className="mt-1 break-words font-semibold">{household.name}</dd></div>
                         <div><dt className={muted}>{t('householdSettings.country')}</dt><dd className="mt-1 font-semibold">{countryName}</dd></div>
                         <div><dt className={muted}>{t('householdSettings.currency')}</dt><dd className="mt-1 font-semibold">{household.preferredCurrency}</dd><p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t('householdSettings.currencyHelp')}</p></div>

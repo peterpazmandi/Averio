@@ -20,6 +20,9 @@ Saving invalidates household settings, onboarding/shell, current-user and dashbo
 queries. A draft retains its original concurrency version across background reads.
 On conflict it stays visible until explicitly discarded; reloading fetches current
 values. Loading and request failures are never represented as an empty member list.
+After discarding a draft, editing stays disabled until the explicit reload succeeds.
+If loading fails, Retry must succeed before another draft can be opened from the
+refreshed settings and version.
 
 ## API and compatibility
 
