@@ -22,6 +22,9 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Households.Household))
+                throw new ConflictException("household_changed", "Error_HouseholdChanged");
+
             if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Activities.Activity or Averio.Domain.Activities.ActivityAssignment))
                 throw new ConflictException("activity_changed", "Error_ActivityChanged");
 

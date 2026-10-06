@@ -1,6 +1,7 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Domain.Common;
+using Averio.Domain.Households;
 using FluentValidation;
 
 namespace Averio.Application.Households.UpdateHousehold;
@@ -25,10 +26,17 @@ public sealed class UpdateHouseholdHandler(
                     cancellationToken)
             ?? throw new NotFoundException("household", command.HouseholdId);
 
+        var membership = household.Members.Single(member => member.UserId == userId);
+        if (membership.Role != HouseholdRole.Owner)
+            throw new ForbiddenException();
+
         if (!household.IsOnboardingCompleted)
         {
             throw new OnboardingRequiredException();
         }
+
+        if (command.ExpectedVersion != household.Version)
+            throw new ConflictException("household_changed", "Error_HouseholdChanged");
 
         var name = command.Name ?? household.Name!;
 

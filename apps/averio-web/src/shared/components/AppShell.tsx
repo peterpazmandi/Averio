@@ -54,7 +54,9 @@ export function AppShell({ children }: PropsWithChildren) {
         .map((part) => part[0]).join('').toLocaleUpperCase();
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
-    const title = pathname.startsWith('/app/accounts')
+    const title = pathname.startsWith('/app/household')
+        ? t('householdSettings.title')
+        : pathname.startsWith('/app/accounts')
         ? t('app.navigation.accounts')
         : pathname.startsWith('/app/transfers')
             ? t('transfers.title')

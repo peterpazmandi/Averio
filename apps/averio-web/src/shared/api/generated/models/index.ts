@@ -35,6 +35,7 @@ export * from './CurrentUserResponse';
 export * from './DashboardCashFlowPeriodResponse';
 export * from './DashboardResponse';
 export * from './HouseholdBalanceResponse';
+export * from './HouseholdMemberResponse';
 export * from './HouseholdMembershipResponse';
 export * from './HouseholdResponse';
 export * from './HouseholdSetupResponse';

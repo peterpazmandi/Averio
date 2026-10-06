@@ -316,6 +316,9 @@
   <data name="Validation_ActivitySelection" xml:space="preserve"><value>Válassz ki 1–100 különböző tranzakciót.</value></data>
   <data name="Error_ActivityChanged" xml:space="preserve"><value>A tevékenység vagy hozzárendelés megváltozott. Frissítsd az oldalt, és próbáld újra.</value></data>
   <data name="Error_ActivityClosed" xml:space="preserve"><value>Nyisd újra a tevékenységet, mielőtt tranzakciókat rendelsz hozzá.</value></data>
+  <data name="Error_HouseholdChanged" xml:space="preserve"><value>A háztartás beállításai megváltoztak. Mentés előtt töltsd be a legfrissebb beállításokat.</value></data>
+  <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Mentés előtt töltsd be újra a háztartás beállításait.</value></data>
+  <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>A háztartás beállítása befejeződött. A módosításokhoz használd a háztartás beállításait.</value></data>
 </root>
 
 

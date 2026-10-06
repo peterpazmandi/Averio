@@ -28,6 +28,7 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
         });
         builder.HasKey(x => x.Id).HasName("pk_households");
         builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
         builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(120);
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
 

@@ -316,6 +316,9 @@
   <data name="Validation_ActivitySelection" xml:space="preserve"><value>Select between 1 and 100 distinct transactions.</value></data>
   <data name="Error_ActivityChanged" xml:space="preserve"><value>The activity or assignment has changed. Reload and try again.</value></data>
   <data name="Error_ActivityClosed" xml:space="preserve"><value>Reopen this activity before adding transactions.</value></data>
+  <data name="Error_HouseholdChanged" xml:space="preserve"><value>Household settings changed. Reload the latest settings before saving again.</value></data>
+  <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Reload household settings before saving.</value></data>
+  <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>Household setup is complete. Use household settings to make changes.</value></data>
 </root>
 
 

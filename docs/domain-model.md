@@ -61,6 +61,23 @@ Role governs household administration. Role does not grant universal access to a
 
 The current early product operates around one active household context per user. Avoid choices that make broader multi-household support impossible later, but do not introduce complexity before it is needed.
 
+## Household administration (ADR-023)
+
+ADR-023 now defines the accepted invitation/joining policy: owner-managed, email-bound,
+verified, expiring single-use invitations; one household per user; only new users or
+verified-empty solo households may join initially. Existing financial history is never
+silently moved or deleted. This policy is not an implemented invitation lifecycle.
+
+Household members can read a minimal directory (membership ID, display name, role,
+join date and self marker). Login emails and financial details are excluded.
+Only owners edit household name/country/preferred reporting currency. Settings use
+an opaque UUID version for optimistic concurrency. Shared financial-resource
+permissions remain independent of household administrative role.
+
+Completed financial onboarding cannot act as an alternative profile-settings write.
+Preferred reporting currency does not convert amounts or change account currencies.
+See [ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md).
+
 ## Invitation
 
 Planned concept for inviting another user/member into a household.

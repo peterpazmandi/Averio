@@ -20,6 +20,8 @@ using Averio.Infrastructure.Identity;
 using Averio.Infrastructure.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -192,6 +194,7 @@ static async Task RunVerificationAsync(string connectionString)
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
+    await HouseholdVerification.RunAsync(provider, currentUser, fixture);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -213,7 +216,16 @@ static async Task VerifyMigrationsAndSeedsAsync(IServiceProvider provider)
     await using var scope = provider.CreateAsyncScope();
     var context = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
 
+    // Exercise upgrading existing households, not only creating the final schema.
+    await context.GetService<IMigrator>().MigrateAsync("20261003103809_AddActivities");
+    var legacyHouseholdId = Guid.NewGuid();
+    await context.Database.ExecuteSqlInterpolatedAsync($"""
+        INSERT INTO households (id, created_at_utc) VALUES ({legacyHouseholdId}, {DateTimeOffset.UtcNow});
+        """);
     await context.Database.MigrateAsync();
+    var backfilled = await context.Households.AsNoTracking().SingleAsync(h => h.Id == legacyHouseholdId);
+    True(backfilled.Version != Guid.Empty);
+    await context.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM households WHERE id = {legacyHouseholdId}");
 
     var pending = await context.Database.GetPendingMigrationsAsync();
     Equal(0, pending.Count());
@@ -859,4 +871,3 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
-

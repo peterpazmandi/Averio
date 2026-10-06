@@ -426,6 +426,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("preferred_currency");
 
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
                     b.HasKey("Id")
                         .HasName("pk_households");
 
