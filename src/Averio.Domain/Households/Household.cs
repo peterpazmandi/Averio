@@ -35,6 +35,12 @@ public sealed class Household
     public bool IsOnboardingCompleted => OnboardingCompletedAtUtc.HasValue;
 
     public IReadOnlyCollection<HouseholdMember> Members => _members;
+    public void AddMember(Guid userId, DateTimeOffset now)
+    {
+        if (_members.Any(x => x.UserId == userId)) throw new InvalidOperationException("Already a member.");
+        _members.Add(HouseholdMember.CreateMember(Id, userId, now));
+        Version = Guid.NewGuid();
+    }
     public DateTimeOffset? FinancialSetupCompletedAtUtc
     {
         get;

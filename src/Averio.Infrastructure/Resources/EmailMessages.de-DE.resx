@@ -63,4 +63,7 @@
   <data name="Error_PasswordRejected" xml:space="preserve">
     <value>Das Passwort erfüllt die erforderlichen Sicherheitsregeln nicht.</value>
   </data>
+  <data name="Invitation_Subject" xml:space="preserve"><value>Einladung zu einem Averio-Haushalt</value></data>
+  <data name="Invitation_Body" xml:space="preserve"><value>Melde dich mit dieser E-Mail-Adresse an oder registriere dich, um die Einladung zu prüfen und anzunehmen. Der Link gilt sieben Tage. Das Öffnen führt nicht zum Beitritt.</value></data>
+  <data name="Invitation_Button" xml:space="preserve"><value>Einladung ansehen</value></data>
 </root>

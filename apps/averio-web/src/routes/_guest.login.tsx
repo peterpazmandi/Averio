@@ -37,6 +37,7 @@ import {
     PrimaryButton,
 } from '../shared/components/PrimaryButton';
 import { PasswordField } from '../shared/components/PasswordField';
+import { pendingInvitation } from '../features/household/invitationContext';
 
 export const Route =
     createFileRoute('/_guest/login')({
@@ -94,6 +95,11 @@ function LoginPage() {
             await auth.clear();
 
             const user = await auth.refresh();
+
+            if (pendingInvitation()) {
+                await navigate({ to: '/invitation' });
+                return;
+            }
 
             if (user.onboardingRequired) {
                 await navigate({ to: '/onboarding' });

@@ -301,8 +301,11 @@ is the sole frontend contract. The settings page invalidates household, onboardi
 identity and dashboard queries after saving. A draft retains its original version
 until saved or explicitly discarded.
 
-ADR-023 defines the future invitation/joining lifecycle without adding invitation
-persistence or execution. See [Household settings](household-settings.md).
+ADR-023 defines the invitation/joining lifecycle. The invitation slice adds
+explicit application handlers, persistent hashed tokens and lifecycle/delivery
+state, and an atomic PostgreSQL joining boundary. Parent row locks plus immediate
+FK locks protect empty-source eligibility against dependent writes. See
+[Household settings](household-settings.md) and [Household invitations](household-invitations.md).
 
 ## Activity tracking implementation
 

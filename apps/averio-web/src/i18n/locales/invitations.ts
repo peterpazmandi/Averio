@@ -1,0 +1,111 @@
+export const invitationsEN = {
+    "title": "Invitations",
+    "invite": "Invite a partner",
+    "help": "Invite someone using their verified login email. They join as a member; your private finances stay private.",
+    "email": "Email address",
+    "send": "Send invitation",
+    "resend": "Resend",
+    "revoke": "Revoke invitation",
+    "revokeHelp": "The current link will stop working. This does not remove any existing member.",
+    "empty": "Make room for shared finances",
+    "loadError": "Invitations could not be loaded.",
+    "expires": "Link expires: {{date}}",
+    "states": {
+        "Pending": "Pending",
+        "Expired": "Expired",
+        "Accepted": "Accepted",
+        "Revoked": "Revoked"
+    },
+    "delivery": {
+        "Unknown": "Delivery not confirmed — resend if needed",
+        "Sent": "Email sent",
+        "Failed": "Email delivery failed — try resending"
+    },
+    "review": "Review invitation",
+    "joinHelp": "Use the email address that received this invitation. Register and verify it if you are new. You can join only from an empty solo household. If you have already added accounts or other financial data, your existing household will be preserved and joining will be blocked.",
+    "missing": "Reopen the invitation link from your email.",
+    "signedIn": "Signed in as {{email}}",
+    "alreadyJoined": "You have already joined this household.",
+    "confirm": "I agree to join this household as a member and replace my empty solo household. Existing members will see my display name, role and join date.",
+    "blocked": "Your current household cannot be replaced: it has financial data or other members. Nothing has been moved or deleted.",
+    "continue": "Open household",
+    "accept": "Accept and join",
+    "switchUser": "Sign out to use another account",
+    "login": "Sign in",
+    "register": "Create an account",
+    "notNow": "Not now — return home"
+};
+export const invitationsDE = {
+    "title": "Einladungen",
+    "invite": "Partner einladen",
+    "help": "Lade jemanden mit seiner bestätigten Anmelde-E-Mail ein. Die Person wird Mitglied; private Finanzen bleiben privat.",
+    "email": "E-Mail-Adresse",
+    "send": "Einladung senden",
+    "resend": "Erneut senden",
+    "revoke": "Einladung widerrufen",
+    "revokeHelp": "Der aktuelle Link wird ungültig. Bestehende Mitglieder werden nicht entfernt.",
+    "empty": "Platz für gemeinsame Finanzen",
+    "loadError": "Einladungen konnten nicht geladen werden.",
+    "expires": "Link gültig bis: {{date}}",
+    "states": {
+        "Pending": "Ausstehend",
+        "Expired": "Abgelaufen",
+        "Accepted": "Angenommen",
+        "Revoked": "Widerrufen"
+    },
+    "delivery": {
+        "Unknown": "Zustellung unbestätigt — bei Bedarf erneut senden",
+        "Sent": "E-Mail gesendet",
+        "Failed": "Zustellung fehlgeschlagen — erneut versuchen"
+    },
+    "review": "Einladung ansehen",
+    "joinHelp": "Verwende die E-Mail-Adresse, an die diese Einladung gesendet wurde. Registriere und bestätige sie bei Bedarf. Ein Beitritt ist nur aus einem leeren Einpersonenhaushalt möglich. Bei vorhandenen Konten oder anderen Finanzdaten bleibt dein Haushalt erhalten und der Beitritt wird blockiert.",
+    "missing": "Öffne den Einladungslink aus deiner E-Mail erneut.",
+    "signedIn": "Angemeldet als {{email}}",
+    "alreadyJoined": "Du bist diesem Haushalt bereits beigetreten.",
+    "confirm": "Ich möchte diesem Haushalt als Mitglied beitreten und meinen leeren Einpersonenhaushalt ersetzen. Mitglieder sehen meinen Anzeigenamen, meine Rolle und mein Beitrittsdatum.",
+    "blocked": "Dein Haushalt enthält Finanzdaten oder andere Mitglieder und kann nicht ersetzt werden. Es wurde nichts verschoben oder gelöscht.",
+    "continue": "Haushalt öffnen",
+    "accept": "Annehmen und beitreten",
+    "switchUser": "Abmelden und anderes Konto verwenden",
+    "login": "Anmelden",
+    "register": "Konto erstellen",
+    "notNow": "Später — zur Startseite"
+};
+export const invitationsHU = {
+    "title": "Meghívások",
+    "invite": "Partner meghívása",
+    "help": "A partnered megerősített bejelentkezési e-mail-címét add meg. Tagként csatlakozik; a privát pénzügyek privátak maradnak.",
+    "email": "E-mail-cím",
+    "send": "Meghívás küldése",
+    "resend": "Újraküldés",
+    "revoke": "Meghívás visszavonása",
+    "revokeHelp": "A jelenlegi link érvénytelenné válik. Ez nem távolít el meglévő tagot.",
+    "empty": "Adjatok helyet a közös pénzügyeknek",
+    "loadError": "Nem sikerült betölteni a meghívásokat.",
+    "expires": "A link lejárata: {{date}}",
+    "states": {
+        "Pending": "Függőben",
+        "Expired": "Lejárt",
+        "Accepted": "Elfogadva",
+        "Revoked": "Visszavonva"
+    },
+    "delivery": {
+        "Unknown": "A kézbesítés nem megerősített — szükség esetén küldd újra",
+        "Sent": "E-mail elküldve",
+        "Failed": "Sikertelen kézbesítés — próbáld újraküldeni"
+    },
+    "review": "Meghívás megtekintése",
+    "joinHelp": "A meghívást fogadó e-mail-címet használd. Ha új vagy, regisztrálj és erősítsd meg a címedet. Csak üres, egyszemélyes háztartásból csatlakozhatsz. Ha már vannak számláid vagy más pénzügyi adataid, a háztartásod megmarad, és a csatlakozást nem engedélyezzük.",
+    "missing": "Nyisd meg újra az e-mailben kapott meghívólinket.",
+    "signedIn": "Bejelentkezve: {{email}}",
+    "alreadyJoined": "Már csatlakoztál ehhez a háztartáshoz.",
+    "confirm": "Tagként csatlakozom ehhez a háztartáshoz, az üres egyszemélyes háztartásom helyett. A tagok látni fogják a megjelenített nevemet, szerepkörömet és csatlakozási dátumomat.",
+    "blocked": "A háztartásodban pénzügyi adatok vagy más tagok vannak, ezért nem cserélhető le. Semmit sem helyeztünk át vagy töröltünk.",
+    "continue": "Háztartás megnyitása",
+    "accept": "Elfogadás és csatlakozás",
+    "switchUser": "Kijelentkezés másik fiók használatához",
+    "login": "Bejelentkezés",
+    "register": "Fiók létrehozása",
+    "notNow": "Most nem — vissza a kezdőlapra"
+};

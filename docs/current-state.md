@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-05
+**Status date:** 2026-10-06
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -136,7 +136,7 @@ been implemented.
 
 The following are not yet treated as implemented:
 
-- household invitations/partner invite lifecycle
+- member removal, leaving and ownership transfer
 - recurring transaction domain and worker execution
 - category drag reordering, shared system-category customization, and private categories
 - goals
@@ -159,7 +159,7 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Implement invitations and acceptance under ADR-023 next. Household settings and the member directory now establish the administrative foundation; the joining policy explicitly protects users with existing history. Recurring execution remains a later milestone requiring idempotency and worker design.
+Verify the two-person beta journey and operational email configuration next. Invitations and acceptance implement ADR-023 while protecting users with existing history. Departure/recovery policy is still needed before a wider collaboration release. Recurring execution remains a later milestone requiring idempotency and worker design.
 
 ## Household settings — 2026-10-05
 
@@ -168,7 +168,7 @@ Implement invitations and acceptance under ADR-023 next. Household settings and 
 - Owner-only settings writes require an expected UUID version; stale requests and database races return localized conflicts. Completed financial onboarding cannot overwrite these settings through the onboarding endpoints.
 - Preferred reporting currency changes no ledger amounts or account currencies.
 - `AddHouseholdVersion` migration, regenerated OpenAPI client and PostgreSQL regression coverage.
-- ADR-023 accepts the invitation/joining policy. Invitations and membership transitions are not implemented in this slice.
+- ADR-023 invitation/joining policy is implemented: owner create/list/resend/revoke, verified email matching, explicit acceptance, atomic empty-household transition, full query-cache reset and EN/DE/HU UI/email copy. See [Household invitations](household-invitations.md).
 
 See [Household settings](household-settings.md) for API compatibility and deployment.
 

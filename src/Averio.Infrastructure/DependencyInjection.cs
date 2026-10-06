@@ -83,6 +83,8 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<Averio.Application.Households.Invitations.IInvitationRepository, InvitationRepository>();
+        services.AddScoped<Averio.Application.Households.Invitations.IInvitationEmailSender, InvitationEmailSender>();
         services.AddScoped<IHouseholdRepository, HouseholdRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IAccountBalanceReader, AccountBalanceReader>();

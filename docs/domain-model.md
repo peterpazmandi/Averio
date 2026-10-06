@@ -331,3 +331,8 @@ Categories support deeper nesting. A compatible active subcategory may be a pare
 ## Personal activities
 
 `Activity` belongs to one household member and has a name, optional dates, open/closed status and concurrency timestamp. `ActivityAssignment` links a visible transaction to at most one activity per member, with an independent version retained after removal. Assignments are private metadata, not ledger mutations. Results sum currently visible posted income minus expenses through today's UTC date, separately per original currency; transfers and future/voided transactions do not contribute. Closed activities reject new assignments but retain live correction/void effects. See [ADR-022](decisions/ADR-022-personal-activities.md) and [Activities](activities.md).
+
+
+## Invitation lifecycle implementation
+
+`HouseholdInvitation` belongs to the target household, grants only Member, and stores inviter, normalized email, token hash, version, timestamps, delivery status and acceptance audit. SourceHouseholdId is retained as a historical identifier after verified-empty source removal. Accepted and Revoked are terminal; Pending expiry is derived. Acceptance and the membership transition commit atomically. Existing records are never migrated or deleted to make a household eligible. See [invitation implementation](household-invitations.md) for locking, constraints and eligibility.

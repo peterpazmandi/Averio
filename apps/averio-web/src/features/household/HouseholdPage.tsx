@@ -7,6 +7,7 @@ import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { householdQueries } from './householdQueries';
 import { HouseholdEditor } from './HouseholdEditor';
+import { HouseholdInvitations } from './HouseholdInvitations';
 
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
@@ -83,8 +84,8 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                             <span className="rounded-full border border-emerald-900/15 px-2 py-1 text-xs font-semibold dark:border-emerald-100/20">{t(member.role === 'owner' ? 'householdSettings.owner' : 'householdSettings.member')}</span>
                         </li>)}
                     </ul>
-                    <p className="rounded-xl bg-white/60 p-3 text-sm text-slate-600 dark:bg-black/10 dark:text-slate-300">{t('householdSettings.invitationSoon')}</p>
                 </AverioCard>
+                {owner && <HouseholdInvitations userId={userId} householdId={householdId} />}
                 <AverioCard id="household-privacy" className="scroll-mt-6 space-y-3 p-5 sm:p-6">
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
                     <p className={muted}>{t('householdSettings.privacyHelp')}</p>

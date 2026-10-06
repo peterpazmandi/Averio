@@ -110,6 +110,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         '../../shared/components/concept/ConceptIcon': { ConceptIcon: 'icon' },
         './householdQueries': { householdQueries: { detail: () => ({}) } },
         './HouseholdEditor': { HouseholdEditor: 'editor' },
+        './HouseholdInvitations': { HouseholdInvitations: 'invitations' },
     });
     function render() { cursor = 0; return HouseholdPage({ userId: 'u', householdId: 'h' }); }
     function find(tree, type, text) {

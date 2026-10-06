@@ -51,6 +51,7 @@ concurrent contexts, unchanged account currencies and closed onboarding paths.
 Run it through the existing CI workflow or with `AVERIO_TEST_CONNECTION_STRING`
 pointing to a disposable local PostgreSQL server (the suite creates its own DB).
 
-Invitations, acceptance, removal, leaving and owner transfer are not implemented.
-Their accepted boundaries and joining eligibility are recorded in
+Owners can now create, resend and revoke invitations; verified invitees can accept
+under the safe empty-household policy. See [Household invitations](household-invitations.md).
+Removal, leaving and owner transfer remain deferred. The accepted boundaries are in
 [ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md).

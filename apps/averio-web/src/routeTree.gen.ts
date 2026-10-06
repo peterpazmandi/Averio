@@ -15,6 +15,7 @@ import { Route as GuestRouteImport } from './routes/_guest'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
 import { Route as GuestForgotPasswordRouteImport } from './routes/_guest.forgot-password'
+import { Route as GuestInvitationRouteImport } from './routes/_guest.invitation'
 import { Route as GuestLoginRouteImport } from './routes/_guest.login'
 import { Route as GuestRegisterRouteImport } from './routes/_guest.register'
 import { Route as GuestResendVerificationRouteImport } from './routes/_guest.resend-verification'
@@ -58,6 +59,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const GuestForgotPasswordRoute = GuestForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestInvitationRoute = GuestInvitationRouteImport.update({
+  id: '/invitation',
+  path: '/invitation',
   getParentRoute: () => GuestRoute,
 } as any)
 const GuestLoginRoute = GuestLoginRouteImport.update({
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/forgot-password': typeof GuestForgotPasswordRoute
+  '/invitation': typeof GuestInvitationRoute
   '/login': typeof GuestLoginRoute
   '/register': typeof GuestRegisterRoute
   '/resend-verification': typeof GuestResendVerificationRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/forgot-password': typeof GuestForgotPasswordRoute
+  '/invitation': typeof GuestInvitationRoute
   '/login': typeof GuestLoginRoute
   '/register': typeof GuestRegisterRoute
   '/resend-verification': typeof GuestResendVerificationRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_guest/forgot-password': typeof GuestForgotPasswordRoute
+  '/_guest/invitation': typeof GuestInvitationRoute
   '/_guest/login': typeof GuestLoginRoute
   '/_guest/register': typeof GuestRegisterRoute
   '/_guest/resend-verification': typeof GuestResendVerificationRoute
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/onboarding'
     | '/forgot-password'
+    | '/invitation'
     | '/login'
     | '/register'
     | '/resend-verification'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/forgot-password'
+    | '/invitation'
     | '/login'
     | '/register'
     | '/resend-verification'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/onboarding'
     | '/_guest/forgot-password'
+    | '/_guest/invitation'
     | '/_guest/login'
     | '/_guest/register'
     | '/_guest/resend-verification'
@@ -335,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof GuestForgotPasswordRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/invitation': {
+      id: '/_guest/invitation'
+      path: '/invitation'
+      fullPath: '/invitation'
+      preLoaderRoute: typeof GuestInvitationRouteImport
       parentRoute: typeof GuestRoute
     }
     '/_guest/login': {
@@ -512,6 +531,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 interface GuestRouteChildren {
   GuestForgotPasswordRoute: typeof GuestForgotPasswordRoute
+  GuestInvitationRoute: typeof GuestInvitationRoute
   GuestLoginRoute: typeof GuestLoginRoute
   GuestRegisterRoute: typeof GuestRegisterRoute
   GuestResendVerificationRoute: typeof GuestResendVerificationRoute
@@ -521,6 +541,7 @@ interface GuestRouteChildren {
 
 const GuestRouteChildren: GuestRouteChildren = {
   GuestForgotPasswordRoute: GuestForgotPasswordRoute,
+  GuestInvitationRoute: GuestInvitationRoute,
   GuestLoginRoute: GuestLoginRoute,
   GuestRegisterRoute: GuestRegisterRoute,
   GuestResendVerificationRoute: GuestResendVerificationRoute,

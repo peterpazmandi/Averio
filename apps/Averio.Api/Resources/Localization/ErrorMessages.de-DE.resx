@@ -319,6 +319,12 @@
   <data name="Error_HouseholdChanged" xml:space="preserve"><value>Die Haushaltseinstellungen wurden geändert. Lade die aktuellen Einstellungen, bevor du erneut speicherst.</value></data>
   <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Lade die Haushaltseinstellungen vor dem Speichern neu.</value></data>
   <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>Der Haushalt ist eingerichtet. Änderungen sind in den Haushaltseinstellungen möglich.</value></data>
+  <data name="Validation_InvitationEmail" xml:space="preserve"><value>Gib eine gültige E-Mail-Adresse ein.</value></data>
+  <data name="Error_InvitationInvalid" xml:space="preserve"><value>Diese Einladung ist ungültig, abgelaufen, geändert oder für eine andere E-Mail-Adresse bestimmt.</value></data>
+  <data name="Error_InvitationThrottled" xml:space="preserve"><value>Warte vor dem erneuten Senden mindestens eine Minute. Es gelten auch Einladungslimits.</value></data>
+  <data name="Error_InvitationExists" xml:space="preserve"><value>Für diese E-Mail-Adresse besteht bereits eine Einladung. Sende sie erneut oder widerrufe sie zuerst.</value></data>
+  <data name="Error_InvitationMember" xml:space="preserve"><value>Diese Person ist bereits Haushaltsmitglied.</value></data>
+  <data name="Error_HouseholdNotEmpty" xml:space="preserve"><value>Zum Beitreten benötigst du einen leeren Einpersonenhaushalt. Dein Haushalt und deine Finanzdaten bleiben erhalten.</value></data>
 </root>
 
 

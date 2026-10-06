@@ -29,6 +29,8 @@ public sealed class HouseholdMember
     public HouseholdRole Role { get; private set; }
 
     public DateTimeOffset JoinedAtUtc { get; private set; }
+    internal static HouseholdMember CreateMember(Guid householdId, Guid userId, DateTimeOffset now)
+        => new(Guid.NewGuid(), householdId, userId, HouseholdRole.Member, now);
 
     internal static HouseholdMember CreateOwner(
         Guid householdId,

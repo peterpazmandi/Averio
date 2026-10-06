@@ -63,4 +63,7 @@
   <data name="Error_PasswordRejected" xml:space="preserve">
     <value>A jelszó nem felel meg a szükséges biztonsági követelményeknek.</value>
   </data>
+  <data name="Invitation_Subject" xml:space="preserve"><value>Meghívás egy Averio-háztartásba</value></data>
+  <data name="Invitation_Body" xml:space="preserve"><value>Jelentkezz be vagy regisztrálj ezzel az e-mail-címmel a meghívás megtekintéséhez és elfogadásához. A link hét napig érvényes. Megnyitása még nem jelent csatlakozást.</value></data>
+  <data name="Invitation_Button" xml:space="preserve"><value>Meghívás megtekintése</value></data>
 </root>

@@ -127,6 +127,8 @@ static async Task RunVerificationAsync(string connectionString)
     services.AddLogging();
     services.AddApplication();
     services.AddInfrastructure(configuration);
+    services.AddSingleton<CapturingInvitationSender>();
+    services.AddSingleton<Averio.Application.Households.Invitations.IInvitationEmailSender>(sp => sp.GetRequiredService<CapturingInvitationSender>());
     services.AddSingleton<TransferReadInterceptor>();
     services.ConfigureDbContext<AverioDbContext>((sp, options) =>
         options.AddInterceptors(sp.GetRequiredService<TransferReadInterceptor>()), ServiceLifetime.Singleton);
@@ -195,6 +197,7 @@ static async Task RunVerificationAsync(string connectionString)
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
+    await InvitationVerification.RunAsync(provider, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)

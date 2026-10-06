@@ -319,6 +319,12 @@
   <data name="Error_HouseholdChanged" xml:space="preserve"><value>A háztartás beállításai megváltoztak. Mentés előtt töltsd be a legfrissebb beállításokat.</value></data>
   <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Mentés előtt töltsd be újra a háztartás beállításait.</value></data>
   <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>A háztartás beállítása befejeződött. A módosításokhoz használd a háztartás beállításait.</value></data>
+  <data name="Validation_InvitationEmail" xml:space="preserve"><value>Adj meg egy érvényes e-mail-címet.</value></data>
+  <data name="Error_InvitationInvalid" xml:space="preserve"><value>A meghívás érvénytelen, lejárt, megváltozott vagy másik e-mail-címhez tartozik.</value></data>
+  <data name="Error_InvitationThrottled" xml:space="preserve"><value>Várj legalább egy percet az újraküldés előtt. A meghívások száma is korlátozott.</value></data>
+  <data name="Error_InvitationExists" xml:space="preserve"><value>Ehhez az e-mail-címhez már van meghívás. Küldd újra vagy vond vissza.</value></data>
+  <data name="Error_InvitationMember" xml:space="preserve"><value>Ez a személy már a háztartás tagja.</value></data>
+  <data name="Error_HouseholdNotEmpty" xml:space="preserve"><value>A csatlakozáshoz üres, egyszemélyes háztartás szükséges. A jelenlegi háztartásod és pénzügyi adataid megmaradtak.</value></data>
 </root>
 
 
