@@ -148,6 +148,8 @@ static async Task RunVerificationAsync(string connectionString)
     var fixture = await SeedFixtureAsync(provider, clock.GetUtcNow());
     currentUser.UserId = fixture.OwnerUserId;
 
+    await SchemaConstraintVerification.RunAsync(provider, fixture, clock.GetUtcNow());
+
     await CheckAsync(
         "transaction and aggregate writes roll back atomically",
         () => VerifyAtomicRollbackAsync(provider, currentUser, fixture));

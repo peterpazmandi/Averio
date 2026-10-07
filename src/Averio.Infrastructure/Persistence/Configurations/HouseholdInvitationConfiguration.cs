@@ -12,7 +12,25 @@ internal sealed class HouseholdInvitationConfiguration : IEntityTypeConfiguratio
         b.ToTable("household_invitations", t => {
             t.HasCheckConstraint("ck_invitation_state", "\"State\" IN ('Pending','Accepted','Revoked')");
             t.HasCheckConstraint("ck_invitation_delivery", "\"DeliveryStatus\" IN ('Unknown','Sent','Failed')");
-            t.HasCheckConstraint("ck_invitation_acceptance", "(\"State\" = 'Accepted') = (\"AcceptedAt\" IS NOT NULL AND \"AcceptedByUserId\" IS NOT NULL AND \"SourceHouseholdId\" IS NOT NULL)");
+            t.HasCheckConstraint("ck_invitation_lifecycle_metadata", """
+                ("State" = 'Pending'
+                    AND "AcceptedAt" IS NULL
+                    AND "AcceptedByUserId" IS NULL
+                    AND "SourceHouseholdId" IS NULL
+                    AND "RevokedAt" IS NULL)
+                    OR
+                ("State" = 'Accepted'
+                    AND "AcceptedAt" IS NOT NULL
+                    AND "AcceptedByUserId" IS NOT NULL
+                    AND "SourceHouseholdId" IS NOT NULL
+                    AND "RevokedAt" IS NULL)
+                    OR
+                ("State" = 'Revoked'
+                    AND "AcceptedAt" IS NULL
+                    AND "AcceptedByUserId" IS NULL
+                    AND "SourceHouseholdId" IS NULL
+                    AND "RevokedAt" IS NOT NULL)
+                """);
             t.HasCheckConstraint("ck_invitation_expiry", "\"ExpiresAt\" > \"CreatedAt\" AND \"SendCount\" > 0");
         });
         b.HasKey(x => x.Id);
@@ -23,6 +41,7 @@ internal sealed class HouseholdInvitationConfiguration : IEntityTypeConfiguratio
         b.Property(x => x.DeliveryStatus).HasMaxLength(16).IsRequired();
         b.Property(x => x.Version).IsConcurrencyToken();
         b.HasIndex(x => x.TokenHash).IsUnique();
+        b.HasIndex(x => x.HouseholdId);
         b.HasIndex(x => new { x.HouseholdId, x.NormalizedEmail }).IsUnique().HasFilter("\"State\" = 'Pending'");
         b.HasOne<Household>().WithMany().HasForeignKey(x => x.HouseholdId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.InviterUserId).OnDelete(DeleteBehavior.Restrict);

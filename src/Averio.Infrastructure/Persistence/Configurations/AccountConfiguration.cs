@@ -17,6 +17,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             table.HasCheckConstraint("ck_accounts_visibility", "visibility IN ('Household', 'Private')");
             table.HasCheckConstraint("ck_accounts_type", "type IN ('Checking', 'Savings', 'Cash', 'CreditCard')");
             table.HasCheckConstraint("ck_accounts_status", "status IN ('Active', 'Archived')");
+            table.HasCheckConstraint("ck_accounts_archived_at_matches_status", "(status = 'Active' AND archived_at IS NULL) OR (status = 'Archived' AND archived_at IS NOT NULL)");
             table.HasCheckConstraint("ck_accounts_scope_visibility", """
                 (scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)
                 OR

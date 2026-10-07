@@ -65,8 +65,11 @@ The current early product operates around one active household context per user.
 
 ADR-023 now defines the accepted invitation/joining policy: owner-managed, email-bound,
 verified, expiring single-use invitations; one household per user; only new users or
-verified-empty solo households may join initially. Existing financial history is never
-silently moved or deleted. This policy is not an implemented invitation lifecycle.
+verified-empty solo households may join initially. The invitation lifecycle is implemented:
+owners can create, inspect, resend, and revoke invitations, and verified users can preview
+and explicitly accept them. Existing financial history is never silently moved or deleted.
+See [Household invitations](household-invitations.md) for the implemented workflow and
+[ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md) for the accepted policy.
 
 Household members can read a minimal directory (membership ID, display name, role,
 join date and self marker). Login emails and financial details are excluded.
@@ -80,11 +83,13 @@ See [ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md).
 
 ## Invitation
 
-Planned concept for inviting another user/member into a household.
-
-Expected concerns: inviter, target email, intended role, status, secure token, expiry, acceptance, cancellation/revocation, and duplicate-pending-invitation rules.
-
-Not assumed implemented yet.
+An owner-managed, email-bound invitation grants the Member role only. It stores a hash of
+the single-use token, has an expiry and lifecycle version, and records delivery and
+acceptance/revocation metadata. Expiry is derived from `ExpiresAt`; pending invitations can
+be resent (rotating the token) or revoked. Acceptance requires an authenticated, verified,
+email-matched user and explicit confirmation. Joining is allowed only for a new user or a
+verified-empty solo household; financial history is never silently moved or deleted.
+See [Household invitations](household-invitations.md) for endpoint and lifecycle details.
 
 ## Account
 
