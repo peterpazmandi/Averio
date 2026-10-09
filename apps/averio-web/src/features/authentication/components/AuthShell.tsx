@@ -72,6 +72,7 @@ export function AuthShell({
                 {/* Background effects                               */}
                 {/* ------------------------------------------------ */}
 
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                 {/*
                     Main subtle Averio-green glow.
 
@@ -192,6 +193,8 @@ export function AuthShell({
                         to-black/10
                     "
                 />
+
+                </div>
 
                 {/* ------------------------------------------------ */}
                 {/* Branding / marketing copy                        */}
