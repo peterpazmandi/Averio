@@ -17,13 +17,13 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         return dbContext.HouseholdMembers
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                x => x.UserId == userId,
+                x => x.UserId == userId && x.LeftAtUtc == null,
                 cancellationToken);
     }
 
     public async Task<Household?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var id = await dbContext.HouseholdMembers.AsNoTracking().Where(x => x.UserId == userId)
+        var id = await dbContext.HouseholdMembers.AsNoTracking().Where(x => x.UserId == userId && x.LeftAtUtc == null)
             .Select(x => (Guid?)x.HouseholdId).SingleOrDefaultAsync(cancellationToken);
         return id is null ? null : await GetByIdForUserAsync(id.Value, userId, cancellationToken);
     }
@@ -40,9 +40,10 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
             .SingleOrDefaultAsync(
                 household =>
                     household.Id == householdId
+                    && household.ArchivedAtUtc == null
                     && household.Members.Any(
                         member =>
-                            member.UserId == userId),
+                            member.UserId == userId && member.LeftAtUtc == null),
                 cancellationToken);
     }
 
@@ -89,7 +90,7 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         await dbContext.Entry(household).ReloadAsync(cancellationToken);
         if (household.ArchivedAtUtc is not null || !await dbContext.HouseholdMembers
                 .AsNoTracking().AnyAsync(member => member.HouseholdId == householdId
-                    && member.UserId == userId, cancellationToken))
+                    && member.UserId == userId && member.LeftAtUtc == null, cancellationToken))
             return null;
 
         await dbContext.Entry(household)

@@ -1,6 +1,7 @@
 import {
     Outlet,
     createFileRoute,
+    useRouterState,
 } from '@tanstack/react-router';
 
 import {
@@ -14,8 +15,9 @@ export const Route =
     });
 
 function GuestLayout() {
+    const pathname = useRouterState({ select: state => state.location.pathname });
     return (
-        <AuthShell>
+        <AuthShell withCard={pathname !== '/invitation'}>
             <Outlet />
         </AuthShell>
     );

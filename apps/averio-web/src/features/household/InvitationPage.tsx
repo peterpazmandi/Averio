@@ -13,6 +13,7 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { invitationApi, invitationKeys } from './invitationQueries';
 import { pendingInvitation, rememberInvitation, forgetInvitation } from './invitationContext';
+import { refreshHouseholdContext } from './householdTransition';
 
 export function InvitationPage() {
     const [token] = useState(() => window.location.hash.slice(1) || pendingInvitation() || '');
@@ -54,9 +55,7 @@ function InvitationForUser({ token }: { token: string }) {
             } });
         },
         onSuccess: async () => {
-            await client.cancelQueries();
-            client.clear();
-            await auth.refresh();
+            await refreshHouseholdContext(client, auth.refresh);
             await navigate({ to: '/app/household' });
             forgetInvitation();
         },
@@ -71,10 +70,10 @@ function InvitationForUser({ token }: { token: string }) {
     const busy = preview.isPending || accept.isPending || signOut.isPending || decline.isPending;
     const error = accept.error ?? preview.error ?? signOut.error ?? decline.error;
     const choicesComplete = !departure || (departure.accounts.every(account => !!handling[account.id]) && (!departure.requiresSuccessor || !!successor));
-    return <AverioCard className="mx-auto max-w-xl space-y-5 p-5 sm:p-6">
+    return <AverioCard className="mx-auto w-full max-w-xl space-y-5 p-5 sm:p-6">
         <h1 className="text-2xl font-bold">{t('invitations.review')}</h1>
         <p>{t('invitations.joinHelp')}</p>
-        {auth.status === 'authenticated' ? <>
+        {auth.status === 'authenticated' ? <div className="space-y-5">
             <p className="break-all text-sm">{t('invitations.signedIn', { email: auth.user?.email })}</p>
             {!token && pending.isPending && <p role="status">{t('common.status.loading')}</p>}
             {!token && pending.isError && <><p role="alert">{t('invitations.loadError')}</p><AverioButton onClick={() => void pending.refetch()}>{t('common.actions.retry')}</AverioButton></>}
@@ -82,8 +81,11 @@ function InvitationForUser({ token }: { token: string }) {
             {!token && (pending.data?.length ?? 0) > 1 && <AverioField>{t('invitations.migration.destination')}<AverioSelect disabled={busy} value={selectedId} onChange={event => { setSelectedId(event.target.value); preview.reset(); accept.reset(); }}>
                 <option value="">{t('invitations.migration.choose')}</option>{pending.data?.map(row => <option key={row.id} value={row.id}>{row.householdName}</option>)}
             </AverioSelect></AverioField>}
-            {!!(token || invitationId) && <AverioButton variant="primary" disabled={busy} onClick={() => { accept.reset(); preview.mutate(); }}>{t('invitations.review')}</AverioButton>}
-            {preview.data && <>
+            <div className="flex flex-wrap gap-3">
+                {!!(token || invitationId) && <AverioButton variant="primary" disabled={busy} onClick={() => { accept.reset(); preview.mutate(); }}>{t('invitations.review')}</AverioButton>}
+                <AverioButton disabled={busy} onClick={() => signOut.mutate()}>{t('invitations.switchUser')}</AverioButton>
+            </div>
+            {preview.data && <section className="space-y-5" aria-label={t('invitations.review')}>
                 <h2 className="break-words text-xl font-semibold">{t('invitations.migration.joining', { name: preview.data.householdName })}</h2>
                 {preview.data.alreadyJoined ? <p>{t('invitations.alreadyJoined')}</p> : <>
                     {!auth.user?.displayName && <AverioField>{t('invitations.migration.displayName')}<AverioInput maxLength={100} value={displayName} disabled={busy} onChange={event => setDisplayName(event.target.value)} /></AverioField>}
@@ -105,15 +107,16 @@ function InvitationForUser({ token }: { token: string }) {
                     </>}
                     <label className="flex items-start gap-3"><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} className="mt-1 size-5 shrink-0" /><span>{t('invitations.confirm')}</span></label>
                 </>}
-                <AverioButton variant="primary" disabled={busy || !preview.data.canJoin || (!preview.data.alreadyJoined && (!confirmed || !choicesComplete))} onClick={() => accept.mutate()}>{t(preview.data.alreadyJoined ? 'invitations.continue' : 'invitations.accept')}</AverioButton>
-            </>}
-            {preview.data && !preview.data.alreadyJoined && <AverioButton disabled={busy} onClick={() => setDeclining(true)}>{t('invitations.decline')}</AverioButton>}
+                <div className="flex flex-wrap gap-3">
+                    <AverioButton variant="primary" disabled={busy || !preview.data.canJoin || (!preview.data.alreadyJoined && (!confirmed || !choicesComplete))} onClick={() => accept.mutate()}>{t(preview.data.alreadyJoined ? 'invitations.continue' : 'invitations.accept')}</AverioButton>
+                    {!preview.data.alreadyJoined && <AverioButton disabled={busy} onClick={() => setDeclining(true)}>{t('invitations.decline')}</AverioButton>}
+                </div>
+            </section>}
             <AverioDialog open={declining} title={t('invitations.decline')} closeLabel={t('householdSettings.cancel')} busy={busy} onDismiss={() => setDeclining(false)}
                 actions={<AverioButton variant="danger" disabled={busy} onClick={() => decline.mutate()}>{t('invitations.decline')}</AverioButton>}>
                 <p>{t('invitations.declineHelp')}</p>{decline.error && <p role="alert">{decline.error instanceof ApiError ? decline.error.message : t('errors.genericDescription')}</p>}
             </AverioDialog>
-            <AverioButton disabled={busy} onClick={() => signOut.mutate()}>{t('invitations.switchUser')}</AverioButton>
-        </> : auth.status === 'error' ? <AverioButton onClick={() => void auth.refresh().catch(() => undefined)}>{t('common.actions.retry')}</AverioButton> : !token ? <p role="alert">{t('invitations.missing')}</p> : <div className="flex flex-wrap gap-4">
+        </div> : auth.status === 'error' ? <AverioButton onClick={() => void auth.refresh().catch(() => undefined)}>{t('common.actions.retry')}</AverioButton> : !token ? <p role="alert">{t('invitations.missing')}</p> : <div className="flex flex-wrap gap-4">
             <Link to="/login" search={{ redirect: '/invitation' }} className="font-semibold text-emerald-700 underline dark:text-emerald-300">{t('invitations.login')}</Link>
             <Link to="/register" className="font-semibold text-emerald-700 underline dark:text-emerald-300">{t('invitations.register')}</Link>
         </div>}

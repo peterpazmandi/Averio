@@ -21,17 +21,16 @@ export function PreviousHouseholds({ userId, householdId }: { userId: string; ho
             {former.isError ? <><p role="alert">{t('invitations.loadError')}</p><AverioButton onClick={() => void former.refetch()}>{t('common.actions.retry')}</AverioButton></> : <ul className="space-y-2">{former.data?.map(member => <li key={member.id} className="break-words">{member.displayName || t('householdSettings.unnamedMember')} — {t('invitations.history.left', { date: date(member.leftAtUtc) })}</li>)}</ul>}
             <p className="text-sm">{t('invitations.history.attribution')}</p>
         </AverioCard>}
-        <AverioCard className="space-y-4 p-5 sm:p-6"><h3 className="text-lg font-semibold">{t('invitations.history.title')}</h3>
+        {(!history.isSuccess || history.data.length > 0) && <AverioCard className="space-y-4 p-5 sm:p-6"><h3 className="text-lg font-semibold">{t('invitations.history.title')}</h3>
             <p className="text-sm">{t('invitations.history.help')}</p>
             {history.isPending && <p role="status">{t('common.status.loading')}</p>}
             {history.isError && <><p role="alert">{t('invitations.loadError')}</p><AverioButton onClick={() => void history.refetch()}>{t('common.actions.retry')}</AverioButton></>}
-            {history.isSuccess && history.data.length === 0 && <p>{t('invitations.history.empty')}</p>}
             <ul className="space-y-3">{history.data?.map(row => <li key={row.id} className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0"><p className="break-words font-semibold">{row.householdName}</p><p className="text-xs">{t('invitations.history.left', { date: date(row.leftAtUtc) })}</p></div>
                 <AverioButton aria-expanded={selected === row.id} onClick={() => setSelected(old => old === row.id ? null : row.id)}>{t(selected === row.id ? 'invitations.history.close' : 'invitations.history.open')}</AverioButton>
             </li>)}</ul>
-        </AverioCard>
-        {selected && <HistoricalHousehold key={selected} userId={userId} id={selected} />}
+        </AverioCard>}
+        {selected && history.data?.some(row => row.id === selected) && <HistoricalHousehold key={selected} userId={userId} id={selected} />}
     </>;
 }
 function HistoricalHousehold({ userId, id }: { userId: string; id: string }) {

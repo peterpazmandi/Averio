@@ -37,7 +37,8 @@ appear. History is read-only, belongs exclusively to that former user, and never
 contributes to destination totals. Date-filtered cash flow retains original
 currencies and excludes private transactions, voided entries, transfers and opening
 balances. An empty, unconfigured registration placeholder does not create a history
-card.
+card. Household settings omit the previous-households section when the history
+query succeeds with no records; loading and failed requests retain explicit feedback.
 
 Invitation context remains in tab session storage across registration, verification
 and login for up to seven days. Verified recipients also discover their pending
@@ -62,8 +63,11 @@ metadata writes with cutover. Active memberships and household owners use filter
 unique indexes; old memberships remain as foreign-key targets for authorship and
 holders. Departed users have no live authorization in the source household.
 
-After acceptance the frontend cancels queries, clears query/mutation caches,
-refreshes identity and opens the destination. Joined users do not run household
+After acceptance the frontend cancels queries, removes non-authentication queries
+and clears mutation results. It keeps the mounted authentication query attached to
+its observer, refreshes identity from the server, then opens the destination.
+Retained membership rows are historical attribution: only `LeftAtUtc == null`
+memberships in an active household determine the current user and authorization. Joined users do not run household
 creation or first-account setup. An optional display name is collected separately.
 
 ## Email and lifecycle
@@ -84,7 +88,12 @@ creation or first-account setup. An optional display name is collected separatel
   name, privacy explanation and a clear review action. EN/DE/HU copy uses the
   requesting owner's current API culture. The logo is served from the deployed
   frontend at `/branding/averio-email-logo.png`; clients that block images still
-  see the text wordmark and action.
+  see the text wordmark and action. Presentation tables and inline background colors
+  provide the base layout; Outlook's Word renderer receives a fixed-width fallback
+  and a VML review button. Both buttons and the plain fallback link carry the same
+  escaped invitation URL. Dark-mode media and Outlook selectors adapt the navy
+  surface, text and emerald accents. Actual inbox rendering still requires checking
+  in Outlook and Gmail because clients may override colors.
 - Configure `Email:Provider=Brevo`, `Email:BrevoApiKey`, `Email:SenderEmail`,
   `Email:SenderName`, and the deployed HTTPS `Email:FrontendBaseUrl`. Secrets belong
   in environment configuration. The development logger sender is intentionally
@@ -124,7 +133,9 @@ PostgreSQL regressions cover lifecycle security, concurrent joining and writes,
 sole-holder eligibility, owner succession, exact cutover balances, no copied
 movements, immutable privacy-filtered history, archive instead of deletion,
 idempotency and unchanged source cash flow. Frontend regressions cover invitation
-context and household reload behavior. Build, lint and generated-client checks
+context, immediate active-household refresh with a mounted auth observer, cancelled
+source requests, discarded finance caches, conditional history sections and household
+reload behavior. Build, lint and generated-client checks
 remain part of the normal verification workflow.
 
 Standalone leaving/removal, live multi-household switching, history merging,

@@ -3,6 +3,7 @@ using Averio.Application.Accounts.GetAccounts;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Households.Invitations;
+using Averio.Application.Identity.GetCurrentUser;
 using Averio.Application.Statistics.GetCashFlow;
 using Averio.Application.Transactions.Common;
 using Averio.Domain.Accounts;
@@ -95,6 +96,17 @@ internal static class DepartureVerification
         await Throws<ConflictException>(() => Run(leaving, sp => Handler(sp, leaving).AcceptAsync(input with { Accounts = [choices[0]] }, Ct)));
         await Run(leaving, async sp => { await Handler(sp, leaving).AcceptAsync(input, Ct); return true; });
         await Run(leaving, async sp => { await Handler(sp, leaving).AcceptAsync(input, Ct); return true; });
+        var current = await Run(leaving, sp => ActivatorUtilities.CreateInstance<GetCurrentUserHandler>(sp,
+            new MutableCurrentUser { UserId = leaving }).HandleAsync(Ct));
+        Check(current.HouseholdId == target.HouseholdId && current.HouseholdRole == HouseholdRole.Member
+            && !current.OnboardingRequired, "Current user immediately resolves the destination household despite retained source membership");
+        await Run(leaving, async sp => {
+            var db = sp.GetRequiredService<AverioDbContext>();
+            Check(await db.HouseholdMembers.IgnoreQueryFilters().CountAsync(x => x.UserId == leaving) == 2
+                && await db.HouseholdMembers.CountAsync(x => x.UserId == leaving && x.HouseholdId == target.HouseholdId) == 1,
+                "Retained historical membership never becomes a second active household");
+            return true;
+        });
         var after = await CashFlow();
         Check(before.Periods.SequenceEqual(after.Periods), "Departure preserves source cash flow");
         await Run(leaving, async sp => {
@@ -142,6 +154,17 @@ internal static class DepartureVerification
         var html = InvitationEmailTemplate.Render("https://averio.test", "TOKEN", "Join <script>& home", "Body", "Review", "Privacy", "Expires", "Fallback", "Footer");
         Check(!html.Contains("<script>") && html.Contains("&lt;script&gt;") && html.Contains("#10B981")
             && html.Contains("/branding/averio-email-logo.png") && html.Contains("/invitation#TOKEN"), "Branded email escapes content and uses fragment credentials");
+        var escapedEmail = InvitationEmailTemplate.Render("https://averio.test/", "A&\"B", "Title", "Body", "Review <now>",
+            "Privacy <safe>", "Expires", "Fallback", "Footer");
+        var links = System.Text.RegularExpressions.Regex.Matches(escapedEmail, "href=\"([^\"]*)\"")
+            .Select(match => match.Groups[1].Value).ToArray();
+        Check(links.Length == 3 && links.All(link => link == "https://averio.test/invitation#A&amp;&quot;B"),
+            "Outlook, standard button and fallback link retain the same escaped invitation credential");
+        Check(escapedEmail.Contains("<v:roundrect") && escapedEmail.Contains("<w:anchorlock/>")
+            && escapedEmail.Contains("<!--[if !mso]><!-->") && escapedEmail.Contains("Review &lt;now&gt;")
+            && escapedEmail.Contains("prefers-color-scheme:dark") && escapedEmail.Contains("[data-ogsc]")
+            && escapedEmail.Contains("bgcolor=\"#FFFFFF\"") && !escapedEmail.Contains("Privacy <safe>"),
+            "Email supplies Outlook button fallback, adaptive colors and escaped localized copy");
         Console.WriteLine("PASS departure account cutover, exact balances, ownership transfer, immutable privacy-filtered history, no copied movements and unchanged source cash flow");
     }
     private static async Task VerifySoloAndRaceAsync(IServiceProvider provider, Fixture target, MutableTimeProvider clock)

@@ -1,7 +1,7 @@
 # Averio UI component patterns
 
 **Status:** Accepted implementation guidance  
-**Updated:** 2026-09-25
+**Updated:** 2026-10-09
 
 These patterns record the agreed transfer UI refinements and apply to new or changed empty states and cards across Averio. They extend the canonical HTML concept. Existing screens can migrate when touched; this is not a requirement to restyle the whole application at once.
 
@@ -19,7 +19,7 @@ Reference: `features/transfers/TransfersPage.tsx` and `shared/components/ui/Aver
 
 ## Menu-inspired cards
 
-Cards follow the selected navigation item's visual language: rounded corners, a subtle tinted background, a thin border, and a narrow emerald left accent. Use `shared/components/ui/AverioCard` for reusable content/form groups, with native props and refs. Its Tailwind surface uses a 17px radius, 3px primary-color left border, light background `#F2FAF7`, and dark background `#112B36`.
+Cards follow the selected navigation item's visual language: rounded corners, a neutral background matching Statistics, a thin border, and a narrow emerald left accent. Use `shared/components/ui/AverioCard` for reusable content/form groups, with native props and refs. Its Tailwind surface uses a 17px radius, 3px primary-color left border, light background `#FFFFFF`, and dark background `#0D1726`.
 
 One logical item must read as one card. Related account sides, amounts, status, notes, and actions share an outer surface; do not split them into disconnected floating cards. Use spacing or a subtle internal divider for a footer. Keep headings and primary values readable in both themes. A noninteractive card must not imply it is clickable; use explicit buttons for actions. Voided or destructive states retain their status text and appropriate neutral/red cues rather than relying only on the emerald accent.
 
