@@ -19,21 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     env:
       AVERIO_TEST_CONNECTION_STRING: >-
         Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
@@ -41,6 +26,42 @@ jobs:
         Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
 
     steps:
+      - name: Start PostgreSQL with Docker Hub cache fallback
+        run: |
+          set -euo pipefail
+
+          # Preserve runner settings and let Docker fall back to Hub on a cache miss.
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/etc/docker/daemon.json")
+          config = json.loads(path.read_text()) if path.exists() else {}
+          mirrors = config.get("registry-mirrors", [])
+          config["registry-mirrors"] = ["https://mirror.gcr.io"] + [value for value in mirrors if value != "https://mirror.gcr.io"]
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(config))
+          PY
+          sudo systemctl restart docker
+
+          docker pull postgres:17
+          docker run --detach --name averio-test-postgres \
+            --env POSTGRES_USER=postgres \
+            --env POSTGRES_PASSWORD=postgres \
+            --env POSTGRES_DB=postgres \
+            --publish 5432:5432 \
+            --health-cmd "pg_isready -U postgres -d postgres" \
+            --health-interval 5s --health-timeout 5s --health-retries 10 \
+            postgres:17
+
+          for attempt in $(seq 1 30); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' averio-test-postgres)" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs averio-test-postgres
+          exit 1
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -151,3 +172,6 @@ jobs:
             exit 1
           fi
 
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker rm --force averio-test-postgres 2>/dev/null || true
