@@ -200,6 +200,7 @@ static async Task RunVerificationAsync(string connectionString)
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
     await InvitationVerification.RunAsync(provider, fixture, clock);
+    await DepartureVerification.RunAsync(provider, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -876,3 +877,4 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
+

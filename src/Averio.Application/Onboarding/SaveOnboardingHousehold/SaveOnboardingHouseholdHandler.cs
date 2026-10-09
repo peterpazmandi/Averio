@@ -13,7 +13,8 @@ public sealed class SaveOnboardingHouseholdHandler(
     IIdentityService identityService,
     IHouseholdRepository householdRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    Averio.Application.Households.Invitations.InvitationHandler invitations)
 {
     public async Task HandleAsync(
         SaveOnboardingHouseholdCommand command,
@@ -23,6 +24,11 @@ public sealed class SaveOnboardingHouseholdHandler(
 
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
+        if ((await invitations.PendingAsync(cancellationToken)).Count > 0)
+            throw new ConflictException("invitation_onboarding", "Error_InvitationOnboarding");
+
+
+        await using var writeTransaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         var household = await householdRepository.GetByUserIdAsync(
                 userId,
@@ -57,5 +63,6 @@ public sealed class SaveOnboardingHouseholdHandler(
             timeProvider.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await writeTransaction.CommitAsync(cancellationToken);
     }
 }

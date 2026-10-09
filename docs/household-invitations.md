@@ -5,59 +5,66 @@ status, resend a pending/expired link, or revoke it. Members cannot access this
 email directory. Accepting grants the Member role and the existing shared-finance
 permissions; it does not grant access to private accounts or personal activities.
 
-## Joining
+## Joining and account cutover
 
-1. Open the email link. Opening a link never changes membership.
-2. Sign in with the invited email, or register and verify that address first.
-3. Review the household name and the replacement explanation, explicitly confirm,
-   and choose Accept and join.
+1. Open the invitation and sign in, or register and verify the invited email.
+2. Review the destination household and departure plan. A new user sees this flow
+   before any household-create or first-account form.
+3. Choose personal/private, personal/shared, or household-owned handling for every
+   active personal account held solely by you. Household-owned and jointly held
+   accounts stay behind; archived accounts are not copied.
+4. If you own a household with remaining members, select its next owner.
+5. Explicitly confirm and accept. A changed account, balance or household requires
+   a fresh review. You can also decline and resume your existing or solo household.
 
-Invitation context stays in the current browser tab's session storage across
-registration, verification and login, with a seven-day local expiry. The login
-route resumes the invitation before solo onboarding. If verification is opened
-in a separate browser/tab without that context, reopen the original invitation
-email link after verification. Tokens are removed from the URL fragment after
-loading, and cleared on successful acceptance or Not now. They are never query
-parameters, query-cache keys, or server access-log paths. POST bodies containing
-tokens must remain excluded from any future request-body logging.
+Acceptance creates new account identities with current balances as opening balances
+on the acceptance date. No source transactions, transfers, custom categories,
+activities or other financial context enter the destination household. Private
+copies are excluded from household reports; shared personal and household-owned
+copies participate in reports. Currency is preserved without conversion.
 
-Only verified users with the matching normalized email can preview or accept.
-Wrong-email, revoked, expired and rotated links receive a generic invalid-invitation
-error without household details. Switching accounts is available on the review page.
+The original accounts and ledger remain in the source household. Copied source
+accounts are permanently closed and cannot be restored or written to. Their
+historical reporting participation is retained, so source cash flow does not change.
+Remaining members see only what their existing permissions permit and see former
+holder attribution. Household-owned and joint accounts stay active under existing
+permissions. If the last member leaves, the household is archived, never deleted.
 
-The source household must contain exactly its owner and no persisted dependents:
-accounts (including archived), transactions (including voided), transfers,
-categories, labels, activities, assignments, pins or invitations/history. Global
-seeded catalogs and the user's profile do not block joining. Shared households
-and households with data are preserved and cannot join. There is no financial
-history migration or deletion workflow. Only a verified-empty disposable source
-household and its membership are removed. Acceptance records the source household
-identifier, accepting user and timestamp for audit.
+The departing user can open their previous-household history in Household settings.
+This is an immutable snapshot of data visible at departure, including private data
+only they could see and redacted transfer legs. Later source writes or edits cannot
+appear. History is read-only, belongs exclusively to that former user, and never
+contributes to destination totals. Date-filtered cash flow retains original
+currencies and excludes private transactions, voided entries, transfers and opening
+balances. An empty, unconfigured registration placeholder does not create a history
+card.
 
-## Atomicity and dependent writes
+Invitation context remains in tab session storage across registration, verification
+and login for up to seven days. Verified recipients also discover their pending
+invitations server-side, so another verification tab resumes invitation onboarding.
+Tokens are removed from URL fragments after loading and cleared after acceptance
+or deferral. They are never query parameters or query-cache keys. POST token bodies
+must remain excluded from request-body logging. No recipient or household details
+are disclosed until authenticated, verified email matching succeeds.
 
-Acceptance locks the user row, both household rows in ascending ID order, and
-the source membership. It rechecks the token, current membership, inviter's owner
-role, target completion and source dependencies under the transaction. Revocation
-and resend lock the same target household, so only one lifecycle action can win.
-Repeated acceptance by the same user returns success without another membership.
-The unique user-membership constraint remains in force.
+## Atomicity and authorization
 
-PostgreSQL foreign-key KEY SHARE locks participate in the joining protocol for
-every dependent insert: they conflict with the acceptance FOR UPDATE parent locks.
-An insert that wins is visible to subsequent READ COMMITTED eligibility queries;
-an insert that loses cannot reference the deleted source. Both household and member
-parents are locked, including member-only dependencies such as pins. No eligibility
-decision relies on cascade deletion. The check enumerates mapped FKs to these
-parents and checks all rows without visibility/archive filters. Future dependencies
-must have enforced, immediate FKs and be covered by a joining regression. Unmapped
-tables, deferred constraints or external stores require extending this protocol
-before shipping.
+Acceptance locks the identity user and source/destination households in ascending
+ID order. Under that transaction it rechecks lifecycle, inviter authority, active
+membership, target setup, source version, eligible account IDs, exact account
+version tokens, balances, handling choices and successor. Snapshot, departure,
+owner transfer, destination membership, copies and acceptance commit together.
+Retries of an already accepted invitation by that member are idempotent.
 
-After acceptance the frontend cancels all queries, clears query and mutation
-caches, refreshes identity, and opens the target household. No solo first-account
-setup is required for a joined household. An optional display name can remain
-unset; the existing member-directory fallback applies.
+Financial mutation handlers lock the household before reading or authorizing and
+recheck active membership after acquiring the lock. This serializes ledger and
+metadata writes with cutover. Active memberships and household owners use filtered
+unique indexes; old memberships remain as foreign-key targets for authorship and
+holders. Departed users have no live authorization in the source household.
+
+After acceptance the frontend cancels queries, clears query/mutation caches,
+refreshes identity and opens the destination. Joined users do not run household
+creation or first-account setup. An optional display name is collected separately.
 
 ## Email and lifecycle
 
@@ -73,7 +80,11 @@ unset; the existing member-directory fallback applies.
   between persistence and delivery leaves Unknown. There is no durable email queue
   or automatic retry in this slice. A delivery update cannot overwrite the status
   of a newer resend/revocation because it checks the lifecycle version.
-- EN/DE/HU emails use the requesting owner's current API culture.
+- Branded HTML emails use the official Averio logo, emerald accents, destination
+  name, privacy explanation and a clear review action. EN/DE/HU copy uses the
+  requesting owner's current API culture. The logo is served from the deployed
+  frontend at `/branding/averio-email-logo.png`; clients that block images still
+  see the text wordmark and action.
 - Configure `Email:Provider=Brevo`, `Email:BrevoApiKey`, `Email:SenderEmail`,
   `Email:SenderName`, and the deployed HTTPS `Email:FrontendBaseUrl`. Secrets belong
   in environment configuration. The development logger sender is intentionally
@@ -82,28 +93,40 @@ unset; the existing member-directory fallback applies.
 
 ## API and deployment
 
-- GET/POST `/api/v1/households/{householdId}/invitations`: owner list/create.
-- POST `.../invitations/{invitationId}/resends` and `/revocations`: owner command
-  with `expectedVersion`.
-- POST `/api/v1/invitations/preview`: verified email-matched, non-consuming preview.
-- POST `/api/v1/invitations/acceptances`: explicit, atomic join; body `{ token }`.
+- Owner GET/POST `/api/v1/households/{householdId}/invitations` and versioned
+  `.../{invitationId}/resends` / `revocations` retain their lifecycle behavior.
+- GET `/api/v1/invitations/pending`: verified recipient's valid invitations.
+- POST `/api/v1/invitations/preview`: token or invitation ID, non-consuming review.
+- POST `/api/v1/invitations/declinations`: recipient explicitly declines.
+- POST `/api/v1/invitations/acceptances`: token or ID, `confirmed`,
+  `expectedSourceVersion`, optional `successorMemberId`, and complete `accounts`
+  containing `accountId`, `expectedVersion`, `openingBalance`, `handling`.
+- GET `/api/v1/household-history` and `/{id}?from=YYYY-MM-DD&to=YYYY-MM-DD`:
+  only the authenticated user's frozen snapshots and filtered cash flow.
+- GET `/api/v1/households/{householdId}/former-members`: active members see
+  display names and departure dates, without login emails or financial details.
 
-All routes require authentication; the existing cookie CSRF middleware protects
-POST requests. Apply `20261006073953_AddHouseholdInvitations` explicitly before API
-deployment, then deploy the regenerated frontend client. The migration adds the
-invitation table, indexes, lifecycle checks and restrictive FKs; existing financial
-data is unchanged. Do not roll the schema back after accepting invitations unless
-loss of invitation audit history has been addressed.
+Money in cutover review, acceptance and history is a decimal string to avoid
+JavaScript precision loss. Account version tokens are opaque strings; send them
+back unchanged. Cookie authentication and existing CSRF protection apply.
+
+Apply the migration chain through
+`20261009165339_AddHouseholdDepartureAndHistory` explicitly before deployment,
+then deploy the API and regenerated frontend together. It adds departure/archive/
+cutover timestamps, immutable JSON snapshots, and filtered active membership/owner
+indexes. It retains existing records. Do not roll this migration back after use:
+the old unfiltered user index cannot represent historical memberships and dropping
+snapshots would destroy retained access. No production startup migration is added.
 
 ## Verification and boundaries
 
-The PostgreSQL suite exercises permissions, failed delivery, duplicates, rotation,
-cooldowns, wrong/unverified email, preview without mutation, concurrent acceptance,
-private-account visibility, revoked/expired links, and dependency preservation.
-Frontend regression coverage includes tab context expiry and the existing settings
-reload race. Browser verification should cover owner send/revoke, anonymous link ->
-login -> review -> confirmation -> target household, and responsive EN/DE/HU states.
+PostgreSQL regressions cover lifecycle security, concurrent joining and writes,
+sole-holder eligibility, owner succession, exact cutover balances, no copied
+movements, immutable privacy-filtered history, archive instead of deletion,
+idempotency and unchanged source cash flow. Frontend regressions cover invitation
+context and household reload behavior. Build, lint and generated-client checks
+remain part of the normal verification workflow.
 
-Member removal, leaving, ownership transfer, automatic history merging and
-multi-household switching remain deferred under ADR-023. A wider collaboration
-release still needs a supported departure/recovery policy.
+Standalone leaving/removal, live multi-household switching, history merging,
+bank-feed reconnection and snapshot export remain deferred. See
+[ADR-024](decisions/ADR-024-invitation-cutover-and-retained-history.md).

@@ -23,6 +23,9 @@ public sealed class VoidTransactionHandler(
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
+        await using var databaseTransaction =
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var household = await householdRepository.GetByIdForUserAsync(
             householdId,
             userId,
@@ -57,8 +60,7 @@ public sealed class VoidTransactionHandler(
         if (!TransactionAccess.CanModify(account, membership))
             throw new ForbiddenException();
 
-        await using var databaseTransaction =
-            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
 
         try
         {
@@ -74,3 +76,4 @@ public sealed class VoidTransactionHandler(
         }
     }
 }
+

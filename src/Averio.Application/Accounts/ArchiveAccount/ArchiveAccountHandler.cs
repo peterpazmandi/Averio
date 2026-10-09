@@ -19,6 +19,8 @@ public sealed class ArchiveAccountHandler(
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
+        await using var writeTransaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var household =
             await householdRepository.GetByIdForUserAsync(
                 householdId,
@@ -49,5 +51,6 @@ public sealed class ArchiveAccountHandler(
         account.Archive(timeProvider.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await writeTransaction.CommitAsync(cancellationToken);
     }
 }

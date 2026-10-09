@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<SaveOnboardingHouseholdValidator>();
 
         services.AddScoped<Households.GetHousehold.GetHouseholdHandler>();
+        services.AddScoped<Households.Invitations.HouseholdHistoryHandler>();
         services.AddScoped<UpdateHouseholdHandler>();
         services.AddScoped<UpdateHouseholdValidator>();
 
@@ -91,4 +92,5 @@ public static class DependencyInjection
         return services;
     }
 }
+
 

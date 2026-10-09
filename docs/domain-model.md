@@ -63,13 +63,17 @@ The current early product operates around one active household context per user.
 
 ## Household administration (ADR-023)
 
-ADR-023 now defines the accepted invitation/joining policy: owner-managed, email-bound,
-verified, expiring single-use invitations; one household per user; only new users or
-verified-empty solo households may join initially. The invitation lifecycle is implemented:
-owners can create, inspect, resend, and revoke invitations, and verified users can preview
-and explicitly accept them. Existing financial history is never silently moved or deleted.
-See [Household invitations](household-invitations.md) for the implemented workflow and
-[ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md) for the accepted policy.
+ADR-023 defines owner-managed, verified, expiring email-bound invitations.
+[ADR-024](decisions/ADR-024-invitation-cutover-and-retained-history.md) supersedes
+its empty-household joining restriction. Users retain one active membership;
+departed memberships record `LeftAtUtc` and remain attribution/FK targets.
+Acceptance copies active sole-holder personal accounts with opening balances and
+explicit destination handling, never prior transactions or transfers.
+Household-owned/joint accounts stay behind. Original ledgers remain; last-member
+households record `ArchivedAtUtc` instead of being deleted. Departing users retain
+immutable, individually authorized `HouseholdHistory` snapshots of what they could
+see at departure, separate from current reporting. Copied source accounts record
+`CutoverAtUtc` and are permanently closed. See [Household invitations](household-invitations.md).
 
 Household members can read a minimal directory (membership ID, display name, role,
 join date and self marker). Login emails and financial details are excluded.
@@ -340,4 +344,5 @@ Categories support deeper nesting. A compatible active subcategory may be a pare
 
 ## Invitation lifecycle implementation
 
-`HouseholdInvitation` belongs to the target household, grants only Member, and stores inviter, normalized email, token hash, version, timestamps, delivery status and acceptance audit. SourceHouseholdId is retained as a historical identifier after verified-empty source removal. Accepted and Revoked are terminal; Pending expiry is derived. Acceptance and the membership transition commit atomically. Existing records are never migrated or deleted to make a household eligible. See [invitation implementation](household-invitations.md) for locking, constraints and eligibility.
+`HouseholdInvitation` belongs to the target household, grants only Member, and stores inviter, normalized email, token hash, version, timestamps, delivery status and acceptance audit. SourceHouseholdId identifies the retained source household. Accepted and Revoked are terminal; Pending expiry is derived. Acceptance and the membership transition commit atomically. Source records are retained; account copies and individually authorized history snapshots commit with departure. See [invitation implementation](household-invitations.md) for locking, constraints and cutover semantics.
+

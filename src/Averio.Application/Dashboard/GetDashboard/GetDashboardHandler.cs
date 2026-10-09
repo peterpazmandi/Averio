@@ -99,7 +99,7 @@ public sealed class GetDashboardHandler(
                 names,
                 currentBalances.GetValueOrDefault(
                     account.Id,
-                    account.BalanceAnchorAmount)))
+                    account.BalanceAnchorAmount), household.Members.Select(x => x.Id).ToArray()))
             .ToArray();
 
         var currentMonth = new DateOnly(today.Year, today.Month, 1);
@@ -140,3 +140,4 @@ public sealed class GetDashboardHandler(
             latestTransactions);
     }
 }
+

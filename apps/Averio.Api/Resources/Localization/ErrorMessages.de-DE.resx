@@ -324,8 +324,11 @@
   <data name="Error_InvitationThrottled" xml:space="preserve"><value>Warte vor dem erneuten Senden mindestens eine Minute. Es gelten auch Einladungslimits.</value></data>
   <data name="Error_InvitationExists" xml:space="preserve"><value>Für diese E-Mail-Adresse besteht bereits eine Einladung. Sende sie erneut oder widerrufe sie zuerst.</value></data>
   <data name="Error_InvitationMember" xml:space="preserve"><value>Diese Person ist bereits Haushaltsmitglied.</value></data>
-  <data name="Error_HouseholdNotEmpty" xml:space="preserve"><value>Zum Beitreten benötigst du einen leeren Einpersonenhaushalt. Dein Haushalt und deine Finanzdaten bleiben erhalten.</value></data>
+  <data name="Error_DepartureChanged" xml:space="preserve"><value>Dein Haushalt, deine Konten oder Salden wurden geändert. Prüfe die Einladung erneut und bestätige den aktuellen Plan.</value></data>
+  <data name="Error_InvitationOnboarding" xml:space="preserve"><value>Du hast eine offene Haushaltseinladung. Prüfe sie oder lehne sie ab, bevor du einen Haushalt erstellst.</value></data>
+  <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>Das Startdatum darf nicht nach dem Enddatum liegen.</value></data>
 </root>
+
 
 
 

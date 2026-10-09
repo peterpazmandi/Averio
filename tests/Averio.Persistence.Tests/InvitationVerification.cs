@@ -13,7 +13,7 @@ internal sealed class CapturingInvitationSender : IInvitationEmailSender
 {
     public readonly Dictionary<string, string> Tokens = new(StringComparer.OrdinalIgnoreCase);
     public bool Succeed = true;
-    public Task<bool> SendAsync(string email, string token, CancellationToken ct) { Tokens[email] = token; return Task.FromResult(Succeed); }
+    public Task<bool> SendAsync(string email, string token, string householdName, CancellationToken ct) { Tokens[email] = token; return Task.FromResult(Succeed); }
 }
 
 internal static class InvitationVerification
@@ -85,7 +85,7 @@ internal static class InvitationVerification
             Check(accepted.State == "Accepted" && accepted.AcceptedAt is not null
                 && accepted.AcceptedByUserId == invitee.User && accepted.SourceHouseholdId == invitee.Household
                 && accepted.RevokedAt is null, "Accepted invitation lifecycle metadata persists consistently");
-            Check(!await db.Households.AnyAsync(x => x.Id == invitee.Household), "Only empty source is removed");
+            Check(await db.Households.AnyAsync(x => x.Id == invitee.Household && x.ArchivedAtUtc != null), "Empty source is archived, never deleted");
             var accounts = ActivatorUtilities.CreateInstance<GetAccountsHandler>(scope.ServiceProvider, new MutableCurrentUser { UserId = invitee.User });
             var visible = await accounts.HandleAsync(f.HouseholdId, false, Ct);
             Check(visible.Any(x => x.Id == f.HouseholdAccountId), "Joined member sees shared accounts");
@@ -108,8 +108,8 @@ internal static class InvitationVerification
         }
         await Throws<ConflictException>(() => Run(revoked.User, h => h.AcceptAsync(sender.Tokens[revoked.Email], Ct)));
 
-        // A member-only dependency must block joining, including an insert committing
-        // while acceptance is waiting for its member lock (pins use ON DELETE CASCADE).
+        // A member-only dependency must survive joining, including an insert committing
+        // alongside acceptance (pins retain their original member foreign key).
         var pinned = await NewSolo(); await Send(f.OwnerUserId, pinned.Email);
         await using (var scope = provider.CreateAsyncScope())
         {
@@ -119,7 +119,7 @@ internal static class InvitationVerification
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO category_pins (household_member_id, category_id, sort_order, created_at) VALUES ({pinned.Member}, {category}, 0, {clock.GetUtcNow()})");
             var accepting = Run(pinned.User, h => h.AcceptAsync(sender.Tokens[pinned.Email], Ct));
             await tx.CommitAsync();
-            await Throws<ConflictException>(() => accepting);
+            await accepting;
             Check(await db.Households.AnyAsync(x => x.Id == pinned.Household), "Concurrent pin must preserve source household");
         }
         var expired = await NewSolo(); await Send(f.OwnerUserId, expired.Email);
@@ -172,3 +172,4 @@ internal static class InvitationVerification
     private static async Task Throws<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new InvalidOperationException("Expected " + typeof(T).Name); }
 }
+

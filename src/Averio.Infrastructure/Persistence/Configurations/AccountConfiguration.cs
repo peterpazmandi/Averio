@@ -44,6 +44,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").IsConcurrencyToken();
         builder.Property(x => x.ArchivedAt).HasColumnName("archived_at");
+        builder.Property(x => x.CutoverAtUtc).HasColumnName("cutover_at_utc");
 
         builder.HasOne<Household>().WithMany()
             .HasForeignKey(x => x.HouseholdId)
@@ -58,3 +59,4 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.HasIndex(x => new { x.HouseholdId, x.Visibility });
     }
 }
+

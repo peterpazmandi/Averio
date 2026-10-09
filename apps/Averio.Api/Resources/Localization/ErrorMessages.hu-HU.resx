@@ -324,8 +324,11 @@
   <data name="Error_InvitationThrottled" xml:space="preserve"><value>Várj legalább egy percet az újraküldés előtt. A meghívások száma is korlátozott.</value></data>
   <data name="Error_InvitationExists" xml:space="preserve"><value>Ehhez az e-mail-címhez már van meghívás. Küldd újra vagy vond vissza.</value></data>
   <data name="Error_InvitationMember" xml:space="preserve"><value>Ez a személy már a háztartás tagja.</value></data>
-  <data name="Error_HouseholdNotEmpty" xml:space="preserve"><value>A csatlakozáshoz üres, egyszemélyes háztartás szükséges. A jelenlegi háztartásod és pénzügyi adataid megmaradtak.</value></data>
+  <data name="Error_DepartureChanged" xml:space="preserve"><value>Megváltozott a háztartásod, valamelyik számlád vagy az egyenleged. Nézd meg újra a meghívást, és erősítsd meg az aktuális tervet.</value></data>
+  <data name="Error_InvitationOnboarding" xml:space="preserve"><value>Függőben lévő háztartási meghívásod van. Tekintsd meg vagy utasítsd el, mielőtt háztartást hozol létre.</value></data>
+  <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>A kezdő dátum nem lehet későbbi a záró dátumnál.</value></data>
 </root>
+
 
 
 

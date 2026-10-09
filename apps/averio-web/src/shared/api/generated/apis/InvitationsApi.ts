@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type AcceptInvitationRequest,
+    AcceptInvitationRequestFromJSON,
+    AcceptInvitationRequestToJSON,
+} from '../models/AcceptInvitationRequest';
+import {
     type AcceptInvitationResponse,
     AcceptInvitationResponseFromJSON,
     AcceptInvitationResponseToJSON,
@@ -23,6 +28,21 @@ import {
     CreateInvitationRequestFromJSON,
     CreateInvitationRequestToJSON,
 } from '../models/CreateInvitationRequest';
+import {
+    type FormerMember,
+    FormerMemberFromJSON,
+    FormerMemberToJSON,
+} from '../models/FormerMember';
+import {
+    type HistorySnapshot,
+    HistorySnapshotFromJSON,
+    HistorySnapshotToJSON,
+} from '../models/HistorySnapshot';
+import {
+    type HistorySummary,
+    HistorySummaryFromJSON,
+    HistorySummaryToJSON,
+} from '../models/HistorySummary';
 import {
     type InvitationPreviewResponse,
     InvitationPreviewResponseFromJSON,
@@ -43,6 +63,33 @@ import {
     InvitationVersionRequestFromJSON,
     InvitationVersionRequestToJSON,
 } from '../models/InvitationVersionRequest';
+import {
+    type PendingInvitation,
+    PendingInvitationFromJSON,
+    PendingInvitationToJSON,
+} from '../models/PendingInvitation';
+
+export interface ApiV1HouseholdHistoryIdGetRequest {
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    from?: string;
+    /**
+     * 
+     */
+    to?: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdFormerMembersGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
 
 export interface ApiV1HouseholdsHouseholdIdInvitationsGetRequest {
     /**
@@ -96,6 +143,13 @@ export interface ApiV1InvitationsAcceptancesPostRequest {
     /**
      * 
      */
+    acceptInvitationRequest: AcceptInvitationRequest;
+}
+
+export interface ApiV1InvitationsDeclinationsPostRequest {
+    /**
+     * 
+     */
     invitationTokenRequest: InvitationTokenRequest;
 }
 
@@ -110,6 +164,135 @@ export interface ApiV1InvitationsPreviewPostRequest {
  * 
  */
 export class InvitationsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdHistoryGet without sending the request
+     */
+    async apiV1HouseholdHistoryGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/household-history`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdHistoryGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<HistorySummary>>> {
+        const requestOptions = await this.apiV1HouseholdHistoryGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(HistorySummaryFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdHistoryGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<HistorySummary>> {
+        const response = await this.apiV1HouseholdHistoryGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdHistoryIdGet without sending the request
+     */
+    async apiV1HouseholdHistoryIdGetRequestOpts(requestParameters: ApiV1HouseholdHistoryIdGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling apiV1HouseholdHistoryIdGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = requestParameters['from'];
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = requestParameters['to'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/household-history/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdHistoryIdGetRaw(requestParameters: ApiV1HouseholdHistoryIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HistorySnapshot>> {
+        const requestOptions = await this.apiV1HouseholdHistoryIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => HistorySnapshotFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdHistoryIdGet(requestParameters: ApiV1HouseholdHistoryIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<HistorySnapshot> {
+        const response = await this.apiV1HouseholdHistoryIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdFormerMembersGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdFormerMembersGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdFormerMembersGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdFormerMembersGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/former-members`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdFormerMembersGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdFormerMembersGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<FormerMember>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdFormerMembersGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(FormerMemberFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdFormerMembersGet(requestParameters: ApiV1HouseholdsHouseholdIdFormerMembersGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<FormerMember>> {
+        const response = await this.apiV1HouseholdsHouseholdIdFormerMembersGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdInvitationsGet without sending the request
@@ -330,10 +513,10 @@ export class InvitationsApi extends runtime.BaseAPI {
      * Creates request options for apiV1InvitationsAcceptancesPost without sending the request
      */
     async apiV1InvitationsAcceptancesPostRequestOpts(requestParameters: ApiV1InvitationsAcceptancesPostRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['invitationTokenRequest'] == null) {
+        if (requestParameters['acceptInvitationRequest'] == null) {
             throw new runtime.RequiredError(
-                'invitationTokenRequest',
-                'Required parameter "invitationTokenRequest" was null or undefined when calling apiV1InvitationsAcceptancesPost().'
+                'acceptInvitationRequest',
+                'Required parameter "acceptInvitationRequest" was null or undefined when calling apiV1InvitationsAcceptancesPost().'
             );
         }
 
@@ -351,7 +534,7 @@ export class InvitationsApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: InvitationTokenRequestToJSON(requestParameters['invitationTokenRequest']),
+            body: AcceptInvitationRequestToJSON(requestParameters['acceptInvitationRequest']),
         };
     }
 
@@ -368,6 +551,85 @@ export class InvitationsApi extends runtime.BaseAPI {
      */
     async apiV1InvitationsAcceptancesPost(requestParameters: ApiV1InvitationsAcceptancesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AcceptInvitationResponse> {
         const response = await this.apiV1InvitationsAcceptancesPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1InvitationsDeclinationsPost without sending the request
+     */
+    async apiV1InvitationsDeclinationsPostRequestOpts(requestParameters: ApiV1InvitationsDeclinationsPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['invitationTokenRequest'] == null) {
+            throw new runtime.RequiredError(
+                'invitationTokenRequest',
+                'Required parameter "invitationTokenRequest" was null or undefined when calling apiV1InvitationsDeclinationsPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/invitations/declinations`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: InvitationTokenRequestToJSON(requestParameters['invitationTokenRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1InvitationsDeclinationsPostRaw(requestParameters: ApiV1InvitationsDeclinationsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1InvitationsDeclinationsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1InvitationsDeclinationsPost(requestParameters: ApiV1InvitationsDeclinationsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1InvitationsDeclinationsPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1InvitationsPendingGet without sending the request
+     */
+    async apiV1InvitationsPendingGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/invitations/pending`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1InvitationsPendingGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PendingInvitation>>> {
+        const requestOptions = await this.apiV1InvitationsPendingGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PendingInvitationFromJSON));
+    }
+
+    /**
+     */
+    async apiV1InvitationsPendingGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PendingInvitation>> {
+        const response = await this.apiV1InvitationsPendingGetRaw(initOverrides);
         return await response.value();
     }
 

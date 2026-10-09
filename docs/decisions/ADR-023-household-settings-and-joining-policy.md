@@ -1,6 +1,6 @@
 # ADR-023 — Household administration and safe invitation joining
 
-**Status:** Accepted  
+**Status:** Superseded in part by [ADR-024](ADR-024-invitation-cutover-and-retained-history.md); household settings and invitation security remain accepted  
 **Date:** 2026-10-05
 
 ## Context
@@ -122,3 +122,4 @@ See [Household invitations](../household-invitations.md) for endpoints, token ha
 delivery failure semantics and the PostgreSQL parent/FK locking protocol.
 Email delivery is synchronous after invitation persistence; Unknown is recoverable
 by an explicit resend. This does not introduce a worker or durable outbox.
+

@@ -29,7 +29,7 @@ export function AccountCard({
     const [confirm, setConfirm] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const archived = account.status === 'Archived';
-    const canModify = !!currentMemberId && (
+    const canModify = !account.cutoverAtUtc && !!currentMemberId && (
         account.scope === 'Household'
         || account.owners.some(owner =>
             owner.householdMemberId === currentMemberId)
@@ -180,3 +180,4 @@ export function AccountCard({
         </article>
     );
 }
+

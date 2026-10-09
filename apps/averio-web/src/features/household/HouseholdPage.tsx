@@ -7,6 +7,7 @@ import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { householdQueries } from './householdQueries';
 import { HouseholdEditor } from './HouseholdEditor';
+import { PreviousHouseholds } from './PreviousHouseholds';
 import { HouseholdInvitations } from './HouseholdInvitations';
 
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
@@ -85,6 +86,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                         </li>)}
                     </ul>
                 </AverioCard>
+                <PreviousHouseholds userId={userId} householdId={householdId} />
                 {owner && <HouseholdInvitations userId={userId} householdId={householdId} />}
                 <AverioCard id="household-privacy" className="scroll-mt-6 space-y-3 p-5 sm:p-6">
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
@@ -95,3 +97,4 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
         </div>
     </div>;
 }
+

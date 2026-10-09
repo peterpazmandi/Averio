@@ -46,9 +46,11 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
         if (input is not null) await validator.ValidateAndThrowAsync(input, ct);
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         HouseholdInvitation invitation;
+        string householdName;
         await using (var tx = await unitOfWork.BeginTransactionAsync(ct))
         {
             var household = await OwnerAsync(householdId, ct);
+            householdName = household.Name!;
             var now = clock.GetUtcNow();
             var rows = await invitations.ListAsync(householdId, ct);
             if (invitationId is { } id)
@@ -81,7 +83,7 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
         }
         // No raw token is persisted. A restart leaves Unknown, and resend rotates the link.
         var version = invitation.Version;
-        var sent = await emailSender.SendAsync(invitation.Email, token, ct);
+        var sent = await emailSender.SendAsync(invitation.Email, token, householdName, ct);
         await invitations.RecordDeliveryAsync(invitation.Id, version, sent, ct);
     }
     public async Task RevokeAsync(Guid householdId, Guid id, Guid expectedVersion, CancellationToken ct)
@@ -94,45 +96,82 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
         await unitOfWork.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
-    public async Task<InvitationPreview> PreviewAsync(string token, CancellationToken ct)
+    public async Task<IReadOnlyList<PendingInvitation>> PendingAsync(CancellationToken ct)
     {
-        var (invitation, user) = await ValidateTokenAsync(token, ct);
-        var target = await households.GetByIdForUserAsync(invitation.HouseholdId, invitation.InviterUserId, ct) ?? throw Invalid();
-        if (!target.IsFinancialSetupCompleted || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
-        var source = await households.GetByUserIdAsync(user.Id, ct) ?? throw Invalid();
-        var joined = invitation.State == "Accepted" && source.Id == target.Id;
-        return new(target.Name!, joined, joined || (source.Id != target.Id && await invitations.IsEmptySoloAsync(source, user.Id, ct)));
+        var user = await identity.FindByIdAsync(UserId, ct) ?? throw new AuthenticationFailedException();
+        if (!user.EmailConfirmed) throw new EmailNotVerifiedException();
+        return await invitations.PendingAsync(Normalize(user.Email), ct);
     }
-    public async Task<Guid> AcceptAsync(string token, CancellationToken ct)
+    public async Task DeclineAsync(string? token, Guid? id, CancellationToken ct)
     {
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
-        // Serialize acceptances for this identity, then households in deterministic order.
+        var (initial, _) = await ValidateTokenAsync(token, id, ct);
+        _ = await invitations.LockHouseholdAsync(initial.HouseholdId, ct) ?? throw Invalid();
+        var (invitation, _) = await ValidateTokenAsync(token, id, ct);
+        if (invitation.State != "Pending") throw Invalid();
+        invitation.Revoke(clock.GetUtcNow());
+        await unitOfWork.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+    }
+    public Task<InvitationPreview> PreviewAsync(string token, CancellationToken ct) => PreviewAsync(token, null, ct);
+    public async Task<InvitationPreview> PreviewAsync(string? token, Guid? invitationId, CancellationToken ct)
+    {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
+        var (invitation, user) = await ValidateTokenAsync(token, invitationId, ct);
+        var sourceId = (await households.GetMembershipByUserIdAsync(user.Id, ct))?.HouseholdId ?? throw Invalid();
+        var locked = new Dictionary<Guid, Household>();
+        foreach (var id in new[] { sourceId, invitation.HouseholdId }.Distinct().Order())
+            locked[id] = await invitations.LockHouseholdAsync(id, ct) ?? throw Invalid();
+        (invitation, user) = await ValidateTokenAsync(token, invitationId, ct);
+        var target = locked[invitation.HouseholdId];
+        if (!target.IsFinancialSetupCompleted || target.ArchivedAtUtc is not null
+            || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
+        var joined = invitation.State == "Accepted" && sourceId == target.Id;
+        var departure = joined ? null : await invitations.DepartureAsync(locked[sourceId], user.Id, clock.GetUtcNow(), ct);
+        return new(target.Name!, joined, joined || sourceId != target.Id, departure);
+    }
+    // Convenience for application callers with no accounts; still reviews the source version.
+    public async Task<Guid> AcceptAsync(string token, CancellationToken ct)
+    {
+        var preview = await PreviewAsync(token, ct);
+        return await AcceptAsync(new InvitationAcceptance(token, null, preview.Departure?.Version,
+            true, null, []), ct);
+    }
+    public async Task<Guid> AcceptAsync(InvitationAcceptance input, CancellationToken ct)
+    {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         await invitations.LockUserAsync(UserId, ct);
-        var (initial, _) = await ValidateTokenAsync(token, ct);
+        var (initial, _) = await ValidateTokenAsync(input.Token, input.InvitationId, ct);
         var sourceId = (await households.GetMembershipByUserIdAsync(UserId, ct))?.HouseholdId ?? throw Invalid();
         var locked = new Dictionary<Guid, Household>();
         foreach (var id in new[] { sourceId, initial.HouseholdId }.Distinct().Order())
             locked[id] = await invitations.LockHouseholdAsync(id, ct) ?? throw Invalid();
-        var (invitation, user) = await ValidateTokenAsync(token, ct);
+        var (invitation, user) = await ValidateTokenAsync(input.Token, input.InvitationId, ct);
         var source = locked[sourceId];
         var target = locked[invitation.HouseholdId];
-        if (!target.IsFinancialSetupCompleted || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
+        if (!target.IsFinancialSetupCompleted || target.ArchivedAtUtc is not null
+            || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
         if (invitation.State == "Accepted" && source.Id == target.Id) return target.Id;
-        if (source.Id == target.Id || !await invitations.IsEmptySoloAsync(source, user.Id, ct))
-            throw new ConflictException("household_not_empty", "Error_HouseholdNotEmpty");
-        await invitations.JoinAsync(source, target, user.Id, clock.GetUtcNow(), ct);
+        if (!input.Confirmed || source.Id == target.Id || input.ExpectedSourceVersion != source.Version)
+            throw new ConflictException("departure_changed", "Error_DepartureChanged");
+        await invitations.JoinAsync(source, target, user.Id, input, clock.GetUtcNow(), ct);
         invitation.Accept(user.Id, source.Id, clock.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return target.Id;
     }
-    private async Task<(HouseholdInvitation, IdentityUserInfo)> ValidateTokenAsync(string token, CancellationToken ct)
+    private async Task<(HouseholdInvitation, IdentityUserInfo)> ValidateTokenAsync(string? token, Guid? id, CancellationToken ct)
     {
         var user = await identity.FindByIdAsync(UserId, ct) ?? throw new AuthenticationFailedException();
         if (!user.EmailConfirmed) throw new EmailNotVerifiedException();
-        if (token is null || token.Length != 64 || !token.All(Uri.IsHexDigit)) throw Invalid();
-        var invitation = await invitations.FindByHashAsync(Hash(token), ct) ?? throw Invalid();
-        if (invitation.NormalizedEmail != Normalize(user.Email)) throw Invalid();
+        HouseholdInvitation? invitation;
+        if (!string.IsNullOrEmpty(token))
+        {
+            if (token.Length != 64 || !token.All(Uri.IsHexDigit)) throw Invalid();
+            invitation = await invitations.FindByHashAsync(Hash(token), ct);
+        }
+        else invitation = id is null ? null : await invitations.FindAsync(id.Value, ct);
+        if (invitation is null || invitation.NormalizedEmail != Normalize(user.Email)) throw Invalid();
         if (!invitation.IsPending(clock.GetUtcNow()) && !(invitation.State == "Accepted" && invitation.AcceptedByUserId == user.Id)) throw Invalid();
         return (invitation, user);
     }

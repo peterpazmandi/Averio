@@ -25,7 +25,7 @@ public sealed record CreateAccountResponse(Guid Id);
 
 public sealed record AccountOwnerResponse(
     Guid HouseholdMemberId,
-    string? DisplayName);
+    string? DisplayName, bool IsFormerMember = false);
 
 public sealed record AccountOwnerOptionsResponse(
     Guid CurrentMemberId,
@@ -45,4 +45,5 @@ public sealed record AccountResponse(
     DateOnly BalanceAnchorDate,
     string CurrentBalanceAmount,
     string Status,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt, DateTimeOffset? CutoverAtUtc = null);
+

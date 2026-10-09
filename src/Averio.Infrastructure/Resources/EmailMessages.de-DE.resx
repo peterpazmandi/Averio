@@ -64,6 +64,11 @@
     <value>Das Passwort erfüllt die erforderlichen Sicherheitsregeln nicht.</value>
   </data>
   <data name="Invitation_Subject" xml:space="preserve"><value>Einladung zu einem Averio-Haushalt</value></data>
-  <data name="Invitation_Body" xml:space="preserve"><value>Melde dich mit dieser E-Mail-Adresse an oder registriere dich, um die Einladung zu prüfen und anzunehmen. Der Link gilt sieben Tage. Das Öffnen führt nicht zum Beitritt.</value></data>
+  <data name="Invitation_Body" xml:space="preserve"><value>Jemand hat in seinem Averio-Haushalt Platz für dich gemacht. Sieh dir die Einladung an, um gemeinsame Finanzen zusammen zu verwalten. Melde dich an oder registriere dich mit der E-Mail-Adresse, an die diese Nachricht gesendet wurde.</value></data>
   <data name="Invitation_Button" xml:space="preserve"><value>Einladung ansehen</value></data>
+<data name="Invitation_Title" xml:space="preserve"><value>Du bist zu {0} eingeladen</value></data>
+<data name="Invitation_Privacy" xml:space="preserve"><value>Gemeinsame Finanzen, persönliche Privatsphäre. Deine bisherigen Buchungen und Umbuchungen bleiben im alten Haushalt. Du entscheidest, wie geeignete persönliche Konten im neuen Haushalt behandelt werden.</value></data>
+<data name="Invitation_Expiry" xml:space="preserve"><value>Die Einladung ist sieben Tage gültig. Das Öffnen des Links führt niemals automatisch zum Beitritt.</value></data>
+<data name="Invitation_Fallback" xml:space="preserve"><value>Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:</value></data>
+<data name="Invitation_Footer" xml:space="preserve"><value>Du hast keine Einladung erwartet? Du kannst diese E-Mail ignorieren. Deine Finanzen bleiben unverändert.</value></data>
 </root>

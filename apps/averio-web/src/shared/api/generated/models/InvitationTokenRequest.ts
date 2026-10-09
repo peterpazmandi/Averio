@@ -22,7 +22,11 @@ export interface InvitationTokenRequest {
     /**
      * 
      */
-    token: string;
+    token: string | null;
+    /**
+     * 
+     */
+    invitationId?: string | null;
 }
 
 /**
@@ -44,6 +48,7 @@ export function InvitationTokenRequestFromJSONTyped(json: any, ignoreDiscriminat
     return {
         
         'token': json['token'],
+        'invitationId': json['invitationId'] === undefined ? undefined : json['invitationId'] === null ? null : json['invitationId'],
     };
 }
 
@@ -59,6 +64,7 @@ export function InvitationTokenRequestToJSONTyped(value?: InvitationTokenRequest
     return {
         
         'token': value['token'],
+        'invitationId': value['invitationId'],
     };
 }
 

@@ -52,6 +52,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("currency_code");
 
+                    b.Property<DateTimeOffset?>("CutoverAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cutover_at_utc");
+
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
@@ -114,7 +118,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_accounts_scope", "scope IN ('Household', 'Personal')");
 
-                            t.HasCheckConstraint("ck_accounts_scope_visibility", "(scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)\r\nOR\r\n(scope = 'Personal' AND (visibility <> 'Private' OR NOT include_in_household_reports))");
+                            t.HasCheckConstraint("ck_accounts_scope_visibility", "(scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)\nOR\n(scope = 'Personal' AND (visibility <> 'Private' OR NOT include_in_household_reports))");
 
                             t.HasCheckConstraint("ck_accounts_status", "status IN ('Active', 'Archived')");
 
@@ -402,6 +406,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("ArchivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at_utc");
+
                     b.Property<string>("CountryCode")
                         .HasColumnType("char(2)")
                         .HasColumnName("country_code");
@@ -438,12 +446,55 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.ToTable("households", null, t =>
                         {
-                            t.HasCheckConstraint("ck_households_completed_onboarding_profile", "onboarding_completed_at_utc IS NULL\r\nOR (\r\n    name IS NOT NULL\r\n    AND length(btrim(name)) >= 2\r\n    AND country_code IS NOT NULL\r\n    AND preferred_currency IS NOT NULL\r\n)");
+                            t.HasCheckConstraint("ck_households_completed_onboarding_profile", "onboarding_completed_at_utc IS NULL\nOR (\n    name IS NOT NULL\n    AND length(btrim(name)) >= 2\n    AND country_code IS NOT NULL\n    AND preferred_currency IS NOT NULL\n)");
 
-                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\r\nOR country_code ~ '^[A-Z]{2}$'");
+                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\nOR country_code ~ '^[A-Z]{2}$'");
 
-                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\r\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
+                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
                         });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Households.HouseholdHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<string>("HouseholdName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("household_name");
+
+                    b.Property<DateTimeOffset>("LeftAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("left_at_utc");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("snapshot_json");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<bool>("WasLastMember")
+                        .HasColumnType("boolean")
+                        .HasColumnName("was_last_member");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.HasIndex("UserId", "LeftAtUtc");
+
+                    b.ToTable("household_history", (string)null);
                 });
 
             modelBuilder.Entity("Averio.Domain.Households.HouseholdInvitation", b =>
@@ -532,7 +583,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_invitation_expiry", "\"ExpiresAt\" > \"CreatedAt\" AND \"SendCount\" > 0");
 
-                            t.HasCheckConstraint("ck_invitation_lifecycle_metadata", "(\"State\" = 'Pending'\r\n    AND \"AcceptedAt\" IS NULL\r\n    AND \"AcceptedByUserId\" IS NULL\r\n    AND \"SourceHouseholdId\" IS NULL\r\n    AND \"RevokedAt\" IS NULL)\r\n    OR\r\n(\"State\" = 'Accepted'\r\n    AND \"AcceptedAt\" IS NOT NULL\r\n    AND \"AcceptedByUserId\" IS NOT NULL\r\n    AND \"SourceHouseholdId\" IS NOT NULL\r\n    AND \"RevokedAt\" IS NULL)\r\n    OR\r\n(\"State\" = 'Revoked'\r\n    AND \"AcceptedAt\" IS NULL\r\n    AND \"AcceptedByUserId\" IS NULL\r\n    AND \"SourceHouseholdId\" IS NULL\r\n    AND \"RevokedAt\" IS NOT NULL)");
+                            t.HasCheckConstraint("ck_invitation_lifecycle_metadata", "(\"State\" = 'Pending'\n    AND \"AcceptedAt\" IS NULL\n    AND \"AcceptedByUserId\" IS NULL\n    AND \"SourceHouseholdId\" IS NULL\n    AND \"RevokedAt\" IS NULL)\n    OR\n(\"State\" = 'Accepted'\n    AND \"AcceptedAt\" IS NOT NULL\n    AND \"AcceptedByUserId\" IS NOT NULL\n    AND \"SourceHouseholdId\" IS NOT NULL\n    AND \"RevokedAt\" IS NULL)\n    OR\n(\"State\" = 'Revoked'\n    AND \"AcceptedAt\" IS NULL\n    AND \"AcceptedByUserId\" IS NULL\n    AND \"SourceHouseholdId\" IS NULL\n    AND \"RevokedAt\" IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_invitation_state", "\"State\" IN ('Pending','Accepted','Revoked')");
                         });
@@ -553,6 +604,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at_utc");
 
+                    b.Property<DateTimeOffset?>("LeftAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("left_at_utc");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -571,13 +626,14 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId")
                         .IsUnique()
-                        .HasDatabaseName("ux_household_members_user_id");
+                        .HasDatabaseName("ux_household_members_user_id")
+                        .HasFilter("left_at_utc IS NULL");
 
                     b.HasIndex(new[] { "HouseholdId" }, "ix_household_members_household_id");
 
                     b.HasIndex(new[] { "HouseholdId" }, "ux_household_members_household_owner")
                         .IsUnique()
-                        .HasFilter("role = 'owner'");
+                        .HasFilter("role = 'owner' AND left_at_utc IS NULL");
 
                     b.ToTable("household_members", null, t =>
                         {
@@ -1315,6 +1371,21 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Averio.Domain.Households.HouseholdHistory", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Averio.Domain.Households.HouseholdInvitation", b =>
                 {
                     b.HasOne("Averio.Infrastructure.Identity.ApplicationUser", null)
@@ -1345,8 +1416,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_household_members_households_household_id");
 
                     b.HasOne("Averio.Infrastructure.Identity.ApplicationUser", null)
-                        .WithOne("HouseholdMembership")
-                        .HasForeignKey("Averio.Domain.Households.HouseholdMember", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_household_members_users_user_id");
@@ -1505,11 +1576,6 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("Labels");
-                });
-
-            modelBuilder.Entity("Averio.Infrastructure.Identity.ApplicationUser", b =>
-                {
-                    b.Navigation("HouseholdMembership");
                 });
 #pragma warning restore 612, 618
         }

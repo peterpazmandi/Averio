@@ -19,6 +19,21 @@ public sealed class Household
     }
 
     public Guid Id { get; private set; }
+    public DateTimeOffset? ArchivedAtUtc { get; private set; }
+    public void Depart(Guid userId, Guid? successorMemberId, DateTimeOffset now)
+    {
+        var leaving = _members.Single(x => x.UserId == userId && x.LeftAtUtc is null);
+        var remaining = _members.Where(x => x.LeftAtUtc is null && x.Id != leaving.Id).ToArray();
+        if (leaving.Role == HouseholdRole.Owner && remaining.Length > 0)
+        {
+            var successor = remaining.SingleOrDefault(x => x.Id == successorMemberId)
+                ?? throw new InvalidOperationException("Choose a remaining member as owner.");
+            _ = successor; // Promotion follows persistence of the departing owner, preserving the unique owner index.
+        }
+        leaving.Leave(now);
+        if (remaining.Length == 0) ArchivedAtUtc = now;
+        Version = Guid.NewGuid();
+    }
 
     public Guid Version { get; private set; } = Guid.NewGuid();
 
@@ -37,10 +52,11 @@ public sealed class Household
     public IReadOnlyCollection<HouseholdMember> Members => _members;
     public void AddMember(Guid userId, DateTimeOffset now)
     {
-        if (_members.Any(x => x.UserId == userId)) throw new InvalidOperationException("Already a member.");
+        if (_members.Any(x => x.UserId == userId && x.LeftAtUtc is null)) throw new InvalidOperationException("Already a member.");
         _members.Add(HouseholdMember.CreateMember(Id, userId, now));
         Version = Guid.NewGuid();
     }
+    public void PromoteSuccessor(Guid memberId) => _members.Single(x => x.Id == memberId && x.LeftAtUtc is null).BecomeOwner();
     public DateTimeOffset? FinancialSetupCompletedAtUtc
     {
         get;
@@ -134,3 +150,4 @@ public sealed class Household
         Version = Guid.NewGuid();
     }
 }
+

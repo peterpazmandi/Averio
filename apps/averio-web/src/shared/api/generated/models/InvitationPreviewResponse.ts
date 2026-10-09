@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DeparturePreviewResponse } from './DeparturePreviewResponse';
+import {
+    DeparturePreviewResponseFromJSON,
+    DeparturePreviewResponseFromJSONTyped,
+    DeparturePreviewResponseToJSON,
+    DeparturePreviewResponseToJSONTyped,
+} from './DeparturePreviewResponse';
+
 /**
  * 
  * @export
@@ -31,6 +39,10 @@ export interface InvitationPreviewResponse {
      * 
      */
     canJoin: boolean;
+    /**
+     * 
+     */
+    departure: DeparturePreviewResponse | null;
 }
 
 /**
@@ -40,6 +52,7 @@ export function instanceOfInvitationPreviewResponse(value: object): value is Inv
     if (!('householdName' in value) || value['householdName'] === undefined) return false;
     if (!('alreadyJoined' in value) || value['alreadyJoined'] === undefined) return false;
     if (!('canJoin' in value) || value['canJoin'] === undefined) return false;
+    if (!('departure' in value) || value['departure'] === undefined) return false;
     return true;
 }
 
@@ -56,6 +69,7 @@ export function InvitationPreviewResponseFromJSONTyped(json: any, ignoreDiscrimi
         'householdName': json['householdName'],
         'alreadyJoined': json['alreadyJoined'],
         'canJoin': json['canJoin'],
+        'departure': DeparturePreviewResponseFromJSON(json['departure']),
     };
 }
 
@@ -73,6 +87,7 @@ export function InvitationPreviewResponseToJSONTyped(value?: InvitationPreviewRe
         'householdName': value['householdName'],
         'alreadyJoined': value['alreadyJoined'],
         'canJoin': value['canJoin'],
+        'departure': DeparturePreviewResponseToJSON(value['departure']),
     };
 }
 

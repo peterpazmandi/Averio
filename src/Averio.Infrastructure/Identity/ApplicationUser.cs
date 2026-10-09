@@ -15,9 +15,5 @@ public sealed class ApplicationUser
 
     public DateTimeOffset? LastLoginAtUtc { get; set; }
 
-    public HouseholdMember? HouseholdMembership
-    {
-        get;
-        private set;
-    }
+
 }

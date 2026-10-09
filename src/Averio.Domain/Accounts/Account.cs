@@ -23,6 +23,13 @@ public sealed class Account
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
+    public DateTimeOffset? CutoverAtUtc { get; private set; }
+    public void CloseForDeparture(DateTimeOffset now)
+    {
+        Archive(now);
+        CutoverAtUtc = now;
+        UpdatedAt = NextVersion(now);
+    }
 
     public static Account Create(
         Guid householdId,
@@ -135,6 +142,7 @@ public sealed class Account
 
     public void Restore(DateTimeOffset now)
     {
+        if (CutoverAtUtc is not null) throw new InvalidOperationException("Historical accounts cannot be restored.");
         if (Status == AccountStatus.Active) return;
         Status = AccountStatus.Active;
         ArchivedAt = null;
@@ -146,3 +154,4 @@ public sealed class Account
         Math.Max(now.UtcTicks - now.UtcTicks % 10, UpdatedAt.UtcTicks - UpdatedAt.UtcTicks % 10 + 10),
         TimeSpan.Zero);
 }
+
