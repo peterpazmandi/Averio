@@ -56,11 +56,12 @@ export function AuthShell({
                     p-12
                     text-white
 
-                    lg:sticky
-                    lg:top-0
+                    lg:fixed
+                    lg:inset-y-0
+                    lg:left-0
+                    lg:w-[45%]
                     lg:flex
                     lg:h-dvh
-                    lg:self-start
                     lg:flex-col
                     lg:justify-between
                     lg:gap-8
@@ -338,6 +339,7 @@ export function AuthShell({
                     sm:px-6
                     sm:py-6
 
+                    lg:col-start-2
                     lg:px-12
 
                     xl:px-16
