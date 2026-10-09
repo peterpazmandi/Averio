@@ -88,12 +88,19 @@ creation or first-account setup. An optional display name is collected separatel
   name, privacy explanation and a clear review action. EN/DE/HU copy uses the
   requesting owner's current API culture. The logo is served from the deployed
   frontend at `/branding/averio-email-logo.png`; clients that block images still
-  see the text wordmark and action. Presentation tables and inline background colors
-  provide the base layout; Outlook's Word renderer receives a fixed-width fallback
+  see the text wordmark and action. Each content block has a table row, with spacing
+  on table cells. The standard review button uses a 48px table cell and full-height
+  link rather than anchor padding. Foreground/background dark-mode overrides are
+  paired for both Outlook marker variants; styles are scoped to the email.
+  The displayed fallback URL contains only optional `<wbr>` breaks, preserving the
+  credential and copyable text without invisible Unicode separators.
+  Presentation tables and inline background colors provide the base layout; Outlook's Word renderer receives a fixed-width fallback
   and a VML review button. Both buttons and the plain fallback link carry the same
   escaped invitation URL. Dark-mode media and Outlook selectors adapt the navy
   surface, text and emerald accents. Actual inbox rendering still requires checking
-  in Outlook and Gmail because clients may override colors.
+  in Outlook and Gmail because clients may override colors. Deploy the API and
+  send/resend a new invitation for manual verification: received emails retain
+  their original HTML and cannot pick up a template change.
 - Configure `Email:Provider=Brevo`, `Email:BrevoApiKey`, `Email:SenderEmail`,
   `Email:SenderName`, and the deployed HTTPS `Email:FrontendBaseUrl`. Secrets belong
   in environment configuration. The development logger sender is intentionally
@@ -136,7 +143,23 @@ idempotency and unchanged source cash flow. Frontend regressions cover invitatio
 context, immediate active-household refresh with a mounted auth observer, cancelled
 source requests, discarded finance caches, conditional history sections and household
 reload behavior. Build, lint and generated-client checks
-remain part of the normal verification workflow.
+remain part of the normal verification workflow. Headless Chrome also measures
+actual rendered EN/DE/HU email fixtures at desktop and 320px widths: light mode,
+both Outlook dark-mode marker variants, removed head styles, removed anchor box
+styles and blocked images. Checks cover contrast, ordering, containment, link
+identity, copyable URL text and button height. Fixtures use synthetic credentials
+and make no email deliveries. This is a browser layout regression, not an Outlook
+renderer or a substitute for inbox testing.
+
+To run the email checks after a Release build from the repository root:
+
+```sh
+dotnet run --project tests/Averio.Persistence.Tests --configuration Release --no-build -- --invitation-previews /tmp/averio-email-previews
+node tests/email/invitation-layout.mjs /tmp/averio-email-previews
+```
+
+Chrome must be installed (`CHROME_BINARY` can specify its executable). Fixture
+output is disposable and contains no real recipients or invitation credentials.
 
 Standalone leaving/removal, live multi-household switching, history merging,
 bank-feed reconnection and snapshot export remain deferred. See

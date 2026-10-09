@@ -90,6 +90,15 @@ jobs:
           --configuration Release
           --no-build
 
+      - name: Verify invitation email browser layout
+        run: |
+          set -euo pipefail
+          dotnet run \
+            --project tests/Averio.Persistence.Tests/Averio.Persistence.Tests.csproj \
+            --configuration Release --no-build \
+            -- --invitation-previews "$RUNNER_TEMP/averio-email-previews"
+          node tests/email/invitation-layout.mjs "$RUNNER_TEMP/averio-email-previews"
+
       - name: Install frontend dependencies
         working-directory: apps/averio-web
         run: npm ci

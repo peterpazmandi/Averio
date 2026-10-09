@@ -165,6 +165,14 @@ internal static class DepartureVerification
             && escapedEmail.Contains("prefers-color-scheme:dark") && escapedEmail.Contains("[data-ogsc]")
             && escapedEmail.Contains("bgcolor=\"#FFFFFF\"") && !escapedEmail.Contains("Privacy <safe>"),
             "Email supplies Outlook button fallback, adaptive colors and escaped localized copy");
+        var visibleMatch = System.Text.RegularExpressions.Regex.Match(escapedEmail,
+            """<a class="av-email-fallback av-email-link"[^>]*>(.*?)</a>""",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        Check(visibleMatch.Success
+            && System.Net.WebUtility.HtmlDecode(visibleMatch.Groups[1].Value.Replace("<wbr>", ""))
+                == "https://averio.test/invitation#A&\"B"
+            && !escapedEmail.Contains('\u200B'),
+            "Displayed fallback URL wraps without changing copied credentials or injecting invisible characters");
         Console.WriteLine("PASS departure account cutover, exact balances, ownership transfer, immutable privacy-filtered history, no copied movements and unchanged source cash flow");
     }
     private static async Task VerifySoloAndRaceAsync(IServiceProvider provider, Fixture target, MutableTimeProvider clock)

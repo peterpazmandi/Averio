@@ -26,6 +26,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
+// Render synthetic email fixtures without connecting to a database or sending mail.
+if (args.Length == 2 && args[0] == "--invitation-previews")
+{
+    InvitationEmailPreview.Write(args[1]);
+    return 0;
+}
+
 const string connectionStringVariable = "AVERIO_TEST_CONNECTION_STRING";
 var serverConnectionString = Environment.GetEnvironmentVariable(connectionStringVariable);
 
