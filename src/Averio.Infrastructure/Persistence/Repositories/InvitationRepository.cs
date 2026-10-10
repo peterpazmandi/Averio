@@ -93,6 +93,11 @@ internal sealed class InvitationRepository(AverioDbContext db, IAccountBalanceRe
         var transfers = await db.Transfers.AsNoTracking().Where(x => x.HouseholdId == source.Id
             && (visibleIds.Contains(x.SourceAccountId) || visibleIds.Contains(x.DestinationAccountId)))
             .OrderByDescending(x => x.OccurredOn).ThenBy(x => x.Id).ToListAsync(ct);
+        // Freeze classification at cutover; history reads never need the source
+        // category directory, and custom names may equal a built-in system key.
+        var categoryIds = visibleTransactions.SelectMany(x => x.Items).Select(x => x.CategoryId).Distinct().ToArray();
+        var systemCategoryIds = (await db.Categories.AsNoTracking()
+            .Where(x => x.IsBase && categoryIds.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct)).ToHashSet();
         var accountById = visibleAccounts.ToDictionary(x => x.Id);
         static string Money(decimal value) => value.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture);
         var snapshot = new HistorySnapshot(new(Guid.Empty, source.Name ?? "Averio", now, plan.WillArchive),
@@ -101,7 +106,7 @@ internal sealed class InvitationRepository(AverioDbContext db, IAccountBalanceRe
             visibleTransactions.Select(x => new HistoryTransaction(x.Id, x.AccountId, x.Description, x.Merchant, x.Note, x.OccurredOn,
                 Money(x.Amount), x.Currency.Value, x.Kind.ToString(), x.Status == TransactionStatus.Voided,
                 accountById[x.AccountId].IncludeInHouseholdReports && x.Visibility == TransactionVisibility.Household,
-                x.Items.OrderBy(i => i.Position).Select(i => new HistoryItem(i.Description, i.CategoryName, Money(i.Amount))).ToArray())).ToArray(),
+                x.Items.OrderBy(i => i.Position).Select(i => new HistoryItem(i.Description, i.CategoryName, Money(i.Amount), systemCategoryIds.Contains(i.CategoryId))).ToArray())).ToArray(),
             transfers.Select(x => new HistoryTransfer(x.Id, x.OccurredOn,
                 visibleIds.Contains(x.SourceAccountId) ? new(x.SourceAccountId, accountById[x.SourceAccountId].Name, x.SourceCurrency.Value, Money(x.SentAmount)) : null,
                 visibleIds.Contains(x.DestinationAccountId) ? new(x.DestinationAccountId, accountById[x.DestinationAccountId].Name, x.DestinationCurrency.Value, Money(x.ReceivedAmount)) : null,

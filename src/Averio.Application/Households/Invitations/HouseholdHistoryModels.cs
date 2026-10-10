@@ -3,7 +3,8 @@ namespace Averio.Application.Households.Invitations;
 public sealed record HistorySummary(Guid Id, string HouseholdName, DateTimeOffset LeftAtUtc, bool WasLastMember);
 public sealed record HistoryAccount(Guid Id, string Name, string Currency, string Type, string Scope,
     string Visibility, bool IncludeInHouseholdReports, string Balance, bool WasCopied);
-public sealed record HistoryItem(string Description, string CategoryName, string Amount);
+// Null preserves compatibility with snapshots captured before category classification.
+public sealed record HistoryItem(string Description, string CategoryName, string Amount, bool? IsSystemCategory = null);
 public sealed record HistoryTransaction(Guid Id, Guid AccountId, string Description, string? Merchant,
     string? Note, DateOnly OccurredOn, string Amount, string Currency, string Kind, bool IsVoided,
     bool IncludedInHouseholdReports, IReadOnlyList<HistoryItem> Items);

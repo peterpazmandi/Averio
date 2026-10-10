@@ -8,6 +8,7 @@ using Averio.Application.Statistics.GetCashFlow;
 using Averio.Application.Transactions.Common;
 using Averio.Domain.Accounts;
 using Averio.Domain.Common;
+using Averio.Domain.Categories;
 using Averio.Domain.Households;
 using Averio.Domain.Transactions;
 using Averio.Domain.Transfers;
@@ -48,6 +49,7 @@ internal static class DepartureVerification
         var hidden = Account.Create(source.Id, [successor], "Other member private", AccountType.Cash, AccountScope.Personal,
             AccountVisibility.Private, false, CurrencyCode.From("EUR"), 999, today, now);
         Guid category;
+        var customCategory = Category.Create(source.Id, "income-salary", CategoryKind.Both, "cash", "#10B981", null, now);
         await Run(leaving, async sp => {
             var db = sp.GetRequiredService<AverioDbContext>();
             foreach (var user in new[] { leaving, remaining })
@@ -57,14 +59,14 @@ internal static class DepartureVerification
                     UserName = address, NormalizedUserName = address.ToUpperInvariant(), DisplayName = user == leaving ? "Former person" : "Successor",
                     EmailConfirmed = true, CreatedAtUtc = now, SecurityStamp = Guid.NewGuid().ToString() });
             }
-            db.Add(source); db.Accounts.AddRange(personal, privateAccount, householdAccount, joint, hidden);
+            db.Add(source); db.Add(customCategory); db.Accounts.AddRange(personal, privateAccount, householdAccount, joint, hidden);
             await db.SaveChangesAsync(); return true;
         });
-        category = await Run(leaving, async sp => await sp.GetRequiredService<AverioDbContext>().Categories.Where(x => x.IsBase).Select(x => x.Id).FirstAsync());
+        category = await Run(leaving, async sp => await sp.GetRequiredService<AverioDbContext>().Categories.Where(x => x.IsBase && x.SystemKey == "income-salary").Select(x => x.Id).SingleAsync());
         var income = Transaction.Create(source.Id, personal.Id, oldMember, TransactionKind.Income, TransactionVisibility.Household,
-            personal.Currency, "Income", null, today, [new("Income", category, "Historical category", "cash", 100.1234m)], [], now);
+            personal.Currency, "Income", null, today, [new("Salary", category, "income-salary", "cash", 100.1234m)], [], now);
         var expense = Transaction.Create(source.Id, personal.Id, oldMember, TransactionKind.Expense, TransactionVisibility.Private,
-            personal.Currency, "Private purchase", null, today, [new("Gift", category, "Historical category", "cash", 50.1111m)], [], now);
+            personal.Currency, "Private purchase", null, today, [new("Gift", customCategory.Id, "income-salary", "cash", 50.1111m)], [], now);
         var transfer = Transfer.Create(source.Id, personal.Id, householdAccount.Id, oldMember, personal.Currency, householdAccount.Currency,
             37.0001m, 37.0001m, today, "Historical transfer", now);
         var hiddenTransfer = Transfer.Create(source.Id, householdAccount.Id, hidden.Id, successor, householdAccount.Currency, hidden.Currency,
@@ -130,6 +132,16 @@ internal static class DepartureVerification
         var summary = (await Run(leaving, sp => History(sp, leaving).ListAsync(Ct))).Single(x => x.HouseholdName == "Previous home");
         var snapshot = await Run(leaving, sp => History(sp, leaving).GetAsync(summary.Id, null, null, Ct));
         Check(snapshot.Transactions.Count == 2 && snapshot.Transfers.Count == 2 && snapshot.Accounts.All(x => x.Id != hidden.Id), "Snapshot retains only authorized data");
+        var systemItem = snapshot.Transactions.Single(x => x.Id == income.Id).Items.Single();
+        var customItem = snapshot.Transactions.Single(x => x.Id == expense.Id).Items.Single();
+        Check(systemItem.CategoryName == "income-salary" && systemItem.IsSystemCategory == true
+            && systemItem.Description == "Salary" && customItem.CategoryName == "income-salary"
+            && customItem.IsSystemCategory == false,
+            "Snapshot distinguishes system keys from identically named custom categories without translating user content");
+        var legacyItem = System.Text.Json.JsonSerializer.Deserialize<HistoryItem>(
+            """{"Description":"Salary","CategoryName":"income-salary","Amount":"100.1234"}""")!;
+        Check(legacyItem.IsSystemCategory is null && legacyItem.CategoryName == "income-salary",
+            "Older snapshot JSON remains readable without category classification or a data rewrite");
         var redacted = snapshot.Transfers.Single(x => x.Id == hiddenTransfer.Id);
         Check(redacted.Source is not null && redacted.Destination is null && redacted.Note is null,
             "Hidden transfer account, amount, currency and shared note are all redacted");
@@ -143,12 +155,18 @@ internal static class DepartureVerification
         // A later shared entry must never appear in the former member's history.
         await Run(remaining, async sp => {
             var db = sp.GetRequiredService<AverioDbContext>();
+            var renamedCategory = await db.Categories.SingleAsync(x => x.Id == customCategory.Id);
+            renamedCategory.Update("Renamed after departure", "cash",
+                "#10B981", null, now.AddMinutes(1));
             db.Add(Transaction.Create(source.Id, householdAccount.Id, successor, TransactionKind.Income, TransactionVisibility.Household,
                 householdAccount.Currency, "Later", null, today, [new("Later", category, "Category", "cash", 10)], [], now.AddMinutes(1)));
             await db.SaveChangesAsync(); return true;
         });
         var frozen = await Run(leaving, sp => History(sp, leaving).GetAsync(summary.Id, null, null, Ct));
         Check(frozen.Transactions.Count == 2, "Snapshot never reveals post-departure writes");
+        Check(frozen.Transactions.Single(x => x.Id == income.Id).Items.Single() == systemItem
+            && frozen.Transactions.Single(x => x.Id == expense.Id).Items.Single() == customItem,
+            "Post-departure category changes cannot alter frozen category references or classification");
         await VerifySoloAndRaceAsync(provider, target, clock);
         await VerifyDepartedWriterAsync(provider, clock);
         var html = InvitationEmailTemplate.Render("https://averio.test", "TOKEN", "Join <script>& home", "Body", "Review", "Privacy", "Expires", "Fallback", "Footer");
