@@ -31,6 +31,10 @@ export interface HistoryItem {
      * 
      */
     amount: string;
+    /**
+     * 
+     */
+    isSystemCategory?: boolean | null;
 }
 
 /**
@@ -56,6 +60,7 @@ export function HistoryItemFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'description': json['description'],
         'categoryName': json['categoryName'],
         'amount': json['amount'],
+        'isSystemCategory': json['isSystemCategory'] === undefined ? undefined : json['isSystemCategory'] === null ? null : json['isSystemCategory'],
     };
 }
 
@@ -73,6 +78,7 @@ export function HistoryItemToJSONTyped(value?: HistoryItem | null, ignoreDiscrim
         'description': value['description'],
         'categoryName': value['categoryName'],
         'amount': value['amount'],
+        'isSystemCategory': value['isSystemCategory'],
     };
 }
 

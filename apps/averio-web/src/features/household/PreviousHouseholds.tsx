@@ -5,6 +5,7 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormControls';
 import { formatDecimalAmount, subtractDecimalAmounts } from '../../shared/money/decimalAmount';
+import { getHistoricalCategoryDisplayName } from './historyCategoryLocalization';
 import { invitationApi, invitationKeys } from './invitationQueries';
 
 export function PreviousHouseholds({ userId, householdId }: { userId: string; householdId: string }) {
@@ -68,7 +69,7 @@ function HistoricalHousehold({ userId, id }: { userId: string; id: string }) {
             {transactions.length === 0 && <p>{t('invitations.history.noEntries')}</p>}
             {transactions.map(row => <details key={row.id} className="min-w-0 border-b border-slate-200 py-3 dark:border-slate-700"><summary className="cursor-pointer break-words">{row.occurredOn} · {row.description} · {row.kind === 'Income' ? '+' : '−'}{money(row.amount, row.currency)} {row.isVoided && t('invitations.history.voided')}</summary>
                 <div className="space-y-2 pt-3 text-sm"><p className="break-words">{accountNames.get(row.accountId)}</p>{row.note && <p className="whitespace-pre-wrap break-words">{row.note}</p>}
-                    <ul className="space-y-1">{row.items.map((item, i) => <li key={i} className="break-words">{item.description} · {item.categoryName} · {money(item.amount, row.currency)}</li>)}</ul></div>
+                    <ul className="space-y-1">{row.items.map((item, i) => <li key={i} className="break-words">{item.description} · {getHistoricalCategoryDisplayName(item, t)} · {money(item.amount, row.currency)}</li>)}</ul></div>
             </details>)}
         </AverioCard>
         <AverioCard className="space-y-3 p-5"><h4 className="font-semibold">{t('invitations.history.transfers')}</h4>

@@ -161,6 +161,7 @@ test('previous household section is omitted only for a successful empty history'
         '../../shared/components/ui/AverioButton': { AverioButton: 'button' },
         '../../shared/components/ui/AverioFormControls': { AverioField: 'label', AverioInput: 'input' },
         '../../shared/money/decimalAmount': { formatDecimalAmount: amount => amount, subtractDecimalAmounts() {} },
+        './historyCategoryLocalization': { getHistoricalCategoryDisplayName: item => item.categoryName },
         './invitationQueries': { invitationApi: {}, invitationKeys: { history: () => [], former: () => [] } },
     });
     const render = () => PreviousHouseholds({ userId: 'member', householdId: 'destination' });

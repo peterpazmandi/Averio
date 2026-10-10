@@ -40,6 +40,16 @@ balances. An empty, unconfigured registration placeholder does not create a hist
 card. Household settings omit the previous-households section when the history
 query succeeds with no records; loading and failed requests retain explicit feedback.
 
+Historical built-in category labels follow the current UI language, even when the
+transaction was created in another language. Account names, transaction/item
+descriptions, notes and custom category names remain the user's original content.
+New snapshot items freeze `isSystemCategory` at acceptance, so a custom name equal
+to a built-in key is still displayed literally. Older snapshots omit this nullable
+field: the UI localizes only exact known system keys, never English labels. An old
+custom name identical to a system key cannot be distinguished in that legacy format.
+This display fallback does not rewrite stored snapshots, fetch the source category
+directory or change amounts and cash flow.
+
 Invitation context remains in tab session storage across registration, verification
 and login for up to seven days. Verified recipients also discover their pending
 invitations server-side, so another verification tab resumes invitation onboarding.
@@ -137,6 +147,9 @@ creation or first-account setup. An optional display name is collected separatel
 Money in cutover review, acceptance and history is a decimal string to avoid
 JavaScript precision loss. Account version tokens are opaque strings; send them
 back unchanged. Cookie authentication and existing CSRF protection apply.
+The nullable history-item category classification is an additive API/JSON change;
+existing snapshots deserialize with an unknown classification and need no additional
+database migration.
 
 Apply the migration chain through
 `20261009165339_AddHouseholdDepartureAndHistory` explicitly before deployment,
@@ -151,10 +164,14 @@ snapshots would destroy retained access. No production startup migration is adde
 PostgreSQL regressions cover lifecycle security, concurrent joining and writes,
 sole-holder eligibility, owner succession, exact cutover balances, no copied
 movements, immutable privacy-filtered history, archive instead of deletion,
-idempotency and unchanged source cash flow. Frontend regressions cover invitation
+idempotency and unchanged source cash flow. They also cover built-in/custom key
+collisions, legacy snapshot JSON and frozen classification after category edits.
+Frontend regressions cover invitation
 context, immediate active-household refresh with a mounted auth observer, cancelled
 source requests, discarded finance caches, conditional history sections and household
-reload behavior. Build, lint and generated-client checks
+reload behavior. Category localization regressions switch EN/HU/DE on the same
+cached previous-household snapshot while preserving custom labels, user content and
+stored data. Build, lint and generated-client checks
 remain part of the normal verification workflow. Headless Chrome also measures
 actual rendered EN/DE/HU email fixtures at desktop and 320px widths in 72 cases:
 light/native-dark themes, Outlook markers on a real outer table, Outlook class
