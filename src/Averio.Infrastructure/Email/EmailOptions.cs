@@ -6,6 +6,7 @@ internal sealed class EmailOptions
 
     public string Provider { get; set; } = "Development";
     public string FrontendBaseUrl { get; set; } = "http://localhost:5173";
+    public string LogoUrl { get; set; } = InvitationEmailTemplate.DefaultLogoUrl;
     public string SenderEmail { get; set; } = string.Empty;
     public string SenderName { get; set; } = "Averio";
     public string BrevoApiKey { get; set; } = string.Empty;

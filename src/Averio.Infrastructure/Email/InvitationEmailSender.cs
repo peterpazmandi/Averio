@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using Averio.Application.Households.Invitations;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -15,7 +14,8 @@ internal sealed class InvitationEmailSender(ITransactionalEmailSender sender, IO
         var html = InvitationEmailTemplate.Render(options.Value.FrontendBaseUrl, token,
             text["Invitation_Title", householdName].Value, text["Invitation_Body"].Value,
             text["Invitation_Button"].Value, text["Invitation_Privacy"].Value,
-            text["Invitation_Expiry"].Value, text["Invitation_Fallback"].Value, text["Invitation_Footer"].Value);
+            text["Invitation_Expiry"].Value, text["Invitation_Fallback"].Value, text["Invitation_Footer"].Value,
+            options.Value.LogoUrl);
         try { await sender.SendAsync(email, text["Invitation_Subject"].Value, html, ct); return true; }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { return false; } // Persist failure without logging email content or credentials.

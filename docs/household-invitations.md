@@ -86,12 +86,22 @@ creation or first-account setup. An optional display name is collected separatel
   of a newer resend/revocation because it checks the lifecycle version.
 - Branded HTML emails use the official Averio logo, emerald accents, destination
   name, privacy explanation and a clear review action. EN/DE/HU copy uses the
-  requesting owner's current API culture. The logo is served from the deployed
-  frontend at `/branding/averio-email-logo.png`; clients that block images still
-  see the text wordmark and action. Each content block has a table row, with spacing
+  requesting owner's current API culture. `Email:LogoUrl` is independent of
+  `Email:FrontendBaseUrl`: local invitation links can stay on localhost while inbox
+  image proxies fetch the public HTTPS PNG. The default logo URL is
+  `https://averioapp.com/branding/averio-email-logo.png`. Deploy the frontend's
+  `public/branding/averio-email-logo.png` asset at that URL, or configure a publicly
+  reachable CDN PNG. The URL is validated at startup; HTTPS/public-host syntax
+  does not prove deployment availability. Clients that block images still see the
+  text wordmark and action. Each content block has a table row, with spacing
   on table cells. The standard review button uses a 48px table cell and full-height
-  link rather than anchor padding. Foreground/background dark-mode overrides are
-  paired for both Outlook marker variants; styles are scoped to the email.
+  link rather than anchor padding. Text and spacer rows inherit the card's continuous
+  background instead of painting separate rectangles. Dark-mode media rules exclude
+  Outlook's `x_`-prefixed classes so the message-pane light/dark toggle takes
+  precedence over the operating-system theme. An outer white table gives Outlook
+  a color-rewrite trigger; the nested surfaces are selected through its original
+  style/attribute color markers (`data-ogsc/ogsb/ogac/ogab`). This avoids relying
+  on compound class/attribute selectors that Outlook does not reliably support.
   The displayed fallback URL contains only optional `<wbr>` breaks, preserving the
   credential and copyable text without invisible Unicode separators.
   Presentation tables and inline background colors provide the base layout; Outlook's Word renderer receives a fixed-width fallback
@@ -102,7 +112,9 @@ creation or first-account setup. An optional display name is collected separatel
   send/resend a new invitation for manual verification: received emails retain
   their original HTML and cannot pick up a template change.
 - Configure `Email:Provider=Brevo`, `Email:BrevoApiKey`, `Email:SenderEmail`,
-  `Email:SenderName`, and the deployed HTTPS `Email:FrontendBaseUrl`. Secrets belong
+  `Email:SenderName`, `Email:LogoUrl`, and the deployed HTTPS
+  `Email:FrontendBaseUrl`. For local testing, keep `FrontendBaseUrl` on localhost
+  and use the same public `LogoUrl` as production. Secrets belong
   in environment configuration. The development logger sender is intentionally
   not used for invitations, so raw invitation links never enter server logs;
   without Brevo, delivery is recorded as Failed. Tests use a capturing fake sender.
@@ -144,12 +156,17 @@ context, immediate active-household refresh with a mounted auth observer, cancel
 source requests, discarded finance caches, conditional history sections and household
 reload behavior. Build, lint and generated-client checks
 remain part of the normal verification workflow. Headless Chrome also measures
-actual rendered EN/DE/HU email fixtures at desktop and 320px widths: light mode,
-both Outlook dark-mode marker variants, removed head styles, removed anchor box
-styles and blocked images. Checks cover contrast, ordering, containment, link
-identity, copyable URL text and button height. Fixtures use synthetic credentials
-and make no email deliveries. This is a browser layout regression, not an Outlook
-renderer or a substitute for inbox testing.
+actual rendered EN/DE/HU email fixtures at desktop and 320px widths in 72 cases:
+light/native-dark themes, Outlook markers on a real outer table, Outlook class
+prefixing with a light message pane under OS dark mode, all four prefixed Outlook
+marker variants, removed head styles, removed anchor box styles and blocked images.
+Checks cover contrast, ordering, containment, continuous backgrounds, message-theme
+selection, link identity, copyable URL text and button height. They also assert
+that a localhost invitation link uses a separate public HTTPS logo URL before
+serving the actual repository PNG over HTTP and checking decoded image dimensions.
+Fixtures use synthetic credentials and make no email deliveries. These model
+documented transformations in a browser; they are not Outlook emulation or a
+substitute for inbox testing.
 
 To run the email checks after a Release build from the repository root:
 
@@ -160,6 +177,23 @@ node tests/email/invitation-layout.mjs /tmp/averio-email-previews
 
 Chrome must be installed (`CHROME_BINARY` can specify its executable). Fixture
 output is disposable and contains no real recipients or invitation credentials.
+
+After deploying the public image, run this separate deployment preflight with Node
+24 (no emails are sent):
+
+```sh
+node tests/email/check-logo.mjs https://averioapp.com/branding/averio-email-logo.png
+```
+
+It requires successful HTTPS delivery, `image/png`, a PNG signature and nonzero
+image dimensions, so a SPA's HTTP-200 HTML fallback cannot pass. Also check the
+URL from a browser without authentication: Gmail/Outlook proxies must reach it
+without cookies, a bot challenge, a private tunnel or localhost. Brevo's
+transactional endpoint does not provide a supported CID image attachment path;
+the template therefore uses a public PNG rather than data URIs or CID references.
+Received emails cannot be repaired by a deployment: send/resend a fresh invitation
+after updating the API and asset, then check both Outlook message-pane themes and
+Gmail with remote images enabled.
 
 Standalone leaving/removal, live multi-household switching, history merging,
 bank-feed reconnection and snapshot export remain deferred. See

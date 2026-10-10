@@ -15,7 +15,7 @@ internal static class InvitationEmailPreview
             string Text(string key) => resources.GetString(key, culture)
                 ?? throw new InvalidOperationException("Missing email resource: " + key);
             var title = string.Format(culture, Text("Invitation_Title"), "Pazmándi család & a longer household name");
-            var html = InvitationEmailTemplate.Render("https://preview.averio.example.test", "PREVIEW_ONLY_" + new string('A', 43),
+            var html = InvitationEmailTemplate.Render("http://localhost:5173", "PREVIEW_ONLY_" + new string('A', 43),
                 title, Text("Invitation_Body"), Text("Invitation_Button"), Text("Invitation_Privacy"),
                 Text("Invitation_Expiry"), Text("Invitation_Fallback"), Text("Invitation_Footer"));
             File.WriteAllText(Path.Combine(directory, cultureName + ".html"), html);

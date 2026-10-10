@@ -114,7 +114,10 @@ public static class DependencyInjection
     {
         services
             .AddOptions<EmailOptions>()
-            .Bind(configuration.GetSection(EmailOptions.SectionName));
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .Validate(options => InvitationEmailTemplate.IsSupportedLogoUrl(options.LogoUrl),
+                "Email:LogoUrl must use HTTPS and a public DNS host, without user info or a fragment.")
+            .ValidateOnStart();
 
         var provider = configuration[$"{EmailOptions.SectionName}:Provider"];
 

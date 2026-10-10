@@ -154,6 +154,22 @@ internal static class DepartureVerification
         var html = InvitationEmailTemplate.Render("https://averio.test", "TOKEN", "Join <script>& home", "Body", "Review", "Privacy", "Expires", "Fallback", "Footer");
         Check(!html.Contains("<script>") && html.Contains("&lt;script&gt;") && html.Contains("#10B981")
             && html.Contains("/branding/averio-email-logo.png") && html.Contains("/invitation#TOKEN"), "Branded email escapes content and uses fragment credentials");
+        var localEmail = InvitationEmailTemplate.Render("http://localhost:5173", "TOKEN", "Title", "Body", "Review",
+            "Privacy", "Expires", "Fallback", "Footer");
+        Check(localEmail.Contains("src=\"" + InvitationEmailTemplate.DefaultLogoUrl + "\"")
+            && localEmail.Contains("href=\"http://localhost:5173/invitation#TOKEN\"")
+            && !localEmail.Contains("src=\"http://localhost"),
+            "Local invitation navigation keeps a separately hosted HTTPS logo for inbox image proxies");
+        var customLogo = InvitationEmailTemplate.Render("https://averio.test", "TOKEN", "Title", "Body", "Review",
+            "Privacy", "Expires", "Fallback", "Footer", "https://cdn.averio.test/logo.png?v=1&theme=all");
+        Check(customLogo.Contains("src=\"https://cdn.averio.test/logo.png?v=1&amp;theme=all\""),
+            "Configured logo URL is escaped independently of invitation navigation");
+        foreach (var unsupported in new[] { "http://averio.test/logo.png", "https://localhost/logo.png",
+            "https://127.0.0.1/logo.png", "https://[::1]/logo.png", "/logo.png", "https://internal.local/logo.png" })
+        {
+            Check(!InvitationEmailTemplate.IsSupportedLogoUrl(unsupported),
+                "Reject logo addresses inbox proxies cannot safely fetch: " + unsupported);
+        }
         var escapedEmail = InvitationEmailTemplate.Render("https://averio.test/", "A&\"B", "Title", "Body", "Review <now>",
             "Privacy <safe>", "Expires", "Fallback", "Footer");
         var links = System.Text.RegularExpressions.Regex.Matches(escapedEmail, "href=\"([^\"]*)\"")
