@@ -86,7 +86,7 @@ async function login(page, email, password) {
     await page.locator('input[type=email]').fill(email);
     await page.locator('input[type=password]').fill(password);
     await page.locator('button[type=submit]').click();
-    await page.waitForURL(url => url.pathname === '/invitation' || url.pathname.startsWith('/app/'));
+    await page.waitForURL(url => url.pathname === '/invitation' || url.pathname === '/app' || url.pathname.startsWith('/app/'));
 }
 async function invite(page, email) {
     await page.getByRole('button', { name: 'Invite a partner', exact: true }).click();
