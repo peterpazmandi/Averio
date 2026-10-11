@@ -65,11 +65,20 @@ ID order. Under that transaction it rechecks lifecycle, inviter authority, activ
 membership, target setup, source version, eligible account IDs, exact account
 version tokens, balances, handling choices and successor. Snapshot, departure,
 owner transfer, destination membership, copies and acceptance commit together.
-Retries of an already accepted invitation by that member are idempotent.
+Retries of an already accepted invitation by that member are idempotent while they
+remain in its destination. Once they have left, previewing or accepting that
+consumed token or invitation ID returns the localized `invitation_invalid` conflict
+(HTTP 409). Rejoining requires a new invitation; an old link cannot create another
+departure plan or history snapshot.
 
 Financial mutation handlers lock the household before reading or authorizing and
 recheck active membership after acquiring the lock. This serializes ledger and
-metadata writes with cutover. Active memberships and household owners use filtered
+metadata writes with cutover. Transfer create/update/void and category
+create/update/archive/restore begin their transactions before loading membership.
+Transfers acquire the household lock before account locks, so acceptance observes
+every committed movement in opening balances and frozen history. A writer waiting
+behind acceptance loses authorization after departure, including when the source
+household is archived. Active memberships and household owners use filtered
 unique indexes; old memberships remain as foreign-key targets for authorship and
 holders. Departed users have no live authorization in the source household.
 
@@ -80,12 +89,24 @@ Retained membership rows are historical attribution: only `LeftAtUtc == null`
 memberships in an active household determine the current user and authorization. Joined users do not run household
 creation or first-account setup. An optional display name is collected separately.
 
+Each frontend review retains the exact token or invitation ID it submitted.
+Acceptance and decline use that reviewed identity. If discovery replaces an
+invitation, the stale review cannot be submitted; the replacement needs a new
+review, account choices, successor and confirmation. Declining clears the preview,
+choices, consent, dialog, selection and both stored and in-memory token context.
+Remaining invitations are immediately reviewable in the same onboarding screen;
+solo household creation becomes available only after none remain.
+
 ## Email and lifecycle
 
 - 256-bit random tokens; SHA-256 hashes only in the database; seven-day validity.
 - Pending, Accepted and Revoked are persisted; Expired is derived from expiry.
 - One Pending row per household/normalized email, including expired rows: resend
-  it or revoke it before creating another. Resend rotates the token and version.
+  it or revoke it before creating another. Resend rotates the token and version,
+  and records the sending owner as `InviterUserId`, the authority for that newly
+  issued credential. After ownership succession, the current owner can resend a
+  predecessor's pending invitation to make it discoverable and usable again.
+  The predecessor's old token is invalidated; terminal invitations cannot be resent.
 - One-minute resend cooldown, ten sends per invitation, twenty new invitations
   per household per rolling day; the existing email IP rate limiter also applies.
 - State is committed before synchronous email delivery. Sent means the provider
@@ -166,10 +187,21 @@ sole-holder eligibility, owner succession, exact cutover balances, no copied
 movements, immutable privacy-filtered history, archive instead of deletion,
 idempotency and unchanged source cash flow. They also cover built-in/custom key
 collisions, legacy snapshot JSON and frozen classification after category edits.
+The review regression suite pauses real create/update/void transfer handlers and
+category create/update/archive/restore handlers against acceptance. It observes
+PostgreSQL household-lock waits, checks both commit orders, requires updated
+opening balances/snapshots, and verifies no departed writer changes an active or
+archived source. Lifecycle tests cover owner-succession resends and token/ID replay
+after the recipient leaves an accepted invitation's destination.
 Frontend regressions cover invitation
 context, immediate active-household refresh with a mounted auth observer, cancelled
 source requests, discarded finance caches, conditional history sections and household
-reload behavior. Category localization regressions switch EN/HU/DE on the same
+reload behavior. They replace a sole discovered invitation after confirmation and
+decline one of two invitations without unmounting onboarding, with and without a
+link token. Each requires fresh destination consent and proves the remaining
+invitation can be reviewed and accepted. These three cases fail on the original
+component and pass with the state fixes.
+Category localization regressions switch EN/HU/DE on the same
 cached previous-household snapshot while preserving custom labels, user content and
 stored data. Build, lint and generated-client checks
 remain part of the normal verification workflow. Headless Chrome also measures

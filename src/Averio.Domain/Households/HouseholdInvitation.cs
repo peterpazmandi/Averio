@@ -26,13 +26,15 @@ public sealed class HouseholdInvitation
     {
         var invitation = new HouseholdInvitation { Id = Guid.NewGuid(), HouseholdId = householdId,
             InviterUserId = inviter, Email = email, NormalizedEmail = normalizedEmail, CreatedAt = now };
-        invitation.Rotate(hash, now);
+        invitation.Rotate(hash, inviter, now);
         return invitation;
     }
     public bool IsPending(DateTimeOffset now) => State == "Pending" && ExpiresAt > now;
-    public void Rotate(string hash, DateTimeOffset now)
+    public void Rotate(string hash, Guid inviter, DateTimeOffset now)
     {
         if (State != "Pending") throw new InvalidOperationException("Invitation is no longer pending.");
+        // Authority belongs to the owner who issued this token, including after succession.
+        InviterUserId = inviter;
         TokenHash = hash; LastSentAt = now; ExpiresAt = now.AddDays(7);
         SendCount++; DeliveryStatus = "Unknown"; Version = Guid.NewGuid();
     }

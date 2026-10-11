@@ -7,6 +7,7 @@ import { logoutUser } from '../authentication/api/authApi';
 import { saveOnboardingProfile } from '../onboarding/api/onboardingApi';
 import { formatDecimalAmount } from '../../shared/money/decimalAmount';
 import { ApiError } from '../../shared/api/ApiError';
+import type { InvitationTokenRequest } from '../../shared/api/generated';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
@@ -16,7 +17,7 @@ import { pendingInvitation, rememberInvitation, forgetInvitation } from './invit
 import { refreshHouseholdContext } from './householdTransition';
 
 export function InvitationPage() {
-    const [token] = useState(() => window.location.hash.slice(1) || pendingInvitation() || '');
+    const [token, setToken] = useState(() => window.location.hash.slice(1) || pendingInvitation() || '');
     useEffect(() => {
         rememberInvitation(token);
         window.history.replaceState(window.history.state, '', window.location.pathname);
@@ -24,9 +25,9 @@ export function InvitationPage() {
     const auth = useAuth();
     const { t } = useTranslation();
     if (auth.status === 'loading') return <p role="status">{t('common.status.loading')}</p>;
-    return <InvitationForUser key={auth.user?.userId ?? 'anonymous'} token={token} />;
+    return <InvitationForUser key={auth.user?.userId ?? 'anonymous'} token={token} onClearToken={() => setToken('')} />;
 }
-function InvitationForUser({ token }: { token: string }) {
+function InvitationForUser({ token, onClearToken }: { token: string; onClearToken: () => void }) {
     const auth = useAuth();
     const { t, i18n } = useTranslation();
     const client = useQueryClient();
@@ -40,15 +41,21 @@ function InvitationForUser({ token }: { token: string }) {
     const pending = useQuery({ queryKey: invitationKeys.pending(auth.user?.userId),
         queryFn: ({ signal }) => invitationApi.apiV1InvitationsPendingGet({ signal }),
         enabled: auth.status === 'authenticated' && !token });
-    const invitationId = selectedId || (pending.data?.length === 1 ? pending.data[0].id : undefined);
-    const preview = useMutation({ mutationFn: () => invitationApi.apiV1InvitationsPreviewPost({ invitationTokenRequest: { token: token || null, invitationId } }),
+    const invitationId = pending.data?.some(row => row.id === selectedId) ? selectedId
+        : pending.data?.length === 1 ? pending.data[0].id : undefined;
+    const preview = useMutation({ mutationFn: (request: InvitationTokenRequest) => invitationApi.apiV1InvitationsPreviewPost({ invitationTokenRequest: request }),
         onSuccess: () => { setConfirmed(false); setHandling({}); setSuccessor(''); } });
-    const departure = preview.data?.departure;
+    // Consent belongs to the exact invitation reviewed, even if discovery refreshes.
+    const reviewCurrent = !!preview.data && preview.variables?.token === (token || null)
+        && preview.variables?.invitationId === invitationId;
+    const review = reviewCurrent ? preview.data : undefined;
+    const departure = review?.departure;
     const accept = useMutation({
         mutationFn: async () => {
+            if (!reviewCurrent || !preview.variables) throw new Error(t('invitations.review'));
             if (!auth.user?.displayName && displayName.trim()) await saveOnboardingProfile({ displayName: displayName.trim() });
             return invitationApi.apiV1InvitationsAcceptancesPost({ acceptInvitationRequest: {
-                token: token || null, invitationId: invitationId ?? null, expectedSourceVersion: departure?.version ?? '00000000-0000-0000-0000-000000000000',
+                token: preview.variables.token, invitationId: preview.variables.invitationId ?? null, expectedSourceVersion: departure?.version ?? '00000000-0000-0000-0000-000000000000',
                 confirmed, successorMemberId: successor || null,
                 accounts: departure?.accounts.map(account => ({ accountId: account.id, expectedVersion: account.version,
                     openingBalance: account.balance, handling: handling[account.id] })) ?? [],
@@ -61,9 +68,15 @@ function InvitationForUser({ token }: { token: string }) {
         },
     });
     const signOut = useMutation({ mutationFn: async () => { await logoutUser(); await auth.clear(); await client.cancelQueries(); client.clear(); } });
-    const decline = useMutation({ mutationFn: () => invitationApi.apiV1InvitationsDeclinationsPost({ invitationTokenRequest: { token: token || null, invitationId } }),
+    const decline = useMutation({ mutationFn: () => {
+        if (!reviewCurrent || !preview.variables) throw new Error(t('invitations.review'));
+        return invitationApi.apiV1InvitationsDeclinationsPost({ invitationTokenRequest: preview.variables });
+    },
         onSuccess: async () => {
             forgetInvitation();
+            onClearToken();
+            setSelectedId(''); setConfirmed(false); setHandling({}); setSuccessor(''); setDeclining(false);
+            preview.reset(); accept.reset(); decline.reset();
             await client.invalidateQueries({ queryKey: invitationKeys.pending(auth.user?.userId) });
             await navigate({ to: auth.user?.onboardingRequired ? '/onboarding' : '/app/household' });
         } });
@@ -82,12 +95,12 @@ function InvitationForUser({ token }: { token: string }) {
                 <option value="">{t('invitations.migration.choose')}</option>{pending.data?.map(row => <option key={row.id} value={row.id}>{row.householdName}</option>)}
             </AverioSelect></AverioField>}
             <div className="flex flex-wrap gap-3">
-                {!!(token || invitationId) && <AverioButton variant="primary" disabled={busy} onClick={() => { accept.reset(); preview.mutate(); }}>{t('invitations.review')}</AverioButton>}
+                {!!(token || invitationId) && <AverioButton variant="primary" disabled={busy} onClick={() => { accept.reset(); decline.reset(); setDeclining(false); preview.mutate({ token: token || null, invitationId }); }}>{t('invitations.review')}</AverioButton>}
                 <AverioButton disabled={busy} onClick={() => signOut.mutate()}>{t('invitations.switchUser')}</AverioButton>
             </div>
-            {preview.data && <section className="space-y-5" aria-label={t('invitations.review')}>
-                <h2 className="break-words text-xl font-semibold">{t('invitations.migration.joining', { name: preview.data.householdName })}</h2>
-                {preview.data.alreadyJoined ? <p>{t('invitations.alreadyJoined')}</p> : <>
+            {review && <section className="space-y-5" aria-label={t('invitations.review')}>
+                <h2 className="break-words text-xl font-semibold">{t('invitations.migration.joining', { name: review.householdName })}</h2>
+                {review.alreadyJoined ? <p>{t('invitations.alreadyJoined')}</p> : <>
                     {!auth.user?.displayName && <AverioField>{t('invitations.migration.displayName')}<AverioInput maxLength={100} value={displayName} disabled={busy} onChange={event => setDisplayName(event.target.value)} /></AverioField>}
                     {departure && <>
                         {departure.householdName && <AverioCard className="space-y-3 p-4"><h3 className="font-semibold">{t('invitations.migration.leaving', { name: departure.householdName })}</h3>
@@ -108,12 +121,12 @@ function InvitationForUser({ token }: { token: string }) {
                     <label className="flex items-start gap-3"><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} className="mt-1 size-5 shrink-0" /><span>{t('invitations.confirm')}</span></label>
                 </>}
                 <div className="flex flex-wrap gap-3">
-                    <AverioButton variant="primary" disabled={busy || !preview.data.canJoin || (!preview.data.alreadyJoined && (!confirmed || !choicesComplete))} onClick={() => accept.mutate()}>{t(preview.data.alreadyJoined ? 'invitations.continue' : 'invitations.accept')}</AverioButton>
-                    {!preview.data.alreadyJoined && <AverioButton disabled={busy} onClick={() => setDeclining(true)}>{t('invitations.decline')}</AverioButton>}
+                    <AverioButton variant="primary" disabled={busy || !review.canJoin || (!review.alreadyJoined && (!confirmed || !choicesComplete))} onClick={() => accept.mutate()}>{t(review.alreadyJoined ? 'invitations.continue' : 'invitations.accept')}</AverioButton>
+                    {!review.alreadyJoined && <AverioButton disabled={busy} onClick={() => setDeclining(true)}>{t('invitations.decline')}</AverioButton>}
                 </div>
             </section>}
-            <AverioDialog open={declining} title={t('invitations.decline')} closeLabel={t('householdSettings.cancel')} busy={busy} onDismiss={() => setDeclining(false)}
-                actions={<AverioButton variant="danger" disabled={busy} onClick={() => decline.mutate()}>{t('invitations.decline')}</AverioButton>}>
+            <AverioDialog open={declining && reviewCurrent} title={t('invitations.decline')} closeLabel={t('householdSettings.cancel')} busy={busy} onDismiss={() => setDeclining(false)}
+                actions={<AverioButton variant="danger" disabled={busy || !reviewCurrent} onClick={() => decline.mutate()}>{t('invitations.decline')}</AverioButton>}>
                 <p>{t('invitations.declineHelp')}</p>{decline.error && <p role="alert">{decline.error instanceof ApiError ? decline.error.message : t('errors.genericDescription')}</p>}
             </AverioDialog>
         </div> : auth.status === 'error' ? <AverioButton onClick={() => void auth.refresh().catch(() => undefined)}>{t('common.actions.retry')}</AverioButton> : !token ? <p role="alert">{t('invitations.missing')}</p> : <div className="flex flex-wrap gap-4">

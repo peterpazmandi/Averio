@@ -59,7 +59,7 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
                 if (invitation.Version != expectedVersion || invitation.State != "Pending") throw Invalid();
                 if (now - invitation.LastSentAt < TimeSpan.FromMinutes(1) || invitation.SendCount >= 10)
                     throw new ConflictException("invitation_throttled", "Error_InvitationThrottled");
-                invitation.Rotate(Hash(token), now);
+                invitation.Rotate(Hash(token), UserId, now);
             }
             else
             {
@@ -127,6 +127,7 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
         if (!target.IsFinancialSetupCompleted || target.ArchivedAtUtc is not null
             || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
         var joined = invitation.State == "Accepted" && sourceId == target.Id;
+        if (!joined && !invitation.IsPending(clock.GetUtcNow())) throw Invalid();
         var departure = joined ? null : await invitations.DepartureAsync(locked[sourceId], user.Id, clock.GetUtcNow(), ct);
         return new(target.Name!, joined, joined || sourceId != target.Id, departure);
     }
@@ -152,6 +153,7 @@ public sealed class InvitationHandler(ICurrentUser currentUser, IIdentityService
         if (!target.IsFinancialSetupCompleted || target.ArchivedAtUtc is not null
             || !target.Members.Any(x => x.UserId == invitation.InviterUserId && x.Role == HouseholdRole.Owner)) throw Invalid();
         if (invitation.State == "Accepted" && source.Id == target.Id) return target.Id;
+        if (!invitation.IsPending(clock.GetUtcNow())) throw Invalid();
         if (!input.Confirmed || source.Id == target.Id || input.ExpectedSourceVersion != source.Version)
             throw new ConflictException("departure_changed", "Error_DepartureChanged");
         await invitations.JoinAsync(source, target, user.Id, input, clock.GetUtcNow(), ct);
