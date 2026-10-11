@@ -48,7 +48,9 @@ coverage complements these cases; it does not replace them.
 Frontend regressions use real TanStack Query observers to verify complete private
 query/mutation cleanup, cancellation and delayed responses, reattachment-free
 identity refresh, and CSRF requests resolving across identity changes in both
-orders. Financial cache removal does not rely on an enumerated list of features.
+orders. Old actions are cancelled instead of being given the new identity's token;
+new actions share the replacement request. Financial cache removal does not rely
+on an enumerated list of features.
 
 ## Running locally
 

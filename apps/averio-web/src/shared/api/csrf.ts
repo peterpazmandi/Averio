@@ -6,25 +6,27 @@ let tokenPromise: Promise<string> | null = null;
 let identityGeneration = 0;
 
 export async function getCsrfToken(): Promise<string> {
-    for (;;) {
-        if (cachedToken) return cachedToken;
-        const generation = identityGeneration;
-        const request = tokenPromise ??= loadCsrfToken();
-        try {
-            const token = await request;
-            // A session change can finish while the previous token is loading.
-            // All waiters must obtain a token for the new identity instead.
-            if (generation !== identityGeneration) continue;
-            cachedToken = token;
-            return token;
-        }
-        catch (error) {
-            if (generation === identityGeneration) throw error;
-        }
-        finally {
-            if (tokenPromise === request) tokenPromise = null;
-        }
+    if (cachedToken) return cachedToken;
+    const generation = identityGeneration;
+    const request = tokenPromise ??= loadCsrfToken();
+    try {
+        const token = await request;
+        // Never let an action started by one identity use another user's token.
+        if (generation !== identityGeneration) throw sessionChanged();
+        cachedToken = token;
+        return token;
     }
+    catch (error) {
+        if (generation !== identityGeneration) throw sessionChanged();
+        throw error;
+    }
+    finally {
+        if (tokenPromise === request) tokenPromise = null;
+    }
+}
+
+function sessionChanged(): DOMException {
+    return new DOMException('The session changed while retrieving the CSRF token.', 'AbortError');
 }
 
 export function clearCsrfToken(): void {

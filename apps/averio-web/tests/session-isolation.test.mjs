@@ -64,12 +64,13 @@ test('logout clears all financial queries and mutation payloads while retaining 
 });
 
 for (const order of ['old-first', 'new-first', 'old-error']) {
-    test(`CSRF identity switch discards stale requests and shares the replacement (${order})`, async () => {
+    test(`CSRF identity switch cancels old actions and shares the replacement (${order})`, async () => {
         const requests = [];
         const { getCsrfToken, clearCsrfToken } = load('../src/shared/api/csrf.ts', {
             './apiConfiguration': { API_BASE_URL: 'http://api.test' },
-        }, { fetch: () => { const request = deferred(); requests.push(request); return request.promise; } });
-        const old = getCsrfToken(); const oldWaiter = getCsrfToken();
+        }, { DOMException, fetch: () => { const request = deferred(); requests.push(request); return request.promise; } });
+        const old = getCsrfToken().catch(error => error);
+        const oldWaiter = getCsrfToken().catch(error => error);
         assert.equal(requests.length, 1);
         clearCsrfToken();
         const current = getCsrfToken();
@@ -83,7 +84,10 @@ for (const order of ['old-first', 'new-first', 'old-error']) {
         const currentWaiter = getCsrfToken();
         assert.equal(requests.length, 2, 'The old finally cannot evict the new in-flight request');
         requests[1].resolve(reply('new-identity'));
-        assert.deepEqual(await Promise.all([old, oldWaiter, current, currentWaiter]), Array(4).fill('new-identity'));
+        assert.deepEqual(await Promise.all([current, currentWaiter]), Array(2).fill('new-identity'));
+        for (const result of await Promise.all([old, oldWaiter])) {
+            assert.equal(result.name, 'AbortError', 'An old action must not resume under the new identity');
+        }
         assert.equal(await getCsrfToken(), 'new-identity');
         assert.equal(requests.length, 2);
         clearCsrfToken();
