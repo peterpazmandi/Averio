@@ -307,6 +307,9 @@ try {
     await browser?.close();
     await control('/shutdown', {}).catch(() => {});
     // Give the test host time to dispose the real API and remove its isolated database.
-    if (children[0]) await poll(() => children[0].exitCode !== null, 'fixture cleanup', 10_000).catch(() => { process.exitCode = 1; });
+    if (children[0]) {
+        await poll(() => children[0].exitCode !== null, 'fixture cleanup', 10_000).catch(() => { process.exitCode = 1; });
+        if (children[0].exitCode !== 0) process.exitCode = 1;
+    }
     for (const child of children) if (child.exitCode === null) child.kill();
 }

@@ -229,6 +229,7 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 
 - Real two-user browser verification against the production API pipeline and an isolated PostgreSQL database, including registration/verification, invitations, privacy, cutover, retained history and session switching.
 - Complete financial query/mutation cleanup on logout and membership changes, preserving the mounted current-user observer. CSRF requests cannot restore a token from a previous identity.
+- Replacement invitation links opened in the same tab refresh the credential and reset review/consent instead of retaining the previous hash token.
 - Localized requester-visible tracked balance explanations on the dashboard and account cards, with EN/DE/HU desktop/mobile and light/dark browser checks.
 - CI failure screenshots, browser traces and server logs, plus a release smoke evidence checklist. Provider/inbox and staging checks are recorded separately from automated captured-mail verification.
 - No new migration or API contract. See [Collaboration verification](collaboration-verification.md).

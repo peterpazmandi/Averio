@@ -19,13 +19,23 @@ import { refreshHouseholdContext } from './householdTransition';
 export function InvitationPage() {
     const [token, setToken] = useState(() => window.location.hash.slice(1) || pendingInvitation() || '');
     useEffect(() => {
+        // Opening a replacement email link in this tab can be hash navigation,
+        // which keeps the React page mounted. Capture it as a new invitation.
+        const receiveLink = () => {
+            const incoming = window.location.hash.slice(1);
+            if (incoming) setToken(incoming);
+        };
+        window.addEventListener('hashchange', receiveLink);
+        return () => window.removeEventListener('hashchange', receiveLink);
+    }, []);
+    useEffect(() => {
         rememberInvitation(token);
         window.history.replaceState(window.history.state, '', window.location.pathname);
     }, [token]);
     const auth = useAuth();
     const { t } = useTranslation();
     if (auth.status === 'loading') return <p role="status">{t('common.status.loading')}</p>;
-    return <InvitationForUser key={auth.user?.userId ?? 'anonymous'} token={token} onClearToken={() => setToken('')} />;
+    return <InvitationForUser key={`${auth.user?.userId ?? 'anonymous'}:${token}`} token={token} onClearToken={() => setToken('')} />;
 }
 function InvitationForUser({ token, onClearToken }: { token: string; onClearToken: () => void }) {
     const auth = useAuth();

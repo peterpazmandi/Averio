@@ -20,6 +20,8 @@ the production API has no fixture endpoints or authentication bypasses.
 separate owner, new partner and existing member browser contexts. It verifies:
 
 - Owner invitation controls, delivery failure/retry and revoked/expired/rotated links.
+  Opening a replacement link in the same tab captures the new hash credential and
+  resets the prior review and consent, even when the page stays mounted.
 - Wrong-email rejection and mandatory CSRF, registration and email verification.
 - Invitation-first onboarding, explicit consent, immediate destination membership
   and Member permissions, and no empty previous-households card.
