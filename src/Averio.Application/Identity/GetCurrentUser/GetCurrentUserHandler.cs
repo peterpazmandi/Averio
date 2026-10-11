@@ -20,7 +20,7 @@ public sealed class GetCurrentUserHandler(
         var household = await householdRepository.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new HouseholdRequiredException();
 
-        var membership = household.Members.Single(x => x.UserId == userId);
+        var membership = household.Members.Single(x => x.UserId == userId && x.LeftAtUtc == null);
 
         return new CurrentUserResult(
             user.Id,

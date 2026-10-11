@@ -14,7 +14,8 @@ import { ConceptPreferences } from '../../../shared/components/concept/ConceptPr
 
 export function AuthShell({
     children,
-}: PropsWithChildren) {
+    withCard = true,
+}: PropsWithChildren<{ withCard?: boolean }>) {
     const {
         t,
     } = useTranslation();
@@ -55,15 +56,23 @@ export function AuthShell({
                     p-12
                     text-white
 
+                    lg:fixed
+                    lg:inset-y-0
+                    lg:left-0
+                    lg:w-[45%]
                     lg:flex
+                    lg:h-dvh
                     lg:flex-col
                     lg:justify-between
+                    lg:gap-8
+                    lg:overflow-y-auto
                 "
             >
                 {/* ------------------------------------------------ */}
                 {/* Background effects                               */}
                 {/* ------------------------------------------------ */}
 
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                 {/*
                     Main subtle Averio-green glow.
 
@@ -184,6 +193,8 @@ export function AuthShell({
                         to-black/10
                     "
                 />
+
+                </div>
 
                 {/* ------------------------------------------------ */}
                 {/* Branding / marketing copy                        */}
@@ -331,6 +342,7 @@ export function AuthShell({
                     sm:px-6
                     sm:py-6
 
+                    lg:col-start-2
                     lg:px-12
 
                     xl:px-16
@@ -431,10 +443,10 @@ export function AuthShell({
                     "
                 >
                     {/* ------------------------------------------------ */}
-                    {/* Main auth card                                   */}
+                    {/* Invitation pages supply their own AverioCard.    */}
                     {/* ------------------------------------------------ */}
 
-                    <div
+                    {withCard ? <div
                         className="
                             w-full
                             min-w-0
@@ -466,7 +478,7 @@ export function AuthShell({
                         "
                     >
                         {children}
-                    </div>
+                    </div> : children}
                 </div>
             </section>
         </main>

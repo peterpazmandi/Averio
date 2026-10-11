@@ -301,9 +301,15 @@ is the sole frontend contract. The settings page invalidates household, onboardi
 identity and dashboard queries after saving. A draft retains its original version
 until saved or explicitly discarded.
 
-ADR-023 defines the future invitation/joining lifecycle without adding invitation
-persistence or execution. See [Household settings](household-settings.md).
+ADR-023 defines the invitation/joining lifecycle. The invitation slice adds
+explicit application handlers, persistent hashed tokens and lifecycle/delivery
+state, and an atomic PostgreSQL joining boundary. ADR-024 adds immutable privacy-filtered history snapshots and account copies with
+opening balances. Financial mutations acquire household locks before authorization
+and recheck active membership after waiting, serializing writes with cutover.
+Filtered active-user/owner indexes retain departed memberships for attribution. See
+[Household settings](household-settings.md) and [Household invitations](household-invitations.md).
 
 ## Activity tracking implementation
 
 The Activities vertical slice uses an explicit `ActivityHandler`, a privacy-filtered EF repository and separate personal assignment records. Ledger create/update may include assignment changes in the same unit of work. Bulk assignment holds the member row lock and commits atomically; close/reopen uses the same lock. Independent GUID versions reject stale metadata writes without changing ledger concurrency tokens. Results are computed from visible source transactions, not household reporting aggregates, and preserve original currencies. Composite database foreign keys enforce household/member ownership. See [ADR-022](decisions/ADR-022-personal-activities.md) and the [activity API and rollout guide](activities.md).
+

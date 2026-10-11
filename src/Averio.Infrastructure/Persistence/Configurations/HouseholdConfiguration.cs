@@ -25,10 +25,22 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
                 preferred_currency IS NULL
                 OR preferred_currency IN ('HUF', 'EUR', 'USD')
                 """);
+            table.HasCheckConstraint(
+                "ck_households_completed_onboarding_profile",
+                """
+                onboarding_completed_at_utc IS NULL
+                OR (
+                    name IS NOT NULL
+                    AND length(btrim(name)) >= 2
+                    AND country_code IS NOT NULL
+                    AND preferred_currency IS NOT NULL
+                )
+                """);
         });
         builder.HasKey(x => x.Id).HasName("pk_households");
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
+        builder.Property(x => x.ArchivedAtUtc).HasColumnName("archived_at_utc");
         builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(120);
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
 
@@ -77,6 +89,8 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");
         builder.Property(x => x.UserId).HasColumnName("user_id");
+        builder.Property(x => x.LeftAtUtc).HasColumnName("left_at_utc");
+        builder.HasQueryFilter(x => x.LeftAtUtc == null);
 
         builder.Property(x => x.Role)
             .HasColumnName("role")
@@ -96,14 +110,14 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
             .HasConstraintName("fk_household_members_households_household_id");
 
         builder.HasOne<ApplicationUser>()
-            .WithOne(x => x.HouseholdMembership)
-            .HasForeignKey<HouseholdMember>(x => x.UserId)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict)
             .HasConstraintName("fk_household_members_users_user_id");
 
         builder.HasIndex(x => x.UserId)
             .IsUnique()
-            .HasDatabaseName("ux_household_members_user_id");
+            .HasDatabaseName("ux_household_members_user_id").HasFilter("left_at_utc IS NULL");
 
         // Named at creation so EF keeps this distinct from the filtered owner index below
         // (two HasIndex calls on the same property both defaulting to no name collapse into one index).
@@ -111,6 +125,7 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
 
         builder.HasIndex(x => x.HouseholdId, "ux_household_members_household_owner")
             .IsUnique()
-            .HasFilter("role = 'owner'");
+            .HasFilter("role = 'owner' AND left_at_utc IS NULL");
     }
 }
+

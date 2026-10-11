@@ -319,7 +319,16 @@
   <data name="Error_HouseholdChanged" xml:space="preserve"><value>Household settings changed. Reload the latest settings before saving again.</value></data>
   <data name="Validation_HouseholdVersionRequired" xml:space="preserve"><value>Reload household settings before saving.</value></data>
   <data name="Error_HouseholdSetupCompleted" xml:space="preserve"><value>Household setup is complete. Use household settings to make changes.</value></data>
+  <data name="Validation_InvitationEmail" xml:space="preserve"><value>Enter a valid email address.</value></data>
+  <data name="Error_InvitationInvalid" xml:space="preserve"><value>This invitation is invalid, expired, changed, or belongs to a different email address.</value></data>
+  <data name="Error_InvitationThrottled" xml:space="preserve"><value>Wait at least one minute before resending. Invitation limits may also apply.</value></data>
+  <data name="Error_InvitationExists" xml:space="preserve"><value>An invitation already exists for this email. Resend or revoke it first.</value></data>
+  <data name="Error_InvitationMember" xml:space="preserve"><value>This person is already a household member.</value></data>
+  <data name="Error_DepartureChanged" xml:space="preserve"><value>Your household, accounts or balance changed. Review the invitation again and confirm the latest plan.</value></data>
+  <data name="Error_InvitationOnboarding" xml:space="preserve"><value>You have a pending household invitation. Review or decline it before creating a household.</value></data>
+  <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>The start date must not be after the end date.</value></data>
 </root>
+
 
 
 

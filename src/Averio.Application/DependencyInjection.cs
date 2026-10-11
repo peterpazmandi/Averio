@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         services.AddScoped<RegisterUserHandler>();
+        services.AddScoped<Households.Invitations.InvitationHandler>();
         services.AddScoped<LoginUserHandler>();
         services.AddScoped<VerifyEmailHandler>();
         services.AddScoped<ResendEmailVerificationHandler>();
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<SaveOnboardingHouseholdValidator>();
 
         services.AddScoped<Households.GetHousehold.GetHouseholdHandler>();
+        services.AddScoped<Households.Invitations.HouseholdHistoryHandler>();
         services.AddScoped<UpdateHouseholdHandler>();
         services.AddScoped<UpdateHouseholdValidator>();
 
@@ -90,4 +92,5 @@ public static class DependencyInjection
         return services;
     }
 }
+
 

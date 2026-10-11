@@ -17,17 +17,15 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         return dbContext.HouseholdMembers
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                x => x.UserId == userId,
+                x => x.UserId == userId && x.LeftAtUtc == null,
                 cancellationToken);
     }
 
-    public Task<Household?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<Household?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
     {
-        return dbContext.Households
-            .Include(x => x.Members)
-            .SingleOrDefaultAsync(
-                household => household.Members.Any(member => member.UserId == userId),
-                cancellationToken);
+        var id = await dbContext.HouseholdMembers.AsNoTracking().Where(x => x.UserId == userId && x.LeftAtUtc == null)
+            .Select(x => (Guid?)x.HouseholdId).SingleOrDefaultAsync(cancellationToken);
+        return id is null ? null : await GetByIdForUserAsync(id.Value, userId, cancellationToken);
     }
 
     public Task<Household?> GetByIdForUserAsync(
@@ -35,14 +33,17 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         Guid userId,
         CancellationToken cancellationToken)
     {
+        if (dbContext.Database.CurrentTransaction is not null)
+            return GetByIdForUserForUpdateAsync(householdId, userId, cancellationToken);
         return dbContext.Households
             .Include(x => x.Members)
             .SingleOrDefaultAsync(
                 household =>
                     household.Id == householdId
+                    && household.ArchivedAtUtc == null
                     && household.Members.Any(
                         member =>
-                            member.UserId == userId),
+                            member.UserId == userId && member.LeftAtUtc == null),
                 cancellationToken);
     }
 
@@ -69,6 +70,8 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
                         FROM household_members AS m
                         WHERE m.household_id = h.id
                             AND m.user_id = {userId}
+                            AND m.left_at_utc IS NULL
+                            AND h.archived_at_utc IS NULL
                     )
                     FOR UPDATE OF h
                 """)
@@ -81,6 +84,14 @@ internal sealed class HouseholdRepository(AverioDbContext dbContext) : IHousehol
         {
             return null;
         }
+
+        // A departure may commit while this query waits for the parent lock.
+        // Recheck membership with a fresh READ COMMITTED statement after acquiring it.
+        await dbContext.Entry(household).ReloadAsync(cancellationToken);
+        if (household.ArchivedAtUtc is not null || !await dbContext.HouseholdMembers
+                .AsNoTracking().AnyAsync(member => member.HouseholdId == householdId
+                    && member.UserId == userId && member.LeftAtUtc == null, cancellationToken))
+            return null;
 
         await dbContext.Entry(household)
             .Collection(value => value.Members)

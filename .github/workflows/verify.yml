@@ -21,7 +21,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17
+        # Docker Official Images publisher on ECR Public avoids Hub pull limits.
+        image: public.ecr.aws/docker/library/postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -88,6 +89,15 @@ jobs:
           --project tests/Averio.Persistence.Tests/Averio.Persistence.Tests.csproj
           --configuration Release
           --no-build
+
+      - name: Verify invitation email browser layout
+        run: |
+          set -euo pipefail
+          dotnet run \
+            --project tests/Averio.Persistence.Tests/Averio.Persistence.Tests.csproj \
+            --configuration Release --no-build \
+            -- --invitation-previews "$RUNNER_TEMP/averio-email-previews"
+          node tests/email/invitation-layout.mjs "$RUNNER_TEMP/averio-email-previews"
 
       - name: Install frontend dependencies
         working-directory: apps/averio-web

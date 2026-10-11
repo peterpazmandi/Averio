@@ -83,6 +83,10 @@ export interface AccountResponse {
      * 
      */
     updatedAt: string;
+    /**
+     * 
+     */
+    cutoverAtUtc?: string | null;
 }
 
 /**
@@ -130,6 +134,7 @@ export function AccountResponseFromJSONTyped(json: any, ignoreDiscriminator: boo
         'currentBalanceAmount': json['currentBalanceAmount'],
         'status': json['status'],
         'updatedAt': json['updatedAt'],
+        'cutoverAtUtc': json['cutoverAtUtc'] === undefined ? undefined : json['cutoverAtUtc'] === null ? null : json['cutoverAtUtc'],
     };
 }
 
@@ -158,6 +163,7 @@ export function AccountResponseToJSONTyped(value?: AccountResponse | null, ignor
         'currentBalanceAmount': value['currentBalanceAmount'],
         'status': value['status'],
         'updatedAt': value['updatedAt'],
+        'cutoverAtUtc': value['cutoverAtUtc'],
     };
 }
 

@@ -1,5 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { invitationApi, invitationKeys } from '../../household/invitationQueries';
+import { InvitationPage } from '../../household/InvitationPage';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
 import { useAuth } from '../../authentication/context/AuthProvider';
 import { OnboardingForUser } from './OnboardingForUser';
@@ -16,6 +19,9 @@ export function OnboardingPage() {
     const auth = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const pending = useQuery({ queryKey: invitationKeys.pending(auth.user?.userId),
+        queryFn: ({ signal }) => invitationApi.apiV1InvitationsPendingGet({ signal }),
+        enabled: auth.status === 'authenticated' });
 
     if (auth.status === 'loading') {
         return (
@@ -73,6 +79,10 @@ export function OnboardingPage() {
         );
     }
 
+    if (pending.isPending) return <p role="status">{t('common.status.loading')}</p>;
+    if (pending.isError) return <div role="alert"><p>{t('invitations.loadError')}</p><PrimaryButton onClick={() => void pending.refetch()}>{t('common.actions.retry')}</PrimaryButton></div>;
+    if (pending.data.length > 0) return <InvitationPage />;
+
     return (
         <OnboardingForUser
             key={auth.user.userId}
@@ -80,4 +90,5 @@ export function OnboardingPage() {
         />
     );
 }
+
 

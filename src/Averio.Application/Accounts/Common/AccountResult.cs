@@ -2,7 +2,7 @@ using Averio.Domain.Accounts;
 
 namespace Averio.Application.Accounts.Common;
 
-public sealed record AccountOwnerResult(Guid HouseholdMemberId, string? DisplayName);
+public sealed record AccountOwnerResult(Guid HouseholdMemberId, string? DisplayName, bool IsFormerMember = false);
 
 public sealed record AccountResult(
     Guid Id,
@@ -18,18 +18,18 @@ public sealed record AccountResult(
     DateOnly BalanceAnchorDate,
     decimal CurrentBalanceAmount,
     string Status,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt, DateTimeOffset? CutoverAtUtc = null)
 {
     public static AccountResult From(
         Account account,
         IReadOnlyDictionary<Guid, string?> memberNames,
-        decimal currentBalanceAmount)
+        decimal currentBalanceAmount, IReadOnlyCollection<Guid>? activeMemberIds = null)
     {
         var owners = account.Owners
             .OrderBy(owner => owner.HouseholdMemberId)
             .Select(owner => new AccountOwnerResult(
                 owner.HouseholdMemberId,
-                memberNames.GetValueOrDefault(owner.HouseholdMemberId)))
+                memberNames.GetValueOrDefault(owner.HouseholdMemberId), activeMemberIds is not null && !activeMemberIds.Contains(owner.HouseholdMemberId)))
             .ToArray();
 
         return new AccountResult(
@@ -46,6 +46,7 @@ public sealed record AccountResult(
             account.BalanceAnchorDate,
             currentBalanceAmount,
             account.Status.ToString(),
-            account.UpdatedAt);
+            account.UpdatedAt, account.CutoverAtUtc);
     }
 }
+

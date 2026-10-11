@@ -19,6 +19,8 @@ public sealed class UpdateHouseholdHandler(
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
+        await using var writeTransaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var household = await householdRepository
                 .GetByIdForUserAsync(
                     command.HouseholdId,
@@ -49,5 +51,6 @@ public sealed class UpdateHouseholdHandler(
         household.UpdateProfile(name, country, currency);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await writeTransaction.CommitAsync(cancellationToken);
     }
 }

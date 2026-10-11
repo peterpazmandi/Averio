@@ -185,7 +185,13 @@ sealed class Clock(DateTimeOffset now) : TimeProvider { public override DateTime
 sealed class Work : IUnitOfWork {
     public int Saves { get; private set; }
     public Task<int> SaveChangesAsync(CancellationToken ct) { Saves++; return Task.FromResult(1); }
-    public Task<IApplicationTransaction> BeginTransactionAsync(CancellationToken ct) => throw new NotSupportedException();
+    public Task<IApplicationTransaction> BeginTransactionAsync(CancellationToken ct) => Task.FromResult<IApplicationTransaction>(new NoopTransaction());
+    private sealed class NoopTransaction : IApplicationTransaction
+    {
+        public Task CommitAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken ct) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 }
 sealed class Households(Household value) : IHouseholdRepository {
     public void Add(Household household) => throw new NotSupportedException();
@@ -225,3 +231,4 @@ sealed class Fixture {
     public UpdateAccountCommand Command() => new(Household.Id, Account.Id, "Edited", Account.Type,
         [Member.Id], Account.Visibility, Account.IncludeInHouseholdReports, Account.UpdatedAt);
 }
+

@@ -1,6 +1,6 @@
 # ADR-023 — Household administration and safe invitation joining
 
-**Status:** Accepted  
+**Status:** Superseded in part by [ADR-024](ADR-024-invitation-cutover-and-retained-history.md); household settings and invitation security remain accepted  
 **Date:** 2026-10-05
 
 ## Context
@@ -113,3 +113,13 @@ data. Some existing users cannot join in the initial invitation release; the UI
 must explain this before acceptance rather than suggesting deletion of history.
 The settings page is useful immediately and establishes an honest, privacy-aware
 foundation for collaboration and eventual user research with couples.
+
+
+## Implementation note — 2026-10-06
+
+The invitation slice now implements the accepted lifecycle and joining policy.
+See [Household invitations](../household-invitations.md) for endpoints, token handling,
+delivery failure semantics and the PostgreSQL parent/FK locking protocol.
+Email delivery is synchronous after invitation persistence; Unknown is recoverable
+by an explicit resend. This does not introduce a worker or durable outbox.
+

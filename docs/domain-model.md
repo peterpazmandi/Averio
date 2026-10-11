@@ -63,10 +63,17 @@ The current early product operates around one active household context per user.
 
 ## Household administration (ADR-023)
 
-ADR-023 now defines the accepted invitation/joining policy: owner-managed, email-bound,
-verified, expiring single-use invitations; one household per user; only new users or
-verified-empty solo households may join initially. Existing financial history is never
-silently moved or deleted. This policy is not an implemented invitation lifecycle.
+ADR-023 defines owner-managed, verified, expiring email-bound invitations.
+[ADR-024](decisions/ADR-024-invitation-cutover-and-retained-history.md) supersedes
+its empty-household joining restriction. Users retain one active membership;
+departed memberships record `LeftAtUtc` and remain attribution/FK targets.
+Acceptance copies active sole-holder personal accounts with opening balances and
+explicit destination handling, never prior transactions or transfers.
+Household-owned/joint accounts stay behind. Original ledgers remain; last-member
+households record `ArchivedAtUtc` instead of being deleted. Departing users retain
+immutable, individually authorized `HouseholdHistory` snapshots of what they could
+see at departure, separate from current reporting. Copied source accounts record
+`CutoverAtUtc` and are permanently closed. See [Household invitations](household-invitations.md).
 
 Household members can read a minimal directory (membership ID, display name, role,
 join date and self marker). Login emails and financial details are excluded.
@@ -80,11 +87,13 @@ See [ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md).
 
 ## Invitation
 
-Planned concept for inviting another user/member into a household.
-
-Expected concerns: inviter, target email, intended role, status, secure token, expiry, acceptance, cancellation/revocation, and duplicate-pending-invitation rules.
-
-Not assumed implemented yet.
+An owner-managed, email-bound invitation grants the Member role only. It stores a hash of
+the single-use token, has an expiry and lifecycle version, and records delivery and
+acceptance/revocation metadata. Expiry is derived from `ExpiresAt`; pending invitations can
+be resent (rotating the token) or revoked. Acceptance requires an authenticated, verified,
+email-matched user and explicit confirmation. Joining is allowed only for a new user or a
+verified-empty solo household; financial history is never silently moved or deleted.
+See [Household invitations](household-invitations.md) for endpoint and lifecycle details.
 
 ## Account
 
@@ -331,3 +340,9 @@ Categories support deeper nesting. A compatible active subcategory may be a pare
 ## Personal activities
 
 `Activity` belongs to one household member and has a name, optional dates, open/closed status and concurrency timestamp. `ActivityAssignment` links a visible transaction to at most one activity per member, with an independent version retained after removal. Assignments are private metadata, not ledger mutations. Results sum currently visible posted income minus expenses through today's UTC date, separately per original currency; transfers and future/voided transactions do not contribute. Closed activities reject new assignments but retain live correction/void effects. See [ADR-022](decisions/ADR-022-personal-activities.md) and [Activities](activities.md).
+
+
+## Invitation lifecycle implementation
+
+`HouseholdInvitation` belongs to the target household, grants only Member, and stores inviter, normalized email, token hash, version, timestamps, delivery status and acceptance audit. SourceHouseholdId identifies the retained source household. Accepted and Revoked are terminal; Pending expiry is derived. Acceptance and the membership transition commit atomically. Source records are retained; account copies and individually authorized history snapshots commit with departure. See [invitation implementation](household-invitations.md) for locking, constraints and cutover semantics.
+

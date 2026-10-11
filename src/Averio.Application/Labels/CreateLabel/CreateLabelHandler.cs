@@ -59,6 +59,8 @@ public sealed class CreateLabelHandler(
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
+        await using var writeTransaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var household = await householdRepository.GetByIdForUserAsync(
             command.HouseholdId,
             userId,
@@ -101,6 +103,8 @@ public sealed class CreateLabelHandler(
 
         labelRepository.Add(label);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await writeTransaction.CommitAsync(cancellationToken);
         return label.Id;
     }
 }
+

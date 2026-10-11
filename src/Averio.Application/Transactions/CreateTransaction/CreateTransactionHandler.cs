@@ -50,6 +50,9 @@ public sealed class CreateTransactionHandler(
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
 
+        await using var databaseTransaction =
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         var household = await householdRepository.GetByIdForUserAsync(
             command.HouseholdId,
             userId,
@@ -80,8 +83,7 @@ public sealed class CreateTransactionHandler(
                 "Error_TransactionVisibilityNotAllowed");
         }
 
-        await using var databaseTransaction =
-            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
 
         var items = await referenceResolver.ResolveItemsAsync(
             household.Id,
@@ -125,4 +127,5 @@ public sealed class CreateTransactionHandler(
         }
     }
 }
+
 

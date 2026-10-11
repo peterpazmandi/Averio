@@ -110,6 +110,8 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         '../../shared/components/concept/ConceptIcon': { ConceptIcon: 'icon' },
         './householdQueries': { householdQueries: { detail: () => ({}) } },
         './HouseholdEditor': { HouseholdEditor: 'editor' },
+        './PreviousHouseholds': { PreviousHouseholds: 'history' },
+        './HouseholdInvitations': { HouseholdInvitations: 'invitations' },
     });
     function render() { cursor = 0; return HouseholdPage({ userId: 'u', householdId: 'h' }); }
     function find(tree, type, text) {
@@ -148,3 +150,4 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
     edit().props.onClick();
     assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Retry releases editor only with refreshed version');
 });
+

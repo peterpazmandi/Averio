@@ -17,11 +17,13 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
     }
     public async Task<Guid> CreateAsync(Guid householdId, ActivityInput input, CancellationToken ct)
     {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var memberId = await AuthorizeAsync(householdId, ct);
         await validator.ValidateAndThrowAsync(input, ct);
         var activity = Activity.Create(householdId, memberId, input.Name, input.StartsOn, input.EndsOn, clock.GetUtcNow());
         activities.Add(activity);
         await unitOfWork.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return activity.Id;
     }
     public async Task<IReadOnlyList<ActivityDayResult>> TimelineAsync(Guid householdId, Guid id, CancellationToken ct)
@@ -34,9 +36,9 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
     }
     public async Task UpdateAsync(Guid householdId, Guid id, ActivityInput input, DateTimeOffset expected, CancellationToken ct)
     {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var memberId = await AuthorizeAsync(householdId, ct);
         await validator.ValidateAndThrowAsync(input, ct);
-        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         await activities.LockMemberAsync(householdId, memberId, ct);
         var activity = await activities.GetAsync(householdId, memberId, id, ct)
             ?? throw new NotFoundException("activity", id);
@@ -47,10 +49,10 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
     }
     public async Task AssignAsync(Guid householdId, Guid? activityId, IReadOnlyList<ActivityAssignmentChange> changes, CancellationToken ct)
     {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var memberId = await AuthorizeAsync(householdId, ct);
         if (changes.Count is < 1 or > 100 || changes.Select(x => x.TransactionId).Distinct().Count() != changes.Count)
             throw new BusinessRuleException("activity_selection_invalid", "Validation_ActivitySelection");
-        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         await activities.LockMemberAsync(householdId, memberId, ct);
         foreach (var change in changes)
         {
@@ -95,3 +97,4 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
     }
     private static ConflictException Changed() => new("activity_changed", "Error_ActivityChanged");
 }
+

@@ -56,7 +56,8 @@ public sealed class GetAccountsHandler(
                 names,
                 balances.GetValueOrDefault(
                     account.Id,
-                    account.BalanceAnchorAmount)))
+                    account.BalanceAnchorAmount), household.Members.Select(x => x.Id).ToArray()))
             .ToArray();
     }
 }
+

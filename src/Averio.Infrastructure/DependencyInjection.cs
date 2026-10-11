@@ -83,7 +83,10 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<Averio.Application.Households.Invitations.IInvitationRepository, InvitationRepository>();
+        services.AddScoped<Averio.Application.Households.Invitations.IInvitationEmailSender, InvitationEmailSender>();
         services.AddScoped<IHouseholdRepository, HouseholdRepository>();
+        services.AddScoped<Averio.Application.Households.Invitations.IHouseholdHistoryRepository, HouseholdHistoryRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IAccountBalanceReader, AccountBalanceReader>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -111,7 +114,10 @@ public static class DependencyInjection
     {
         services
             .AddOptions<EmailOptions>()
-            .Bind(configuration.GetSection(EmailOptions.SectionName));
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .Validate(options => InvitationEmailTemplate.IsSupportedLogoUrl(options.LogoUrl),
+                "Email:LogoUrl must use HTTPS and a public DNS host, without user info or a fragment.")
+            .ValidateOnStart();
 
         var provider = configuration[$"{EmailOptions.SectionName}:Provider"];
 
@@ -139,3 +145,4 @@ public static class DependencyInjection
         services.AddHostedService(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
     }
 }
+

@@ -13,7 +13,9 @@ public sealed class CompleteOnboardingHandler(
     IIdentityService identityService,
     IHouseholdRepository householdRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    Averio.Application.Households.Invitations.InvitationHandler invitations,
+    Averio.Application.Households.Invitations.IInvitationRepository invitationRepository)
 {
     public async Task HandleAsync(
         CompleteOnboardingCommand command,
@@ -26,6 +28,16 @@ public sealed class CompleteOnboardingHandler(
         var userId =
             currentUser.UserId
             ?? throw new AuthenticationFailedException();
+        if ((await invitations.PendingAsync(cancellationToken)).Count > 0)
+            throw new ConflictException("invitation_onboarding", "Error_InvitationOnboarding");
+
+
+        await using var transaction =
+            await unitOfWork.BeginTransactionAsync(
+                cancellationToken);
+
+        // Match acceptance's identity-before-household order when both rows are written.
+        await invitationRepository.LockUserAsync(userId, cancellationToken);
 
         var household =
             await householdRepository.GetByUserIdAsync(
@@ -46,9 +58,7 @@ public sealed class CompleteOnboardingHandler(
 
         var currency = CurrencyCode.From(command.PreferredCurrency);
 
-        await using var transaction =
-            await unitOfWork.BeginTransactionAsync(
-                cancellationToken);
+
 
         var userUpdated =
             await identityService.UpdateDisplayNameAsync(

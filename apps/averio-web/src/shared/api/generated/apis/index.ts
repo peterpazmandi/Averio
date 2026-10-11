@@ -9,6 +9,7 @@ export * from './DashboardApi';
 export * from './FirstAccountOnboardingApi';
 export * from './HouseholdsApi';
 export * from './IconsApi';
+export * from './InvitationsApi';
 export * from './LabelsApi';
 export * from './OnboardingApi';
 export * from './SecurityApi';

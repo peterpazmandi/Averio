@@ -26,6 +26,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
+// Render synthetic email fixtures without connecting to a database or sending mail.
+if (args.Length == 2 && args[0] == "--invitation-previews")
+{
+    InvitationEmailPreview.Write(args[1]);
+    return 0;
+}
+
 const string connectionStringVariable = "AVERIO_TEST_CONNECTION_STRING";
 var serverConnectionString = Environment.GetEnvironmentVariable(connectionStringVariable);
 
@@ -127,6 +134,8 @@ static async Task RunVerificationAsync(string connectionString)
     services.AddLogging();
     services.AddApplication();
     services.AddInfrastructure(configuration);
+    services.AddSingleton<CapturingInvitationSender>();
+    services.AddSingleton<Averio.Application.Households.Invitations.IInvitationEmailSender>(sp => sp.GetRequiredService<CapturingInvitationSender>());
     services.AddSingleton<TransferReadInterceptor>();
     services.ConfigureDbContext<AverioDbContext>((sp, options) =>
         options.AddInterceptors(sp.GetRequiredService<TransferReadInterceptor>()), ServiceLifetime.Singleton);
@@ -145,6 +154,8 @@ static async Task RunVerificationAsync(string connectionString)
 
     var fixture = await SeedFixtureAsync(provider, clock.GetUtcNow());
     currentUser.UserId = fixture.OwnerUserId;
+
+    await SchemaConstraintVerification.RunAsync(provider, fixture, clock.GetUtcNow());
 
     await CheckAsync(
         "transaction and aggregate writes roll back atomically",
@@ -195,6 +206,9 @@ static async Task RunVerificationAsync(string connectionString)
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
+    await InvitationVerification.RunAsync(provider, fixture, clock);
+    await DepartureVerification.RunAsync(provider, fixture, clock);
+    await InvitationReviewVerification.RunAsync(provider, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -871,3 +885,4 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
+

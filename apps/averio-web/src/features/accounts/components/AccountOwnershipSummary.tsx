@@ -7,7 +7,7 @@ import '../accounts.css';
 export function AccountOwnershipSummary({ account }: { account: AccountResponse }) {
     const { t } = useTranslation();
     const holders = account.owners.map((owner, index) =>
-        owner.displayName || t('accountOwnership.member', { number: index + 1 }),
+        (owner.displayName || t('accountOwnership.member', { number: index + 1 })) + (owner.isFormerMember ? ' (' + t('invitations.history.formerMember') + ')' : ''),
     ).join(', ');
     const rows: { icon: ConceptIconName; tone: string; label: string; value: string }[] = [
         { icon: account.scope === 'Household' ? 'household' : 'profile', tone: account.scope === 'Household' ? 'blue' : 'purple',
@@ -27,3 +27,4 @@ export function AccountOwnershipSummary({ account }: { account: AccountResponse 
         </dl>
     );
 }
+

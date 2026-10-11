@@ -27,6 +27,10 @@ export interface AccountOwnerResponse {
      * 
      */
     displayName: string | null;
+    /**
+     * 
+     */
+    isFormerMember?: boolean;
 }
 
 /**
@@ -50,6 +54,7 @@ export function AccountOwnerResponseFromJSONTyped(json: any, ignoreDiscriminator
         
         'householdMemberId': json['householdMemberId'],
         'displayName': json['displayName'],
+        'isFormerMember': json['isFormerMember'] == null ? undefined : json['isFormerMember'],
     };
 }
 
@@ -66,6 +71,7 @@ export function AccountOwnerResponseToJSONTyped(value?: AccountOwnerResponse | n
         
         'householdMemberId': value['householdMemberId'],
         'displayName': value['displayName'],
+        'isFormerMember': value['isFormerMember'],
     };
 }
 

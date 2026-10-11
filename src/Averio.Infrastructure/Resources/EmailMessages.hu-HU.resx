@@ -63,4 +63,12 @@
   <data name="Error_PasswordRejected" xml:space="preserve">
     <value>A jelszó nem felel meg a szükséges biztonsági követelményeknek.</value>
   </data>
+  <data name="Invitation_Subject" xml:space="preserve"><value>Meghívás egy Averio-háztartásba</value></data>
+  <data name="Invitation_Body" xml:space="preserve"><value>Valaki helyet készített neked az Averio-háztartásában. Nézd meg a meghívást, és kezeljétek együtt a közös pénzügyeiteket. Jelentkezz be vagy regisztrálj azzal az e-mail-címmel, amelyre ezt az üzenetet kaptad.</value></data>
+  <data name="Invitation_Button" xml:space="preserve"><value>Meghívás megtekintése</value></data>
+<data name="Invitation_Title" xml:space="preserve"><value>Meghívást kaptál ide: {0}</value></data>
+<data name="Invitation_Privacy" xml:space="preserve"><value>Közös pénzügyek, személyes magánszféra. A korábbi tranzakcióid és átvezetéseid a régi háztartásban maradnak. Te döntöd el, hogyan kezelje az új háztartás az átvihető személyes számláidat.</value></data>
+<data name="Invitation_Expiry" xml:space="preserve"><value>A meghívás hét napig érvényes. A link megnyitása soha nem csatlakoztat automatikusan a háztartáshoz.</value></data>
+<data name="Invitation_Fallback" xml:space="preserve"><value>Ha a gomb nem működik, másold ezt a linket a böngésződbe:</value></data>
+<data name="Invitation_Footer" xml:space="preserve"><value>Nem számítottál meghívásra? Nyugodtan hagyd figyelmen kívül ezt az e-mailt. A pénzügyeid változatlanok maradnak.</value></data>
 </root>

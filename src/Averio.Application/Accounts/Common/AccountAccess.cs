@@ -9,7 +9,7 @@ public static class AccountAccess
         Account account,
         HouseholdMember membership)
     {
-        if (account.HouseholdId != membership.HouseholdId)
+        if (account.HouseholdId != membership.HouseholdId || membership.LeftAtUtc is not null || account.CutoverAtUtc is not null)
         {
             return false;
         }
@@ -18,3 +18,4 @@ public static class AccountAccess
             || account.Owners.Any(owner => owner.HouseholdMemberId == membership.Id);
     }
 }
+

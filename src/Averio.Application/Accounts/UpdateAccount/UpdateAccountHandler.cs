@@ -19,6 +19,8 @@ public sealed class UpdateAccountHandler(
     public async Task HandleAsync(UpdateAccountCommand command, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new AuthenticationFailedException();
+
+        await using var writeTransaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         var household = await householdRepository.GetByIdForUserAsync(
             command.HouseholdId, userId, cancellationToken)
             ?? throw new NotFoundException("household", command.HouseholdId);
@@ -48,8 +50,10 @@ public sealed class UpdateAccountHandler(
         account.Update(command.Name, command.Type, command.OwnerHouseholdMemberIds,
             command.Visibility, command.IncludeInHouseholdReports, timeProvider.GetUtcNow());
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await writeTransaction.CommitAsync(cancellationToken);
     }
 
     private static ValidationException OwnerValidation(string code) => new(
         [new ValidationFailure("OwnerHouseholdMemberIds", code) { ErrorCode = code }]);
 }
+

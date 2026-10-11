@@ -29,6 +29,11 @@ public sealed class HouseholdMember
     public HouseholdRole Role { get; private set; }
 
     public DateTimeOffset JoinedAtUtc { get; private set; }
+    public DateTimeOffset? LeftAtUtc { get; private set; }
+    public void Leave(DateTimeOffset now) => LeftAtUtc = now;
+    internal void BecomeOwner() => Role = HouseholdRole.Owner;
+    internal static HouseholdMember CreateMember(Guid householdId, Guid userId, DateTimeOffset now)
+        => new(Guid.NewGuid(), householdId, userId, HouseholdRole.Member, now);
 
     internal static HouseholdMember CreateOwner(
         Guid householdId,
@@ -43,3 +48,4 @@ public sealed class HouseholdMember
             joinedAtUtc);
     }
 }
+

@@ -12,11 +12,10 @@ public sealed class CategoryManagementHandler(
 {
     public async Task<Guid> CreateAsync(Guid householdId, CategoryInput input, CancellationToken ct)
     {
-        await AuthorizeAsync(householdId, ct);
         await validator.ValidateAndThrowAsync(input, ct);
-        await ValidateIconAsync(input.Icon, null, ct);
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
-        await categories.LockHouseholdAsync(householdId, ct);
+        await AuthorizeAsync(householdId, ct);
+        await ValidateIconAsync(input.Icon, null, ct);
         var parent = await ParentAsync(householdId, input.ParentId, ct);
         await ValidateParentAsync(householdId, parent, input.Kind, Guid.Empty, ct);
         var category = Category.Create(householdId, input.Name, input.Kind,
@@ -30,10 +29,9 @@ public sealed class CategoryManagementHandler(
     public async Task UpdateAsync(Guid householdId, Guid id, CategoryInput input,
         DateTimeOffset expectedUpdatedAt, CancellationToken ct)
     {
-        await AuthorizeAsync(householdId, ct);
         await validator.ValidateAndThrowAsync(input, ct);
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
-        await categories.LockHouseholdAsync(householdId, ct);
+        await AuthorizeAsync(householdId, ct);
         var category = await CustomAsync(householdId, id, expectedUpdatedAt, ct);
         if (category.IsArchived) throw new ConflictException("category_archived", "Error_CategoryArchived");
         if (category.Kind != input.Kind)
@@ -49,9 +47,8 @@ public sealed class CategoryManagementHandler(
     public async Task SetArchivedAsync(Guid householdId, Guid id, bool archived,
         DateTimeOffset expectedUpdatedAt, CancellationToken ct)
     {
-        await AuthorizeAsync(householdId, ct);
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
-        await categories.LockHouseholdAsync(householdId, ct);
+        await AuthorizeAsync(householdId, ct);
         var category = await CustomAsync(householdId, id, expectedUpdatedAt, ct);
         if (archived && await categories.HasChildrenAsync(id, true, ct))
             throw new BusinessRuleException("category_active_children", "Error_CategoryActiveChildren");

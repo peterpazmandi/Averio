@@ -16,10 +16,10 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         TransferInput input, CancellationToken ct)
     {
         await validator.ValidateAndThrowAsync(input, ct);
-        var member = await GetMemberAsync(householdId, ct);
         if (sourceId == destinationId)
             throw new BusinessRuleException("transfer_accounts_invalid", "Error_TransferDistinctAccounts");
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
+        var member = await GetMemberAsync(householdId, ct);
         var locked = await transfers.GetLockedAccountsAsync(householdId, sourceId, destinationId, ct);
         var source = GetWritableAccount(member, locked, sourceId, true);
         var destination = GetWritableAccount(member, locked, destinationId, true);
@@ -38,8 +38,8 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         DateTimeOffset expectedUpdatedAt, CancellationToken ct)
     {
         await validator.ValidateAndThrowAsync(input, ct);
-        var member = await GetMemberAsync(householdId, ct);
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
+        var member = await GetMemberAsync(householdId, ct);
         var transfer = await GetWritableAsync(member, id, ct);
         CheckVersion(transfer, expectedUpdatedAt);
         if (transfer.VoidedAt is not null)
@@ -56,8 +56,8 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
 
     public async Task VoidAsync(Guid householdId, Guid id, DateTimeOffset expectedUpdatedAt, CancellationToken ct)
     {
-        var member = await GetMemberAsync(householdId, ct);
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
+        var member = await GetMemberAsync(householdId, ct);
         var transfer = await GetWritableAsync(member, id, ct);
         var locked = await transfers.GetLockedAccountsAsync(householdId, transfer.SourceAccountId, transfer.DestinationAccountId, ct);
         GetWritableAccount(member, locked, transfer.SourceAccountId, false);
