@@ -41,15 +41,17 @@ internal static class BrowserHost
             Environment.SetEnvironmentVariable("ConnectionStrings__AverioDatabase", database.ConnectionString);
             Environment.SetEnvironmentVariable("Email__Provider", "Development");
             Environment.SetEnvironmentVariable("Email__FrontendBaseUrl", "http://localhost:5173");
+            // Migrate before hosted services preload the database-backed key ring.
+            await using (var db = new AverioDbContext(new DbContextOptionsBuilder<AverioDbContext>()
+                .UseNpgsql(database.ConnectionString).Options))
+            {
+                await db.Database.MigrateAsync();
+            }
             var inbox = new Inbox();
             var clock = new BrowserClock();
             await using var factory = new BrowserFactory(inbox, clock);
             factory.UseKestrel(5180);
             using var client = factory.CreateClient();
-            await using (var scope = factory.Services.CreateAsyncScope())
-            {
-                await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Database.MigrateAsync();
-            }
             var owner = await Seed(factory.Services, clock, "owner@collaboration.test", "Collaboration home");
             var existing = await Seed(factory.Services, clock, "existing@collaboration.test", "Previous home");
             var control = WebApplication.CreateBuilder();

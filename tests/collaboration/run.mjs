@@ -20,9 +20,9 @@ const contexts = [];
 const errors = [];
 let browser;
 
-function start(command, args, cwd, name) {
+function start(command, args, cwd, name, env = {}) {
     const log = fs.openSync(path.join(artifacts, name + '.log'), 'w');
-    const child = spawn(command, args, { cwd, stdio: ['ignore', log, log], windowsHide: true });
+    const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: ['ignore', log, log], windowsHide: true });
     fs.closeSync(log);
     child.on('error', error => errors.push(String(error)));
     children.push(child);
@@ -117,7 +117,9 @@ function localeFile(file) {
 try {
     if (!process.env.AVERIO_TEST_CONNECTION_STRING) throw new Error('AVERIO_TEST_CONNECTION_STRING is required; see docs/collaboration-verification.md.');
     start('dotnet', ['run', '--project', 'tests/Averio.Collaboration.Host', '--configuration', 'Release', '--no-build',
-        '--no-launch-profile', '--', '--browser-fixture'], root, 'api');
+        '--no-launch-profile', '--', '--browser-fixture'], root, 'api', {
+        ASPNETCORE_TEST_CONTENTROOT_AVERIO_API: path.join(root, 'apps/Averio.Api'),
+    });
     const fixture = await poll(() => control('/ready'), 'migrated API and seeded fixture', 60_000);
     start(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'preview', '--host', 'localhost',
         '--port', '5173', '--strictPort'], web, 'web');
@@ -183,7 +185,13 @@ try {
     assert.equal(Number(cashFlow.periods[0].incomeAmount), 230.1235);
     await denied(partner, prefix + `/accounts/${f.privateAccountId}`);
     await denied(partner, prefix + `/transactions/${f.privateTransactionId}`);
-    await denied(partner, prefix + `/transfers/${f.privateTransferId}`);
+    const redacted = await ok(partner, prefix + `/transfers/${f.privateTransferId}`);
+    assert.ok(redacted.source, 'The shared transfer leg remains visible');
+    assert.equal(redacted.destination, null);
+    assert.equal(redacted.note, null);
+    assert.equal(redacted.canModify, false);
+    assert.equal((await ok(partner, prefix + `/transfers?accountId=${f.privateAccountId}`)).items.length, 0);
+    await denied(partner, prefix + `/transfers/${f.privateTransferId}?expectedUpdatedAt=${encodeURIComponent(redacted.updatedAt)}`, { method: 'DELETE' });
     await denied(partner, prefix + `/activities/${f.privateActivityId}/timeline`);
     const privateRow = await ok(owner, prefix + `/transactions/${f.privateTransactionId}`);
     await denied(partner, prefix + `/transactions/${f.privateTransactionId}?expectedUpdatedAt=${encodeURIComponent(privateRow.updatedAt)}`, { method: 'DELETE' });
@@ -282,6 +290,10 @@ try {
     assert.deepEqual(errors, []);
     console.log('PASS EN/DE/HU, desktop/mobile, light/dark balances and household states, same-tab logout/login isolation');
 } catch (error) {
+    for (const name of ['api', 'web']) {
+        const log = path.join(artifacts, name + '.log');
+        if (fs.existsSync(log)) console.error(`${name} fixture log:\n${fs.readFileSync(log, 'utf8').split('\n').slice(-80).join('\n')}`);
+    }
     for (let i = 0; i < contexts.length; i++) {
         const page = contexts[i].pages()[0];
         if (page) await page.screenshot({ path: path.join(artifacts, `failure-${i}.png`), fullPage: true }).catch(() => {});

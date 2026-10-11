@@ -175,8 +175,8 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                         {reportedAccounts.slice(0, 3).map(account => (
                             <div key={account.id} className="flex flex-wrap items-center gap-2 text-sm [&_strong]:block [&_small]:text-slate-500 dark:[&_small]:text-slate-400">
                                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"><ConceptIcon name="accounts" /></span>
-                                <div>
-                                    <strong>{account.name}</strong>
+                                <div className="min-w-0 flex-1">
+                                    <strong className="break-words">{account.name}</strong>
                                     <small>{t(account.scope === 'Household'
                                         ? 'accountOwnership.household' : 'accountOwnership.personal')} · {account.currency}</small>
                                 </div>

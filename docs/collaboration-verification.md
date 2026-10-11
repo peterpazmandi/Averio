@@ -23,8 +23,10 @@ separate owner, new partner and existing member browser contexts. It verifies:
 - Wrong-email rejection and mandatory CSRF, registration and email verification.
 - Invitation-first onboarding, explicit consent, immediate destination membership
   and Member permissions, and no empty previous-households card.
-- Private accounts, transactions, transfers and activities remain inaccessible,
-  including guessed IDs, search, financial projections, dashboard and a write attempt.
+- Private accounts, transactions and activities remain inaccessible, including
+  guessed IDs, search, financial projections, dashboard and write attempts. Transfers
+  expose only the permitted leg; a hidden counterparty and note stay redacted, and
+  a private account cannot be used as a filter or write target.
 - A holder and another member see different tracked balances when private entries
   exist. Household reports exclude private entries and keep currencies separate.
 - Existing accounts are copied with reviewed opening balances, without old ledger
