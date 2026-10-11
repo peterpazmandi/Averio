@@ -2,8 +2,11 @@ import type { QueryClient } from '@tanstack/react-query';
 import { authQueryKeys } from './authQueryKeys';
 import { clearCsrfToken } from '../../../shared/api/csrf';
 
-export async function clearCachedAuthState(client: QueryClient): Promise<void> {
-    clearCsrfToken();
+export async function clearCachedAuthState(
+    client: QueryClient,
+    { identityChanged = true }: { identityChanged?: boolean } = {},
+): Promise<void> {
+    if (identityChanged) clearCsrfToken();
     await client.cancelQueries();
     // Reset in place so AuthProvider stays attached, without a logout refetch.
     const authQuery = client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true });
