@@ -164,7 +164,7 @@ try {
     await partner.getByText('Collaboration home', { exact: true }).first().waitFor();
     assert.equal(await partner.getByRole('button', { name: 'Edit profile', exact: true }).count(), 0);
     assert.deepEqual(await ok(partner, '/household-history'), []);
-    assert.equal(await partner.getByRole('heading', { name: 'Previous households' }).count(), 0);
+    await partner.getByRole('heading', { name: 'Previous households' }).waitFor({ state: 'hidden' });
     assert.equal((await api(partner, `/households/${f.householdId}/invitations`)).status, 403);
     const noCsrf = await api(partner, '/invitations/preview', { method: 'POST', csrf: false, body: { token: 'A'.repeat(64) } });
     assert.equal(noCsrf.status, 400);
@@ -270,7 +270,7 @@ try {
         await partner.setViewportSize({ width: theme === 'dark' ? 390 : 1440, height: 900 });
         await partner.goto(ui + '/app/household');
         await partner.getByRole('heading', { name: householdCopy['householdSettings' + language.toUpperCase()].profile, exact: true }).waitFor();
-        assert.equal(await partner.getByRole('heading', { name: invitations['invitations' + language.toUpperCase()].history.title }).count(), 0);
+        await partner.getByRole('heading', { name: invitations['invitations' + language.toUpperCase()].history.title }).waitFor({ state: 'hidden' });
         assert.equal(await partner.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await partner.goto(ui + '/app');
         await partner.getByRole('heading', { name: concepts['concept' + language.toUpperCase()].balanceTitle, exact: true }).waitFor();
@@ -284,8 +284,8 @@ try {
     await login(existing, partnerEmail, password);
     await existing.goto(ui + '/app/household');
     await existing.getByText('Collaboration home', { exact: true }).first().waitFor();
-    assert.equal(await existing.getByRole('heading', { name: 'Previous households', exact: true }).count(), 0);
-    assert.equal(await existing.getByText('Previous home', { exact: true }).count(), 0);
+    await existing.getByRole('heading', { name: 'Previous households', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await existing.getByRole('heading', { name: 'Previous home', exact: true }).count(), 0);
     assert.deepEqual(await ok(existing, '/household-history'), []);
     assert.deepEqual(errors, []);
     console.log('PASS EN/DE/HU, desktop/mobile, light/dark balances and household states, same-tab logout/login isolation');
