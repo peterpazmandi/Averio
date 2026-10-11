@@ -1,47 +1,13 @@
-import { invitationKeys } from '../../household/invitationQueries';
-import { householdKeys } from '../../household/householdQueries';
 import type { QueryClient } from '@tanstack/react-query';
-import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
 import { authQueryKeys } from './authQueryKeys';
-import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
-import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
+import { clearCsrfToken } from '../../../shared/api/csrf';
 
-export async function clearCachedAuthState(queryClient: QueryClient): Promise<void> {
-    await Promise.all([
-        queryClient.cancelQueries({ queryKey: invitationKeys.all }),
-        queryClient.cancelQueries({ queryKey: householdKeys.all }),
-        queryClient.cancelQueries({
-            queryKey: authQueryKeys.all,
-        }),
-
-        queryClient.cancelQueries({
-            queryKey: onboardingQueryKeys.all,
-        }),
-
-        queryClient.cancelQueries({
-            queryKey: accountsQueryKeys.all,
-        }),
-        queryClient.cancelQueries({
-            queryKey: dashboardQueryKeys.all,
-        }),
-    ]);
-
-    queryClient.removeQueries({ queryKey: invitationKeys.all });
-    queryClient.removeQueries({ queryKey: householdKeys.all });
-
-    queryClient.removeQueries({
-        queryKey: authQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: onboardingQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: accountsQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: dashboardQueryKeys.all,
-    });
+export async function clearCachedAuthState(client: QueryClient): Promise<void> {
+    clearCsrfToken();
+    await client.cancelQueries();
+    // Reset in place so AuthProvider stays attached, without a logout refetch.
+    const authQuery = client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true });
+    authQuery?.reset();
+    client.removeQueries({ predicate: query => query !== authQuery });
+    client.getMutationCache().clear();
 }

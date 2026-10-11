@@ -67,7 +67,7 @@ function InvitationForUser({ token, onClearToken }: { token: string; onClearToke
             forgetInvitation();
         },
     });
-    const signOut = useMutation({ mutationFn: async () => { await logoutUser(); await auth.clear(); await client.cancelQueries(); client.clear(); } });
+    const signOut = useMutation({ mutationFn: async () => { await logoutUser(); await auth.clear(); } });
     const decline = useMutation({ mutationFn: () => {
         if (!reviewCurrent || !preview.variables) throw new Error(t('invitations.review'));
         return invitationApi.apiV1InvitationsDeclinationsPost({ invitationTokenRequest: preview.variables });

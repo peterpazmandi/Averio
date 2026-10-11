@@ -9,9 +9,8 @@ export async function refreshHouseholdContext<T>(
     await client.cancelQueries();
     // Removing this query would leave AuthProvider observing a detached query
     // whose data still points at the previous household.
-    client.removeQueries({
-        predicate: query => query.queryKey[0] !== authQueryKeys.all[0],
-    });
+    const authQuery = client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true });
+    client.removeQueries({ predicate: query => query !== authQuery });
     client.getMutationCache().clear();
     return await refreshAuth();
 }

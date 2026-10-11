@@ -51,7 +51,10 @@ concurrent contexts, unchanged account currencies and closed onboarding paths.
 Run it through the existing CI workflow or with `AVERIO_TEST_CONNECTION_STRING`
 pointing to a disposable local PostgreSQL server (the suite creates its own DB).
 
-Owners can now create, resend and revoke invitations; verified invitees can accept
-under the safe empty-household policy. See [Household invitations](household-invitations.md).
-Removal, leaving and owner transfer remain deferred. The accepted boundaries are in
-[ADR-023](decisions/ADR-023-household-settings-and-joining-policy.md).
+Owners can create, resend and revoke invitations. Verified invitees can join from
+an existing household with reviewed account copies and retained history. During
+acceptance, a departing owner chooses a successor when other members remain; a
+last-member household is archived read-only. ADR-024 supersedes the original
+empty-household joining restriction in ADR-023. See [Household invitations](household-invitations.md)
+and [Collaboration verification](collaboration-verification.md). Independent removal
+or departure without an invitation remains deferred.

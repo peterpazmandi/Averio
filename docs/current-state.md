@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-06
+**Status date:** 2026-10-11
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -223,3 +223,12 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 - Original financial history and former-holder attribution are preserved. The last-member household is archived, not deleted; departing users receive immutable, private, read-only history snapshots with date-filtered cash flow.
 - Owner succession during acceptance, active membership uniqueness, serialized financial writes, exact decimal string contracts and PostgreSQL regression coverage.
 - See [ADR-024](decisions/ADR-024-invitation-cutover-and-retained-history.md) and the [deployment guide](household-invitations.md).
+
+
+## Collaboration verification and polish - 2026-10-11
+
+- Real two-user browser verification against the production API pipeline and an isolated PostgreSQL database, including registration/verification, invitations, privacy, cutover, retained history and session switching.
+- Complete financial query/mutation cleanup on logout and membership changes, preserving the mounted current-user observer. CSRF requests cannot restore a token from a previous identity.
+- Localized requester-visible tracked balance explanations on the dashboard and account cards, with EN/DE/HU desktop/mobile and light/dark browser checks.
+- CI failure screenshots, browser traces and server logs, plus a release smoke evidence checklist. Provider/inbox and staging checks are recorded separately from automated captured-mail verification.
+- No new migration or API contract. See [Collaboration verification](collaboration-verification.md).
