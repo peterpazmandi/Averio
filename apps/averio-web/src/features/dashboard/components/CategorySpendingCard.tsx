@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,9 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
     userId: string; householdId: string; reportingCurrency: string;
 }) {
     const { t, i18n } = useTranslation();
+    const controlId = useId();
+    const [kind, setKind] = useState<'Expense' | 'Income'>('Expense');
+    const copy = (key: string) => t(`categorySpending.${kind === 'Income' ? 'income' + key[0].toUpperCase() + key.slice(1) : key}`);
     const language = i18n.resolvedLanguage ?? i18n.language;
     const [today, setToday] = useState(() => utcMonthToDate(new Date()).to);
     const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
@@ -32,22 +35,19 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
         retry: 1,
     });
     const rows = query.data?.periods ?? [];
-    const currencies = [...new Set(rows.filter(row => Number(row.expenseAmount) > 0)
-        .map(row => row.currency))].sort();
+    const currencies = [...new Set(rows.filter(row => Number(row.expenseAmount) > 0 || Number(row.incomeAmount) > 0)
+        .map(row => row.currency).concat(reportingCurrency))].sort();
     const currency = selectedCurrency && currencies.includes(selectedCurrency)
         ? selectedCurrency : currencies.includes(reportingCurrency) ? reportingCurrency : currencies[0];
-    const spending = categorySpending(rows, currency ?? reportingCurrency);
+    const spending = categorySpending(rows, currency ?? reportingCurrency, kind);
     const money = (amount: string) => formatDecimalAmount(amount, currency ?? reportingCurrency, language);
-    const date = (value: string) => new Intl.DateTimeFormat(language, {
-        day: 'numeric', month: 'short', timeZone: 'UTC',
-    }).format(new Date(value + 'T00:00:00Z'));
 
     return (
         <AverioCard role="region" aria-labelledby="category-spending-title" className="col-span-12 space-y-4 xl:col-span-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                    <h3 id="category-spending-title" className="text-base font-semibold">{t('categorySpending.title')}</h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('categorySpending.period', { from: date(from), to: date(today) })}</p>
+                    <h3 id="category-spending-title" className="text-base font-semibold">{copy('title')}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('categorySpending.period')}</p>
                 </div>
                 <Link to="/app/statistics" className={linkStyle}>{t('categorySpending.report')}</Link>
             </div>
@@ -55,22 +55,32 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                 : query.isError ? <div className="space-y-3">
                     <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('categorySpending.error')}</p>
                     <AverioButton disabled={query.isFetching} onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton>
-                </div> : spending.segments.length === 0 ? <div className="space-y-2 py-4 text-center">
+                </div> : <>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 text-xs font-medium">
+                            <label htmlFor={`${controlId}-currency`}>{t('categorySpending.currency')}</label>
+                            <AverioSelect id={`${controlId}-currency`} value={currency} onChange={event => setSelectedCurrency(event.target.value)}>
+                                {currencies.map(value => <option key={value} value={value}>{value}</option>)}
+                            </AverioSelect>
+                        </div>
+                        <div className="space-y-1 text-xs font-medium">
+                            <label htmlFor={`${controlId}-kind`}>{t('categorySpending.type')}</label>
+                            <AverioSelect id={`${controlId}-kind`} value={kind} onChange={event => setKind(event.target.value as 'Expense' | 'Income')}>
+                                <option value="Expense">{t('categorySpending.expense')}</option>
+                                <option value="Income">{t('categorySpending.income')}</option>
+                            </AverioSelect>
+                        </div>
+                    </div>
+                    {spending.segments.length === 0 ? <div className="space-y-2 py-4 text-center">
                     <svg viewBox="0 0 100 80" className="mx-auto h-20 w-24 text-emerald-500" aria-hidden="true">
                         <circle cx="50" cy="40" r="28" fill="none" stroke="currentColor" strokeWidth="12" className="opacity-20" />
                         <path d="M50 12a28 28 0 0 1 28 28" fill="none" stroke="currentColor" strokeWidth="12" />
                         <path d="M44 40h12m-6-6v12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                     </svg>
-                    <h4 className="font-semibold">{t('categorySpending.emptyTitle')}</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{t('categorySpending.emptyHelp')}</p>
+                    <h4 className="font-semibold">{copy('emptyTitle')}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{copy('emptyHelp')}</p>
                     <Link to="/app/transactions" search={{ create: true }} className={linkStyle}>{t('concept.addTransaction')}</Link>
                 </div> : <>
-                    <label className="block space-y-1 text-xs font-medium">
-                        <span>{t('categorySpending.currency')}</span>
-                        <AverioSelect value={currency} onChange={event => setSelectedCurrency(event.target.value)}>
-                            {currencies.map(value => <option key={value} value={value}>{value}</option>)}
-                        </AverioSelect>
-                    </label>
                     <div className="flex flex-wrap items-center justify-center gap-4">
                         <svg viewBox="0 0 120 120" className="size-28 shrink-0" aria-hidden="true">
                             {spending.segments.map((segment, index) => <circle key={segment.id}
@@ -79,7 +89,7 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                                 strokeDashoffset={-segment.offset} transform="rotate(-90 60 60)" className={tones[index]} />)}
                         </svg>
                         <dl className="min-w-[12rem] flex-1 space-y-3">
-                            {spending.segments.map((segment, index) => <div key={segment.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-xs">
+                            {spending.segments.map((segment, index) => <div key={segment.id} data-category={segment.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-xs ${segment.id === 'other' ? 'border-t border-slate-200 pt-3 dark:border-slate-700' : 'font-semibold'}`}>
                                 <dt className="flex min-w-0 items-start gap-2">
                                     <svg viewBox="0 0 8 8" className={`mt-1 size-2 shrink-0 ${tones[index]}`} aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
                                     <span className="min-w-0 break-words">
@@ -92,11 +102,12 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                         </dl>
                     </div>
                     <div className="flex flex-wrap justify-between gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
-                        <span className="text-sm">{t('categorySpending.total')}</span>
+                        <span className="text-sm">{copy('total')}</span>
                         <strong className="break-all tabular-nums" data-testid="category-spending-total">{money(spending.total)}</strong>
                     </div>
                 </>}
-            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t('categorySpending.help')}</p>
+                </>}
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{copy('help')}</p>
         </AverioCard>
     );
 }

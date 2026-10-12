@@ -66,3 +66,15 @@ test('account changes invalidate household reporting as well as balances', async
     await useAccountMutations('user', 'home').update.onSuccess();
     assert.ok(keys.some(key => key.join() === 'statistics,user,home'));
 });
+
+test('income ranks independently, sums daily decimals and groups the remainder without expenses', () => {
+    const input = Array.from({ length: 6 }, (_, i) => ({ ...row(String(i), '999'), incomeAmount: String(i + 1) }));
+    input.push({ ...row('5', '999'), incomeAmount: '0.0001' });
+    input.push({ ...row('foreign', '999', 'HUF'), incomeAmount: '10000' });
+    const result = categorySpending(input, 'EUR', 'Income');
+    assert.equal(result.total, '21.0001');
+    assert.equal(result.segments.map(x => x.id).join(), '5,4,3,2,other');
+    assert.equal(result.segments[0].amount, '6.0001');
+    assert.equal(result.segments[4].amount, '3');
+    assert.equal(categorySpending([row('expense', '100')], 'EUR', 'Income').segments.length, 0);
+});

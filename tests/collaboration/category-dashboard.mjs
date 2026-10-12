@@ -24,7 +24,7 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
         await page.locator('a[href="/app"]').first().click();
         await page.getByRole('region', { name: 'Spending by category', exact: true }).waitFor();
     };
-    const card = () => page.getByRole('region', { name: 'Spending by category', exact: true });
+    const card = () => page.getByRole('region', { name: /^(Spending|Income) by category$/ });
     const total = async expected => {
         await poll(async () => (await card().getByTestId('category-spending-total').textContent()).replace(/\s/g, '') === expected, `category total ${expected}`);
     };
@@ -84,12 +84,26 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     } });
     assert.ok(excluded.id);
     await page.reload(); await total('€45.0003');
-    await card().getByText('Other categories', { exact: false }).waitFor();
+    await card().getByText('Other', { exact: true }).waitFor();
     assert.equal(await card().locator('dt').count(), 5);
     assert.equal(await card().getByText(categoryName, { exact: false }).count() > 0, true);
-    await card().getByRole('combobox').selectOption('HUF');
+    await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('HUF');
     await total('HUF1,234.5678');
-    await card().getByRole('combobox').selectOption('EUR');
+    await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('EUR');
+    await total('€45.0003');
+    assert.deepEqual(await card().locator('[data-category]').evaluateAll(rows => rows.map(row => row.dataset.category)),
+        [categories[0].id, categories[5].id, categories[4].id, categories[3].id, 'other']);
+    assert.equal(await card().locator('[data-category="other"]').evaluate(el => getComputedStyle(el).borderTopWidth), '1px');
+    await card().getByText('This month so far', { exact: true }).waitFor();
+    await card().getByRole('combobox', { name: 'Transaction type', exact: true }).selectOption('Income');
+    await total('€150.1234');
+    await card().getByText('Total income', { exact: true }).waitFor();
+    await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('HUF');
+    await card().getByText('Your income story starts here', { exact: true }).waitFor();
+    assert.equal(await card().getByTestId('category-spending-total').count(), 0);
+    await card().getByRole('combobox', { name: 'Transaction type', exact: true }).selectOption('Expense');
+    await total('HUF1,234.5678');
+    await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('EUR');
     await total('€45.0003');
     await card().getByRole('link', { name: 'View report', exact: true }).click();
     await page.waitForURL('**/app/statistics');
@@ -111,6 +125,10 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
         await localized.getByTestId('category-spending-total').waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.equal(await localized.evaluate(el => el.scrollWidth > el.clientWidth + 1), false);
+        assert.ok(await page.locator('.av-bento > div').evaluateAll(cards => cards.length >= 8 && cards.every(card => {
+            const style = getComputedStyle(card);
+            return style.borderLeftWidth === '3px' && style.borderLeftColor !== style.borderRightColor;
+        })));
         await localized.screenshot({ path: path.join(artifacts, `category-${language}-${theme}.png`) });
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
@@ -130,5 +148,5 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await page.unroute(reportPattern);
     await card().getByRole('button', { name: 'Try again', exact: true }).click();
     await total('€45.0003');
-    console.log('PASS category dashboard: real create/edit/void, precise amounts, UTC range, currencies, privacy/reporting exclusions, Other, locales/themes, loading/error/retry');
+    console.log('PASS category dashboard: real create/edit/void, precise amounts, UTC range, currencies, expense/income switching and empty recovery, privacy/reporting exclusions, ranked top four/Other, consistent card accents, locales/themes, loading/error/retry');
 }

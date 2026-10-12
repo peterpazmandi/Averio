@@ -70,13 +70,13 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
     }
     if (dashboardQuery.isError) {
         return (
-            <section className="av-card space-y-4">
+            <AverioCard className="space-y-4">
                 <p role="alert" className="av-error">{t('errors.genericDescription')}</p>
                 <button type="button" className="av-btn" disabled={dashboardQuery.isFetching}
                     onClick={() => { void dashboardQuery.refetch(); }}>
                     {t('common.actions.retry')}
                 </button>
-            </section>
+            </AverioCard>
         );
     }
 
@@ -113,7 +113,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
         icon: ConceptIconName,
     ) {
         return (
-            <section className="av-card av-span-4" aria-label={t('concept.' + name + 'Title')}>
+            <AverioCard className="av-span-4" aria-label={t('concept.' + name + 'Title')}>
                 <div className="av-card-head">
                     <div>
                         <h3>{t('concept.' + name + 'Title')}</h3>
@@ -125,7 +125,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     <ConceptIcon name={icon} />
                     <p>{t('concept.' + name + 'Empty')}</p>
                 </div>
-            </section>
+            </AverioCard>
         );
     }
 
@@ -187,7 +187,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     </div>
                 </AverioCard>
 
-                <section className="av-card av-span-8">
+                <AverioCard className="av-span-8">
                     <div className="av-card-head">
                         <div>
                             <h3>{t('transactionManagement.dashboardCashFlow')}</h3>
@@ -317,9 +317,9 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                         <span><i className="income" />{t('statistics.income')}</span>
                         <span><i className="expense" />{t('statistics.expenses')}</span>
                     </div>
-                </section>
+                </AverioCard>
 
-                <section className="av-card av-span-4" aria-label={t('transactionManagement.dashboardMonth')}>
+                <AverioCard className="av-span-4" aria-label={t('transactionManagement.dashboardMonth')}>
                     <div className="av-card-head">
                         <div>
                             <h3>{t('transactionManagement.dashboardMonth')}</h3>
@@ -361,12 +361,12 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                             })}
                         </div>
                     )}
-                </section>
+                </AverioCard>
 
                 <CategorySpendingCard key={`${userId}:${householdId}`} userId={userId} householdId={householdId} reportingCurrency={dashboard.reportingCurrency} />
                 {emptyCard('goals', 'goals')}
 
-                <section className="av-card av-span-8">
+                <AverioCard className="av-span-8">
                     <div className="av-card-head">
                         <div>
                             <h3>{t('transactionManagement.latest')}</h3>
@@ -413,11 +413,11 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                             ))}
                         </div>
                     )}
-                </section>
+                </AverioCard>
 
                 {emptyCard('personal', 'profile')}
 
-                <section className="av-card av-span-12" aria-labelledby="dashboard-accounts-title">
+                <AverioCard className="av-span-12" aria-labelledby="dashboard-accounts-title">
                     <div className="av-card-head">
                         <div>
                             <h3 id="dashboard-accounts-title">{t('dashboard.accountsTitle')}</h3>
@@ -442,7 +442,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                             ))}
                         </div>
                     )}
-                </section>
+                </AverioCard>
             </div>
         </div>
     );

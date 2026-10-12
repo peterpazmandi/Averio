@@ -235,3 +235,5 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 - Localized requester-visible tracked balance explanations on the dashboard and account cards, with EN/DE/HU desktop/mobile and light/dark browser checks.
 - CI failure screenshots, browser traces and server logs, plus a release smoke evidence checklist. Provider/inbox and staging checks are recorded separately from automated captured-mail verification.
 - No new migration or API contract. See [Collaboration verification](collaboration-verification.md).
+
+Dashboard category card refinements: “This month so far” subtitle; adjacent currency and Expenses/Income selectors; independently ranked top four with a separated Other row; shared green-left-border surfaces across dashboard cards. See `dashboard-category-spending.md` for reporting semantics and browser coverage.
