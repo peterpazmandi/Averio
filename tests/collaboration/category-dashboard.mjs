@@ -84,7 +84,7 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     } });
     assert.ok(excluded.id);
     await page.reload(); await total('€45.0003');
-    await card().getByText('Other', { exact: true }).waitFor();
+    await card().locator('[data-category="other"] dt').filter({ hasText: /^Other/ }).waitFor();
     assert.equal(await card().locator('dt').count(), 5);
     assert.equal(await card().getByText(categoryName, { exact: false }).count() > 0, true);
     await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('HUF');
