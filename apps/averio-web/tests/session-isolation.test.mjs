@@ -23,6 +23,70 @@ const deferred = () => {
     return { promise, resolve, reject };
 };
 
+for (const knownIdentity of [false, true]) {
+    test(`route guard 401 leaves an enabled auth observer anonymous (${knownIdentity ? 'expired session' : 'initial visit'})`, async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+        const { authQueryKeys } = load('../src/features/authentication/api/authQueryKeys.ts', {});
+        const { ApiError } = load('../src/shared/api/ApiError.ts', {});
+        const unauthorized = new ApiError('Unauthorized', 401);
+        let identity;
+        let requests = 0;
+        const authQueries = { currentUser: () => ({ queryKey: authQueryKeys.currentUser(), retry: false,
+            staleTime: 60_000, queryFn: async () => {
+                requests++;
+                if (!identity) throw unauthorized;
+                return identity;
+            } }) };
+        if (knownIdentity) client.setQueryData(authQueryKeys.currentUser(), { userId: 'previous-member' });
+        client.setQueryData(['private-finances'], { note: 'SECRET' });
+        await client.getMutationCache().build(client, {
+            mutationFn: async () => ({ note: 'SECRET' }),
+        }).execute();
+        const authCache = load('../src/features/authentication/api/authCache.ts', {
+            './authQueryKeys': { authQueryKeys }, '../../../shared/api/csrf': { clearCsrfToken() {} },
+        });
+        const { getAuthenticatedUser } = load('../src/features/authentication/api/authGuard.ts', {
+            '@tanstack/react-router': { redirect: options => ({ redirect: options }) },
+            '../../../shared/api/ApiError': { ApiError }, './authQueries': { authQueries }, './authCache': authCache,
+        });
+        const observer = new QueryObserver(client, { ...authQueries.currentUser(), enabled: true });
+        const unsubscribe = observer.subscribe(() => {});
+        const attached = client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true });
+        let rejected = false;
+        const scheduled = [];
+        const { AuthProvider } = load('../src/features/authentication/context/AuthProvider.tsx', {
+            react: { createContext: () => ({ Provider: 'provider' }), useCallback: fn => fn,
+                useEffect: fn => fn(), useState: () => [rejected, value => { rejected = value; }] },
+            'react/jsx-runtime': jsxRuntime,
+            '@tanstack/react-query': { useQueryClient: () => client, useQuery: () => observer.getCurrentResult() },
+            '../../../shared/api/ApiError': { ApiError }, '../api/authQueries': { authQueries }, '../api/authCache': authCache,
+        }, { window: { setTimeout: fn => { scheduled.push(fn); return 1; }, clearTimeout() {} } });
+        const render = () => AuthProvider({ children: null }).props.value;
+        try {
+            await assert.rejects(getAuthenticatedUser(client, '/app/accounts'), error =>
+                error.redirect?.to === '/login' && error.redirect.search.redirect === '/app/accounts');
+            // Model batched React delivery: the provider first renders after guard cleanup.
+            assert.equal(render().status, 'anonymous', 'A guard/preload must not leave the app loading with no request');
+            assert.equal(observer.getCurrentResult().error, unauthorized);
+            assert.equal(observer.getCurrentResult().data, undefined);
+            assert.equal(observer.getCurrentResult().fetchStatus, 'idle');
+            assert.equal(requests, 1, 'Cleanup must not refetch the expired session');
+            assert.equal(client.getQueryData(['private-finances']), undefined);
+            assert.equal(client.getMutationCache().getAll().length, 0);
+            assert.equal(client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true }), attached);
+            scheduled.splice(0).forEach(fn => fn());
+            await new Promise(resolve => setImmediate(resolve));
+            assert.equal(render().status, 'anonymous', 'Provider cleanup keeps the signed-out state');
+            identity = { userId: 'next-member' };
+            await render().refresh();
+            assert.equal(render().status, 'authenticated');
+            assert.equal(render().user.userId, 'next-member');
+        } finally {
+            unsubscribe(); client.clear();
+        }
+    });
+}
+
 test('logout clears all financial queries and mutation payloads while retaining the live auth observer', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const authKey = ['authentication', 'current-user'];
