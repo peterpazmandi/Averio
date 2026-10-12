@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-11
+**Status date:** 2026-10-12
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -104,6 +104,8 @@ The dashboard endpoint returns visible accounts with current balances,
 household balances by currency, six months of cash flow, and the latest visible
 transactions. The statistics page presents monthly cash flow and yearly
 category totals without combining currencies.
+
+The dashboard category card shows month-to-date household-reportable expenses using daily aggregates through today (UTC), separate currencies, exact totals, and the largest four direct categories plus Other. It replaces the category placeholder with the canonical donut/legend design, localized states and browser verification. See [Dashboard category spending](dashboard-category-spending.md).
 
 ## Verification and CI — implemented
 

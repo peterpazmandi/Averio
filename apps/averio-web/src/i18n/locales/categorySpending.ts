@@ -1,0 +1,36 @@
+export const categorySpendingEN = {
+    title: 'Spending by category',
+    period: '{{from}} – {{to}} · UTC',
+    report: 'View report',
+    currency: 'Spending currency',
+    total: 'Total expenses',
+    other: 'Other categories',
+    help: 'Household-reportable expenses through today. Currencies stay separate; each category counts only its own items.',
+    emptyTitle: 'Your spending story starts here',
+    emptyHelp: 'No household-reportable expenses this month yet. Record an expense to see where your money goes.',
+    error: 'Category spending could not be loaded.',
+};
+export const categorySpendingDE = {
+    title: 'Ausgaben nach Kategorie',
+    period: '{{from}} – {{to}} · UTC',
+    report: 'Bericht ansehen',
+    currency: 'Ausgabenwährung',
+    total: 'Gesamtausgaben',
+    other: 'Weitere Kategorien',
+    help: 'Für Haushaltsberichte berücksichtigte Ausgaben bis heute. Währungen bleiben getrennt; jede Kategorie zählt nur ihre eigenen Positionen.',
+    emptyTitle: 'Hier beginnt dein Ausgabenüberblick',
+    emptyHelp: 'Diesen Monat gibt es noch keine Ausgaben für Haushaltsberichte. Erfasse eine Ausgabe, um zu sehen, wohin dein Geld fließt.',
+    error: 'Die Ausgaben nach Kategorie konnten nicht geladen werden.',
+};
+export const categorySpendingHU = {
+    title: 'Kiadások kategóriánként',
+    period: '{{from}} – {{to}} · UTC',
+    report: 'Jelentés megtekintése',
+    currency: 'Kiadások pénzneme',
+    total: 'Összes kiadás',
+    other: 'További kategóriák',
+    help: 'A háztartási jelentésekben szereplő kiadások a mai napig. A pénznemeket külön kezeljük; minden kategória csak a saját tételeit tartalmazza.',
+    emptyTitle: 'Itt kezdődik a kiadásaid áttekintése',
+    emptyHelp: 'Ebben a hónapban még nincs háztartási jelentésben szereplő kiadás. Rögzíts egy kiadást, és nézd meg, mire megy el a pénzed.',
+    error: 'A kategóriánkénti kiadásokat nem sikerült betölteni.',
+};

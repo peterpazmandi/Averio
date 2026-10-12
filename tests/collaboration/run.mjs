@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { verifyCategoryDashboard } from './category-dashboard.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const web = path.join(root, 'apps/averio-web');
@@ -289,6 +290,8 @@ try {
     assert.deepEqual(await ok(existing, '/household-history'), []);
     assert.deepEqual(errors, []);
     console.log('PASS EN/DE/HU, desktop/mobile, light/dark balances and household states, same-tab logout/login isolation');
+    await verifyCategoryDashboard({ fixture: fixture.dashboard, password, session, ok, poll, localeFile, artifacts, outsider: partner });
+    assert.deepEqual(errors, []);
 } catch (error) {
     for (const name of ['api', 'web']) {
         const log = path.join(artifacts, name + '.log');

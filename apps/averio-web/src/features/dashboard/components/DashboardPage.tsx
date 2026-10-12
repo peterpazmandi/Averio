@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CategorySpendingCard } from './CategorySpendingCard';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -108,7 +109,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
     const currentMonth = dashboard.cashFlow.filter(period => period.periodStart === monthKey);
 
     function emptyCard(
-        name: 'category' | 'goals' | 'personal',
+        name: 'goals' | 'personal',
         icon: ConceptIconName,
     ) {
         return (
@@ -362,7 +363,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     )}
                 </section>
 
-                {emptyCard('category', 'categories')}
+                <CategorySpendingCard key={`${userId}:${householdId}`} userId={userId} householdId={householdId} reportingCurrency={dashboard.reportingCurrency} />
                 {emptyCard('goals', 'goals')}
 
                 <section className="av-card av-span-8">
