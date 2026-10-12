@@ -34,7 +34,7 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     assert.equal(await card().getByTestId('category-spending-total').count(), 0);
     await card().getByRole('link', { name: 'Add transaction', exact: true }).click();
     const editor = page.getByRole('dialog', { name: 'Add transaction', exact: true });
-    await editor.getByLabel('Account', { exact: true }).selectOption(f.sharedAccountId);
+    await editor.getByLabel(/^Account/).selectOption(f.sharedAccountId);
     await editor.getByLabel('Date', { exact: true }).fill(f.date);
     await editor.getByLabel('Merchant / Store', { exact: true }).fill('Dashboard browser purchase');
     await editor.getByLabel('Description', { exact: true }).fill('Browser expense');
@@ -87,9 +87,9 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await card().getByText('Other categories', { exact: false }).waitFor();
     assert.equal(await card().locator('dt').count(), 5);
     assert.equal(await card().getByText(categoryName, { exact: false }).count() > 0, true);
-    await card().getByLabel('Spending currency', { exact: true }).selectOption('HUF');
+    await card().getByRole('combobox').selectOption('HUF');
     await total('HUF1,234.5678');
-    await card().getByLabel('Spending currency', { exact: true }).selectOption('EUR');
+    await card().getByRole('combobox').selectOption('EUR');
     await total('€45.0003');
     await card().getByRole('link', { name: 'View report', exact: true }).click();
     await page.waitForURL('**/app/statistics');

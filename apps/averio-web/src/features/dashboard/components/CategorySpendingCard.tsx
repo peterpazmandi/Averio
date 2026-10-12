@@ -72,20 +72,22 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                         </AverioSelect>
                     </label>
                     <div className="flex flex-wrap items-center justify-center gap-4">
-                        <svg viewBox="0 0 120 120" className="h-32 w-32 shrink-0" aria-hidden="true">
+                        <svg viewBox="0 0 120 120" className="size-28 shrink-0" aria-hidden="true">
                             {spending.segments.map((segment, index) => <circle key={segment.id}
                                 cx="60" cy="60" r="44" pathLength="100" fill="none" stroke="currentColor" strokeWidth="18"
                                 strokeDasharray={`${segment.percentage} ${100 - segment.percentage}`}
                                 strokeDashoffset={-segment.offset} transform="rotate(-90 60 60)" className={tones[index]} />)}
                         </svg>
-                        <dl className="min-w-0 flex-1 space-y-3">
-                            {spending.segments.map((segment, index) => <div key={segment.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
-                                <dt className="min-w-0 break-words">
-                                    <svg viewBox="0 0 8 8" className={`mr-2 inline size-2 ${tones[index]}`} aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-                                    {segment.id === 'other' ? t('categorySpending.other') : getCategoryDisplayName(segment, t)}
-                                    <span className="ml-2 text-xs text-slate-600 dark:text-slate-300">{new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(segment.percentage / 100)}</span>
+                        <dl className="min-w-[12rem] flex-1 space-y-3">
+                            {spending.segments.map((segment, index) => <div key={segment.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-xs">
+                                <dt className="flex min-w-0 items-start gap-2">
+                                    <svg viewBox="0 0 8 8" className={`mt-1 size-2 shrink-0 ${tones[index]}`} aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
+                                    <span className="min-w-0 break-words">
+                                        {segment.id === 'other' ? t('categorySpending.other') : getCategoryDisplayName(segment, t)}
+                                        <span className="block text-xs text-slate-600 dark:text-slate-300">{new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(segment.percentage / 100)}</span>
+                                    </span>
                                 </dt>
-                                <dd className="break-all font-semibold tabular-nums">{money(segment.amount)}</dd>
+                                <dd className="max-w-[10rem] break-all text-right font-semibold tabular-nums">{money(segment.amount)}</dd>
                             </div>)}
                         </dl>
                     </div>
