@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
 import * as jsxRuntime from 'react/jsx-runtime';
-import { QueryClient, QueryObserver } from '@tanstack/react-query';
+import { QueryClient, QueryObserver, queryOptions } from '@tanstack/react-query';
 
 function load(path, imports, globals = {}) {
     const code = ts.transpileModule(fs.readFileSync(new URL(path, import.meta.url), 'utf8'), {
@@ -200,3 +200,59 @@ for (const order of ['old-first', 'new-first', 'old-error']) {
         assert.equal(await next, 'third-identity');
     });
 }
+
+for (const authenticated of [true, false]) {
+    test(`cold-start guard survives auth observer remount (${authenticated ? 'signed in' : 'anonymous'})`, async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+        const response = deferred();
+        const { authQueryKeys } = load('../src/features/authentication/api/authQueryKeys.ts', {});
+        const { ApiError } = load('../src/shared/api/ApiError.ts', {});
+        let requests = 0;
+        const { authQueries } = load('../src/features/authentication/api/authQueries.ts', {
+            '@tanstack/react-query': { queryOptions }, './authQueryKeys': { authQueryKeys },
+            './authApi': { getCurrentUser: () => { requests++; return response.promise; } },
+        });
+        const authCache = load('../src/features/authentication/api/authCache.ts', {
+            './authQueryKeys': { authQueryKeys }, '../../../shared/api/csrf': { clearCsrfToken() {} },
+        });
+        const { getAuthenticatedUser } = load('../src/features/authentication/api/authGuard.ts', {
+            '@tanstack/react-router': { redirect: options => ({ redirect: options }) },
+            '../../../shared/api/ApiError': { ApiError }, './authQueries': { authQueries }, './authCache': authCache,
+        });
+        const observer = new QueryObserver(client, authQueries.currentUser());
+        let unsubscribe = observer.subscribe(() => {});
+        const pending = getAuthenticatedUser(client, '/app').then(user => ({ user }), error => ({ error }));
+        // React development StrictMode temporarily removes the last auth observer.
+        // The route guard is still awaiting this same session request.
+        unsubscribe();
+        unsubscribe = observer.subscribe(() => {});
+        try {
+            if (authenticated) response.resolve({ userId: 'owner' });
+            else response.reject(new ApiError('Unauthorized', 401));
+            const result = await pending;
+            if (authenticated) assert.equal(result.user?.userId, 'owner', String(result.error));
+            else assert.equal(result.error?.redirect?.to, '/login', String(result.error));
+            assert.equal(requests, 1, 'Observer replay must retain the request shared with the guard');
+        } finally { unsubscribe(); client.clear(); }
+    });
+}
+
+test('explicit logout cancels an in-flight shared session and discards its late response', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+    const response = deferred();
+    const { authQueryKeys } = load('../src/features/authentication/api/authQueryKeys.ts', {});
+    const { authQueries } = load('../src/features/authentication/api/authQueries.ts', {
+        '@tanstack/react-query': { queryOptions }, './authQueryKeys': { authQueryKeys },
+        './authApi': { getCurrentUser: () => response.promise },
+    });
+    const { clearCachedAuthState } = load('../src/features/authentication/api/authCache.ts', {
+        './authQueryKeys': { authQueryKeys }, '../../../shared/api/csrf': { clearCsrfToken() {} },
+    });
+    const pending = client.fetchQuery(authQueries.currentUser()).catch(error => error);
+    await clearCachedAuthState(client);
+    response.resolve({ userId: 'old-session' });
+    assert.equal((await pending).constructor.name, 'CancelledError');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(client.getQueryData(authQueryKeys.currentUser()), undefined);
+    client.clear();
+});

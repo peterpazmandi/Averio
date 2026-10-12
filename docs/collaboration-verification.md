@@ -113,3 +113,9 @@ Record this evidence for the exact release candidate:
 
 Leave a check explicitly **not run** until its evidence exists. This implementation
 and PR do not deploy, migrate a shared database, or send provider email.
+
+## Refresh and development startup regression
+
+The browser suite also checks authenticated cold loads and browser reloads on `/app`, `/app/accounts`, `/app/statistics`, and `/`, plus signed-out redirects to login. It delays the real `/auth/me` response to exercise startup overlap. After the production checks it restarts the frontend as a Vite development server on the same test origin and repeats these scenarios with React StrictMode enabled.
+
+The current-user query is shared by the auth observer and imperative route guards. It deliberately does not consume the observer abort signal: a temporary observer unmount must not cancel a guard's pending session lookup. Explicit logout/session-cache cleanup still cancels query waiters and discards late results. The session-isolation regression tests verify both behaviors.
