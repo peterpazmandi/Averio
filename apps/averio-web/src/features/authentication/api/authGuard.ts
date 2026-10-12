@@ -35,7 +35,7 @@ export async function getAuthenticatedUser(
             error instanceof ApiError
             && error.status === 401
         ) {
-            await clearCachedAuthState(queryClient);
+            await clearCachedAuthState(queryClient, { unauthorizedError: error });
             throw redirect({
                 to: '/login',
                 search: {

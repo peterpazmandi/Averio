@@ -82,7 +82,7 @@ household is archived. Active memberships and household owners use filtered
 unique indexes; old memberships remain as foreign-key targets for authorship and
 holders. Departed users have no live authorization in the source household.
 
-After acceptance the frontend cancels queries, removes non-authentication queries
+After acceptance the frontend cancels queries, removes every query except the live current-user query
 and clears mutation results. It keeps the mounted authentication query attached to
 its observer, refreshes identity from the server, then opens the destination.
 Retained membership rows are historical attribution: only `LeftAtUtc == null`
@@ -247,3 +247,13 @@ Gmail with remote images enabled.
 Standalone leaving/removal, live multi-household switching, history merging,
 bank-feed reconnection and snapshot export remain deferred. See
 [ADR-024](decisions/ADR-024-invitation-cutover-and-retained-history.md).
+
+
+## Collaboration verification
+
+The phase-three browser suite exercises separate real cookie sessions against the
+API and isolated PostgreSQL. See [Collaboration verification](collaboration-verification.md)
+for covered scenarios, local execution, cache/CSRF regression details and the staging
+provider smoke evidence checklist. Logout clears all financial queries and mutation
+payloads while resetting the current-user query in place; delayed token requests
+cannot restore a previous session's CSRF token.

@@ -115,6 +115,8 @@ export function AccountCard({
                 </p>
             </div>
 
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t('accountManagement.trackedBalanceHelp')}</p>
+
             <AccountOwnershipSummary account={account} />
 
             {canModify && (

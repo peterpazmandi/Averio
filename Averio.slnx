@@ -9,6 +9,7 @@
     <Project Path="src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Averio.Collaboration.Host/Averio.Collaboration.Host.csproj" />
     <Project Path="tests/Averio.Accounts.Tests/Averio.Accounts.Tests.csproj" />
     <Project Path="tests/Averio.Persistence.Tests/Averio.Persistence.Tests.csproj" />
     <Project Path="tests/Averio.Transactions.Tests/Averio.Transactions.Tests.csproj" />

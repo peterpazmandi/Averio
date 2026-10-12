@@ -6,7 +6,7 @@ export const authQueries = {
     currentUser: () =>
         queryOptions({
             queryKey: authQueryKeys.currentUser(),
-            queryFn: getCurrentUser,
+            queryFn: ({ signal }) => getCurrentUser(signal),
             retry: false,
             staleTime: 60_000,
         }),

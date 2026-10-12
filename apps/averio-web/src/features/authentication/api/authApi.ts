@@ -80,10 +80,11 @@ export async function resendEmailVerification(
     );
 }
 
-export async function getCurrentUser():
+export async function getCurrentUser(signal?: AbortSignal):
     Promise<CurrentUserResponse> {
     return await apiFetch<CurrentUserResponse>(
         '/api/v1/auth/me',
+        { signal },
     );
 }
 

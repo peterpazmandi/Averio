@@ -115,6 +115,19 @@ jobs:
         working-directory: apps/averio-web
         run: npm run lint
 
+      - name: Verify collaboration in separate browser sessions
+        working-directory: apps/averio-web
+        run: npm run test:collaboration
+
+      - name: Upload collaboration failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collaboration-failure-evidence
+          path: test-results/collaboration
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify generated OpenAPI client
         working-directory: apps/averio-web
         env:

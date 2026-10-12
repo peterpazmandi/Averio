@@ -31,7 +31,7 @@ export function HouseholdInvitations({ userId, householdId }: { userId: string; 
     const error = mutation.error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{mutation.error instanceof ApiError ? mutation.error.message : t('errors.genericDescription')}</p>;
     return <AverioCard className="space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-semibold">{t('invitations.title')}</h3>
-            <AverioButton onClick={() => { mutation.reset(); setOpen(true); }}>{t('invitations.invite')}</AverioButton></div>
+            <AverioButton disabled={mutation.isPending} onClick={() => { mutation.reset(); setOpen(true); }}>{t('invitations.invite')}</AverioButton></div>
         <p className="text-sm text-slate-600 dark:text-slate-300">{t('invitations.help')}</p>
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
         {query.isError && <div role="alert"><p>{t('invitations.loadError')}</p><AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('common.actions.retry')}</AverioButton></div>}

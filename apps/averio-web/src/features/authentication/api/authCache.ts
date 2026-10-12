@@ -1,47 +1,30 @@
-import { invitationKeys } from '../../household/invitationQueries';
-import { householdKeys } from '../../household/householdQueries';
 import type { QueryClient } from '@tanstack/react-query';
-import { onboardingQueryKeys } from '../../onboarding/api/onboardingQueryKeys';
 import { authQueryKeys } from './authQueryKeys';
-import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
-import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
+import { clearCsrfToken } from '../../../shared/api/csrf';
+import type { ApiError } from '../../../shared/api/ApiError';
 
-export async function clearCachedAuthState(queryClient: QueryClient): Promise<void> {
-    await Promise.all([
-        queryClient.cancelQueries({ queryKey: invitationKeys.all }),
-        queryClient.cancelQueries({ queryKey: householdKeys.all }),
-        queryClient.cancelQueries({
-            queryKey: authQueryKeys.all,
-        }),
-
-        queryClient.cancelQueries({
-            queryKey: onboardingQueryKeys.all,
-        }),
-
-        queryClient.cancelQueries({
-            queryKey: accountsQueryKeys.all,
-        }),
-        queryClient.cancelQueries({
-            queryKey: dashboardQueryKeys.all,
-        }),
-    ]);
-
-    queryClient.removeQueries({ queryKey: invitationKeys.all });
-    queryClient.removeQueries({ queryKey: householdKeys.all });
-
-    queryClient.removeQueries({
-        queryKey: authQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: onboardingQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: accountsQueryKeys.all,
-    });
-
-    queryClient.removeQueries({
-        queryKey: dashboardQueryKeys.all,
-    });
+export async function clearCachedAuthState(
+    client: QueryClient,
+    { identityChanged = true, unauthorizedError }: {
+        identityChanged?: boolean;
+        unauthorizedError?: ApiError;
+    } = {},
+): Promise<void> {
+    if (identityChanged) clearCsrfToken();
+    await client.cancelQueries();
+    // Reset in place so AuthProvider stays attached, without a logout refetch.
+    const authQuery = client.getQueryCache().find({ queryKey: authQueryKeys.currentUser(), exact: true });
+    authQuery?.reset();
+    // Route guards cannot set AuthProvider's local sessionRejected flag.
+    // Keep their 401 observable after removing stale identity data so the
+    // mounted provider transitions to anonymous instead of idle/loading.
+    if (unauthorizedError) {
+        authQuery?.setState({
+            status: 'error',
+            error: unauthorizedError,
+            errorUpdatedAt: Date.now(),
+        });
+    }
+    client.removeQueries({ predicate: query => query !== authQuery });
+    client.getMutationCache().clear();
 }

@@ -68,11 +68,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         || queryReturnedUnauthorized;
 
     const clear = useCallback(
-        async (): Promise<void> => {
+        async (identityChanged = true): Promise<void> => {
             setSessionRejected(true);
 
             await clearCachedAuthState(
                 queryClient,
+                { identityChanged },
             );
         },
         [
@@ -88,7 +89,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
             const timeout = window.setTimeout(
                 () => {
-                    void clear();
+                    // An initial anonymous check is not a change of identity.
+                    // Preserve pending public actions such as email verification.
+                    void clear(query.data !== undefined);
                 },
                 0,
             );
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         },
         [
             clear,
+            query.data,
             queryReturnedUnauthorized,
         ],
     );
@@ -136,6 +140,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
                     await clearCachedAuthState(
                         queryClient,
+                        { identityChanged: queryClient.getQueryData(authQueries.currentUser().queryKey) !== undefined },
                     );
                 }
 

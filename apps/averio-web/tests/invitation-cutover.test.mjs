@@ -6,11 +6,11 @@ import ts from 'typescript';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
 
-function load(path, imports, hash = '') {
+function load(path, imports, hash = '', windowOverrides = {}) {
     const code = ts.transpileModule(fs.readFileSync(new URL(path, import.meta.url), 'utf8'), {
         compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;
-    const context = { exports: {}, window: { location: { hash, pathname: '/invitation' }, history: { replaceState() {} } },
+    const context = { exports: {}, window: { location: { hash, pathname: '/invitation' }, history: { replaceState() {} }, ...windowOverrides },
         require: name => { if (name in imports) return imports[name]; throw new Error(`Unexpected import: ${name}`); } };
     vm.runInNewContext(code, context);
     return context.exports;
@@ -22,6 +22,8 @@ function nodes(tree, type) {
 }
 
 function invitationHarness(initialPending, token = '') {
+    const effects = []; const listeners = new Map();
+    const location = { hash: token ? '#' + token : '', pathname: '/invitation' };
     const frames = { parent: [], child: [] }; let frame; let cursor; let mutationIndex;
     let pending = initialPending; let inFlight; const mutations = []; const requests = []; const navigation = [];
     const reviews = id => ({ householdName: id, alreadyJoined: false, canJoin: true,
@@ -30,7 +32,7 @@ function invitationHarness(initialPending, token = '') {
             accounts: [{ id: 'account', name: 'Savings', currency: 'EUR', balance: '10.1234', version: 'account-version' }] } });
     const auth = { status: 'authenticated', user: { userId: 'invitee', displayName: 'Person', onboardingRequired: true } };
     const { InvitationPage } = load('../src/features/household/InvitationPage.tsx', {
-        react: { useEffect() {}, useState: initial => { const slots = frames[frame]; const i = cursor++;
+        react: { useEffect: effect => { if (frame === 'parent') effects.push(effect); }, useState: initial => { const slots = frames[frame]; const i = cursor++;
             if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial;
             return [slots[i], value => { slots[i] = typeof value === 'function' ? value(slots[i]) : value; }]; } },
         'react/jsx-runtime': jsxRuntime,
@@ -60,7 +62,7 @@ function invitationHarness(initialPending, token = '') {
         '../../shared/components/ui/AverioCard': { AverioCard: 'section' },
         '../../shared/components/ui/AverioFormControls': { AverioField: 'label', AverioInput: 'input', AverioSelect: 'select' },
         './invitationQueries': { invitationKeys: { pending: id => ['pending', id] }, invitationApi: {
-            apiV1InvitationsPreviewPost: async ({ invitationTokenRequest: request }) => reviews(request.token ? 'A' : request.invitationId),
+            apiV1InvitationsPreviewPost: async ({ invitationTokenRequest: request }) => reviews(request.token ? request.token.slice(0, 1) : request.invitationId),
             apiV1InvitationsAcceptancesPost: async request => { requests.push(request.acceptInvitationRequest); },
             apiV1InvitationsDeclinationsPost: async ({ invitationTokenRequest: request }) => {
                 const id = request.token ? 'A' : request.invitationId; pending = pending.filter(invite => invite.id !== id);
@@ -68,11 +70,16 @@ function invitationHarness(initialPending, token = '') {
         } },
         './invitationContext': { pendingInvitation: () => null, rememberInvitation() {}, forgetInvitation() {} },
         './householdTransition': { refreshHouseholdContext: async () => {} },
-    }, token ? '#' + token : '');
+    }, token ? '#' + token : '', { location,
+        addEventListener: (type, callback) => listeners.set(type, callback),
+        removeEventListener: type => listeners.delete(type),
+    });
     return {
         render() { frame = 'parent'; cursor = 0; const parent = InvitationPage();
             frame = 'child'; cursor = 0; mutationIndex = 0; return parent.type(parent.props); },
         setPending(value) { pending = value; },
+        mountEffects() { effects.splice(0).forEach(effect => effect()); },
+        openEmailLink(value) { location.hash = '#' + value; listeners.get('hashchange')(); },
         async flush() { await inFlight; }, mutations, requests, navigation,
     };
 }
@@ -279,4 +286,23 @@ test('previous household section is omitted only for a successful empty history'
     history = { isSuccess: true, data: [{ id: 'history', householdName: 'Previous home', leftAtUtc: '2026-10-09T12:00:00Z' }] };
     assert.equal(nodes(render(), 'section').length, 1);
     assert.equal(nodes(render(), 'button').some(node => node.props.children === 'invitations.history.open'), true);
+});
+
+test('opening a replacement email link in the same tab captures its hash and requires a fresh review', async () => {
+    const first = 'A'.repeat(64); const replacement = 'B'.repeat(64);
+    const h = invitationHarness([], first);
+    action(h.render(), 'invitations.review').props.onClick(); h.mountEffects(); await h.flush();
+    consent(h.render());
+    assert.equal(action(h.render(), 'invitations.accept').props.disabled, false);
+    h.openEmailLink(replacement);
+    let tree = h.render();
+    assert.equal(action(tree, 'invitations.accept'), undefined, 'Hash navigation cannot reuse the previous review');
+    await assert.rejects(h.mutations[1].options.mutationFn(), /invitations.review/);
+    action(tree, 'invitations.review').props.onClick(); await h.flush();
+    tree = h.render();
+    assert.equal(h.mutations[0].variables.token, replacement);
+    assert.equal(nodes(tree, 'h2')[0].props.children, 'B');
+    assert.equal(action(tree, 'invitations.accept').props.disabled, true);
+    assert.equal(nodes(tree, 'input').find(node => node.props.type === 'checkbox').props.checked, false);
+    assert.equal(h.requests.length, 0);
 });
