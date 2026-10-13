@@ -29,11 +29,12 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
         await poll(async () => (await card().getByTestId('category-spending-total').textContent()).replace(/\s/g, '') === expected, `category total ${expected}`);
     };
     await page.goto('http://localhost:5173/app');
-    await card().getByText('Your spending story starts here', { exact: true }).waitFor();
+    await card().getByText('No expenses in EUR this month', { exact: true }).waitFor();
     // An owner can read their private expense, but it must never enter household reports.
     assert.equal(await card().getByTestId('category-spending-total').count(), 0);
-    await card().getByRole('link', { name: 'Add transaction', exact: true }).click();
+    await card().getByRole('link', { name: 'Add expense', exact: true }).click();
     const editor = page.getByRole('dialog', { name: 'Add transaction', exact: true });
+    assert.equal(await editor.getByRole('radio', { name: 'Expense', exact: true }).isChecked(), true);
     await editor.getByLabel(/^Account/).selectOption(f.sharedAccountId);
     await editor.getByLabel('Date', { exact: true }).fill(f.date);
     await editor.getByLabel('Merchant / Store', { exact: true }).fill('Dashboard browser purchase');
@@ -61,7 +62,7 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await edit.getByRole('button', { name: 'Void transaction', exact: true }).click();
     await edit.waitFor({ state: 'hidden' });
     await dashboard();
-    await card().getByText('Your spending story starts here', { exact: true }).waitFor();
+    await card().getByText('No expenses in EUR this month', { exact: true }).waitFor();
 
     // Exact first-day inclusion and previous/future exclusion using daily aggregates.
     await make('10.0001', categories[0], { occurredOn: start });
@@ -99,14 +100,53 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await total('€150.1234');
     await card().getByText('Total income', { exact: true }).waitFor();
     await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('HUF');
-    await card().getByText('Your income story starts here', { exact: true }).waitFor();
+    await card().getByText('No income in HUF this month', { exact: true }).waitFor();
     assert.equal(await card().getByTestId('category-spending-total').count(), 0);
-    await card().getByRole('combobox', { name: 'Transaction type', exact: true }).selectOption('Expense');
+    await card().getByRole('link', { name: 'Add income', exact: true }).click();
+    await editor.waitFor();
+    assert.equal(await editor.getByRole('radio', { name: 'Income', exact: true }).isChecked(), true);
+    await editor.getByRole('button', { name: 'Close', exact: true }).click();
+    await poll(() => !new URL(page.url()).searchParams.has('createKind'), 'creation intent cleared');
+    await dashboard();
+    await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('HUF');
     await total('HUF1,234.5678');
     await card().getByRole('combobox', { name: 'Currency', exact: true }).selectOption('EUR');
     await total('€45.0003');
     await card().getByRole('link', { name: 'View report', exact: true }).click();
-    await page.waitForURL('**/app/statistics');
+    await page.waitForURL(url => url.pathname === '/app/statistics');
+    assert.equal(new URL(page.url()).searchParams.get('from'), start);
+    assert.equal(new URL(page.url()).searchParams.get('to'), f.date);
+    assert.equal(new URL(page.url()).searchParams.get('currency'), 'EUR');
+    assert.equal(new URL(page.url()).searchParams.get('kind'), 'Expense');
+    const reportTotal = async expected => poll(async () => (await page.getByTestId('category-report-total').textContent()).replace(/\s/g, '') === expected, `report total ${expected}`);
+    await reportTotal('€45.0003');
+    assert.equal(await page.getByTestId('category-report-list').locator('dt').count(), 6);
+    await page.getByTestId('category-report-list').getByRole('link', { name: categoryName, exact: true }).click();
+    await reportTotal('€30.0003');
+    await page.getByTestId('category-daily').waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('category'), categories[0].id);
+    await page.reload(); await reportTotal('€30.0003');
+    await page.goBack(); await reportTotal('€45.0003');
+    await page.getByLabel(/^Currency/).selectOption('HUF');
+    await page.getByLabel(/^Transaction type/).selectOption('Income');
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await page.getByTestId('category-report-empty').waitFor();
+    assert.equal(await page.getByTestId('category-report-total').count(), 0);
+    await page.getByLabel(/^Transaction type/).selectOption('Expense');
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await reportTotal('HUF1,234.5678');
+    await page.getByLabel('From', { exact: true }).fill(tomorrow.toISOString().slice(0, 10));
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await page.getByRole('alert').waitFor();
+    await page.getByRole('link', { name: 'All statistics', exact: true }).click();
+    await page.getByRole('heading', { name: 'Statistics', exact: true }).waitFor();
+    await dashboard();
+    await card().getByRole('link', { name: categoryName, exact: true }).click();
+    await reportTotal('€30.0003');
+    await dashboard();
+    await card().getByRole('link', { name: 'Other', exact: true }).click();
+    await reportTotal('€45.0003');
+    assert.equal(await page.getByTestId('category-report-list').locator('dt').count(), 6);
     await dashboard();
 
     // An unrelated real household must not be able to request this report.
@@ -130,6 +170,12 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
             return style.borderLeftWidth === '3px' && style.borderLeftColor !== style.borderRightColor;
         })));
         await localized.screenshot({ path: path.join(artifacts, `category-${language}-${theme}.png`) });
+        await localized.getByRole('link', { name: copy['categorySpending' + language.toUpperCase()].report, exact: true }).click();
+        await page.getByTestId('category-report-total').waitFor();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.screenshot({ path: path.join(artifacts, `category-report-${language}-${theme}.png`), fullPage: true });
+        await page.locator('a[href="/app"]').first().click();
+        await localized.waitFor();
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
     const reportPattern = '**/statistics/category-cash-flow?*';
@@ -138,15 +184,15 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await page.route(reportPattern, async route => { await blocked; await route.continue(); });
     await page.reload();
     await card().getByRole('status').waitFor();
-    assert.equal(await card().getByText('Your spending story starts here', { exact: true }).count(), 0);
+    assert.equal(await card().getByText('No expenses in EUR this month', { exact: true }).count(), 0);
     release(); await total('€45.0003');
     await page.unroute(reportPattern);
     await page.route(reportPattern, route => route.fulfill({ status: 503, contentType: 'application/problem+json', body: '{}' }));
     await page.reload(); await card().getByRole('alert').waitFor();
     assert.equal(await card().getByTestId('category-spending-total').count(), 0);
-    assert.equal(await card().getByText('Your spending story starts here', { exact: true }).count(), 0);
+    assert.equal(await card().getByText('No expenses in EUR this month', { exact: true }).count(), 0);
     await page.unroute(reportPattern);
     await card().getByRole('button', { name: 'Try again', exact: true }).click();
     await total('€45.0003');
-    console.log('PASS category dashboard: real create/edit/void, precise amounts, UTC range, currencies, expense/income switching and empty recovery, privacy/reporting exclusions, ranked top four/Other, consistent card accents, locales/themes, loading/error/retry');
+    console.log('PASS category dashboard: real create/edit/void, precise amounts, UTC range, currencies, expense/income switching and empty recovery and typed creation, report context/reload/back/daily drill-down, privacy/reporting exclusions, ranked top four/Other, consistent card accents, locales/themes, loading/error/retry');
 }

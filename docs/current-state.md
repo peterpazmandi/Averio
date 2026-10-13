@@ -237,3 +237,5 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 - No new migration or API contract. See [Collaboration verification](collaboration-verification.md).
 
 Dashboard category card refinements: “This month so far” subtitle; adjacent currency and Expenses/Income selectors; independently ranked top four with a separated Other row; shared green-left-border surfaces across dashboard cards. See `dashboard-category-spending.md` for reporting semantics and browser coverage.
+
+Dashboard category reports now support contextual empty-state actions, simpler expandable help, URL-preserved date/currency/type filters, complete category totals and daily category drill-down. Transaction entry opens with the requested income/expense type.

@@ -17,3 +17,15 @@ No migration, backend contract, generated-client change or dependency is require
 `npm run test:collaboration` includes `tests/collaboration/category-dashboard.mjs`. It uses a dedicated household in the existing real API/PostgreSQL test host and covers browser create/edit/void, first-day/current-day inclusion, previous/future exclusion, private and excluded-account entries, currency/type switching, income totals, empty-income recovery, ranked top four/Other, consistent card accents, report navigation, foreign-household denial, localized desktop/light and mobile/dark states, loading, failure and retry. Only explicit loading/error scenarios intercept requests. Success paths use real reporting endpoints. CI runs this suite and retains failure evidence under the existing collaboration artifact.
 
 See [Collaboration verification](collaboration-verification.md) for prerequisites. Screenshots are produced as `test-results/collaboration/category-*.png`.
+
+## Contextual actions and category reports
+
+A month with no household-reportable activity shows the first-use introduction. When activity exists in another currency or transaction type, the empty state instead names the selected type and currency. Its Add expense/Add income action passes a validated one-shot transaction kind to the editor; closing or saving clears that intent, and editing an existing transaction always retains its own kind.
+
+The short footer explains household amounts and currency separation. Expand About these totals for privacy exclusions, direct category accounting and UTC date boundaries.
+
+View report opens a focused category report inside Statistics with `from`, `to`, `currency`, and `kind` in the URL. These filters survive reload and browser Back/Forward. Reports use the same daily aggregates and exact decimal calculations as the dashboard, show every category, and support changing the period (up to one year), currency and type. The general Statistics view remains available through All statistics. Malformed or incomplete report URLs fall back to that view; invalid filter submissions show a localized validation message.
+
+Click a dashboard category or report row to see its daily amounts. All categories removes the category selection; Other opens the complete category report so its constituent categories can be inspected. This is a reporting drill-down, not a list of individual transactions: it uses the existing household-reportable endpoint and preserves its server-side privacy restrictions without introducing a new API.
+
+Browser tests cover contextual empty states, expense/income editor defaults, report query context and reconciliation, complete category lists, daily drill-down, reload and Back, changing filters, invalid ranges and localized light/dark desktop/mobile layouts.

@@ -26,6 +26,7 @@ interface Props {
     userId: string;
     householdId: string;
     createRequested?: boolean;
+    initialKind?: TransactionKind;
     initialActivityId?: string;
     onCreateRequestHandled?: () => void;
 }
@@ -34,6 +35,7 @@ export function TransactionsPage({
     userId,
     householdId,
     createRequested = false,
+    initialKind,
     initialActivityId,
     onCreateRequestHandled,
 }: Props) {
@@ -632,6 +634,8 @@ export function TransactionsPage({
                 <TransactionEditor
                     userId={userId}
                     householdId={householdId}
+                    key={activeEditor === 'new' ? (initialKind ?? 'Expense') : activeEditor.id}
+                    initialKind={initialKind}
                     transaction={activeEditor === 'new' ? null : activeEditor}
                     onCancel={closeEditor}
                     onSave={save}

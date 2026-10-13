@@ -8,6 +8,7 @@ import { AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { transactionQueries } from '../../transactions/api/transactionQueries';
 import { getCategoryDisplayName } from '../../transactions/categoryLocalization';
+import { CategoryReportHelp } from './CategoryReportHelp';
 import { categorySpending, utcMonthToDate } from '../categorySpending';
 
 const tones = ['text-emerald-500', 'text-indigo-500', 'text-amber-500', 'text-sky-500', 'text-slate-400'];
@@ -19,7 +20,7 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
     const { t, i18n } = useTranslation();
     const controlId = useId();
     const [kind, setKind] = useState<'Expense' | 'Income'>('Expense');
-    const copy = (key: string) => t(`categorySpending.${kind === 'Income' ? 'income' + key[0].toUpperCase() + key.slice(1) : key}`);
+    const copy = (key: string) => t(`categorySpending.${kind === 'Income' ? 'income' + key[0].toUpperCase() + key.slice(1) : key}`, { currency });
     const language = i18n.resolvedLanguage ?? i18n.language;
     const [today, setToday] = useState(() => utcMonthToDate(new Date()).to);
     const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
@@ -39,6 +40,8 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
         .map(row => row.currency).concat(reportingCurrency))].sort();
     const currency = selectedCurrency && currencies.includes(selectedCurrency)
         ? selectedCurrency : currencies.includes(reportingCurrency) ? reportingCurrency : currencies[0];
+    const hasActivity = rows.some(row => Number(row.expenseAmount) > 0 || Number(row.incomeAmount) > 0);
+    const reportSearch = { from, to: today, currency, kind };
     const spending = categorySpending(rows, currency ?? reportingCurrency, kind);
     const money = (amount: string) => formatDecimalAmount(amount, currency ?? reportingCurrency, language);
 
@@ -49,7 +52,7 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                     <h3 id="category-spending-title" className="text-base font-semibold">{copy('title')}</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-300">{t('categorySpending.period')}</p>
                 </div>
-                <Link to="/app/statistics" className={linkStyle}>{t('categorySpending.report')}</Link>
+                <Link to="/app/statistics" search={reportSearch} className={linkStyle}>{t('categorySpending.report')}</Link>
             </div>
             {query.isPending ? <p role="status">{t('common.status.loading')}</p>
                 : query.isError ? <div className="space-y-3">
@@ -71,15 +74,15 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                             </AverioSelect>
                         </div>
                     </div>
-                    {spending.segments.length === 0 ? <div className="space-y-2 py-4 text-center">
+                    {spending.segments.length === 0 ? <div data-testid="category-empty" className="space-y-2 py-4 text-center">
                     <svg viewBox="0 0 100 80" className="mx-auto h-20 w-24 text-emerald-500" aria-hidden="true">
                         <circle cx="50" cy="40" r="28" fill="none" stroke="currentColor" strokeWidth="12" className="opacity-20" />
                         <path d="M50 12a28 28 0 0 1 28 28" fill="none" stroke="currentColor" strokeWidth="12" />
                         <path d="M44 40h12m-6-6v12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                     </svg>
-                    <h4 className="font-semibold">{copy('emptyTitle')}</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{copy('emptyHelp')}</p>
-                    <Link to="/app/transactions" search={{ create: true }} className={linkStyle}>{t('concept.addTransaction')}</Link>
+                    <h4 className="font-semibold">{copy(hasActivity ? 'noMatches' : 'emptyTitle')}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{copy(hasActivity ? 'noMatchesHelp' : 'emptyHelp')}</p>
+                    <Link to="/app/transactions" search={{ create: true, createKind: kind }} className={linkStyle}>{copy('add')}</Link>
                 </div> : <>
                     <div className="flex flex-wrap items-center justify-center gap-4">
                         <svg viewBox="0 0 120 120" className="size-28 shrink-0" aria-hidden="true">
@@ -93,7 +96,10 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                                 <dt className="flex min-w-0 items-start gap-2">
                                     <svg viewBox="0 0 8 8" className={`mt-1 size-2 shrink-0 ${tones[index]}`} aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
                                     <span className="min-w-0 break-words">
-                                        {segment.id === 'other' ? t('categorySpending.other') : getCategoryDisplayName(segment, t)}
+                                        <Link to="/app/statistics" search={{ ...reportSearch, category: segment.id === 'other' ? undefined : segment.id }}
+                                            className="inline-flex min-h-8 items-center rounded text-emerald-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-emerald-400">
+                                            {segment.id === 'other' ? t('categorySpending.other') : getCategoryDisplayName(segment, t)}
+                                        </Link>
                                         <span className="block text-xs text-slate-600 dark:text-slate-300">{new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(segment.percentage / 100)}</span>
                                     </span>
                                 </dt>
@@ -107,7 +113,7 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
                     </div>
                 </>}
                 </>}
-            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{copy('help')}</p>
+            <CategoryReportHelp kind={kind} />
         </AverioCard>
     );
 }

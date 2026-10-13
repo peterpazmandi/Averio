@@ -7,7 +7,7 @@ export function utcMonthToDate(now: Date) {
 }
 
 /** Direct category amounts: a parent's own items never include its children's items. */
-export function categorySpending(rows: CategoryCashFlowPeriodDto[], currency: string, kind: 'Expense' | 'Income' = 'Expense') {
+export function categorySpending(rows: CategoryCashFlowPeriodDto[], currency: string, kind: 'Expense' | 'Income' = 'Expense', limit = 4) {
     const amountKey = kind === 'Income' ? 'incomeAmount' : 'expenseAmount';
     const groups = new Map<string, CategoryCashFlowPeriodDto>();
     for (const row of rows) {
@@ -26,15 +26,15 @@ export function categorySpending(rows: CategoryCashFlowPeriodDto[], currency: st
                 : difference.startsWith('-') ? -1 : 1;
         });
     const total = sumDecimalAmounts(categories.map(row => row[amountKey]));
-    const segments = categories.slice(0, 4).map(row => ({
+    const segments = categories.slice(0, limit).map(row => ({
         id: row.categoryId,
         systemKey: row.categorySystemKey,
         name: row.categoryName,
         amount: row[amountKey],
     }));
-    if (categories.length > 4) segments.push({
+    if (categories.length > limit) segments.push({
         id: 'other', systemKey: null, name: null,
-        amount: sumDecimalAmounts(categories.slice(4).map(row => row[amountKey])),
+        amount: sumDecimalAmounts(categories.slice(limit).map(row => row[amountKey])),
     });
     // Floating point is only used for chart geometry, never money totals or labels.
     let offset = 0;

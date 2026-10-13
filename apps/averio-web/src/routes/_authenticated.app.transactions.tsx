@@ -3,7 +3,8 @@ import { useAuth } from '../features/authentication/context/AuthProvider';
 import { TransactionsPage } from '../features/transactions/components/TransactionsPage';
 
 export const Route = createFileRoute('/_authenticated/app/transactions')({
-    validateSearch: (search: Record<string, unknown>): { create?: boolean; activity?: string } => ({
+    validateSearch: (search: Record<string, unknown>): { create?: boolean; activity?: string; createKind?: 'Expense' | 'Income' } => ({
+        createKind: search.createKind === 'Income' || search.createKind === 'Expense' ? search.createKind : undefined,
         activity: typeof search.activity === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search.activity)
             ? search.activity : undefined,
         create: search.create === true
@@ -31,9 +32,10 @@ function TransactionsRoute() {
             userId={auth.user.userId}
             householdId={auth.user.household.householdId}
             createRequested={search.create}
+            initialKind={search.createKind}
             onCreateRequestHandled={() => {
                 void navigate({
-                    search: { create: undefined, activity: search.activity },
+                    search: { create: undefined, createKind: undefined, activity: search.activity },
                     replace: true,
                 });
             }}

@@ -78,3 +78,24 @@ test('income ranks independently, sums daily decimals and groups the remainder w
     assert.equal(result.segments[4].amount, '3');
     assert.equal(categorySpending([row('expense', '100')], 'EUR', 'Income').segments.length, 0);
 });
+
+const { categoryReportSearch } = load('../src/features/dashboard/categoryReportSearch.ts');
+test('report links validate dates, currency, type and category without trusting URL input', () => {
+    const valid = { from: '2026-10-01', to: '2026-10-12', currency: 'HUF', kind: 'Income', category: '12345678-1234-1234-1234-123456789abc' };
+    assert.equal(JSON.stringify(categoryReportSearch(valid)), JSON.stringify(valid));
+    for (const override of [{ from: '2026-02-30' }, { from: '0000-01-01', to: '0000-01-02' }, { to: '2025-10-01' }, { to: '2028-10-01' },
+        { currency: 'EURO' }, { kind: 'Transfer' }, { from: ['2026-10-01'] }, { to: undefined }]) {
+        assert.equal(Object.keys(categoryReportSearch({ ...valid, ...override })).length, 0);
+    }
+    assert.equal(categoryReportSearch({ ...valid, category: '<script>' }).category, undefined);
+    assert.equal(categoryReportSearch({ ...valid, from: '2028-02-29', to: '2028-02-29' }).from, '2028-02-29');
+});
+test('full report preserves every category and reconciles to the dashboard including Other', () => {
+    const rows = Array.from({ length: 7 }, (_, i) => row(String(i), `${i}.0001`));
+    const dashboard = categorySpending(rows, 'EUR');
+    const report = categorySpending(rows, 'EUR', 'Expense', Infinity);
+    assert.equal(report.segments.length, 7);
+    assert.equal(report.total, dashboard.total);
+    assert.equal(report.segments.some(segment => segment.id === 'other'), false);
+    assert.equal(money.sumDecimalAmounts(report.segments.slice(4).map(x => x.amount)), dashboard.segments[4].amount);
+});
