@@ -174,7 +174,7 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
         await page.getByTestId('category-report-total').waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.screenshot({ path: path.join(artifacts, `category-report-${language}-${theme}.png`), fullPage: true });
-        await page.locator('a[href="/app"]').first().click();
+        await page.goBack();
         await localized.waitFor();
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
