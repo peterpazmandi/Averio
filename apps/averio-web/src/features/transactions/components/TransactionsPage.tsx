@@ -1,7 +1,10 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
 import { ActivitySelect } from '../../activities/ActivitySelect';
 import { AssignActivityDialog } from '../../activities/AssignActivityDialog';
 import { emptyAssignmentVersion } from '../../activities/activityQueries';
+import type { TransactionSearch } from '../transactionSearch';
+import { TransactionLinkDetail } from './TransactionLinkDetail';
+import { AverioField, AverioInput } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -17,7 +20,7 @@ import type {
     TransactionInputDto,
     TransactionKind,
 } from '../api/transactionApi';
-import { transactionQueryKeys } from '../api/transactionQueries';
+import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { useTransactionMutations } from '../api/useTransactionMutations';
 import { TransactionEditor } from './TransactionEditor';
 import '../transactions.css';
@@ -27,7 +30,8 @@ interface Props {
     householdId: string;
     createRequested?: boolean;
     initialKind?: TransactionKind;
-    initialActivityId?: string;
+    urlState: TransactionSearch;
+    onUrlChange: (patch: Partial<TransactionSearch>, replace?: boolean) => void;
     onCreateRequestHandled?: () => void;
 }
 
@@ -36,7 +40,8 @@ export function TransactionsPage({
     householdId,
     createRequested = false,
     initialKind,
-    initialActivityId,
+    urlState,
+    onUrlChange,
     onCreateRequestHandled,
 }: Props) {
     const { t, i18n } = useTranslation();
@@ -44,28 +49,51 @@ export function TransactionsPage({
     const defaultMonth = format(new Date(), 'yyyy-MM');
 
     const [search, setSearch] = useState('');
-    const [activityId, setActivityId] = useState(initialActivityId ?? '');
+    const router = useRouter();
+    const openedFromList = useRef<string | null>(null);
+    const activityId = urlState.activity ?? '';
+    const accountId = urlState.account ?? '';
+    const kind = urlState.kind ?? '';
+    const defaultDate = new Date(defaultMonth + '-01T12:00:00');
+    const from = urlState.from ?? (urlState.dates === 'all' || activityId ? undefined : format(startOfMonth(defaultDate), 'yyyy-MM-dd'));
+    const to = urlState.to ?? (urlState.dates === 'all' || activityId ? undefined : format(endOfMonth(defaultDate), 'yyyy-MM-dd'));
+    const invalidRange = Boolean(from && to && from > to);
+    const month = !from && !to ? '' : from && to && from.endsWith('-01') && to === format(endOfMonth(new Date(from + 'T12:00:00')), 'yyyy-MM-dd') ? from.slice(0, 7) : 'custom';
+    const setActivityId = (value: string) => onUrlChange({ activity: value || undefined, ...(value ? { dates: 'all', from: undefined, to: undefined } : {}) });
+    const setAccountId = (value: string) => onUrlChange({ account: value || undefined });
+    const setKind = (value: '' | TransactionKind) => onUrlChange({ kind: value || undefined });
+    const setMonth = (value: string) => {
+        if (!value) { onUrlChange({ dates: 'all', from: undefined, to: undefined }); return; }
+        const date = new Date((value === 'custom' ? defaultMonth : value) + '-01T12:00:00');
+        onUrlChange({ dates: undefined, from: format(startOfMonth(date), 'yyyy-MM-dd'), to: value === 'custom' ? format(new Date(), 'yyyy-MM-dd') : format(endOfMonth(date), 'yyyy-MM-dd') });
+    };
     const [selecting, setSelecting] = useState(false);
-    const [selected, setSelected] = useState<Record<string, string>>({});
+    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, search]);
+    const [selection, setSelection] = useState<{ scope: string; values: Record<string, string> }>({ scope: '', values: {} });
+    const selected = selection.scope === selectionScope ? selection.values : {};
+    const setSelected = (value: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) =>
+        setSelection(current => ({ scope: selectionScope, values: typeof value === 'function' ? value(current.scope === selectionScope ? current.values : {}) : value }));
     const [assigning, setAssigning] = useState(false);
-    const [accountId, setAccountId] = useState('');
-    const [kind, setKind] = useState<'' | TransactionKind>('');
-    const [month, setMonth] = useState(initialActivityId ? '' : defaultMonth);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [editor, setEditor] = useState<TransactionDto | 'new' | null>(null);
+    const [editor, setEditor] = useState<'new' | null>(null);
     const [notice, setNotice] = useState('');
 
     const searchInput = useRef<HTMLInputElement>(null);
     const filterToggle = useRef<HTMLButtonElement>(null);
 
     const accounts = useQuery(
-        accountsQueries.list(userId, householdId, false),
+        accountsQueries.list(userId, householdId, true),
     );
     const mutations = useTransactionMutations(userId, householdId);
     const busy = mutations.create.isPending
         || mutations.update.isPending
         || mutations.void.isPending;
-    const activeEditor = createRequested ? 'new' : editor;
+    const detail = useQuery({ ...transactionQueries.detail(userId, householdId, urlState.transaction ?? ''), enabled: Boolean(urlState.transaction), retry: false });
+    const activeEditor = urlState.transaction ? (detail.isSuccess && detail.data?.canModify && detail.data.status !== 'Voided' ? detail.data : null) : createRequested ? 'new' : editor;
+    const openTransaction = (transaction: TransactionDto) => {
+        openedFromList.current = transaction.id;
+        onUrlChange({ transaction: transaction.id, create: undefined, createKind: undefined });
+    };
 
     const monthOptions = useMemo(
         () => Array.from({ length: 12 }, (_, index) => {
@@ -81,7 +109,7 @@ export function TransactionsPage({
         [language],
     );
 
-    const selectedMonthLabel = month
+    const selectedMonthLabel = month === 'custom' ? `${from ?? '…'} – ${to ?? '…'}` : month
         ? monthOptions.find(option => option.value === month)?.label ?? month
         : t('transactionManagement.allDates');
 
@@ -102,18 +130,14 @@ export function TransactionsPage({
             kind: kind || undefined,
             search: search.trim() || undefined,
             pageSize: 40,
+            from, to,
         };
 
-        if (month) {
-            const date = new Date(month + '-01T12:00:00');
-            result.from = format(startOfMonth(date), 'yyyy-MM-dd');
-            result.to = format(endOfMonth(date), 'yyyy-MM-dd');
-        }
-
         return result;
-    }, [accountId, kind, month, search, activityId]);
+    }, [accountId, kind, from, to, search, activityId]);
 
     const transactions = useInfiniteQuery({
+        enabled: !invalidRange,
         queryKey: transactionQueryKeys.list(
             userId,
             householdId,
@@ -145,7 +169,7 @@ export function TransactionsPage({
         },
     });
 
-    const items = transactions.data?.pages.flatMap(page => page.items) ?? [];
+    const items = invalidRange ? [] : transactions.data?.pages.flatMap(page => page.items) ?? [];
 
     const formatter = new Intl.DateTimeFormat(language, {
         weekday: 'short',
@@ -157,16 +181,17 @@ export function TransactionsPage({
 
     function resetFilters() {
         setSearch('');
-        setActivityId('');
         setSelected({});
-        setAccountId('');
-        setKind('');
-        setMonth(defaultMonth);
+        onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined });
         searchInput.current?.focus();
     }
 
     function closeEditor() {
         setEditor(null);
+        if (urlState.transaction) {
+            if (openedFromList.current === urlState.transaction) { openedFromList.current = null; router.history.back(); }
+            else onUrlChange({ transaction: undefined }, true);
+        }
         if (createRequested) {
             onCreateRequestHandled?.();
         }
@@ -286,7 +311,7 @@ export function TransactionsPage({
                 >
                     <div className="av-tx-filter-grid">
                         <ActivitySelect userId={userId} householdId={householdId} value={activityId}
-                            onChange={id => { setActivityId(id); setSelected({}); if (id) setMonth(''); }}
+                            onChange={id => { setActivityId(id); setSelected({});  }}
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
                         <label>
                             <span>{t('transactionManagement.filterMonth')}</span>
@@ -298,6 +323,8 @@ export function TransactionsPage({
                                 <option value="">
                                     {t('transactionManagement.allDates')}
                                 </option>
+                                <option value="custom">{t('transactionLinks.customRange')}</option>
+                                {month && month !== 'custom' && !monthOptions.some(option => option.value === month) && <option value={month}>{month}</option>}
                                 {monthOptions.map(option => (
                                     <option
                                         key={option.value}
@@ -319,6 +346,7 @@ export function TransactionsPage({
                                 <option value="">
                                     {t('transactionManagement.allAccounts')}
                                 </option>
+                                {accountId && !accounts.data?.some(account => account.id === accountId) && <option value={accountId}>{t('transactionLinks.unavailableAccount')}</option>}
                                 {(accounts.data ?? []).map(account => (
                                     <option
                                         key={account.id}
@@ -330,11 +358,16 @@ export function TransactionsPage({
                             </select>
                         </label>
 
+                        <AverioField>{t('transactionLinks.from')}<AverioInput type="date" value={from ?? ''}
+                            onChange={event => { onUrlChange({ from: event.target.value || undefined, to, dates: 'all' }); setSelected({}); }} /></AverioField>
+                        <AverioField>{t('transactionLinks.to')}<AverioInput type="date" value={to ?? ''}
+                            onChange={event => { onUrlChange({ to: event.target.value || undefined, from, dates: 'all' }); setSelected({}); }} /></AverioField>
                         <fieldset className="av-tx-filter-kind">
                             <legend>{t('transactionManagement.type')}</legend>
                             <div className="av-tx-segmented">
                                 <button
                                     type="button"
+                                    aria-pressed={!kind}
                                     className={!kind ? 'active' : ''}
                                     onClick={() => { setKind(''); setSelected({}); }}
                                 >
@@ -347,6 +380,7 @@ export function TransactionsPage({
                                             ? 'active income'
                                             : 'income'
                                     }
+                                    aria-pressed={kind === 'Income'}
                                     onClick={() => { setKind('Income'); setSelected({}); }}
                                 >
                                     {t('transactionManagement.income')}
@@ -358,6 +392,7 @@ export function TransactionsPage({
                                             ? 'active expense'
                                             : 'expense'
                                     }
+                                    aria-pressed={kind === 'Expense'}
                                     onClick={() => { setKind('Expense'); setSelected({}); }}
                                 >
                                     {t('transactionManagement.expense')}
@@ -421,11 +456,11 @@ export function TransactionsPage({
                 </p>
             )}
 
-            {transactions.isPending && (
+            {!invalidRange && transactions.isPending && (
                 <p role="status">{t('common.status.loading')}</p>
             )}
 
-            {transactions.isError && (
+            {!invalidRange && transactions.isError && (
                 <div role="alert">
                     <p className="av-error">
                         {t('errors.genericDescription')}
@@ -441,7 +476,7 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {transactions.isSuccess && items.length === 0 && (
+            {!invalidRange && transactions.isSuccess && items.length === 0 && (
                 <div className="av-card av-tx-empty">
                     <ConceptIcon name="transactions" />
                     <p>
@@ -519,14 +554,14 @@ export function TransactionsPage({
                                                     : ''
                                             }`
                                         }
-                                        disabled={!transaction.canModify}
+                                        
                                         title={
-                                            transaction.canModify
+                                            transaction.canModify && transaction.status !== 'Voided'
                                                 ? t('transactionManagement.editHint')
-                                                : undefined
+                                                : t('transactionLinks.details')
                                         }
                                         onClick={() =>
-                                            setEditor(transaction)}
+                                            openTransaction(transaction)}
                                     >
                                         <span className="av-tx-bubble-top">
                                             <span className="av-tx-type-icon">
@@ -613,7 +648,8 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {transactions.hasNextPage && (
+            {invalidRange && <p role="alert">{t('transactionLinks.invalidRange')}</p>}
+            {!invalidRange && transactions.hasNextPage && (
                 <div className="av-tx-load-more">
                     <button
                         type="button"
@@ -630,6 +666,8 @@ export function TransactionsPage({
                 </div>
             )}
 
+            {urlState.transaction && !activeEditor && <TransactionLinkDetail
+                query={detail} onClose={closeEditor} />}
             {activeEditor && (
                 <TransactionEditor
                     userId={userId}

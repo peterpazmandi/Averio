@@ -55,10 +55,11 @@ internal static class BrowserHost
             var owner = await Seed(factory.Services, clock, "owner@collaboration.test", "Collaboration home");
             var existing = await Seed(factory.Services, clock, "existing@collaboration.test", "Previous home");
             var dashboard = await Seed(factory.Services, clock, "dashboard@collaboration.test", "Dashboard home");
+            var navigation = await Seed(factory.Services, clock, "navigation@collaboration.test", "Navigation home");
             var control = WebApplication.CreateBuilder();
             control.WebHost.UseUrls("http://127.0.0.1:5181");
             await using var app = control.Build();
-            app.MapGet("/ready", () => new { owner, existing, dashboard, password = "Browser-test-password-123!" });
+            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, password = "Browser-test-password-123!" });
             app.MapGet("/mail", (string email, string kind) => inbox.Messages.TryGetValue((email, kind), out var mail)
                 ? Results.Ok(mail) : Results.NotFound());
             app.MapPost("/delivery", (Delivery input) => { inbox.FailedEmail = input.FailedEmail; return Results.NoContent(); });

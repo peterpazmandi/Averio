@@ -391,7 +391,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                 <Link
                                     key={transaction.id}
                                     to="/app/transactions"
-                                    search={{ create: undefined }}
+                                    search={{ transaction: transaction.id }}
                                     className="av-list-row"
                                 >
                                     <span className="av-tx-icon">
@@ -431,7 +431,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                         <div className="av-account-list">
                             {dashboard.accounts.map(account => (
                                 <article key={account.id} className="av-account-row">
-                                    <h4>{account.name}</h4>
+                                    <h4><Link to="/app/transactions" search={{ account: account.id, dates: 'all' }} className="rounded underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary-500">{account.name}</Link></h4>
                                     <p className="av-kpi">{money(account.currentBalanceAmount, account.currency)}</p>
                                     <p className="av-subtle">
                                         {t('accountManagement.openingBalance')}: {money(account.balanceAnchorAmount, account.currency)}
