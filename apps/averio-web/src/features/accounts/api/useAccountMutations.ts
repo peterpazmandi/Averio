@@ -11,6 +11,7 @@ export function useAccountMutations(userId: string, householdId: string) {
     const client = useQueryClient();
     async function refresh() {
         await Promise.all([
+            client.invalidateQueries({ queryKey: ['statistics', userId, householdId] }),
             client.invalidateQueries({ queryKey: activityKeys.all(userId, householdId) }),
             client.invalidateQueries({ queryKey: transferKeys.all(userId, householdId) }),
             client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),

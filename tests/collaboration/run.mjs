@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { verifyCategoryDashboard } from './category-dashboard.mjs';
+import { verifyRefresh } from './refresh.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const web = path.join(root, 'apps/averio-web');
@@ -121,7 +123,7 @@ try {
         ASPNETCORE_TEST_CONTENTROOT_AVERIO_API: path.join(root, 'apps/Averio.Api'),
     });
     const fixture = await poll(() => control('/ready'), 'migrated API and seeded fixture', 60_000);
-    start(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'preview', '--host', 'localhost',
+    const preview = start(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'preview', '--host', 'localhost',
         '--port', '5173', '--strictPort'], web, 'web');
     await poll(async () => (await fetch(ui)).ok, 'built frontend');
     browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -289,8 +291,20 @@ try {
     assert.deepEqual(await ok(existing, '/household-history'), []);
     assert.deepEqual(errors, []);
     console.log('PASS EN/DE/HU, desktop/mobile, light/dark balances and household states, same-tab logout/login isolation');
+    await verifyCategoryDashboard({ fixture: fixture.dashboard, password, session, ok, poll, localeFile, artifacts, outsider: partner });
+    await verifyRefresh({ session, email: fixture.dashboard.email, password, development: false });
+    // Production React omits StrictMode effect replay. Exercise the actual dev
+    // entry point too, using the same API, cookies and allowed frontend origin.
+    const previewStopped = new Promise(resolve => preview.once('exit', resolve));
+    preview.kill();
+    await previewStopped;
+    start(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), '--host', 'localhost',
+        '--port', '5173', '--strictPort'], web, 'web-development');
+    await poll(async () => (await fetch(ui)).ok, 'development frontend');
+    await verifyRefresh({ session, email: fixture.dashboard.email, password, development: true });
+    assert.deepEqual(errors, []);
 } catch (error) {
-    for (const name of ['api', 'web']) {
+    for (const name of ['api', 'web', 'web-development']) {
         const log = path.join(artifacts, name + '.log');
         if (fs.existsSync(log)) console.error(`${name} fixture log:\n${fs.readFileSync(log, 'utf8').split('\n').slice(-80).join('\n')}`);
     }

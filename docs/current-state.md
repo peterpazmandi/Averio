@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-11
+**Status date:** 2026-10-12
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -104,6 +104,8 @@ The dashboard endpoint returns visible accounts with current balances,
 household balances by currency, six months of cash flow, and the latest visible
 transactions. The statistics page presents monthly cash flow and yearly
 category totals without combining currencies.
+
+The dashboard category card shows month-to-date household-reportable expenses using daily aggregates through today (UTC), separate currencies, exact totals, and the largest four direct categories plus Other. It replaces the category placeholder with the canonical donut/legend design, localized states and browser verification. See [Dashboard category spending](dashboard-category-spending.md).
 
 ## Verification and CI — implemented
 
@@ -233,3 +235,7 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 - Localized requester-visible tracked balance explanations on the dashboard and account cards, with EN/DE/HU desktop/mobile and light/dark browser checks.
 - CI failure screenshots, browser traces and server logs, plus a release smoke evidence checklist. Provider/inbox and staging checks are recorded separately from automated captured-mail verification.
 - No new migration or API contract. See [Collaboration verification](collaboration-verification.md).
+
+Dashboard category card refinements: “This month so far” subtitle; adjacent currency and Expenses/Income selectors; independently ranked top four with a separated Other row; shared green-left-border surfaces across dashboard cards. See `dashboard-category-spending.md` for reporting semantics and browser coverage.
+
+Dashboard category reports now support contextual empty-state actions, simpler expandable help, URL-preserved date/currency/type filters, complete category totals and daily category drill-down. Transaction entry opens with the requested income/expense type.

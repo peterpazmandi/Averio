@@ -23,6 +23,7 @@ interface Props {
     userId: string;
     householdId: string;
     transaction: TransactionDto | null;
+    initialKind?: TransactionKind;
     onCancel: () => void;
     onSave: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
     onVoid?: () => Promise<void>;
@@ -71,6 +72,7 @@ export function TransactionEditor({
     userId,
     householdId,
     transaction,
+    initialKind = 'Expense',
     onCancel,
     onSave,
     onVoid,
@@ -91,7 +93,7 @@ export function TransactionEditor({
 
     const firstAccountId = transaction?.accountId ?? writableAccounts[0]?.id ?? '';
     const [accountId, setAccountId] = useState(firstAccountId);
-    const [kind, setKind] = useState<TransactionKind>(transaction?.kind ?? 'Expense');
+    const [kind, setKind] = useState<TransactionKind>(transaction?.kind ?? initialKind);
     const [visibility, setVisibility] = useState<TransactionVisibility>(
         transaction?.visibility ?? 'Household',
     );
