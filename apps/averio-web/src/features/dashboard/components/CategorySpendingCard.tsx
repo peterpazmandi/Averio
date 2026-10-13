@@ -36,10 +36,9 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
         retry: 1,
     });
     const rows = query.data?.periods ?? [];
+    const currency = selectedCurrency ?? reportingCurrency;
     const currencies = [...new Set(rows.filter(row => Number(row.expenseAmount) > 0 || Number(row.incomeAmount) > 0)
-        .map(row => row.currency).concat(reportingCurrency))].sort();
-    const currency = selectedCurrency && currencies.includes(selectedCurrency)
-        ? selectedCurrency : currencies.includes(reportingCurrency) ? reportingCurrency : currencies[0];
+        .map(row => row.currency).concat(reportingCurrency, currency))].sort();
     const hasActivity = rows.some(row => Number(row.expenseAmount) > 0 || Number(row.incomeAmount) > 0);
     const reportSearch = { from, to: today, currency, kind };
     const spending = categorySpending(rows, currency ?? reportingCurrency, kind);

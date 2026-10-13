@@ -194,5 +194,49 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     await page.unroute(reportPattern);
     await card().getByRole('button', { name: 'Try again', exact: true }).click();
     await total('€45.0003');
+    const nextMonth = new Date(start + 'T12:00:00Z');
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    const nextDate = nextMonth.toISOString().slice(0, 10);
+    await make('7', categories[0], { occurredOn: nextDate });
+    await verifyCategoryCurrencyRollover(page, nextDate);
     console.log('PASS category dashboard: real create/edit/void, precise amounts, UTC range, currencies, expense/income switching and empty recovery and typed creation, report context/reload/back/daily drill-down, privacy/reporting exclusions, ranked top four/Other, consistent card accents, locales/themes, loading/error/retry');
+}
+
+// Keep the card mounted across a UTC month boundary. Delay the real response
+// to verify the report link also retains the selection while data is loading.
+export async function verifyCategoryCurrencyRollover(page, nextDate) {
+    const card = page.getByRole('region', { name: 'Spending by category', exact: true });
+    const currency = card.getByRole('combobox', { name: 'Currency', exact: true });
+    await currency.selectOption('HUF');
+    const assertReport = async () => {
+        const url = new URL(await card.getByRole('link', { name: 'View report', exact: true }).getAttribute('href'), page.url());
+        assert.equal(url.searchParams.get('currency'), 'HUF');
+        assert.equal(url.searchParams.get('from'), nextDate);
+        assert.equal(url.searchParams.get('to'), nextDate);
+        assert.equal(url.searchParams.get('kind'), 'Expense');
+    };
+    let release;
+    const blocked = new Promise(resolve => { release = resolve; });
+    const pattern = '**/statistics/category-cash-flow?*';
+    const handler = async route => { await blocked; await route.fallback(); };
+    await page.route(pattern, handler);
+    try {
+        await page.clock.setFixedTime(new Date(nextDate + 'T12:00:00Z'));
+        await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+        await card.getByRole('status').waitFor();
+        await assertReport();
+        assert.equal(await card.getByTestId('category-empty').count(), 0);
+        release();
+        await card.getByText('No expenses in HUF this month', { exact: true }).waitFor();
+        assert.equal(await currency.inputValue(), 'HUF');
+        assert.equal(await card.getByTestId('category-spending-total').count(), 0);
+        await assertReport();
+        await currency.selectOption('EUR');
+        await card.getByTestId('category-spending-total').waitFor();
+        assert.equal(await currency.inputValue(), 'EUR');
+    } finally {
+        release();
+        await page.unroute(pattern, handler);
+    }
+    console.log('PASS category currency remains HUF during month rollover/loading/empty results; explicit EUR selection still works');
 }
