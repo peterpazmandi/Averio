@@ -44,3 +44,17 @@ test('URL labels are deduplicated, bounded and validated; save excludes transact
     assert.equal(saved.transaction, undefined); assert.equal(saved.create, undefined); assert.equal(saved.note, undefined);
     assert.deepEqual(saved.labels, [id]);
 });
+
+test('unselected label filters are omitted from generated API requests instead of sending an empty GUID', async () => {
+    let request;
+    class TransactionsApi { apiV1HouseholdsHouseholdIdTransactionsGet(value) { request = value; return Promise.resolve({ items: [], hasMore: false }); } }
+    const context = { exports: {}, require: name => name.endsWith('generatedApiConfiguration') ? { generatedApiConfiguration: {} } :
+        { TransactionsApi, CategoriesApi: class {}, LabelsApi: class {}, StatisticsApi: class {} } };
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync(new URL('../src/features/transactions/api/transactionApi.ts', import.meta.url), 'utf8'), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS },
+    }).outputText, context);
+    await context.exports.getTransactions('household', { labelIds: [] });
+    assert.equal(request.labelIds, undefined);
+    await context.exports.getTransactions('household', { labelIds: ['12345678-1234-1234-1234-123456789abc'] });
+    assert.deepEqual(clean(request.labelIds), ['12345678-1234-1234-1234-123456789abc']);
+});

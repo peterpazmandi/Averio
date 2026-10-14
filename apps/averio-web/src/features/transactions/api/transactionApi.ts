@@ -84,7 +84,7 @@ export const getTransactions = (
     signal?: AbortSignal,
 ): Promise<TransactionPageDto> =>
     transactions.apiV1HouseholdsHouseholdIdTransactionsGet(
-        { householdId, ...filters },
+        { householdId, ...filters, labelIds: filters.labelIds?.length ? filters.labelIds : undefined },
         { signal },
     ) as Promise<TransactionPageDto>;
 
