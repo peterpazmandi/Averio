@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
@@ -13,11 +13,12 @@ import { savedViewQueries, savedViewsApi } from '../api/savedViewQueries';
 type Action = 'save' | 'rename' | 'update' | 'delete';
 export function SavedViews({ userId, householdId, state, invalid, onApply }: {
     userId: string; householdId: string; state: TransactionSearch; invalid: boolean;
-    onApply: (filters: Partial<TransactionSearch>) => void;
+    onApply: (filters: Partial<TransactionSearch>) => Promise<void>;
 }) {
     const { t } = useTranslation();
     const client = useQueryClient();
     const query = useQuery(savedViewQueries.list(userId, householdId));
+    const [isApplying, startApplying] = useTransition();
     const [managing, setManaging] = useState(false);
     const [selectedId, setSelectedId] = useState('');
     // Snapshot the version and filter payload at dialog opening so background refetches cannot authorize an overwrite.
@@ -26,7 +27,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
     const [notice, setNotice] = useState('');
     const selected = query.data?.find(x => x.id === selectedId);
     const current = savedFilters(state);
-    const modified = selected && JSON.stringify(savedFilters(transactionSearch({ ...selected.filters }))) !== JSON.stringify(current);
+    const modified = !isApplying && selected && JSON.stringify(savedFilters(transactionSearch({ ...selected.filters }))) !== JSON.stringify(current);
     const mutation = useMutation({
         mutationFn: async () => {
             if (!dialog) return;
@@ -49,8 +50,12 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
     const open = (action: Action) => { setManaging(false); mutation.reset(); setNotice(''); setName(action === 'save' ? '' : selected?.name ?? ''); setDialog({ action, view: action === 'save' ? undefined : selected, filters: current }); };
     const apply = (id: string) => {
         const view = query.data?.find(x => x.id === id);
-        setSelectedId(id); setNotice('');
-        if (view) onApply({ ...transactionSearch({ ...view.filters }), dates: undefined, transaction: undefined, create: undefined, createKind: undefined });
+        if (!view) return;
+        // Selection and URL navigation form one transition, not a manual filter edit.
+        startApplying(async () => {
+            setSelectedId(id); setNotice('');
+            await onApply({ ...transactionSearch({ ...view.filters }), dates: undefined, transaction: undefined, create: undefined, createKind: undefined });
+        });
     };
     return <section className="my-3 min-w-0" aria-label={t('savedViews.heading')}>
         <div className="flex flex-wrap items-center gap-2">

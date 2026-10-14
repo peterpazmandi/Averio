@@ -21,7 +21,7 @@ function TransactionsRoute() {
         <TransactionsPage
             key={auth.user.userId + auth.user.household.householdId}
             urlState={search}
-            onUrlChange={(patch, replace = false) => { void navigate({ search: previous => ({ ...previous, ...patch }), replace }); }}
+            onUrlChange={(patch, replace = false) => navigate({ search: previous => ({ ...previous, ...patch }), replace })}
             userId={auth.user.userId}
             householdId={auth.user.household.householdId}
             createRequested={search.create}

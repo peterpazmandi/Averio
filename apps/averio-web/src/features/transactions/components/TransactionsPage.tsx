@@ -35,7 +35,7 @@ interface Props {
     createRequested?: boolean;
     initialKind?: TransactionKind;
     urlState: TransactionSearch;
-    onUrlChange: (patch: Partial<TransactionSearch>, replace?: boolean) => void;
+    onUrlChange: (patch: Partial<TransactionSearch>, replace?: boolean) => Promise<void>;
     onCreateRequestHandled?: () => void;
 }
 
@@ -372,7 +372,7 @@ export function TransactionsPage({
             </div>
 
             <SavedViews userId={userId} householdId={householdId} state={urlState} invalid={invalidRange}
-                onApply={filters => { setSearch(''); setSelected({}); onUrlChange(filters); }} />
+                onApply={filters => { setSearch(''); setSelected({}); return onUrlChange(filters); }} />
 
             {notice && (
                 <p role="status" className="av-tx-notice">

@@ -129,6 +129,30 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await second.getByRole('button', { name: /^Filters/ }).click();
     assert.equal(await second.getByLabel('From', { exact: true }).inputValue(), '2026-01-01');
     assert.equal(await second.getByLabel('To', { exact: true }).inputValue(), '2026-01-31');
+    // Observe every rendered status, including transient changes during URL navigation.
+    await ok(page, endpoint, { method: 'POST', body: { name: 'Relative year', filters: { ...view.filters, period: 'last-year', labels: [] } } });
+    await second.goto('http://localhost:5173/app/transactions');
+    await second.getByRole('button', { name: 'Fixed January', exact: true }).waitFor();
+    await second.evaluate(() => {
+        window.modifiedFlashes = [];
+        window.modifiedObserver = new MutationObserver(() => {
+            for (const status of document.querySelectorAll('[role="status"]')) {
+                if (status.textContent.includes('Modified')) window.modifiedFlashes.push(status.textContent);
+            }
+        });
+        window.modifiedObserver.observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    for (let i = 0; i < 6; i++) {
+        const name = i % 2 ? 'Relative year' : 'Fixed January';
+        await second.getByRole('button', { name, exact: true }).click();
+        await poll(() => new URL(second.url()).searchParams.get('period') === (i % 2 ? 'last-year' : 'custom'), 'view switch committed');
+        await second.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    }
+    assert.deepEqual(await second.evaluate(() => { window.modifiedObserver.disconnect(); return window.modifiedFlashes; }), []);
+    await second.getByRole('button', { name: /^Filters/ }).click();
+    await second.getByLabel('Date range', { exact: true }).selectOption('this-year');
+    await second.getByRole('button', { name: 'Show results', exact: true }).click();
+    await second.getByRole('status').filter({ hasText: 'Modified' }).waitFor();
     const copies = localeFile('savedViews');
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
         await second.evaluate(({ language, theme }) => { localStorage.setItem('i18nextLng', language); localStorage.setItem('averio.theme', theme); }, { language, theme });
