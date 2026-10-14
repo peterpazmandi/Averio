@@ -5,6 +5,7 @@ import { emptyAssignmentVersion } from '../../activities/activityQueries';
 import { datePresets, type TransactionSearch, type DatePreset } from '../transactionSearch';
 import { effectivePeriod, resolveTransactionDates } from '../transactionDates';
 import { useTransactionToday } from '../useTransactionToday';
+import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { SavedViews } from './SavedViews';
 import { LabelFilters } from './LabelFilters';
 import { TransactionLinkDetail } from './TransactionLinkDetail';
@@ -219,6 +220,8 @@ export function TransactionsPage({
                     </h2>
                     <p>{t('transactionManagement.description')}</p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+            <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
                 <button
                     type="button"
                     className="av-btn av-primary"
@@ -227,9 +230,9 @@ export function TransactionsPage({
                     <ConceptIcon name="plus" />
                     {t('transactionManagement.add')}
                 </button>
+                </div>
             </header>
 
-            <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
             <div
                 className="av-tx-search-shell"
                 role="search"
@@ -274,7 +277,7 @@ export function TransactionsPage({
                         type="button"
                         className="av-btn av-filter-toggle"
                         aria-expanded={filtersOpen}
-                        aria-controls="transaction-filters"
+                        aria-haspopup="dialog"
                         onClick={() => setFiltersOpen(open => !open)}
                     >
                         <ConceptIcon name="filters" />
@@ -287,13 +290,13 @@ export function TransactionsPage({
                     </button>
                 </div>
 
-                <div
-                    id="transaction-filters"
-                    className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-[#0D1726] sm:p-5"
-                    hidden={!filtersOpen}
-                >
-                    <div className="grid items-start gap-4 lg:grid-cols-3">
-                        <AverioField>{t('savedViews.period')}
+                {filtersOpen && <AverioDialog open title={t('transactionManagement.filters')} closeLabel={t('common.actions.close')}
+                    onDismiss={() => setFiltersOpen(false)} actions={<>
+                        <AverioButton onClick={resetFilters}>{t('transactionManagement.reset')}</AverioButton>
+                        <AverioButton variant="primary" onClick={() => setFiltersOpen(false)}>{t('transactionManagement.showResults')}</AverioButton>
+                    </>}>
+                    <div className="grid items-start gap-4 sm:grid-cols-2">
+                        <AverioField className="sm:col-span-2">{t('savedViews.period')}
                             <AverioSelect aria-label={t('savedViews.period')} value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
                                 {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
                             </AverioSelect>
@@ -328,12 +331,8 @@ export function TransactionsPage({
                         <LabelFilters userId={userId} householdId={householdId} value={labelIds}
                             onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
                     </div>
-                    <div className="mt-4 flex justify-end">
-                        <AverioButton onClick={() => { setFiltersOpen(false); filterToggle.current?.focus(); }}>
-                            {t('transactionManagement.showResults')}
-                        </AverioButton>
-                    </div>
-                </div>
+                    {invalidRange && <p role="alert" className="mt-3 text-red-600 dark:text-red-300">{t('transactionLinks.invalidRange')}</p>}
+                </AverioDialog>}
 
                 <div
                     className="av-search-summary"

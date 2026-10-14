@@ -15,7 +15,7 @@ export async function verifyTransactionLinks({ fixture: f, outsider, password, s
     const old = await make('Navigation old date', f.sharedAccountId, '2020-01-02');
     const query = new URLSearchParams({ account: f.sharedAccountId, kind: 'Expense', from: f.date, to: f.date });
     const listUrl = 'http://localhost:5173/app/transactions?' + query;
-    const targetRow = () => page.getByRole('button').filter({ hasText: 'Navigation target' });
+    const targetRow = () => page.locator('button').filter({ hasText: 'Navigation target' });
     const editor = () => page.getByRole('dialog', { name: 'Edit transaction', exact: true });
     await page.goto(listUrl);
     await targetRow().waitFor();
@@ -33,6 +33,7 @@ export async function verifyTransactionLinks({ fixture: f, outsider, password, s
     await page.getByLabel('From', { exact: true }).fill('2099-01-01');
     await page.getByRole('alert').waitFor();
     await page.goBack(); await targetRow().waitFor();
+    await page.getByRole('button', { name: 'Show results', exact: true }).click();
     await targetRow().click(); await editor().waitFor();
     assert.equal(new URL(page.url()).searchParams.get('transaction'), target.id);
     await page.goBack(); await editor().waitFor({ state: 'hidden' }); await targetRow().waitFor();

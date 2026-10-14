@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
-import { AverioCard } from '../../../shared/components/ui/AverioCard';
 import { ApiError } from '../../../shared/api/ApiError';
 import type { SavedTransactionViewResponse } from '../../../shared/api/generated';
 import { transactionSearch, type TransactionSearch } from '../transactionSearch';
@@ -19,6 +18,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
     const { t } = useTranslation();
     const client = useQueryClient();
     const query = useQuery(savedViewQueries.list(userId, householdId));
+    const [managing, setManaging] = useState(false);
     const [selectedId, setSelectedId] = useState('');
     // Snapshot the version and filter payload at dialog opening so background refetches cannot authorize an overwrite.
     const [dialog, setDialog] = useState<{ action: Action; view?: SavedTransactionViewResponse; filters: ReturnType<typeof savedFilters> } | null>(null);
@@ -46,40 +46,45 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
             setDialog(null);
         },
     });
-    const open = (action: Action) => { mutation.reset(); setNotice(''); setName(action === 'save' ? '' : selected?.name ?? ''); setDialog({ action, view: action === 'save' ? undefined : selected, filters: current }); };
+    const open = (action: Action) => { setManaging(false); mutation.reset(); setNotice(''); setName(action === 'save' ? '' : selected?.name ?? ''); setDialog({ action, view: action === 'save' ? undefined : selected, filters: current }); };
     const apply = (id: string) => {
         const view = query.data?.find(x => x.id === id);
         setSelectedId(id); setNotice('');
         if (view) onApply({ ...transactionSearch({ ...view.filters }), dates: undefined, transaction: undefined, create: undefined, createKind: undefined });
     };
-    return <AverioCard className="my-4 space-y-3 p-4">
-        <h2 className="font-semibold">{t('savedViews.heading')}</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('savedViews.help')}</p>
-        {query.isPending && <p role="status">{t('common.status.loading')}</p>}
+    return <section className="my-3 min-w-0" aria-label={t('savedViews.heading')}>
+        <div className="flex flex-wrap items-center gap-2">
+            {query.isPending && <span role="status" className="text-xs">{t('common.status.loading')}</span>}
+            {query.data?.slice(0, 4).map(view => <button key={view.id} type="button" title={view.name}
+                aria-pressed={selectedId === view.id && !modified} onClick={() => apply(view.id)}
+                className="min-h-9 max-w-48 truncate rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:border-emerald-500 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:border-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:border-slate-700 dark:text-slate-300 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200">{view.name}</button>)}
+            <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
+            {!!query.data?.length && <AverioButton onClick={() => setManaging(true)}>{t('savedViews.manage')}</AverioButton>}
+            {modified && <span role="status" className="text-xs text-amber-700 dark:text-amber-300">{selected?.name} · {t('savedViews.modified')}</span>}
+        </div>
         {query.isError && <div role="alert">{t('savedViews.loadError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
-        {query.isSuccess && <>
-            {!query.data.length && <p className="text-sm">{t('savedViews.empty')}</p>}
-            {!!query.data.length && <AverioField>{t('savedViews.heading')}<AverioSelect aria-label={t('savedViews.heading')} value={selected?.id ?? ''} onChange={event => apply(event.target.value)}>
+        {selected && !selected.available && <p role="alert" className="mt-2 text-sm text-amber-800 dark:text-amber-200">{t('savedViews.unavailable')}</p>}
+        {notice && <p role="status" className="mt-2 text-xs">{notice}</p>}
+        {managing && <AverioDialog open title={t('savedViews.manage')} closeLabel={t('common.actions.close')}
+            onDismiss={() => setManaging(false)} actions={<AverioButton onClick={() => setManaging(false)}>{t('common.actions.done')}</AverioButton>}>
+            <p className="mb-4 text-sm">{t('savedViews.help')}</p>
+            <AverioField>{t('savedViews.heading')}<AverioSelect aria-label={t('savedViews.heading')} value={selected?.id ?? ''} onChange={event => setSelectedId(event.target.value)}>
                 <option value="">{t('savedViews.choose')}</option>
-                {query.data.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
-            </AverioSelect></AverioField>}
-            {modified && <p role="status" className="text-xs font-semibold">{t('savedViews.modified')}</p>}
-            {selected && !selected.available && <p role="alert" className="text-sm text-amber-800 dark:text-amber-200">{t('savedViews.unavailable')}</p>}
-            <div className="flex flex-wrap gap-2">
-                <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
-                {selected && <>
-                    <AverioButton disabled={invalid || !modified} onClick={() => open('update')}>{t('savedViews.update')}</AverioButton>
-                    <AverioButton onClick={() => open('rename')}>{t('savedViews.rename')}</AverioButton>
-                    <AverioButton onClick={() => open('delete')}>{t('savedViews.delete')}</AverioButton>
-                </>}
-            </div>
-        </>}
-        {notice && <p role="status">{notice}</p>}
+                {query.data?.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
+            </AverioSelect></AverioField>
+            {selected && <div className="mt-4 flex flex-wrap gap-2">
+                <AverioButton variant="primary" onClick={() => { apply(selected.id); setManaging(false); }}>{t('savedViews.apply')}</AverioButton>
+                <AverioButton disabled={invalid || !modified} onClick={() => open('update')}>{t('savedViews.update')}</AverioButton>
+                <AverioButton onClick={() => open('rename')}>{t('savedViews.rename')}</AverioButton>
+                <AverioButton onClick={() => open('delete')}>{t('savedViews.delete')}</AverioButton>
+            </div>}
+        </AverioDialog>}
         {dialog && <AverioDialog open title={t('savedViews.' + dialog.action)} closeLabel={t('common.actions.close')} busy={mutation.isPending}
             onDismiss={() => setDialog(null)} actions={<>
                 <AverioButton disabled={mutation.isPending} onClick={() => setDialog(null)}>{t('common.actions.cancel')}</AverioButton>
                 <AverioButton form="saved-view-form" type="submit" variant={dialog.action === 'delete' ? 'danger' : 'primary'} disabled={mutation.isPending || (dialog.action !== 'delete' && !name.trim())}>{t('savedViews.' + dialog.action)}</AverioButton>
             </>}>
+            <p className="mb-4 text-xs">{t('savedViews.help')}</p>
             <form id="saved-view-form" onSubmit={event => { event.preventDefault(); if (!mutation.isPending) mutation.mutate(); }} className="space-y-4">
                 {dialog.action === 'delete' ? <p>{t('savedViews.confirmDelete', { name: dialog.view?.name })}</p> : dialog.action === 'update' ? <p>{t('savedViews.confirmUpdate')}</p> :
                     <AverioField>{t('savedViews.name')}<AverioInput autoFocus required maxLength={80} value={name} onChange={event => setName(event.target.value)} disabled={mutation.isPending} /></AverioField>}
@@ -87,5 +92,5 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
                     <AverioButton onClick={async () => { await query.refetch(); setDialog(null); }}>{t('common.actions.retry')}</AverioButton></div>}
             </form>
         </AverioDialog>}
-    </AverioCard>;
+    </section>;
 }

@@ -1,4 +1,6 @@
 export const savedViewsEN = {
+    "manage": "Manage views",
+    "apply": "Apply view",
     "period": "Date range",
     "this-month": "This month",
     "last-month": "Last month",
@@ -33,6 +35,8 @@ export const savedViewsEN = {
 };
 
 export const savedViewsDE = {
+    "manage": "Ansichten verwalten",
+    "apply": "Ansicht anwenden",
     "period": "Zeitraum",
     "this-month": "Dieser Monat",
     "last-month": "Letzter Monat",
@@ -67,6 +71,8 @@ export const savedViewsDE = {
 };
 
 export const savedViewsHU = {
+    "manage": "Nézetek kezelése",
+    "apply": "Nézet alkalmazása",
     "period": "Időszak",
     "this-month": "Ez a hónap",
     "last-month": "Előző hónap",

@@ -8,6 +8,8 @@ Views belong to the authenticated household membership. They persist on the serv
 
 Labels are existing reusable labels. The filter catalog contains household labels and account labels only for accounts visible to the caller, including archived accounts. All selected labels must be present on a transaction. Filtering happens in PostgreSQL after privacy restrictions and before pagination. Up to 20 labels may be selected. Account labels keep their account scope; they do not become household labels.
 
+The transaction page keeps filters in a modal (a bottom sheet on phones), so opening filters does not push the timeline down. Filter changes remain live in the URL; Show results or Escape closes the dialog. The first four saved views appear as one-click chips; Manage views lists all views and provides apply, update, rename and delete actions. Saving and management explanations stay inside dialogs.
+
 ## Date and URL contract
 
 The `period` parameter preserves the selection, not the dates resolved today. UTC calendar boundaries match the dashboard. Resolved dates are visible in the From/To controls alongside the preset selector. They refresh on page focus and within 30 seconds of a UTC day change.
