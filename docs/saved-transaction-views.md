@@ -10,7 +10,7 @@ Labels are existing reusable labels. The filter catalog contains household label
 
 ## Date and URL contract
 
-The `period` parameter preserves the selection, not the dates resolved today. UTC calendar boundaries match the dashboard. Resolved dates are visible under the selector and in the From/To controls. They refresh on page focus and within 30 seconds of a UTC day change.
+The `period` parameter preserves the selection, not the dates resolved today. UTC calendar boundaries match the dashboard. Resolved dates are visible in the From/To controls alongside the preset selector. They refresh on page focus and within 30 seconds of a UTC day change.
 
 | Value | UI label | Inclusive bounds |
 | --- | --- | --- |

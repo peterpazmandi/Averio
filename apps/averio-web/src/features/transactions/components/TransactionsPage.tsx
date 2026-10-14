@@ -289,96 +289,50 @@ export function TransactionsPage({
 
                 <div
                     id="transaction-filters"
-                    className="av-search-panel"
+                    className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-[#0D1726] sm:p-5"
                     hidden={!filtersOpen}
                 >
-                    <div className="av-tx-filter-grid">
-                        <ActivitySelect userId={userId} householdId={householdId} value={activityId}
-                            onChange={id => { setActivityId(id); setSelected({});  }}
-                            includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
-                        <div><AverioField>{t('savedViews.period')}
+                    <div className="grid items-start gap-4 lg:grid-cols-3">
+                        <AverioField>{t('savedViews.period')}
                             <AverioSelect aria-label={t('savedViews.period')} value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
                                 {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
                             </AverioSelect>
-                        </AverioField><p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{from ?? '…'} – {to ?? '…'}</p></div>
-
-                        <label>
-                            <span>{t('transactionManagement.account')}</span>
-                            <select
-                                className="av-select"
-                                value={accountId}
-                                onChange={event => { setAccountId(event.target.value); setSelected({}); }}
-                            >
-                                <option value="">
-                                    {t('transactionManagement.allAccounts')}
-                                </option>
-                                {accountId && !accounts.data?.some(account => account.id === accountId) && <option value={accountId}>{t('transactionLinks.unavailableAccount')}</option>}
-                                {(accounts.data ?? []).map(account => (
-                                    <option
-                                        key={account.id}
-                                        value={account.id}
-                                    >
-                                        {account.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
+                        </AverioField>
                         <AverioField>{t('transactionLinks.from')}<AverioInput type="date" value={from ?? ''}
                             onChange={event => { onUrlChange({ from: event.target.value || undefined, to, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
                         <AverioField>{t('transactionLinks.to')}<AverioInput type="date" value={to ?? ''}
                             onChange={event => { onUrlChange({ to: event.target.value || undefined, from, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
-                        <LabelFilters userId={userId} householdId={householdId} value={labelIds}
-                            onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
-                        <fieldset className="av-tx-filter-kind">
-                            <legend>{t('transactionManagement.type')}</legend>
-                            <div className="av-tx-segmented">
-                                <button
-                                    type="button"
-                                    aria-pressed={!kind}
-                                    className={!kind ? 'active' : ''}
-                                    onClick={() => { setKind(''); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.all')}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={
-                                        kind === 'Income'
-                                            ? 'active income'
-                                            : 'income'
-                                    }
-                                    aria-pressed={kind === 'Income'}
-                                    onClick={() => { setKind('Income'); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.income')}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={
-                                        kind === 'Expense'
-                                            ? 'active expense'
-                                            : 'expense'
-                                    }
-                                    aria-pressed={kind === 'Expense'}
-                                    onClick={() => { setKind('Expense'); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.expense')}
-                                </button>
+                        <AverioField>{t('transactionManagement.account')}
+                            <AverioSelect value={accountId} onChange={event => { setAccountId(event.target.value); setSelected({}); }}>
+                                <option value="">{t('transactionManagement.allAccounts')}</option>
+                                {accountId && !accounts.data?.some(account => account.id === accountId) && <option value={accountId}>{t('transactionLinks.unavailableAccount')}</option>}
+                                {(accounts.data ?? []).map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                            </AverioSelect>
+                        </AverioField>
+                        <ActivitySelect userId={userId} householdId={householdId} value={activityId}
+                            onChange={id => { setActivityId(id); setSelected({}); }}
+                            includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
+                        <fieldset className="min-w-0">
+                            <legend className="mb-[7px] text-[13px] font-semibold">{t('transactionManagement.type')}</legend>
+                            <div className="grid h-11 grid-cols-3 rounded-[11px] border border-slate-200 p-0.5 dark:border-slate-700">
+                                {(['', 'Income', 'Expense'] as const).map(value => <button key={value} type="button"
+                                    aria-pressed={kind === value}
+                                    className="min-w-0 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200"
+                                    onClick={() => { setKind(value); setSelected({}); }}>
+                                    {t('transactionManagement.' + (value ? value.toLowerCase() : 'all'))}
+                                </button>)}
                             </div>
                         </fieldset>
                     </div>
-
-                    <button
-                        type="button"
-                        className="av-btn av-filter-done"
-                        onClick={() => {
-                            setFiltersOpen(false);
-                            filterToggle.current?.focus();
-                        }}
-                    >
-                        {t('transactionManagement.showResults')}
-                    </button>
+                    <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
+                        <LabelFilters userId={userId} householdId={householdId} value={labelIds}
+                            onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <AverioButton onClick={() => { setFiltersOpen(false); filterToggle.current?.focus(); }}>
+                            {t('transactionManagement.showResults')}
+                        </AverioButton>
+                    </div>
                 </div>
 
                 <div

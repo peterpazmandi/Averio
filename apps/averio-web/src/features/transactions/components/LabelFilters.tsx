@@ -12,13 +12,13 @@ export function LabelFilters({ userId, householdId, value, onChange }: {
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const options = query.data ?? [];
     return <fieldset className="min-w-0 space-y-2 text-sm">
-        <legend className="font-semibold">{t('savedViews.labels')}</legend>
+        <legend className="text-[13px] font-semibold">{t('savedViews.labels')}</legend>
         <p className="text-xs text-slate-500 dark:text-slate-400">{t('savedViews.labelsHelp')}</p>
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
         {query.isError && <div role="alert">{t('savedViews.labelError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
         {query.isSuccess && !options.length && <p>{t('savedViews.noLabels')}</p>}
-        <div className="max-h-48 space-y-1 overflow-y-auto">
-            {[...options, ...value.filter(id => !options.some(x => x.id === id)).map(id => ({ id, name: t('savedViews.unavailableLabel'), accountId: null }))].map(label => <label key={label.id} className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+        <div className="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+            {[...options, ...value.filter(id => !options.some(x => x.id === id)).map(id => ({ id, name: t('savedViews.unavailableLabel'), accountId: null }))].map(label => <label key={label.id} className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700 has-checked:border-emerald-500 has-checked:bg-emerald-50 dark:has-checked:bg-emerald-950">
                 <input type="checkbox" checked={value.includes(label.id)} disabled={!value.includes(label.id) && value.length >= 20}
                     onChange={event => onChange(event.target.checked ? [...value, label.id].sort() : value.filter(id => id !== label.id))}
                     className="size-4 shrink-0 accent-emerald-500" />
