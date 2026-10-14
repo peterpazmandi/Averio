@@ -71,10 +71,14 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await second.getByRole('button', { name: /^Filters/ }).click();
     assert.equal(await second.getByLabel('Date range', { exact: true }).inputValue(), 'previous-3-full-months');
     await second.getByLabel('Date range', { exact: true }).selectOption('last-year');
+    await poll(async () => new URL(second.url()).searchParams.get('period') === 'last-year'
+        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'last-year', 'last-year navigation committed');
     await second.goBack();
-    assert.equal(await second.getByLabel('Date range', { exact: true }).inputValue(), 'previous-3-full-months');
+    await poll(async () => new URL(second.url()).searchParams.get('period') === 'previous-3-full-months'
+        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'previous-3-full-months', 'previous preset restored by Back');
     await second.goForward();
-    assert.equal(await second.getByLabel('Date range', { exact: true }).inputValue(), 'last-year');
+    await poll(async () => new URL(second.url()).searchParams.get('period') === 'last-year'
+        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'last-year', 'last-year preset restored by Forward');
 
     const peer = await session(f.peerEmail, password);
     assert.deepEqual(await ok(peer, endpoint), []);
