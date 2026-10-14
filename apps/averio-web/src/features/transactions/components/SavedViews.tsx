@@ -59,7 +59,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
         {query.isError && <div role="alert">{t('savedViews.loadError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
         {query.isSuccess && <>
             {!query.data.length && <p className="text-sm">{t('savedViews.empty')}</p>}
-            {!!query.data.length && <AverioField>{t('savedViews.heading')}<AverioSelect value={selected?.id ?? ''} onChange={event => apply(event.target.value)}>
+            {!!query.data.length && <AverioField>{t('savedViews.heading')}<AverioSelect aria-label={t('savedViews.heading')} value={selected?.id ?? ''} onChange={event => apply(event.target.value)}>
                 <option value="">{t('savedViews.choose')}</option>
                 {query.data.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
             </AverioSelect></AverioField>}

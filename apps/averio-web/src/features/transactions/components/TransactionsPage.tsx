@@ -297,7 +297,7 @@ export function TransactionsPage({
                             onChange={id => { setActivityId(id); setSelected({});  }}
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
                         <div><AverioField>{t('savedViews.period')}
-                            <AverioSelect value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
+                            <AverioSelect aria-label={t('savedViews.period')} value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
                                 {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
                             </AverioSelect>
                         </AverioField><p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{from ?? '…'} – {to ?? '…'}</p></div>

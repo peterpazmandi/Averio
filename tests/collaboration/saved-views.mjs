@@ -54,8 +54,8 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await ok(page, endpoint + '/' + view.id, { method: 'PUT', body: { name: view.name, filters: view.filters, expectedVersion: view.version } });
     assert.equal((await api(page, endpoint + '/' + view.id, { method: 'PUT', body: { name: 'Stale overwrite', filters: view.filters, expectedVersion: before.version } })).status, 409);
     assert.equal((await api(page, endpoint + '/' + view.id + '?expectedVersion=' + before.version, { method: 'DELETE' })).status, 409);
-    const malformed = await api(page, endpoint, { method: 'POST', body: { name: '', filters: { ...view.filters, period: 'not-a-period' } } });
-    assert.equal(malformed.status, 400);
+    const malformed = await api(page, endpoint, { method: 'POST', body: { name: 'Invalid preset', filters: { ...view.filters, period: 'not-a-period' } } });
+    assert.equal(malformed.status, 422);
     const second = await session(f.email, password);
     await second.clock.setFixedTime(new Date('2026-11-15T12:00:00Z'));
     await second.goto('http://localhost:5173/app/transactions');
@@ -96,7 +96,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await peer.getByRole('alert').filter({ hasText: 'This view includes an unavailable' }).waitFor();
     assert.equal(new URL(peer.url()).searchParams.get('account'), f.personalAccountId);
     assert(new URL(peer.url()).searchParams.get('labels').includes(personal));
-    assert.equal((await api(peer, endpoint + '/' + peerView, { method: 'PUT', body: { name: unavailable.name, filters: peerFilters, expectedVersion: unavailable.version } })).status, 400);
+    assert.equal((await api(peer, endpoint + '/' + peerView, { method: 'PUT', body: { name: unavailable.name, filters: peerFilters, expectedVersion: unavailable.version } })).status, 422);
     await ok(peer, endpoint + '/' + peerView + '?expectedVersion=' + unavailable.version, { method: 'DELETE' });
 
     // A custom range stays fixed, and deleting a view leaves its transactions intact.
