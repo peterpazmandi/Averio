@@ -41,9 +41,9 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
             }
         },
         onSuccess: async () => {
+            await client.invalidateQueries({ queryKey: savedViewQueries.list(userId, householdId).queryKey });
             setNotice(t(dialog?.action === 'delete' ? 'savedViews.deleted' : 'savedViews.saved'));
             setDialog(null);
-            await client.invalidateQueries({ queryKey: savedViewQueries.list(userId, householdId).queryKey });
         },
     });
     const open = (action: Action) => { mutation.reset(); setNotice(''); setName(action === 'save' ? '' : selected?.name ?? ''); setDialog({ action, view: action === 'save' ? undefined : selected, filters: current }); };
