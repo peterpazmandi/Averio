@@ -84,6 +84,10 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
      * 
      */
     activityId?: string;
+    /**
+     * 
+     */
+    labelIds?: Array<string>;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
@@ -194,6 +198,10 @@ export class TransactionsApi extends runtime.BaseAPI {
 
         if (requestParameters['activityId'] != null) {
             queryParameters['activityId'] = requestParameters['activityId'];
+        }
+
+        if (requestParameters['labelIds'] != null) {
+            queryParameters['labelIds'] = requestParameters['labelIds'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

@@ -11,6 +11,17 @@ public sealed class GetLabelsHandler(
     IAccountRepository accountRepository,
     ILabelRepository labelRepository)
 {
+    public async Task<IReadOnlyList<LabelResult>> ForFilteringAsync(Guid householdId, CancellationToken ct)
+    {
+        var userId = currentUser.UserId ?? throw new AuthenticationFailedException();
+        var household = await householdRepository.GetByIdForUserAsync(householdId, userId, ct)
+            ?? throw new NotFoundException("household", householdId);
+        var member = household.Members.Single(x => x.UserId == userId);
+        var accounts = await accountRepository.GetVisibleAsync(householdId, member.Id, true, ct);
+        var labels = await labelRepository.GetForFilteringAsync(householdId, accounts.Select(x => x.Id).ToArray(), ct);
+        return labels.Select(x => new LabelResult(x.Id, x.Name, x.Scope, x.AccountId)).ToArray();
+    }
+
     public async Task<IReadOnlyList<LabelResult>> HandleAsync(
         Guid householdId,
         Guid? accountId,

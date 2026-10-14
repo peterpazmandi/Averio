@@ -93,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<Averio.Application.Categories.ManageCategories.ICategoryPinRepository, CategoryPinRepository>();
         services.AddScoped<Averio.Application.Categories.ManageCategories.ICategoryManagementRepository, CategoryManagementRepository>();
         services.AddScoped<IIconCatalogRepository, IconCatalogRepository>();
+        services.AddScoped<Averio.Application.Transactions.SavedViews.ISavedViewRepository, SavedViewRepository>();
         services.AddScoped<ILabelRepository, LabelRepository>();
         services.AddScoped<Averio.Application.Transfers.ITransferRepository, TransferRepository>();
         services.AddScoped<Averio.Application.Activities.IActivityRepository, ActivityRepository>();

@@ -123,3 +123,7 @@ The current-user query is shared by the auth observer and imperative route guard
 ## Transaction navigation
 
 The dedicated navigation household verifies the filter/detail contract described in [transaction navigation](transaction-navigation.md), including real API authorization, browser history, refresh, read-only voided records, and EN/DE/HU desktop/mobile screenshots.
+
+## Saved transaction views
+
+A dedicated two-member household verifies saved-view persistence, member isolation, date-preset semantics, all-label matching before pagination, optimistic concurrency and loss of account/label access. See [saved transaction views](saved-transaction-views.md).

@@ -29,6 +29,13 @@ import {
     LabelResponseToJSON,
 } from '../models/LabelResponse';
 
+export interface ApiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
+
 export interface ApiV1HouseholdsHouseholdIdLabelsGetRequest {
     /**
      * 
@@ -55,6 +62,49 @@ export interface ApiV1HouseholdsHouseholdIdLabelsPostRequest {
  * 
  */
 export class LabelsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdLabelsFilterOptionsGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdLabelsFilterOptionsGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/labels/filter-options`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<LabelResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(LabelResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdLabelsFilterOptionsGet(requestParameters: ApiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<LabelResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdLabelsFilterOptionsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdLabelsGet without sending the request

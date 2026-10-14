@@ -36,7 +36,7 @@ public sealed record TransactionQuery(
     DateOnly? CursorDate,
     DateTimeOffset? CursorCreatedAt,
     Guid? CursorId,
-    Guid? ActivityId = null);
+    Guid? ActivityId = null, IReadOnlyList<Guid>? LabelIds = null);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,

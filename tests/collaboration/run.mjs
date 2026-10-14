@@ -1,3 +1,4 @@
+import { verifySavedViews } from './saved-views.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -294,6 +295,7 @@ try {
     console.log('PASS EN/DE/HU, desktop/mobile, light/dark balances and household states, same-tab logout/login isolation');
     await verifyCategoryDashboard({ fixture: fixture.dashboard, password, session, ok, poll, localeFile, artifacts, outsider: partner });
     await verifyTransactionLinks({ fixture: fixture.navigation, outsider: fixture.owner, password, session, ok, poll, artifacts, localeFile });
+    await verifySavedViews({ fixture: fixture.savedViews, outsider: fixture.dashboard, password, session, api, ok, poll, artifacts, localeFile });
     await verifyRefresh({ session, email: fixture.dashboard.email, password, development: false });
     // Production React omits StrictMode effect replay. Exercise the actual dev
     // entry point too, using the same API, cookies and allowed frontend origin.

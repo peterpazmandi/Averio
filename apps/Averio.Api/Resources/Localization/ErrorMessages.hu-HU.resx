@@ -327,6 +327,11 @@
   <data name="Error_DepartureChanged" xml:space="preserve"><value>Megváltozott a háztartásod, valamelyik számlád vagy az egyenleged. Nézd meg újra a meghívást, és erősítsd meg az aktuális tervet.</value></data>
   <data name="Error_InvitationOnboarding" xml:space="preserve"><value>Függőben lévő háztartási meghívásod van. Tekintsd meg vagy utasítsd el, mielőtt háztartást hozol létre.</value></data>
   <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>A kezdő dátum nem lehet későbbi a záró dátumnál.</value></data>
+  <data name="Validation_SavedView" xml:space="preserve"><value>Adj meg legfeljebb 80 karakteres nevet és érvényes szűrőket (legfeljebb 20 címkét).</value></data>
+  <data name="Error_SavedViewUnavailable" xml:space="preserve"><value>A nézet egyik számlája, tevékenysége vagy címkéje már nem érhető el. Ellenőrizd a szűrőket.</value></data>
+  <data name="Error_SavedViewDuplicate" xml:space="preserve"><value>Már van ilyen nevű mentett nézeted.</value></data>
+  <data name="Error_SavedViewLimit" xml:space="preserve"><value>Háztartásonként legfeljebb 50 nézet menthető.</value></data>
+  <data name="Error_SavedViewChanged" xml:space="preserve"><value>A nézet máshol megváltozott. Szerkesztés előtt töltsd újra.</value></data>
 </root>
 
 

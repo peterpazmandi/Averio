@@ -7,6 +7,11 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class LabelRepository(AverioDbContext dbContext)
     : ILabelRepository
 {
+    public async Task<IReadOnlyList<Label>> GetForFilteringAsync(Guid householdId, IReadOnlyList<Guid> accountIds, CancellationToken ct)
+        => await dbContext.Labels.AsNoTracking().Where(x => x.HouseholdId == householdId
+            && (x.Scope == LabelScope.Household || (x.AccountId != null && accountIds.Contains(x.AccountId.Value))))
+            .OrderBy(x => x.Name).ThenBy(x => x.Id).ToListAsync(ct);
+
     public void Add(Label label)
         => dbContext.Labels.Add(label);
 

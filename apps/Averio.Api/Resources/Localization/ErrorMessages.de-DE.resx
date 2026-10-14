@@ -327,6 +327,11 @@
   <data name="Error_DepartureChanged" xml:space="preserve"><value>Dein Haushalt, deine Konten oder Salden wurden geändert. Prüfe die Einladung erneut und bestätige den aktuellen Plan.</value></data>
   <data name="Error_InvitationOnboarding" xml:space="preserve"><value>Du hast eine offene Haushaltseinladung. Prüfe sie oder lehne sie ab, bevor du einen Haushalt erstellst.</value></data>
   <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>Das Startdatum darf nicht nach dem Enddatum liegen.</value></data>
+  <data name="Validation_SavedView" xml:space="preserve"><value>Wähle einen Namen mit bis zu 80 Zeichen und gültige Filter (höchstens 20 Labels).</value></data>
+  <data name="Error_SavedViewUnavailable" xml:space="preserve"><value>Ein Konto, eine Aktivität oder ein Label dieser Ansicht ist nicht mehr verfügbar. Prüfe die Filter.</value></data>
+  <data name="Error_SavedViewDuplicate" xml:space="preserve"><value>Du hast bereits eine gespeicherte Ansicht mit diesem Namen.</value></data>
+  <data name="Error_SavedViewLimit" xml:space="preserve"><value>Du kannst bis zu 50 Ansichten pro Haushalt speichern.</value></data>
+  <data name="Error_SavedViewChanged" xml:space="preserve"><value>Diese Ansicht wurde andernorts geändert. Lade sie vor dem Bearbeiten neu.</value></data>
 </root>
 
 

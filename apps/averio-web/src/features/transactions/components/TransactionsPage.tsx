@@ -2,13 +2,16 @@ import { Link, useRouter } from '@tanstack/react-router';
 import { ActivitySelect } from '../../activities/ActivitySelect';
 import { AssignActivityDialog } from '../../activities/AssignActivityDialog';
 import { emptyAssignmentVersion } from '../../activities/activityQueries';
-import type { TransactionSearch } from '../transactionSearch';
+import { datePresets, type TransactionSearch, type DatePreset } from '../transactionSearch';
+import { effectivePeriod, resolveTransactionDates } from '../transactionDates';
+import { useTransactionToday } from '../useTransactionToday';
+import { SavedViews } from './SavedViews';
+import { LabelFilters } from './LabelFilters';
 import { TransactionLinkDetail } from './TransactionLinkDetail';
-import { AverioField, AverioInput } from '../../../shared/components/ui/AverioFormControls';
+import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
@@ -46,7 +49,7 @@ export function TransactionsPage({
 }: Props) {
     const { t, i18n } = useTranslation();
     const language = i18n.resolvedLanguage ?? i18n.language;
-    const defaultMonth = format(new Date(), 'yyyy-MM');
+    const today = useTransactionToday();
 
     const [search, setSearch] = useState('');
     const router = useRouter();
@@ -54,21 +57,17 @@ export function TransactionsPage({
     const activityId = urlState.activity ?? '';
     const accountId = urlState.account ?? '';
     const kind = urlState.kind ?? '';
-    const defaultDate = new Date(defaultMonth + '-01T12:00:00');
-    const from = urlState.from ?? (urlState.dates === 'all' || activityId ? undefined : format(startOfMonth(defaultDate), 'yyyy-MM-dd'));
-    const to = urlState.to ?? (urlState.dates === 'all' || activityId ? undefined : format(endOfMonth(defaultDate), 'yyyy-MM-dd'));
+    const period = effectivePeriod(urlState);
+    const { from, to } = resolveTransactionDates(urlState, today);
     const invalidRange = Boolean(from && to && from > to);
-    const month = !from && !to ? '' : from && to && from.endsWith('-01') && to === format(endOfMonth(new Date(from + 'T12:00:00')), 'yyyy-MM-dd') ? from.slice(0, 7) : 'custom';
-    const setActivityId = (value: string) => onUrlChange({ activity: value || undefined, ...(value ? { dates: 'all', from: undefined, to: undefined } : {}) });
+    const labelIds = useMemo(() => urlState.labels ?? [], [urlState.labels]);
+    const setActivityId = (value: string) => onUrlChange({ activity: value || undefined, ...(value ? { period: 'all', dates: undefined, from: undefined, to: undefined } : {}) });
     const setAccountId = (value: string) => onUrlChange({ account: value || undefined });
     const setKind = (value: '' | TransactionKind) => onUrlChange({ kind: value || undefined });
-    const setMonth = (value: string) => {
-        if (!value) { onUrlChange({ dates: 'all', from: undefined, to: undefined }); return; }
-        const date = new Date((value === 'custom' ? defaultMonth : value) + '-01T12:00:00');
-        onUrlChange({ dates: undefined, from: format(startOfMonth(date), 'yyyy-MM-dd'), to: value === 'custom' ? format(new Date(), 'yyyy-MM-dd') : format(endOfMonth(date), 'yyyy-MM-dd') });
-    };
+    const setPeriod = (value: DatePreset) => onUrlChange({ period: value, dates: undefined,
+        from: value === 'custom' ? from : undefined, to: value === 'custom' ? to : undefined });
     const [selecting, setSelecting] = useState(false);
-    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, search]);
+    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search]);
     const [selection, setSelection] = useState<{ scope: string; values: Record<string, string> }>({ scope: '', values: {} });
     const selected = selection.scope === selectionScope ? selection.values : {};
     const setSelected = (value: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) =>
@@ -95,23 +94,7 @@ export function TransactionsPage({
         onUrlChange({ transaction: transaction.id, create: undefined, createKind: undefined });
     };
 
-    const monthOptions = useMemo(
-        () => Array.from({ length: 12 }, (_, index) => {
-            const date = subMonths(new Date(), index);
-            return {
-                value: format(date, 'yyyy-MM'),
-                label: new Intl.DateTimeFormat(language, {
-                    month: 'long',
-                    year: 'numeric',
-                }).format(date),
-            };
-        }),
-        [language],
-    );
-
-    const selectedMonthLabel = month === 'custom' ? `${from ?? '…'} – ${to ?? '…'}` : month
-        ? monthOptions.find(option => option.value === month)?.label ?? month
-        : t('transactionManagement.allDates');
+    const selectedMonthLabel = t('savedViews.' + period);
 
     const selectedAccountName = accountId
         ? accounts.data?.find(account => account.id === accountId)?.name
@@ -119,7 +102,7 @@ export function TransactionsPage({
 
     const filterCount = Number(accountId !== '')
         + Number(kind !== '')
-        + Number(month !== defaultMonth) + Number(activityId !== '');
+        + Number(period !== 'this-month') + Number(activityId !== '') + labelIds.length;
 
     const hasCriteria = search.trim().length > 0 || filterCount > 0;
 
@@ -130,11 +113,11 @@ export function TransactionsPage({
             kind: kind || undefined,
             search: search.trim() || undefined,
             pageSize: 40,
-            from, to,
+            from, to, labelIds,
         };
 
         return result;
-    }, [accountId, kind, from, to, search, activityId]);
+    }, [accountId, kind, from, to, search, activityId, labelIds]);
 
     const transactions = useInfiniteQuery({
         enabled: !invalidRange,
@@ -182,7 +165,7 @@ export function TransactionsPage({
     function resetFilters() {
         setSearch('');
         setSelected({});
-        onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined });
+        onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: undefined, labels: undefined });
         searchInput.current?.focus();
     }
 
@@ -313,28 +296,12 @@ export function TransactionsPage({
                         <ActivitySelect userId={userId} householdId={householdId} value={activityId}
                             onChange={id => { setActivityId(id); setSelected({});  }}
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
-                        <label>
-                            <span>{t('transactionManagement.filterMonth')}</span>
-                            <select
-                                className="av-select"
-                                value={month}
-                                onChange={event => { setMonth(event.target.value); setSelected({}); }}
-                            >
-                                <option value="">
-                                    {t('transactionManagement.allDates')}
-                                </option>
-                                <option value="custom">{t('transactionLinks.customRange')}</option>
-                                {month && month !== 'custom' && !monthOptions.some(option => option.value === month) && <option value={month}>{month}</option>}
-                                {monthOptions.map(option => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        <AverioField>{t('savedViews.period')}
+                            <AverioSelect value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
+                                {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
+                            </AverioSelect>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{from ?? '…'} – {to ?? '…'}</span>
+                        </AverioField>
 
                         <label>
                             <span>{t('transactionManagement.account')}</span>
@@ -359,9 +326,11 @@ export function TransactionsPage({
                         </label>
 
                         <AverioField>{t('transactionLinks.from')}<AverioInput type="date" value={from ?? ''}
-                            onChange={event => { onUrlChange({ from: event.target.value || undefined, to, dates: 'all' }); setSelected({}); }} /></AverioField>
+                            onChange={event => { onUrlChange({ from: event.target.value || undefined, to, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
                         <AverioField>{t('transactionLinks.to')}<AverioInput type="date" value={to ?? ''}
-                            onChange={event => { onUrlChange({ to: event.target.value || undefined, from, dates: 'all' }); setSelected({}); }} /></AverioField>
+                            onChange={event => { onUrlChange({ to: event.target.value || undefined, from, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
+                        <LabelFilters userId={userId} householdId={householdId} value={labelIds}
+                            onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
                         <fieldset className="av-tx-filter-kind">
                             <legend>{t('transactionManagement.type')}</legend>
                             <div className="av-tx-segmented">
@@ -449,6 +418,9 @@ export function TransactionsPage({
                     )}
                 </div>
             </div>
+
+            <SavedViews userId={userId} householdId={householdId} state={urlState} invalid={invalidRange}
+                onApply={filters => { setSearch(''); setSelected({}); onUrlChange(filters); }} />
 
             {notice && (
                 <p role="status" className="av-tx-notice">

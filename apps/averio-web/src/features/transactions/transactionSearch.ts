@@ -1,6 +1,8 @@
+export const datePresets = ['this-month', 'last-month', 'previous-3-full-months', 'this-year', 'last-year', 'last-12-months', 'all', 'custom'] as const;
+export type DatePreset = typeof datePresets[number];
 export type TransactionSearch = {
     account?: string; kind?: 'Expense' | 'Income'; from?: string; to?: string;
-    dates?: 'all'; activity?: string; transaction?: string;
+    period?: DatePreset; labels?: string[]; dates?: 'all'; activity?: string; transaction?: string;
     create?: boolean; createKind?: 'Expense' | 'Income';
 };
 const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : undefined;
@@ -12,9 +14,11 @@ function date(value: unknown) {
 }
 export function transactionSearch(search: Record<string, unknown>): TransactionSearch {
     const transaction = uuid(search.transaction);
+    const period = datePresets.includes(search.period as DatePreset) ? search.period as DatePreset : undefined;
+    const labels = [...new Set((Array.isArray(search.labels) ? search.labels : typeof search.labels === 'string' ? search.labels.split(',') : []).map(uuid).filter((id): id is string => Boolean(id)))].sort().slice(0, 20);
     const create = !transaction && [true, 'true', '1'].includes(search.create as string | boolean) ? true : undefined;
-    return { account: uuid(search.account), activity: uuid(search.activity), transaction,
-        kind: kind(search.kind), from: date(search.from), to: date(search.to),
+    return { period, labels: labels.length ? labels : undefined, account: uuid(search.account), activity: uuid(search.activity), transaction,
+        kind: kind(search.kind), from: period && period !== 'custom' ? undefined : date(search.from), to: period && period !== 'custom' ? undefined : date(search.to),
         dates: search.dates === 'all' ? 'all' : undefined, create,
         createKind: create ? kind(search.createKind) : undefined };
 }

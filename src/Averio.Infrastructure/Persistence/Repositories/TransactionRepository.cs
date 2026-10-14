@@ -50,6 +50,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 link.HouseholdId == householdId && link.HouseholdMemberId == householdMemberId
                 && link.TransactionId == item.Transaction.Id && link.ActivityId == activityId));
 
+        foreach (var labelId in query.LabelIds ?? [])
+            filtered = filtered.Where(item => item.Transaction.Labels.Any(link => link.LabelId == labelId));
+
         if (query.From is not null)
             filtered = filtered.Where(item => item.Transaction.OccurredOn >= query.From);
         if (query.To is not null)

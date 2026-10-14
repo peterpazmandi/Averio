@@ -1,3 +1,4 @@
+import { savedViewsEN, savedViewsDE, savedViewsHU } from './locales/savedViews';
 import { transactionLinksEN, transactionLinksDE, transactionLinksHU } from './locales/transactionLinks';
 import { invitationsEN, invitationsDE, invitationsHU } from './locales/invitations';
 import { categorySpendingEN, categorySpendingDE, categorySpendingHU } from './locales/categorySpending';
@@ -32,13 +33,16 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, transactionLinks: transactionLinksEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
+                translation: { ...en, transactionLinks: transactionLinksEN,
+            savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, transactionLinks: transactionLinksDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
+                translation: { ...de, transactionLinks: transactionLinksDE,
+            savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, transactionLinks: transactionLinksHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
+                translation: { ...hu, transactionLinks: transactionLinksHU,
+            savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 

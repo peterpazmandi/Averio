@@ -60,6 +60,7 @@ export type CategoryCashFlowPeriodDto = CategoryCashFlowPeriodResponse;
 export type CategoryCashFlowDto = CategoryCashFlowResponse;
 
 export interface TransactionFilters {
+    labelIds?: string[];
     activityId?: string;
     from?: string;
     to?: string;

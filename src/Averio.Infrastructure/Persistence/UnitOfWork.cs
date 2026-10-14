@@ -22,6 +22,8 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is SavedTransactionView))
+                throw new ConflictException("saved_view_changed", "Error_SavedViewChanged");
             if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Households.Household))
                 throw new ConflictException("household_changed", "Error_HouseholdChanged");
 
