@@ -296,12 +296,11 @@ export function TransactionsPage({
                         <ActivitySelect userId={userId} householdId={householdId} value={activityId}
                             onChange={id => { setActivityId(id); setSelected({});  }}
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
-                        <AverioField>{t('savedViews.period')}
+                        <div><AverioField>{t('savedViews.period')}
                             <AverioSelect value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
                                 {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
                             </AverioSelect>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{from ?? '…'} – {to ?? '…'}</span>
-                        </AverioField>
+                        </AverioField><p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{from ?? '…'} – {to ?? '…'}</p></div>
 
                         <label>
                             <span>{t('transactionManagement.account')}</span>

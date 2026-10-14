@@ -1,3 +1,4 @@
+import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { savedViewQueries } from '../api/savedViewQueries';
@@ -8,6 +9,7 @@ export function LabelFilters({ userId, householdId, value, onChange }: {
 }) {
     const { t } = useTranslation();
     const query = useQuery(savedViewQueries.labels(userId, householdId));
+    const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const options = query.data ?? [];
     return <fieldset className="min-w-0 space-y-2 text-sm">
         <legend className="font-semibold">{t('savedViews.labels')}</legend>
@@ -20,7 +22,7 @@ export function LabelFilters({ userId, householdId, value, onChange }: {
                 <input type="checkbox" checked={value.includes(label.id)} disabled={!value.includes(label.id) && value.length >= 20}
                     onChange={event => onChange(event.target.checked ? [...value, label.id].sort() : value.filter(id => id !== label.id))}
                     className="size-4 shrink-0 accent-emerald-500" />
-                <span className="min-w-0 break-words">{label.name}</span>
+                <span className="min-w-0 break-words">{label.name}{label.accountId && <span className="block text-xs text-slate-500 dark:text-slate-400">{accounts.data?.find(account => account.id === label.accountId)?.name}</span>}</span>
             </label>)}
         </div>
     </fieldset>;

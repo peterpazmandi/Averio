@@ -52,7 +52,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
         setSelectedId(id); setNotice('');
         if (view) onApply({ ...transactionSearch({ ...view.filters }), dates: undefined, transaction: undefined, create: undefined, createKind: undefined });
     };
-    return <AverioCard className="my-4 space-y-3 p-4" aria-label={t('savedViews.heading')}>
+    return <AverioCard className="my-4 space-y-3 p-4">
         <h2 className="font-semibold">{t('savedViews.heading')}</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">{t('savedViews.help')}</p>
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
