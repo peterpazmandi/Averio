@@ -21,8 +21,8 @@ jobs:
 
     services:
       postgres:
-        # Docker Official Images publisher on ECR Public avoids Hub pull limits.
-        image: public.ecr.aws/docker/library/postgres:17
+        # Use the official PostgreSQL image; the ECR mirror hit its public data limit.
+        image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
