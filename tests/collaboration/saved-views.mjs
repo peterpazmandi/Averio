@@ -22,7 +22,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     assert.equal(both.items.length, 1); assert.equal(both.items[0].id, target.id); assert.equal(both.hasMore, false);
     const link = 'http://localhost:5173/app/transactions?period=this-month&kind=Expense';
     await page.goto(link);
-    const filterButton = page.getByRole('button', { name: /^Filters/ });
+    const filterButton = page.locator('button.av-filter-toggle');
     const toolbarTop = (await filterButton.boundingBox()).y;
     await filterButton.click();
     await page.getByRole('dialog', { name: 'Filters', exact: true }).waitFor();
@@ -167,3 +167,4 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     }
     console.log('PASS saved views: relative dates, rollover, labels before pagination, persistent CRUD, cross-session restore, Back/Forward, optimistic concurrency, member/household privacy, lost account/label access, custom dates and localized layouts');
 }
+
