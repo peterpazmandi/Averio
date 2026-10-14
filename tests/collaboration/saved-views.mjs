@@ -23,8 +23,12 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     const link = 'http://localhost:5173/app/transactions?period=this-month&kind=Expense';
     await page.goto(link);
     await page.getByRole('button', { name: /^Filters/ }).click();
-    await page.getByRole('checkbox', { name: 'Essentials', exact: true }).check();
-    await page.getByRole('checkbox', { name: 'Reviewed', exact: true }).check();
+    // URL navigation commits controlled checkbox state asynchronously.
+    for (const name of ['Essentials', 'Reviewed']) {
+        const checkbox = page.getByRole('checkbox', { name, exact: true });
+        await checkbox.click();
+        await poll(() => checkbox.isChecked(), `${name} label selected`);
+    }
     await poll(() => new URL(page.url()).searchParams.get('labels')?.includes(reviewed), 'labels in URL');
     await page.getByRole('button').filter({ hasText: 'Saved view target' }).waitFor();
     await page.getByRole('button').filter({ hasText: 'Only one label' }).waitFor({ state: 'hidden' });
@@ -124,3 +128,4 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     }
     console.log('PASS saved views: relative dates, rollover, labels before pagination, persistent CRUD, cross-session restore, Back/Forward, optimistic concurrency, member/household privacy, lost account/label access, custom dates and localized layouts');
 }
+
