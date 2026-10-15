@@ -67,7 +67,7 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
         await page.evaluate(({ language, theme }) => { localStorage.setItem('i18nextLng', language); localStorage.setItem('averio.theme', theme); }, { language, theme });
         await page.setViewportSize({ width: theme === 'dark' ? 390 : 1440, height: 900 });
         await page.goto(url);
-        await page.getByRole('heading', { name: labels.title, exact: true }).waitFor();
+        await page.getByRole('heading', { name: labels.title, exact: true, level: 2 }).waitFor();
         await poll(() => page.getByRole('heading', { name: 'Changed elsewhere', exact: true }).isVisible(), 'recurring cards');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.screenshot({ path: path.join(artifacts, 'recurring-' + language + '-' + theme + '.png'), fullPage: true });
