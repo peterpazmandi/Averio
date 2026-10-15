@@ -572,7 +572,7 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {invalidRange && <p role="alert">{t('transactionLinks.invalidRange')}</p>}
+            {invalidRange && !filtersOpen && <p role="alert">{t('transactionLinks.invalidRange')}</p>}
             {!invalidRange && transactions.hasNextPage && (
                 <div className="av-tx-load-more">
                     <button
@@ -610,3 +610,4 @@ export function TransactionsPage({
         </section>
     );
 }
+
