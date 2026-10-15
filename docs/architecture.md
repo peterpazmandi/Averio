@@ -237,9 +237,9 @@ Domain events may represent meaningful business transitions, but an event bus is
 
 A separate .NET Worker/BackgroundService process is part of the target architecture for scheduled/background work such as imports, receipt processing, aggregate/projection maintenance, and recurring tasks.
 
-Do not assume the restarted repo already contains `Averio.Worker` until it is created.
+apps/Averio.Worker now executes opt-in automatic recurring income and expenses (ADR-025). Other background capabilities remain future scope. See [deployment and operation](recurring-transactions.md).
 
-When introduced it should reuse Domain/Application/Infrastructure code rather than duplicate rules.
+The worker reuses Domain/Application/Infrastructure services, including the same authorized ledger posting path as manual confirmation.
 
 ## Target production topology
 

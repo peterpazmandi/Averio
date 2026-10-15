@@ -12,6 +12,7 @@ export * from './IconsApi';
 export * from './InvitationsApi';
 export * from './LabelsApi';
 export * from './OnboardingApi';
+export * from './RecurringApi';
 export * from './SavedTransactionViewsApi';
 export * from './SecurityApi';
 export * from './StatisticsApi';

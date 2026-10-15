@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
+    ("recurring calendar anchors", RecurringChecks.Calendar),
+    ("recurring lifecycle", RecurringChecks.Lifecycle),
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),
     ("transfer domain invariants and lifecycle", TransferChecks.Invariants),
     ("transfer EF constraints and migration snapshot", TransferChecks.PersistenceModel),

@@ -1,0 +1,81 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+
+export async function verifyRecurring({ fixture: f, password, session, api, ok, poll, artifacts, localeFile }) {
+    const page = await session(f.email, password);
+    await page.clock.setFixedTime(new Date(f.date + 'T12:00:00Z'));
+    const prefix = '/households/' + f.householdId + '/recurring';
+    const url = 'http://localhost:5173/app/recurring';
+    await page.goto(url);
+    await page.getByRole('heading', { name: 'Make regular payments easier to track', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'New recurring', exact: true }).first().click();
+    const editor = () => page.getByRole('dialog', { name: /New recurring|Edit schedule/, exact: true });
+    await editor().getByLabel('Name', { exact: true }).fill('Monthly broadband');
+    await editor().getByLabel('Account', { exact: true }).selectOption(f.sharedAccountId);
+    await editor().getByLabel(/^Amount/).fill('12.3456');
+    assert.equal(await editor().getByLabel('Record automatically', { exact: true }).isChecked(), false);
+    await editor().getByRole('button', { name: 'Category', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Category', exact: true }).locator('button[aria-pressed]').first().click();
+    await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await editor().waitFor({ state: 'hidden' });
+    let rules = await ok(page, prefix);
+    assert.equal(rules.length, 1);
+    const initial = rules[0];
+    assert.equal(initial.automatic, false);
+    assert.equal(initial.amount, '12.3456');
+    await page.getByRole('button', { name: 'Review and record', exact: true }).click();
+    const review = page.getByRole('dialog', { name: 'Review occurrence', exact: true });
+    await review.getByLabel(/^Amount/).fill('15.1234');
+    await review.getByRole('button', { name: 'Record transaction', exact: true }).click();
+    await review.waitFor({ state: 'hidden' });
+    const receipt = await ok(page, prefix + '/' + initial.id + '/occurrences');
+    assert.equal(receipt.length, 1);
+    const retry = await ok(page, prefix + '/' + initial.id + '/occurrences', { method: 'POST',
+        body: { expectedVersion: initial.version, dueOn: initial.nextDueOn, skip: false, amount: '15.1234' } });
+    assert.equal(retry.transactionId, receipt[0].transactionId);
+    assert.equal((await ok(page, '/households/' + f.householdId + '/transactions/' + retry.transactionId)).amount, '15.1234');
+    await page.getByRole('button', { name: 'Recent occurrences', exact: true }).click();
+    await page.getByRole('link', { name: 'View transaction', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Edit transaction', exact: true }).waitFor();
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    await editor().getByLabel('Pause schedule', { exact: true }).check();
+    await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await editor().waitFor({ state: 'hidden' });
+    assert.equal((await ok(page, prefix))[0].isPaused, true);
+    // Keep a draft open while another tab changes the version.
+    await page.getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    const current = (await ok(page, prefix))[0];
+    await ok(page, prefix + '/' + current.id, { method: 'PUT', body: { ...current, expectedVersion: current.version, name: 'Changed elsewhere' } });
+    await editor().getByLabel('Name', { exact: true }).fill('My retained draft');
+    await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await editor().getByRole('alert').waitFor();
+    assert.equal(await editor().getByLabel('Name', { exact: true }).inputValue(), 'My retained draft');
+    await editor().getByRole('button', { name: 'Cancel', exact: true }).last().click();
+    const second = await ok(page, prefix, { method: 'POST', body: { ...initial, name: 'Skip example' } });
+    await page.reload();
+    await page.getByRole('button', { name: 'Skip occurrence', exact: true }).click();
+    const skip = page.getByRole('dialog', { name: 'Skip occurrence', exact: true });
+    await skip.getByRole('button', { name: 'Skip occurrence', exact: true }).click();
+    await skip.waitFor({ state: 'hidden' });
+    assert.equal((await ok(page, prefix + '/' + second.id + '/occurrences'))[0].transactionId, null);
+    const missingCsrf = await api(page, prefix, { method: 'POST', csrf: false, body: { ...initial, name: 'Rejected' } });
+    assert.equal(missingCsrf.status, 400);
+    const copy = localeFile('recurring');
+    for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
+        const labels = copy['recurring' + language.toUpperCase()];
+        await page.evaluate(({ language, theme }) => { localStorage.setItem('i18nextLng', language); localStorage.setItem('averio.theme', theme); }, { language, theme });
+        await page.setViewportSize({ width: theme === 'dark' ? 390 : 1440, height: 900 });
+        await page.goto(url);
+        await page.getByRole('heading', { name: labels.title, exact: true }).waitFor();
+        await poll(() => page.getByRole('heading', { name: 'Changed elsewhere', exact: true }).isVisible(), 'recurring cards');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.screenshot({ path: path.join(artifacts, 'recurring-' + language + '-' + theme + '.png'), fullPage: true });
+        await page.getByRole('button', { name: labels.edit, exact: true }).first().click();
+        await page.getByRole('dialog', { name: labels.edit, exact: true }).waitFor();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.screenshot({ path: path.join(artifacts, 'recurring-editor-' + language + '-' + theme + '.png'), fullPage: true });
+        await page.getByRole('dialog').getByRole('button', { name: labels.cancel, exact: true }).last().click();
+    }
+    console.log('PASS recurring creation, confirmation, exact amount, retry, history, pause, stale draft, skip, CSRF and localized responsive layouts');
+}

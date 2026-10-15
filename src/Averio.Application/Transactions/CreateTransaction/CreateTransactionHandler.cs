@@ -35,6 +35,16 @@ public sealed class CreateTransactionHandler(
         CreateTransactionCommand command,
         CancellationToken cancellationToken)
     {
+        var userId = currentUser.UserId ?? throw new AuthenticationFailedException();
+        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+        var id = await CreateWithinTransactionAsync(command, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return id;
+    }
+
+    // Internal application entry point: callers own the transaction; authorization still runs below.
+    internal async Task<Guid> CreateWithinTransactionAsync(CreateTransactionCommand command, Guid userId, CancellationToken cancellationToken)
+    {
         var input = new TransactionInput(
             command.AccountId,
             command.Kind,
@@ -47,11 +57,7 @@ public sealed class CreateTransactionHandler(
 
         await validator.ValidateAndThrowAsync(input, cancellationToken);
 
-        var userId = currentUser.UserId
-            ?? throw new AuthenticationFailedException();
 
-        await using var databaseTransaction =
-            await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         var household = await householdRepository.GetByIdForUserAsync(
             command.HouseholdId,
@@ -111,20 +117,11 @@ public sealed class CreateTransactionHandler(
             labelIds,
             timeProvider.GetUtcNow());
 
-        try
-        {
-            transactionRepository.Add(transaction);
-            await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
-            await databaseTransaction.CommitAsync(cancellationToken);
-            return transaction.Id;
-        }
-        catch
-        {
-            await databaseTransaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+        transactionRepository.Add(transaction);
+        await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
+        return transaction.Id;
     }
 }
 

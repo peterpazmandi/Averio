@@ -1,3 +1,4 @@
+import { verifyRecurring } from './recurring.mjs';
 import { verifySavedViews } from './saved-views.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -130,6 +131,7 @@ try {
     await poll(async () => (await fetch(ui)).ok, 'built frontend');
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const { owner: f, existing: old, password } = fixture;
+    await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');
     await owner.getByRole('button', { name: 'Invite a partner', exact: true }).waitFor();

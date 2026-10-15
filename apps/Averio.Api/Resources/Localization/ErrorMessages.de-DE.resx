@@ -332,6 +332,8 @@
   <data name="Error_SavedViewDuplicate" xml:space="preserve"><value>Du hast bereits eine gespeicherte Ansicht mit diesem Namen.</value></data>
   <data name="Error_SavedViewLimit" xml:space="preserve"><value>Du kannst bis zu 50 Ansichten pro Haushalt speichern.</value></data>
   <data name="Error_SavedViewChanged" xml:space="preserve"><value>Diese Ansicht wurde andernorts geändert. Lade sie vor dem Bearbeiten neu.</value></data>
+<data name="Validation_Recurring" xml:space="preserve"><value>Wähle einen Namen, eine Kategorie, einen positiven Betrag und einen gültigen Zeitplan ab heute. Konto, Typ, erstes Datum und Häufigkeit sind nach dem Erstellen fest. Bis zu 100 aktive Zeitpläne sind möglich.</value></data>
+<data name="Error_RecurringChanged" xml:space="preserve"><value>Dieser Zeitplan wurde geändert oder der Termin ist noch nicht fällig. Lade ihn neu und prüfe ihn erneut.</value></data>
 </root>
 
 
