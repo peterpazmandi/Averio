@@ -199,12 +199,12 @@ export function TransactionsPage({
         closeEditor();
     }
 
-    async function voidCurrent() {
+    async function voidCurrent(expectedUpdatedAt: string) {
         if (!activeEditor || activeEditor === 'new') return;
 
         await mutations.void.mutateAsync({
             id: activeEditor.id,
-            expectedUpdatedAt: activeEditor.updatedAt,
+            expectedUpdatedAt,
         });
 
         setNotice(t('transactionManagement.voidedNotice'));
@@ -610,4 +610,3 @@ export function TransactionsPage({
         </section>
     );
 }
-

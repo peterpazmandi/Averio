@@ -149,6 +149,35 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
         await second.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
     assert.deepEqual(await second.evaluate(() => { window.modifiedObserver.disconnect(); return window.modifiedFlashes; }), []);
+    // Browsing and renaming another view must not change the applied view.
+    const appliedUrl = second.url();
+    await second.getByRole('button', { name: 'Manage views', exact: true }).click();
+    let manager = second.getByRole('dialog', { name: 'Manage views', exact: true });
+    const fixedView = (await ok(second, endpoint)).find(x => x.name === 'Fixed January');
+    await manager.getByLabel('Saved views', { exact: true }).selectOption(fixedView.id);
+    await second.keyboard.press('Escape');
+    assert.equal(second.url(), appliedUrl);
+    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await second.getByRole('status').filter({ hasText: 'Modified' }).count(), 0);
+    await second.getByRole('button', { name: 'Manage views', exact: true }).click();
+    manager = second.getByRole('dialog', { name: 'Manage views', exact: true });
+    await manager.getByLabel('Saved views', { exact: true }).selectOption(fixedView.id);
+    await manager.getByRole('button', { name: 'Rename view', exact: true }).click();
+    const renameDialog = second.getByRole('dialog', { name: 'Rename view', exact: true });
+    await renameDialog.getByLabel('View name', { exact: true }).fill('January review');
+    await renameDialog.getByRole('button', { name: 'Rename view', exact: true }).click();
+    await renameDialog.waitFor({ state: 'hidden' });
+    assert.equal(second.url(), appliedUrl);
+    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
+    await second.getByRole('button', { name: 'Manage views', exact: true }).click();
+    manager = second.getByRole('dialog', { name: 'Manage views', exact: true });
+    await manager.getByLabel('Saved views', { exact: true }).selectOption(fixedView.id);
+    await manager.getByRole('button', { name: 'Delete view', exact: true }).click();
+    const deleteDialog = second.getByRole('dialog', { name: 'Delete view', exact: true });
+    await deleteDialog.getByRole('button', { name: 'Delete view', exact: true }).click();
+    await deleteDialog.waitFor({ state: 'hidden' });
+    assert.equal(second.url(), appliedUrl);
+    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
     await second.getByRole('button', { name: /^Filters/ }).click();
     await second.getByLabel('Date range', { exact: true }).selectOption('this-year');
     await second.getByRole('button', { name: 'Show results', exact: true }).click();
@@ -167,4 +196,3 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     }
     console.log('PASS saved views: relative dates, rollover, labels before pagination, persistent CRUD, cross-session restore, Back/Forward, optimistic concurrency, member/household privacy, lost account/label access, custom dates and localized layouts');
 }
-

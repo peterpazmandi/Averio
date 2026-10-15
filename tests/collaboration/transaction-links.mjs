@@ -57,6 +57,50 @@ export async function verifyTransactionLinks({ fixture: f, outsider, password, s
     assert.equal(new URL(page.url()).searchParams.get('dates'), 'all');
     await page.getByRole('button').filter({ hasText: 'Navigation old date' }).waitFor();
 
+    // A stale cached draft must not adopt a background refresh's newer concurrency token.
+    await targetRow().click(); await editor().waitFor();
+    const beforeConcurrentEdit = await ok(page, prefix + '/transactions/' + target.id);
+    await editor().getByRole('button', { name: 'Close', exact: true }).click();
+    await editor().waitFor({ state: 'hidden' });
+    await ok(page, prefix + '/transactions/' + target.id, { method: 'PUT', body: {
+        accountId: beforeConcurrentEdit.accountId, kind: beforeConcurrentEdit.kind,
+        visibility: beforeConcurrentEdit.visibility, merchant: beforeConcurrentEdit.merchant,
+        occurredOn: beforeConcurrentEdit.occurredOn, note: 'Concurrent member edit',
+        labelIds: beforeConcurrentEdit.labels.map(x => x.id), expectedUpdatedAt: beforeConcurrentEdit.updatedAt,
+        items: beforeConcurrentEdit.items.map(x => ({ existingItemId: x.id, description: x.description, categoryId: x.categoryId, amount: x.amount })),
+    } });
+    await page.clock.setFixedTime(new Date(f.date + 'T12:03:00Z'));
+    let releaseRefresh;
+    const refreshGate = new Promise(resolve => { releaseRefresh = resolve; });
+    const detailPattern = '**/api/v1' + prefix + '/transactions/' + target.id;
+    await page.route(detailPattern, async route => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const response = await route.fetch();
+        await refreshGate;
+        await route.fulfill({ response });
+    });
+    const refreshed = page.waitForResponse(r => r.url().endsWith('/transactions/' + target.id) && r.request().method() === 'GET');
+    await targetRow().click(); await editor().waitFor();
+    assert.equal(await editor().locator('textarea').inputValue(), beforeConcurrentEdit.note ?? '');
+    releaseRefresh(); await refreshed;
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.unroute(detailPattern);
+    const saveResponse = page.waitForResponse(r => r.request().method() === 'PUT' && r.url().endsWith('/transactions/' + target.id));
+    await editor().getByRole('button', { name: 'Save transaction', exact: true }).click();
+    const rejectedSave = await saveResponse;
+    assert.equal(rejectedSave.request().postDataJSON().expectedUpdatedAt, beforeConcurrentEdit.updatedAt);
+    assert.equal(rejectedSave.status(), 409);
+    await editor().getByRole('button', { name: 'Save transaction', exact: true }).waitFor({ state: 'visible' });
+    const voidResponse = page.waitForResponse(r => r.request().method() === 'DELETE' && r.url().includes('/transactions/' + target.id));
+    page.once('dialog', dialog => dialog.accept());
+    await editor().getByRole('button', { name: 'Void transaction', exact: true }).click();
+    const rejectedVoid = await voidResponse;
+    assert.equal(new URL(rejectedVoid.url()).searchParams.get('expectedUpdatedAt'), beforeConcurrentEdit.updatedAt);
+    assert.equal(rejectedVoid.status(), 409);
+    const preserved = await ok(page, prefix + '/transactions/' + target.id);
+    assert.equal(preserved.note, 'Concurrent member edit'); assert.equal(preserved.status, 'Posted');
+    await editor().getByRole('button', { name: 'Close', exact: true }).click();
+
     // Voided records remain inspectable but cannot reopen an editable form.
     const record = await ok(page, prefix + '/transactions/' + old.id);
     await ok(page, prefix + '/transactions/' + old.id + '?expectedUpdatedAt=' + encodeURIComponent(record.updatedAt), { method: 'DELETE' });
