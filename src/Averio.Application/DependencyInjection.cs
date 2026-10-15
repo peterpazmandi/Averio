@@ -63,6 +63,7 @@ public static class DependencyInjection
 
         services.AddScoped<GetDashboardHandler>();
 
+        services.AddScoped<Transactions.SavedViews.SavedViewHandler>();
         services.AddScoped<Activities.ActivityHandler>();
         services.AddScoped<Transfers.TransferHandler>();
         services.AddScoped<Transactions.CreateTransaction.CreateTransactionHandler>();

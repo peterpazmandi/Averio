@@ -55,10 +55,12 @@ internal static class BrowserHost
             var owner = await Seed(factory.Services, clock, "owner@collaboration.test", "Collaboration home");
             var existing = await Seed(factory.Services, clock, "existing@collaboration.test", "Previous home");
             var dashboard = await Seed(factory.Services, clock, "dashboard@collaboration.test", "Dashboard home");
+            var navigation = await Seed(factory.Services, clock, "navigation@collaboration.test", "Navigation home");
+            var savedViews = await Seed(factory.Services, clock, "views@collaboration.test", "Saved views home");
             var control = WebApplication.CreateBuilder();
             control.WebHost.UseUrls("http://127.0.0.1:5181");
             await using var app = control.Build();
-            app.MapGet("/ready", () => new { owner, existing, dashboard, password = "Browser-test-password-123!" });
+            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, savedViews, password = "Browser-test-password-123!" });
             app.MapGet("/mail", (string email, string kind) => inbox.Messages.TryGetValue((email, kind), out var mail)
                 ? Results.Ok(mail) : Results.NotFound());
             app.MapPost("/delivery", (Delivery input) => { inbox.FailedEmail = input.FailedEmail; return Results.NoContent(); });
@@ -107,6 +109,17 @@ internal static class BrowserHost
         household.CompleteOnboarding(home, "HU", CurrencyCode.From("EUR"), now);
         household.CompleteFinancialSetup(now);
         var member = household.Members.Single().Id;
+        string? peerEmail = null;
+        if (email == "views@collaboration.test")
+        {
+            peerEmail = "views-peer@collaboration.test";
+            var peer = await identity.CreateUserAsync(peerEmail, "Browser-test-password-123!", "en-US", default);
+            var peerId = peer.UserId!.Value;
+            var peerToken = await identity.GenerateEmailVerificationTokenAsync(peerId, default);
+            await identity.ConfirmEmailAsync(peerId, peerToken!, default);
+            await identity.UpdateDisplayNameAsync(peerId, "Views peer", default);
+            household.AddMember(peerId, now);
+        }
         var shared = Account.Create(household.Id, [member], home + " shared", AccountType.Checking,
             AccountScope.Household, AccountVisibility.Household, true, CurrencyCode.From("EUR"), 0, today, now);
         var personal = Account.Create(household.Id, [member], home + " personal", AccountType.Savings,
@@ -136,7 +149,7 @@ internal static class BrowserHost
         await aggregates.ApplyAsync(sharedTransaction, 1, default);
         await aggregates.ApplyAsync(personalIncome, 1, default);
         await transaction.CommitAsync();
-        return new { userId, email, householdId = household.Id, sharedAccountId = shared.Id,
+        return new { userId, email, peerEmail, householdId = household.Id, sharedAccountId = shared.Id,
             personalAccountId = personal.Id, privateAccountId = secret.Id, privateTransactionId = privateTransaction.Id,
             sharedTransactionId = sharedTransaction.Id, privateTransferId = transfer.Id, privateActivityId = activity.Id,
             date = today.ToString("yyyy-MM-dd") };

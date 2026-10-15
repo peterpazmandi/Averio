@@ -22,7 +22,7 @@ public sealed class GetTransactionsHandler(
         DateTimeOffset? cursorCreatedAt,
         Guid? cursorId,
         CancellationToken cancellationToken,
-        Guid? activityId = null)
+        Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -35,6 +35,7 @@ public sealed class GetTransactionsHandler(
 
         var membership = household.Members.Single(member => member.UserId == userId);
         var size = Math.Clamp(pageSize, 1, 100);
+        if (labelIds?.Count > 20) throw new BusinessRuleException("saved_view_invalid", "Validation_SavedView");
 
         var page = await transactionRepository.GetVisiblePageAsync(
             household.Id,
@@ -48,7 +49,7 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId, activityId),
+                cursorId, activityId, labelIds?.Distinct().ToArray()),
             cancellationToken);
 
         return new TransactionPageResult(

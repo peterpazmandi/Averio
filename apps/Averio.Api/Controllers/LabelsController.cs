@@ -34,6 +34,13 @@ public sealed class LabelsController(
             label.AccountId)));
     }
 
+    [HttpGet("filter-options")]
+    public async Task<ActionResult<IReadOnlyList<LabelResponse>>> FilterOptions(Guid householdId, CancellationToken ct)
+    {
+        var labels = await getHandler.ForFilteringAsync(householdId, ct);
+        return Ok(labels.Select(x => new LabelResponse(x.Id, x.Name, x.Scope.ToString(), x.AccountId)));
+    }
+
     [HttpPost]
     public async Task<ActionResult<CreateLabelResponse>> Create(
         Guid householdId,

@@ -1,11 +1,18 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
 import { ActivitySelect } from '../../activities/ActivitySelect';
 import { AssignActivityDialog } from '../../activities/AssignActivityDialog';
 import { emptyAssignmentVersion } from '../../activities/activityQueries';
+import { datePresets, type TransactionSearch, type DatePreset } from '../transactionSearch';
+import { effectivePeriod, resolveTransactionDates } from '../transactionDates';
+import { useTransactionToday } from '../useTransactionToday';
+import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
+import { SavedViews } from './SavedViews';
+import { LabelFilters } from './LabelFilters';
+import { TransactionLinkDetail } from './TransactionLinkDetail';
+import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
@@ -17,7 +24,7 @@ import type {
     TransactionInputDto,
     TransactionKind,
 } from '../api/transactionApi';
-import { transactionQueryKeys } from '../api/transactionQueries';
+import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { useTransactionMutations } from '../api/useTransactionMutations';
 import { TransactionEditor } from './TransactionEditor';
 import '../transactions.css';
@@ -27,7 +34,8 @@ interface Props {
     householdId: string;
     createRequested?: boolean;
     initialKind?: TransactionKind;
-    initialActivityId?: string;
+    urlState: TransactionSearch;
+    onUrlChange: (patch: Partial<TransactionSearch>, replace?: boolean) => Promise<void>;
     onCreateRequestHandled?: () => void;
 }
 
@@ -36,54 +44,58 @@ export function TransactionsPage({
     householdId,
     createRequested = false,
     initialKind,
-    initialActivityId,
+    urlState,
+    onUrlChange,
     onCreateRequestHandled,
 }: Props) {
     const { t, i18n } = useTranslation();
     const language = i18n.resolvedLanguage ?? i18n.language;
-    const defaultMonth = format(new Date(), 'yyyy-MM');
+    const today = useTransactionToday();
 
     const [search, setSearch] = useState('');
-    const [activityId, setActivityId] = useState(initialActivityId ?? '');
+    const router = useRouter();
+    const openedFromList = useRef<string | null>(null);
+    const activityId = urlState.activity ?? '';
+    const accountId = urlState.account ?? '';
+    const kind = urlState.kind ?? '';
+    const period = effectivePeriod(urlState);
+    const { from, to } = resolveTransactionDates(urlState, today);
+    const invalidRange = Boolean(from && to && from > to);
+    const labelIds = useMemo(() => urlState.labels ?? [], [urlState.labels]);
+    const setActivityId = (value: string) => onUrlChange({ activity: value || undefined, ...(value ? { period: 'all', dates: undefined, from: undefined, to: undefined } : {}) });
+    const setAccountId = (value: string) => onUrlChange({ account: value || undefined });
+    const setKind = (value: '' | TransactionKind) => onUrlChange({ kind: value || undefined });
+    const setPeriod = (value: DatePreset) => onUrlChange({ period: value, dates: undefined,
+        from: value === 'custom' ? from : undefined, to: value === 'custom' ? to : undefined });
     const [selecting, setSelecting] = useState(false);
-    const [selected, setSelected] = useState<Record<string, string>>({});
+    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search]);
+    const [selection, setSelection] = useState<{ scope: string; values: Record<string, string> }>({ scope: '', values: {} });
+    const selected = selection.scope === selectionScope ? selection.values : {};
+    const setSelected = (value: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) =>
+        setSelection(current => ({ scope: selectionScope, values: typeof value === 'function' ? value(current.scope === selectionScope ? current.values : {}) : value }));
     const [assigning, setAssigning] = useState(false);
-    const [accountId, setAccountId] = useState('');
-    const [kind, setKind] = useState<'' | TransactionKind>('');
-    const [month, setMonth] = useState(initialActivityId ? '' : defaultMonth);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [editor, setEditor] = useState<TransactionDto | 'new' | null>(null);
+    const [editor, setEditor] = useState<'new' | null>(null);
     const [notice, setNotice] = useState('');
 
     const searchInput = useRef<HTMLInputElement>(null);
     const filterToggle = useRef<HTMLButtonElement>(null);
 
     const accounts = useQuery(
-        accountsQueries.list(userId, householdId, false),
+        accountsQueries.list(userId, householdId, true),
     );
     const mutations = useTransactionMutations(userId, householdId);
     const busy = mutations.create.isPending
         || mutations.update.isPending
         || mutations.void.isPending;
-    const activeEditor = createRequested ? 'new' : editor;
+    const detail = useQuery({ ...transactionQueries.detail(userId, householdId, urlState.transaction ?? ''), enabled: Boolean(urlState.transaction), retry: false });
+    const activeEditor = urlState.transaction ? (detail.isSuccess && detail.data?.canModify && detail.data.status !== 'Voided' ? detail.data : null) : createRequested ? 'new' : editor;
+    const openTransaction = (transaction: TransactionDto) => {
+        openedFromList.current = transaction.id;
+        onUrlChange({ transaction: transaction.id, create: undefined, createKind: undefined });
+    };
 
-    const monthOptions = useMemo(
-        () => Array.from({ length: 12 }, (_, index) => {
-            const date = subMonths(new Date(), index);
-            return {
-                value: format(date, 'yyyy-MM'),
-                label: new Intl.DateTimeFormat(language, {
-                    month: 'long',
-                    year: 'numeric',
-                }).format(date),
-            };
-        }),
-        [language],
-    );
-
-    const selectedMonthLabel = month
-        ? monthOptions.find(option => option.value === month)?.label ?? month
-        : t('transactionManagement.allDates');
+    const selectedMonthLabel = t('savedViews.' + period);
 
     const selectedAccountName = accountId
         ? accounts.data?.find(account => account.id === accountId)?.name
@@ -91,7 +103,7 @@ export function TransactionsPage({
 
     const filterCount = Number(accountId !== '')
         + Number(kind !== '')
-        + Number(month !== defaultMonth) + Number(activityId !== '');
+        + Number(period !== 'this-month') + Number(activityId !== '') + labelIds.length;
 
     const hasCriteria = search.trim().length > 0 || filterCount > 0;
 
@@ -102,18 +114,14 @@ export function TransactionsPage({
             kind: kind || undefined,
             search: search.trim() || undefined,
             pageSize: 40,
+            from, to, labelIds,
         };
 
-        if (month) {
-            const date = new Date(month + '-01T12:00:00');
-            result.from = format(startOfMonth(date), 'yyyy-MM-dd');
-            result.to = format(endOfMonth(date), 'yyyy-MM-dd');
-        }
-
         return result;
-    }, [accountId, kind, month, search, activityId]);
+    }, [accountId, kind, from, to, search, activityId, labelIds]);
 
     const transactions = useInfiniteQuery({
+        enabled: !invalidRange,
         queryKey: transactionQueryKeys.list(
             userId,
             householdId,
@@ -145,7 +153,7 @@ export function TransactionsPage({
         },
     });
 
-    const items = transactions.data?.pages.flatMap(page => page.items) ?? [];
+    const items = invalidRange ? [] : transactions.data?.pages.flatMap(page => page.items) ?? [];
 
     const formatter = new Intl.DateTimeFormat(language, {
         weekday: 'short',
@@ -157,16 +165,17 @@ export function TransactionsPage({
 
     function resetFilters() {
         setSearch('');
-        setActivityId('');
         setSelected({});
-        setAccountId('');
-        setKind('');
-        setMonth(defaultMonth);
+        onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: undefined, labels: undefined });
         searchInput.current?.focus();
     }
 
     function closeEditor() {
         setEditor(null);
+        if (urlState.transaction) {
+            if (openedFromList.current === urlState.transaction) { openedFromList.current = null; router.history.back(); }
+            else onUrlChange({ transaction: undefined }, true);
+        }
         if (createRequested) {
             onCreateRequestHandled?.();
         }
@@ -190,12 +199,12 @@ export function TransactionsPage({
         closeEditor();
     }
 
-    async function voidCurrent() {
+    async function voidCurrent(expectedUpdatedAt: string) {
         if (!activeEditor || activeEditor === 'new') return;
 
         await mutations.void.mutateAsync({
             id: activeEditor.id,
-            expectedUpdatedAt: activeEditor.updatedAt,
+            expectedUpdatedAt,
         });
 
         setNotice(t('transactionManagement.voidedNotice'));
@@ -211,6 +220,8 @@ export function TransactionsPage({
                     </h2>
                     <p>{t('transactionManagement.description')}</p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+            <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
                 <button
                     type="button"
                     className="av-btn av-primary"
@@ -219,9 +230,9 @@ export function TransactionsPage({
                     <ConceptIcon name="plus" />
                     {t('transactionManagement.add')}
                 </button>
+                </div>
             </header>
 
-            <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
             <div
                 className="av-tx-search-shell"
                 role="search"
@@ -266,7 +277,7 @@ export function TransactionsPage({
                         type="button"
                         className="av-btn av-filter-toggle"
                         aria-expanded={filtersOpen}
-                        aria-controls="transaction-filters"
+                        aria-haspopup="dialog"
                         onClick={() => setFiltersOpen(open => !open)}
                     >
                         <ConceptIcon name="filters" />
@@ -279,104 +290,49 @@ export function TransactionsPage({
                     </button>
                 </div>
 
-                <div
-                    id="transaction-filters"
-                    className="av-search-panel"
-                    hidden={!filtersOpen}
-                >
-                    <div className="av-tx-filter-grid">
+                {filtersOpen && <AverioDialog open title={t('transactionManagement.filters')} closeLabel={t('common.actions.close')}
+                    onDismiss={() => setFiltersOpen(false)} actions={<>
+                        <AverioButton onClick={resetFilters}>{t('transactionManagement.reset')}</AverioButton>
+                        <AverioButton variant="primary" onClick={() => setFiltersOpen(false)}>{t('transactionManagement.showResults')}</AverioButton>
+                    </>}>
+                    <div className="grid items-start gap-4 sm:grid-cols-2">
+                        <AverioField className="sm:col-span-2">{t('savedViews.period')}
+                            <AverioSelect aria-label={t('savedViews.period')} value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
+                                {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
+                            </AverioSelect>
+                        </AverioField>
+                        <AverioField>{t('transactionLinks.from')}<AverioInput type="date" value={from ?? ''}
+                            onChange={event => { onUrlChange({ from: event.target.value || undefined, to, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
+                        <AverioField>{t('transactionLinks.to')}<AverioInput type="date" value={to ?? ''}
+                            onChange={event => { onUrlChange({ to: event.target.value || undefined, from, dates: undefined, period: 'custom' }); setSelected({}); }} /></AverioField>
+                        <AverioField>{t('transactionManagement.account')}
+                            <AverioSelect value={accountId} onChange={event => { setAccountId(event.target.value); setSelected({}); }}>
+                                <option value="">{t('transactionManagement.allAccounts')}</option>
+                                {accountId && !accounts.data?.some(account => account.id === accountId) && <option value={accountId}>{t('transactionLinks.unavailableAccount')}</option>}
+                                {(accounts.data ?? []).map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                            </AverioSelect>
+                        </AverioField>
                         <ActivitySelect userId={userId} householdId={householdId} value={activityId}
-                            onChange={id => { setActivityId(id); setSelected({}); if (id) setMonth(''); }}
+                            onChange={id => { setActivityId(id); setSelected({}); }}
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
-                        <label>
-                            <span>{t('transactionManagement.filterMonth')}</span>
-                            <select
-                                className="av-select"
-                                value={month}
-                                onChange={event => { setMonth(event.target.value); setSelected({}); }}
-                            >
-                                <option value="">
-                                    {t('transactionManagement.allDates')}
-                                </option>
-                                {monthOptions.map(option => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label>
-                            <span>{t('transactionManagement.account')}</span>
-                            <select
-                                className="av-select"
-                                value={accountId}
-                                onChange={event => { setAccountId(event.target.value); setSelected({}); }}
-                            >
-                                <option value="">
-                                    {t('transactionManagement.allAccounts')}
-                                </option>
-                                {(accounts.data ?? []).map(account => (
-                                    <option
-                                        key={account.id}
-                                        value={account.id}
-                                    >
-                                        {account.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <fieldset className="av-tx-filter-kind">
-                            <legend>{t('transactionManagement.type')}</legend>
-                            <div className="av-tx-segmented">
-                                <button
-                                    type="button"
-                                    className={!kind ? 'active' : ''}
-                                    onClick={() => { setKind(''); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.all')}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={
-                                        kind === 'Income'
-                                            ? 'active income'
-                                            : 'income'
-                                    }
-                                    onClick={() => { setKind('Income'); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.income')}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={
-                                        kind === 'Expense'
-                                            ? 'active expense'
-                                            : 'expense'
-                                    }
-                                    onClick={() => { setKind('Expense'); setSelected({}); }}
-                                >
-                                    {t('transactionManagement.expense')}
-                                </button>
+                        <fieldset className="min-w-0">
+                            <legend className="mb-[7px] text-[13px] font-semibold">{t('transactionManagement.type')}</legend>
+                            <div className="grid h-11 grid-cols-3 rounded-[11px] border border-slate-200 p-0.5 dark:border-slate-700">
+                                {(['', 'Income', 'Expense'] as const).map(value => <button key={value} type="button"
+                                    aria-pressed={kind === value}
+                                    className="min-w-0 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200"
+                                    onClick={() => { setKind(value); setSelected({}); }}>
+                                    {t('transactionManagement.' + (value ? value.toLowerCase() : 'all'))}
+                                </button>)}
                             </div>
                         </fieldset>
                     </div>
-
-                    <button
-                        type="button"
-                        className="av-btn av-filter-done"
-                        onClick={() => {
-                            setFiltersOpen(false);
-                            filterToggle.current?.focus();
-                        }}
-                    >
-                        {t('transactionManagement.showResults')}
-                    </button>
-                </div>
+                    <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
+                        <LabelFilters userId={userId} householdId={householdId} value={labelIds}
+                            onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
+                    </div>
+                    {invalidRange && <p role="alert" className="mt-3 text-red-600 dark:text-red-300">{t('transactionLinks.invalidRange')}</p>}
+                </AverioDialog>}
 
                 <div
                     className="av-search-summary"
@@ -415,17 +371,20 @@ export function TransactionsPage({
                 </div>
             </div>
 
+            <SavedViews userId={userId} householdId={householdId} state={urlState} invalid={invalidRange}
+                onApply={filters => { setSearch(''); setSelected({}); return onUrlChange(filters); }} />
+
             {notice && (
                 <p role="status" className="av-tx-notice">
                     {notice}
                 </p>
             )}
 
-            {transactions.isPending && (
+            {!invalidRange && transactions.isPending && (
                 <p role="status">{t('common.status.loading')}</p>
             )}
 
-            {transactions.isError && (
+            {!invalidRange && transactions.isError && (
                 <div role="alert">
                     <p className="av-error">
                         {t('errors.genericDescription')}
@@ -441,7 +400,7 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {transactions.isSuccess && items.length === 0 && (
+            {!invalidRange && transactions.isSuccess && items.length === 0 && (
                 <div className="av-card av-tx-empty">
                     <ConceptIcon name="transactions" />
                     <p>
@@ -519,14 +478,14 @@ export function TransactionsPage({
                                                     : ''
                                             }`
                                         }
-                                        disabled={!transaction.canModify}
+                                        
                                         title={
-                                            transaction.canModify
+                                            transaction.canModify && transaction.status !== 'Voided'
                                                 ? t('transactionManagement.editHint')
-                                                : undefined
+                                                : t('transactionLinks.details')
                                         }
                                         onClick={() =>
-                                            setEditor(transaction)}
+                                            openTransaction(transaction)}
                                     >
                                         <span className="av-tx-bubble-top">
                                             <span className="av-tx-type-icon">
@@ -613,7 +572,8 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {transactions.hasNextPage && (
+            {invalidRange && !filtersOpen && <p role="alert">{t('transactionLinks.invalidRange')}</p>}
+            {!invalidRange && transactions.hasNextPage && (
                 <div className="av-tx-load-more">
                     <button
                         type="button"
@@ -630,6 +590,8 @@ export function TransactionsPage({
                 </div>
             )}
 
+            {urlState.transaction && !activeEditor && <TransactionLinkDetail
+                query={detail} onClose={closeEditor} />}
             {activeEditor && (
                 <TransactionEditor
                     userId={userId}

@@ -327,6 +327,11 @@
   <data name="Error_DepartureChanged" xml:space="preserve"><value>Your household, accounts or balance changed. Review the invitation again and confirm the latest plan.</value></data>
   <data name="Error_InvitationOnboarding" xml:space="preserve"><value>You have a pending household invitation. Review or decline it before creating a household.</value></data>
   <data name="Error_HistoryRangeInvalid" xml:space="preserve"><value>The start date must not be after the end date.</value></data>
+  <data name="Validation_SavedView" xml:space="preserve"><value>Choose a name of up to 80 characters and valid filters (at most 20 labels).</value></data>
+  <data name="Error_SavedViewUnavailable" xml:space="preserve"><value>An account, activity or label in this view is no longer available. Review its filters.</value></data>
+  <data name="Error_SavedViewDuplicate" xml:space="preserve"><value>You already have a saved view with this name.</value></data>
+  <data name="Error_SavedViewLimit" xml:space="preserve"><value>You can save up to 50 views per household.</value></data>
+  <data name="Error_SavedViewChanged" xml:space="preserve"><value>This view changed elsewhere. Reload it before editing.</value></data>
 </root>
 
 

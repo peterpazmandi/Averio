@@ -26,7 +26,7 @@ interface Props {
     initialKind?: TransactionKind;
     onCancel: () => void;
     onSave: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
-    onVoid?: () => Promise<void>;
+    onVoid?: (expectedUpdatedAt: string) => Promise<void>;
     busy: boolean;
 }
 
@@ -71,13 +71,16 @@ function scaledToAmount(value: bigint) {
 export function TransactionEditor({
     userId,
     householdId,
-    transaction,
+    transaction: initialTransaction,
     initialKind = 'Expense',
     onCancel,
     onSave,
     onVoid,
     busy,
 }: Props) {
+    // Keep the draft and all concurrency tokens from the same editing session.
+    // The parent keys this component by transaction ID and unmounts it on close.
+    const [transaction] = useState(initialTransaction);
     const { t, i18n } = useTranslation();
     const queryClient = useQueryClient();
     const accounts = useQuery(accountsQueries.list(userId, householdId, false));
@@ -640,7 +643,7 @@ export function TransactionEditor({
                             <button type="button" className="av-btn av-danger" disabled={busy}
                                 onClick={() => {
                                     if (window.confirm(t('transactionManagement.voidConfirm'))) {
-                                        void onVoid().catch(reason => setError(
+                                        void onVoid(transaction.updatedAt).catch(reason => setError(
                                             reason instanceof Error
                                                 ? reason.message
                                                 : t('errors.genericDescription'),

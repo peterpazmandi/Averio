@@ -1,18 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../features/authentication/context/AuthProvider';
+import { transactionSearch } from '../features/transactions/transactionSearch';
 import { TransactionsPage } from '../features/transactions/components/TransactionsPage';
 
 export const Route = createFileRoute('/_authenticated/app/transactions')({
-    validateSearch: (search: Record<string, unknown>): { create?: boolean; activity?: string; createKind?: 'Expense' | 'Income' } => ({
-        createKind: search.createKind === 'Income' || search.createKind === 'Expense' ? search.createKind : undefined,
-        activity: typeof search.activity === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search.activity)
-            ? search.activity : undefined,
-        create: search.create === true
-            || search.create === 'true'
-            || search.create === '1'
-            ? true
-            : undefined,
-    }),
+    validateSearch: transactionSearch,
     component: TransactionsRoute,
 });
 
@@ -27,15 +19,16 @@ function TransactionsRoute() {
 
     return (
         <TransactionsPage
-            key={auth.user.userId + auth.user.household.householdId + (search.activity ?? "")}
-            initialActivityId={search.activity}
+            key={auth.user.userId + auth.user.household.householdId}
+            urlState={search}
+            onUrlChange={(patch, replace = false) => navigate({ search: previous => ({ ...previous, ...patch }), replace })}
             userId={auth.user.userId}
             householdId={auth.user.household.householdId}
             createRequested={search.create}
             initialKind={search.createKind}
             onCreateRequestHandled={() => {
                 void navigate({
-                    search: { create: undefined, createKind: undefined, activity: search.activity },
+                    search: previous => ({ ...previous, create: undefined, createKind: undefined }),
                     replace: true,
                 });
             }}

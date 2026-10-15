@@ -21,10 +21,10 @@ export function ActivitySelect({ userId, householdId, value, onChange, disabled,
     const options = (query.data ?? []).filter(x => (includeClosed || !x.isClosed || x.id === value)
         && x.name.toLocaleLowerCase(i18n.language).includes(search.toLocaleLowerCase(i18n.language)))
         .sort((a, b) => a.name.localeCompare(b.name, i18n.language));
-    return <div className="grid min-w-0 gap-2">
-        <span id={id} className="text-sm font-semibold">{t('activities.activity')}</span>
+    return <div className="grid min-w-0 gap-[7px]">
+        <span id={id} className="text-[13px] font-semibold">{t('activities.activity')}</span>
         <AverioButton aria-labelledby={id + ' ' + id + '-value'} aria-haspopup="dialog" disabled={disabled}
-            onClick={() => { setSearch(''); setOpen(true); }} className="w-full justify-between!">
+            onClick={() => { setSearch(''); setOpen(true); }} className="h-11 w-full justify-between!">
             <span id={id + '-value'} className="truncate">{selected?.name ?? (value ? t('activities.unavailable') : emptyLabel ?? t('activities.none'))}</span>
             <span aria-hidden="true">⌄</span>
         </AverioButton>

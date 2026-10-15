@@ -5,6 +5,7 @@ namespace Averio.Application.Common.Abstractions;
 public interface ILabelRepository
 {
     void Add(Label label);
+    Task<IReadOnlyList<Label>> GetForFilteringAsync(Guid householdId, IReadOnlyList<Guid> accountIds, CancellationToken ct);
 
     Task<IReadOnlyList<Label>> GetApplicableAsync(
         Guid householdId,

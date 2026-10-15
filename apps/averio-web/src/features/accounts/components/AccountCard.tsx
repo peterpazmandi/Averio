@@ -119,6 +119,10 @@ export function AccountCard({
 
             <AccountOwnershipSummary account={account} />
 
+            <Link to="/app/transactions" search={{ account: account.id, dates: 'all' }}
+                className="inline-flex min-h-11 items-center rounded-lg text-sm font-semibold text-emerald-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-emerald-400">
+                {t('transactionLinks.viewTransactions')}
+            </Link>
             {canModify && (
                 <div className="av-account-actions">
                     {!archived && (
