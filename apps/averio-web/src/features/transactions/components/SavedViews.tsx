@@ -70,7 +70,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
                 aria-pressed={selectedId === view.id && !modified} onClick={() => apply(view.id)}
                 className="min-h-9 max-w-48 truncate rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:border-emerald-500 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:border-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:border-slate-700 dark:text-slate-300 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200">{view.name}</button>)}
             <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
-            {!!query.data?.length && <AverioButton onClick={() => { setManagedId(selectedId); setManaging(true); }}>{t('savedViews.manage')}</AverioButton>}
+            {!!query.data?.length && <AverioButton disabled={isApplying} onClick={() => { setManagedId(selectedId); setManaging(true); }}>{t('savedViews.manage')}</AverioButton>}
             {modified && <span role="status" className="text-xs text-amber-700 dark:text-amber-300">{selected?.name} · {t('savedViews.modified')}</span>}
         </div>
         {query.isError && <div role="alert">{t('savedViews.loadError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
