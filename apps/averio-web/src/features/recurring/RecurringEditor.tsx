@@ -41,9 +41,9 @@ export function RecurringEditor({ userId, householdId, rule, accounts, onSave, o
             {error && <p role="alert">{error} {t('recurring.updatedElsewhere')}</p>}
             <AverioCard><h3 className="mb-4 font-bold">{t('recurring.details')}</h3><div className="grid gap-4 sm:grid-cols-2">
                 <AverioField>{t('recurring.name')}<AverioInput required maxLength={100} value={draft.name} disabled={busy} onChange={e => change('name', e.target.value)} /></AverioField>
-                <AverioField>{t('recurring.kind')}<AverioSelect value={draft.kind} disabled={busy || !!rule} onChange={e => { change('kind', e.target.value); change('categoryId', ''); }}>
+                <AverioField>{t('recurring.kind')}<AverioSelect aria-label={t('recurring.kind')} value={draft.kind} disabled={busy || !!rule} onChange={e => { change('kind', e.target.value); change('categoryId', ''); }}>
                     <option value="Expense">{t('recurring.Expense')}</option><option value="Income">{t('recurring.Income')}</option></AverioSelect></AverioField>
-                <AverioField>{t('recurring.account')}<AverioSelect required value={draft.accountId} disabled={busy || !!rule} onChange={e => {
+                <AverioField>{t('recurring.account')}<AverioSelect aria-label={t('recurring.account')} required value={draft.accountId} disabled={busy || !!rule} onChange={e => {
                     const a = accounts.find(a => a.id === e.target.value); change('accountId', e.target.value); change('visibility', a?.visibility === 'Private' ? 'Private' : 'Household');
                 }}><option value="">—</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</AverioSelect></AverioField>
                 <AverioField>{t('recurring.amount')}{account ? ' · ' + account.currency : ''}<AverioInput required inputMode="decimal" pattern="[0-9]+([.,][0-9]{1,4})?" value={draft.amount} disabled={busy}
@@ -52,11 +52,11 @@ export function RecurringEditor({ userId, householdId, rule, accounts, onSave, o
                     {categories.isPending ? <p role="status">{t('recurring.loading')}</p> : categories.isError ? <AverioButton onClick={() => { void categories.refetch(); }}>{t('recurring.retry')}</AverioButton> :
                     <AverioCategorySelect label={t('recurring.category')} categories={(categories.data ?? []).filter(c => !c.isArchived)} contextCategories={categories.data ?? []}
                         value={draft.categoryId} onChange={id => change('categoryId', id)} disabled={busy} />}</div>
-                <AverioField>{t('recurring.visibility')}<AverioSelect value={draft.visibility} disabled={busy || account?.scope === 'Household' || account?.visibility === 'Private'} onChange={e => change('visibility', e.target.value)}>
+                <AverioField>{t('recurring.visibility')}<AverioSelect aria-label={t('recurring.visibility')} value={draft.visibility} disabled={busy || account?.scope === 'Household' || account?.visibility === 'Private'} onChange={e => change('visibility', e.target.value)}>
                     <option value="Household">{t('recurring.Household')}</option><option value="Private">{t('recurring.Private')}</option></AverioSelect></AverioField>
             </div></AverioCard>
             <AverioCard><h3 className="mb-4 font-bold">{t('recurring.timing')}</h3><div className="grid gap-4 sm:grid-cols-2">
-                <AverioField>{t('recurring.frequency')}<AverioSelect value={draft.frequency} disabled={busy || !!rule} onChange={e => change('frequency', e.target.value)}>
+                <AverioField>{t('recurring.frequency')}<AverioSelect aria-label={t('recurring.frequency')} value={draft.frequency} disabled={busy || !!rule} onChange={e => change('frequency', e.target.value)}>
                     {['Weekly', 'Monthly', 'Yearly'].map(f => <option key={f} value={f}>{t('recurring.' + f)}</option>)}</AverioSelect></AverioField>
                 <AverioField>{t('recurring.starts')}<AverioInput required type="date" value={draft.startsOn} disabled={busy || !!rule} min={!rule ? new Date().toISOString().slice(0, 10) : undefined} onChange={e => change('startsOn', e.target.value)} /></AverioField>
                 <AverioField>{t('recurring.ends')}<AverioInput type="date" min={draft.startsOn} value={draft.endsOn ?? ''} disabled={busy} onChange={e => change('endsOn', e.target.value || null)} /></AverioField>

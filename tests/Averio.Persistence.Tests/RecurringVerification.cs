@@ -3,6 +3,7 @@ using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.VoidTransaction;
 using Averio.Domain.Accounts;
 using Averio.Domain.Common;
+using Averio.Domain.Categories;
 using Averio.Domain.Recurring;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
@@ -58,12 +59,38 @@ internal static class RecurringVerification
         var autoId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, input with { Name = "Automatic bill", Automatic = true }, Ct));
         var auto = await Read(autoId);
         var candidate = new RecurringCandidate(autoId, f.HouseholdId, f.OwnerUserId, auto.Version);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var due = await scope.ServiceProvider.GetRequiredService<IRecurringRepository>().DueAsync(day, 100, Ct);
+            Check(due.Any(x => x.RuleId == autoId) && due.All(x => x.RuleId != skipId && x.RuleId != id), "Due discovery included manual rules");
+        }
+        await Throws<NotFoundException>(() => Call(h => h.AutomaticAsync(candidate with { UserId = Guid.NewGuid() }, Ct)));
         var automatic = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Call(h => h.AutomaticAsync(candidate, Ct))));
         Check(automatic.Count(x => x) == 1, "Concurrent workers posted twice");
         var pausedId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, input with { Automatic = true }, Ct));
         var paused = await Read(pausedId);
         await Call(h => h.SaveAsync(f.HouseholdId, pausedId, paused.Version, input with { Automatic = true, IsPaused = true }, Ct));
         Check(!await Call(h => h.AutomaticAsync(new(pausedId, f.HouseholdId, f.OwnerUserId, paused.Version), Ct)), "Stale worker ignored pause");
+        // References are checked again at execution, after a schedule was accepted.
+        Guid categoryId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var category = Category.Create(f.HouseholdId, "Recurring temporary", CategoryKind.Expense, "🏠", "#10B981", null, clock.GetUtcNow());
+            db.Categories.Add(category); await db.SaveChangesAsync(); categoryId = category.Id;
+        }
+        var categoryInput = input with { CategoryId = categoryId, Automatic = true };
+        var categoryRuleId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, categoryInput, Ct));
+        var categoryRule = await Read(categoryRuleId);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            (await db.Categories.SingleAsync(x => x.Id == categoryId)).SetArchived(true, clock.GetUtcNow());
+            await db.SaveChangesAsync();
+        }
+        await Throws<BusinessRuleException>(() => Call(h => h.AutomaticAsync(new(categoryRuleId, f.HouseholdId, f.OwnerUserId, categoryRule.Version), Ct)));
+        Check((await Read(categoryRuleId)).NextDueOn == day, "Archived category consumed date");
+        await Call(h => h.SaveAsync(f.HouseholdId, categoryRuleId, categoryRule.Version, categoryInput with { IsPaused = true }, Ct));
         var blockedId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, input with { Automatic = true }, Ct));
         var blocked = await Read(blockedId);
         await using (var scope = provider.CreateAsyncScope())

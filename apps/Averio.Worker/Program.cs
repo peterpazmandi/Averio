@@ -9,11 +9,23 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddAuthentication();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, WorkerCurrentUser>();
 builder.Services.AddHostedService<RecurringWorker>();
-await builder.Build().RunAsync();
+builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }));
+using var host = builder.Build();
+if (args.Contains("--verify-services"))
+{
+    using var scope = host.Services.CreateScope();
+    _ = scope.ServiceProvider.GetRequiredService<RecurringHandler>();
+    Console.WriteLine("PASS worker dependency graph");
+    return;
+}
+await host.RunAsync();
 
 internal sealed class WorkerCurrentUser : ICurrentUser { public Guid? UserId => null; }
 internal sealed class RecurringWorker(IServiceScopeFactory scopes, ILogger<RecurringWorker> logger) : BackgroundService
