@@ -347,7 +347,7 @@ export function TransactionEditor({
                     </label>)}
                 </fieldset>
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <AverioField>{t('transactionManagement.account')}<AverioSelect value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => setAccountId(e.target.value)}>
+                    <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => setAccountId(e.target.value)}>
                         <option value="" disabled>{t('transactionManagement.account')}</option>
                         {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
                     </AverioSelect></AverioField>
@@ -375,7 +375,7 @@ export function TransactionEditor({
                 {newLabelOpen && <div className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <AverioField>{t('transactionManagement.newLabel')}<AverioInput value={newLabelName} maxLength={40} autoFocus
                         disabled={busy || createLabelMutation.isPending} onChange={e => setNewLabelName(e.target.value)} placeholder={t('transactionManagement.labelPlaceholder')} /></AverioField>
-                    <AverioField>{t('transactionManagement.labelScope')}<AverioSelect value={newLabelScope} disabled={busy || createLabelMutation.isPending} onChange={e => setNewLabelScope(e.target.value as LabelScope)}>
+                    <AverioField>{t('transactionManagement.labelScope')}<AverioSelect aria-label={t('transactionManagement.labelScope')} value={newLabelScope} disabled={busy || createLabelMutation.isPending} onChange={e => setNewLabelScope(e.target.value as LabelScope)}>
                         <option value="Household">{t('transactionManagement.householdLabel')}</option><option value="Account">{t('transactionManagement.accountLabel')}</option>
                     </AverioSelect></AverioField>
                     <div className="flex flex-wrap gap-2">
@@ -417,7 +417,7 @@ export function TransactionEditor({
             <AverioCard className="grid gap-4">
                 <div><h3 className="font-bold">{t('transactionManagement.detailsPrivacy')}</h3><p className="mt-1 text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p></div>
                 <AverioField>{t('transactionManagement.note')}<AverioTextarea value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
-                <AverioField>{t('transactionManagement.visibility')}<AverioSelect value={effectiveVisibility}
+                <AverioField>{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
                     disabled={busy || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
                     <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
                     <option value="Private" disabled={forcedVisibility === 'Household'}>{t('transactionManagement.private')}</option>
