@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RecurringItemRequest } from './RecurringItemRequest';
+import {
+    RecurringItemRequestFromJSON,
+    RecurringItemRequestFromJSONTyped,
+    RecurringItemRequestToJSON,
+    RecurringItemRequestToJSONTyped,
+} from './RecurringItemRequest';
+
 /**
  * 
  * @export
@@ -91,6 +99,26 @@ export interface RecurringRuleResponse {
      * 
      */
     version: string;
+    /**
+     * 
+     */
+    items: Array<RecurringItemRequest>;
+    /**
+     * 
+     */
+    labelIds: Array<string>;
+    /**
+     * 
+     */
+    merchant: string | null;
+    /**
+     * 
+     */
+    note: string | null;
+    /**
+     * 
+     */
+    activityId: string | null;
 }
 
 /**
@@ -115,6 +143,11 @@ export function instanceOfRecurringRuleResponse(value: object): value is Recurri
     if (!('isBlocked' in value) || value['isBlocked'] === undefined) return false;
     if (!('canRecord' in value) || value['canRecord'] === undefined) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
+    if (!('items' in value) || value['items'] === undefined) return false;
+    if (!('labelIds' in value) || value['labelIds'] === undefined) return false;
+    if (!('merchant' in value) || value['merchant'] === undefined) return false;
+    if (!('note' in value) || value['note'] === undefined) return false;
+    if (!('activityId' in value) || value['activityId'] === undefined) return false;
     return true;
 }
 
@@ -146,6 +179,11 @@ export function RecurringRuleResponseFromJSONTyped(json: any, ignoreDiscriminato
         'isBlocked': json['isBlocked'],
         'canRecord': json['canRecord'],
         'version': json['version'],
+        'items': ((json['items'] as Array<any>).map(RecurringItemRequestFromJSON)),
+        'labelIds': json['labelIds'],
+        'merchant': json['merchant'],
+        'note': json['note'],
+        'activityId': json['activityId'],
     };
 }
 
@@ -178,6 +216,11 @@ export function RecurringRuleResponseToJSONTyped(value?: RecurringRuleResponse |
         'isBlocked': value['isBlocked'],
         'canRecord': value['canRecord'],
         'version': value['version'],
+        'items': ((value['items'] as Array<any>).map(RecurringItemRequestToJSON)),
+        'labelIds': value['labelIds'],
+        'merchant': value['merchant'],
+        'note': value['note'],
+        'activityId': value['activityId'],
     };
 }
 

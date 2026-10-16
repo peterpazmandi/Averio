@@ -6,6 +6,13 @@ public enum RecurringFrequency { Weekly, Monthly, Yearly }
 public sealed class RecurringRule
 {
     private RecurringRule() { }
+    private readonly List<RecurringItem> _items = [];
+    private readonly List<RecurringLabel> _labels = [];
+    public IReadOnlyCollection<RecurringItem> Items => _items.AsReadOnly();
+    public IReadOnlyCollection<RecurringLabel> Labels => _labels.AsReadOnly();
+    public string? Merchant { get; private set; }
+    public string? Note { get; private set; }
+    public Guid? ActivityId { get; private set; }
     public Guid Id { get; private set; }
     public Guid HouseholdId { get; private set; }
     public Guid HouseholdMemberId { get; private set; }
@@ -42,7 +49,9 @@ public sealed class RecurringRule
         return r;
     }
     public void Update(Guid category, string name, decimal amount, TransactionVisibility visibility,
-        DateOnly? endsOn, bool automatic, bool paused, bool stopped, DateTimeOffset now)
+        DateOnly? endsOn, bool automatic, bool paused, bool stopped, DateTimeOffset now,
+        IReadOnlyList<RecurringItemDraft>? items = null, IReadOnlyList<Guid>? labels = null,
+        string? merchant = null, string? note = null, Guid? activityId = null)
     {
         if (category == Guid.Empty || string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100
             || amount <= 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount
@@ -52,7 +61,29 @@ public sealed class RecurringRule
         EndsOn = endsOn; Automatic = automatic; IsPaused = paused; IsStopped = stopped; IsBlocked = false;
         NextDueOn = DueDate(StartsOn, Frequency, OccurrenceIndex);
         if (NextDueOn > EndsOn || IsStopped) NextDueOn = null;
+        SetTemplate(items ?? [new(name.Trim(), category, amount)], labels ?? [], merchant, note, activityId);
         Touch(now);
+    }
+    public void SetTemplate(IReadOnlyList<RecurringItemDraft> items, IReadOnlyList<Guid> labels,
+        string? merchant, string? note, Guid? activityId)
+    {
+        if (items.Count is < 1 or > 100 || items.Any(i => string.IsNullOrWhiteSpace(i.Description)
+            || i.Description.Trim().Length > 160 || i.CategoryId == Guid.Empty || i.Amount <= 0
+            || i.Amount > 999999999999999.9999m || decimal.Round(i.Amount, 4) != i.Amount)
+            || items.Sum(i => i.Amount) > 999999999999999.9999m
+            || labels.Count > 20 || labels.Any(id => id == Guid.Empty) || labels.Distinct().Count() != labels.Count
+            || merchant?.Length > 160 || note?.Length > 500 || activityId == Guid.Empty)
+            throw new ArgumentException("Invalid recurring transaction template.");
+        _items.Clear();
+        _items.AddRange(items.Select((item, position) => RecurringItem.Create(Id, item, position)));
+        _labels.RemoveAll(x => !labels.Contains(x.LabelId));
+        _labels.AddRange(labels.Where(id => _labels.All(x => x.LabelId != id))
+            .Select(id => RecurringLabel.Create(HouseholdId, Id, id)));
+        CategoryId = items[0].CategoryId;
+        Amount = items.Sum(i => i.Amount);
+        Merchant = string.IsNullOrWhiteSpace(merchant) ? null : merchant.Trim();
+        Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        ActivityId = activityId;
     }
     public void Advance(DateTimeOffset now)
     {

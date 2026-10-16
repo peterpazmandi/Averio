@@ -65,6 +65,7 @@ export * from './LabelResponse';
 export * from './LoginUserRequest';
 export * from './OnboardingStatusResponse';
 export * from './PendingInvitation';
+export * from './RecurringItemRequest';
 export * from './RecurringOccurrenceRequest';
 export * from './RecurringOccurrenceResponse';
 export * from './RecurringResolutionResponse';

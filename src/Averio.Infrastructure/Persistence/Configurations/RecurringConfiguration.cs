@@ -1,3 +1,5 @@
+using Averio.Domain.Activities;
+using Averio.Domain.Labels;
 using Averio.Domain.Recurring;
 using Averio.Domain.Accounts;
 using Averio.Domain.Categories;
@@ -19,6 +21,13 @@ public sealed class RecurringRuleConfiguration : IEntityTypeConfiguration<Recurr
             t.HasCheckConstraint("ck_recurring_frequency", "frequency IN ('Weekly', 'Monthly', 'Yearly')");
             t.HasCheckConstraint("ck_recurring_dates", "(ends_on IS NULL OR ends_on >= starts_on) AND occurrence_index >= 0 AND (next_due_on IS NULL OR next_due_on >= starts_on)");
         });
+        b.Property(x => x.Merchant).HasColumnName("merchant").HasMaxLength(160);
+        b.Property(x => x.Note).HasColumnName("note").HasMaxLength(500);
+        b.Property(x => x.ActivityId).HasColumnName("activity_id");
+        b.HasOne<Activity>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.HouseholdMemberId, x.ActivityId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.HouseholdMemberId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        b.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+        b.Navigation(x => x.Labels).UsePropertyAccessMode(PropertyAccessMode.Field);
         b.HasKey(x => x.Id);
         b.HasAlternateKey(x => new { x.HouseholdId, x.Id });
         b.Property(x => x.Id).HasColumnName("id");
@@ -68,5 +77,41 @@ public sealed class RecurringOccurrenceConfiguration : IEntityTypeConfiguration<
         b.HasOne<Transaction>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.TransactionId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.TransactionId).IsUnique();
+    }
+}
+
+public sealed class RecurringItemConfiguration : IEntityTypeConfiguration<RecurringItem>
+{
+    public void Configure(EntityTypeBuilder<RecurringItem> b)
+    {
+        b.ToTable("recurring_items", t => {
+            t.HasCheckConstraint("ck_recurring_item_amount", "amount > 0");
+            t.HasCheckConstraint("ck_recurring_item_description", "length(btrim(description)) > 0 AND position >= 0");
+        });
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+        b.Property(x => x.RuleId).HasColumnName("rule_id");
+        b.Property(x => x.Position).HasColumnName("position");
+        b.Property(x => x.Description).HasColumnName("description").HasMaxLength(160);
+        b.Property(x => x.CategoryId).HasColumnName("category_id");
+        b.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);
+        b.HasOne<RecurringRule>().WithMany(x => x.Items).HasForeignKey(x => x.RuleId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(x => new { x.RuleId, x.Position });
+    }
+}
+public sealed class RecurringLabelConfiguration : IEntityTypeConfiguration<RecurringLabel>
+{
+    public void Configure(EntityTypeBuilder<RecurringLabel> b)
+    {
+        b.ToTable("recurring_labels");
+        b.HasKey(x => new { x.RuleId, x.LabelId });
+        b.Property(x => x.HouseholdId).HasColumnName("household_id");
+        b.Property(x => x.RuleId).HasColumnName("rule_id");
+        b.Property(x => x.LabelId).HasColumnName("label_id");
+        b.HasOne<RecurringRule>().WithMany(x => x.Labels).HasForeignKey(x => new { x.HouseholdId, x.RuleId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<Label>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.LabelId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
     }
 }

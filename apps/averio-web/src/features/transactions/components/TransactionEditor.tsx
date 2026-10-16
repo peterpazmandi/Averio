@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import type { RecurringRuleResponse, SaveRecurringRuleRequest } from '../../../shared/api/generated';
+import { RecurringTimingFields } from '../../recurring/RecurringTimingFields';
+import { AverioField, AverioInput, AverioSelect, AverioTextarea } from '../../../shared/components/ui/AverioFormControls';
 import { ActivitySelect } from '../../activities/ActivitySelect';
 import { emptyAssignmentVersion } from '../../activities/activityQueries';
 import { AverioCard } from '../../../shared/components/ui/AverioCard';
@@ -6,7 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
-import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
+import { AverioButton } from '../../../shared/components/ui/AverioButton';
+import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { createLabel } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { CategoryPicker } from './CategoryPicker';
@@ -25,7 +29,10 @@ interface Props {
     transaction: TransactionDto | null;
     initialKind?: TransactionKind;
     onCancel: () => void;
-    onSave: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
+    recurringRule?: RecurringRuleResponse;
+    initialRecurring?: boolean;
+    onSaveRecurring?: (request: SaveRecurringRuleRequest) => Promise<void>;
+    onSave?: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
     onVoid?: (expectedUpdatedAt: string) => Promise<void>;
     busy: boolean;
 }
@@ -73,39 +80,51 @@ export function TransactionEditor({
     householdId,
     transaction: initialTransaction,
     initialKind = 'Expense',
+    recurringRule: initialRule,
+    initialRecurring = false,
+    onSaveRecurring,
     onCancel,
     onSave,
     onVoid,
-    busy,
+    busy: parentBusy,
 }: Props) {
     // Keep the draft and all concurrency tokens from the same editing session.
     // The parent keys this component by transaction ID and unmounts it on close.
     const [transaction] = useState(initialTransaction);
+    const [rule] = useState(initialRule);
+    const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
+    const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
+    const [timing, setTiming] = useState({ frequency: initialRule?.frequency ?? 'Monthly', endsOn: initialRule?.endsOn ?? null as string | null, automatic: initialRule?.automatic ?? false });
+    const [paused, setPaused] = useState(initialRule?.isPaused ?? false);
+    const [stopped, setStopped] = useState(initialRule?.isStopped ?? false);
+    const [stopConsent, setStopConsent] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const busy = parentBusy || submitting;
     const { t, i18n } = useTranslation();
     const queryClient = useQueryClient();
-    const accounts = useQuery(accountsQueries.list(userId, householdId, false));
+    const accounts = useQuery(accountsQueries.list(userId, householdId, !!rule));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writableAccounts = useMemo(() => (accounts.data ?? []).filter(account =>
-        account.status === 'Active'
+        account.id === rule?.accountId || (account.status === 'Active'
         && (!transaction || account.currency === transaction.currency)
         && (
             account.scope === 'Household'
             || account.owners.some(owner =>
                 owner.householdMemberId === owners.data?.currentMemberId)
-        )), [accounts.data, owners.data?.currentMemberId, transaction]);
+        ))), [accounts.data, owners.data?.currentMemberId, transaction, rule]);
 
-    const firstAccountId = transaction?.accountId ?? writableAccounts[0]?.id ?? '';
+    const firstAccountId = rule?.accountId ?? transaction?.accountId ?? writableAccounts[0]?.id ?? '';
     const [accountId, setAccountId] = useState(firstAccountId);
-    const [kind, setKind] = useState<TransactionKind>(transaction?.kind ?? initialKind);
+    const [kind, setKind] = useState<TransactionKind>((rule?.kind as TransactionKind | undefined) ?? transaction?.kind ?? initialKind);
     const [visibility, setVisibility] = useState<TransactionVisibility>(
-        transaction?.visibility ?? 'Household',
+        (rule?.visibility as TransactionVisibility | undefined) ?? transaction?.visibility ?? 'Household',
     );
-    const [merchant, setMerchant] = useState(transaction?.merchant ?? '');
-    const [note, setNote] = useState(transaction?.note ?? '');
-    const [activityId, setActivityId] = useState(transaction?.activityId ?? '');
-    const [occurredOn, setOccurredOn] = useState(transaction?.occurredOn ?? todayIso());
+    const [merchant, setMerchant] = useState(rule?.merchant ?? transaction?.merchant ?? '');
+    const [note, setNote] = useState(rule?.note ?? transaction?.note ?? '');
+    const [activityId, setActivityId] = useState(rule?.activityId ?? transaction?.activityId ?? '');
+    const [occurredOn, setOccurredOn] = useState(rule?.startsOn ?? transaction?.occurredOn ?? (initialRecurring ? new Date().toISOString().slice(0, 10) : todayIso()));
     const [items, setItems] = useState<EditorItem[]>(() =>
-        transaction?.items.length
+        rule ? rule.items.map(item => ({ key: itemKey(), ...item })) : transaction?.items.length
             ? [...transaction.items]
                 .sort((a, b) => a.position - b.position)
                 .map(item => ({
@@ -122,7 +141,7 @@ export function TransactionEditor({
             }],
     );
     const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
-        () => transaction?.labels.map(label => label.id) ?? [],
+        () => rule?.labelIds ?? transaction?.labels.map(label => label.id) ?? [],
     );
     const [newLabelName, setNewLabelName] = useState('');
     const [newLabelScope, setNewLabelScope] = useState<LabelScope>('Household');
@@ -137,8 +156,8 @@ export function TransactionEditor({
             : account?.scope === 'Household'
                 ? 'Household'
                 : undefined;
-    const effectiveVisibility = forcedVisibility ?? visibility;
-    const currency = account?.currency ?? transaction?.currency ?? '';
+    const effectiveVisibility = rule ? visibility : forcedVisibility ?? visibility;
+    const currency = account?.currency ?? rule?.currency ?? transaction?.currency ?? '';
     const language = i18n.resolvedLanguage ?? i18n.language;
 
     const categories = useQuery(transactionQueries.categories(userId, householdId, kind));
@@ -163,10 +182,10 @@ export function TransactionEditor({
     );
 
     const resolvedLabelIds = useMemo(() => {
-        if (!labels.data) return selectedLabelIds;
+        if (rule || !labels.data) return selectedLabelIds;
         const available = new Set(labels.data.map(label => label.id));
         return selectedLabelIds.filter(id => available.has(id));
-    }, [labels.data, selectedLabelIds]);
+    }, [labels.data, selectedLabelIds, rule]);
 
     const createLabelMutation = useMutation({
         mutationFn: () => createLabel(householdId, {
@@ -227,6 +246,7 @@ export function TransactionEditor({
 
     async function submit(event: React.FormEvent) {
         event.preventDefault();
+        if (busy) return;
         setError('');
 
         if (!resolvedAccountId || !occurredOn || resolvedItems.length === 0) {
@@ -252,8 +272,20 @@ export function TransactionEditor({
             return;
         }
 
+        setSubmitting(true);
         try {
-            await onSave({
+            if (recurring && onSaveRecurring) {
+                await onSaveRecurring({
+                    accountId: resolvedAccountId, kind, visibility: effectiveVisibility,
+                    name: scheduleName.trim(), categoryId: mappedItems[0].categoryId, amount: total,
+                    items: mappedItems.map(({ description, categoryId, amount }) => ({ description, categoryId, amount })),
+                    labelIds: resolvedLabelIds, merchant: merchant.trim() || null, note: note.trim() || null,
+                    activityId: activityId || null, startsOn: occurredOn, ...timing,
+                    isPaused: paused, isStopped: stopped, expectedVersion: rule?.version,
+                });
+                return;
+            }
+            await onSave?.({
                 accountId: resolvedAccountId,
                 kind,
                 visibility: effectiveVisibility,
@@ -268,405 +300,133 @@ export function TransactionEditor({
             }, transaction?.updatedAt);
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : t('errors.genericDescription'));
-        }
+        } finally { setSubmitting(false); }
     }
 
-    return (
-        <div className="av-tx-modal-backdrop" role="presentation" onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !busy) onCancel();
-        }}>
-            <section className="av-tx-modal av-tx-modal-wide" role="dialog" aria-modal="true"
-                aria-labelledby="transaction-editor-title">
-                <header className="av-tx-modal-head">
-                    <div>
-                        <span className="av-eyebrow">{t('transactionManagement.type')}</span>
-                        <h2 id="transaction-editor-title">
-                            {t(transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
-                        </h2>
+
+    return <AverioDialog open wide title={t(rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
+        closeLabel={t('common.actions.close')} busy={busy} onDismiss={onCancel}
+        actions={<>
+            {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy} onClick={() => {
+                if (window.confirm(t('transactionManagement.voidConfirm'))) {
+                    void onVoid(transaction.updatedAt).catch(reason => setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
+                }
+            }}>{t('transactionManagement.void')}</AverioButton>}
+            <AverioButton disabled={busy} onClick={onCancel}>{t('common.actions.cancel')}</AverioButton>
+            <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
+                disabled={busy || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                {t(busy ? 'transactionManagement.saving' : recurring ? 'recurring.save' : 'transactionManagement.save')}
+            </AverioButton>
+        </>}>
+        <form id="transaction-editor" className="grid gap-4" onSubmit={submit}>
+                                {!transaction && onSaveRecurring && <AverioCard className="grid gap-3 p-4">
+                        {!rule && onSave && <label className="flex min-h-11 items-center gap-3 font-semibold">
+                            <input type="checkbox" className="size-4 accent-emerald-500" checked={recurring} disabled={busy}
+                                onChange={e => setRecurring(e.target.checked)} />{t('recurring.makeRecurring')}
+                        </label>}
+                        {recurring && <>
+                            <p className="text-sm">{t('recurring.creationHelp')}</p>
+                            <AverioField>{t('recurring.name')}<AverioInput required maxLength={100} value={scheduleName} disabled={busy} onChange={e => setScheduleName(e.target.value)} /></AverioField>
+                            <RecurringTimingFields value={{ ...timing, startsOn: occurredOn }} onChange={patch => setTiming(current => ({ ...current, ...patch }))} busy={busy} anchorLocked={!!rule} showStart={false} />
+                            {rule && <>
+                                <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="size-4 accent-emerald-500" checked={paused} disabled={busy} onChange={e => setPaused(e.target.checked)} />{t('recurring.pause')}</label>
+                                <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="size-4 accent-red-600" checked={stopped} disabled={busy} onChange={e => { setStopped(e.target.checked); setStopConsent(false); }} />{t('recurring.stop')}</label>
+                                {stopped && <div className="rounded-xl border border-red-300 p-3"><p>{t('recurring.stopHelp')}</p><label className="mt-2 flex min-h-11 items-center gap-3"><input type="checkbox" required checked={stopConsent} disabled={busy} onChange={e => setStopConsent(e.target.checked)} />{t('recurring.stopConfirm')}</label></div>}
+                            </>}
+                        </>}
+                    </AverioCard>}
+
+            <AverioCard className="grid gap-4">
+                <div><h3 className="font-bold">{t('transactionManagement.basics')}</h3><p className="mt-1 text-xs">{t('transactionManagement.basicsHelp')}</p></div>
+                <fieldset className="flex gap-3" disabled={busy || !!rule}>
+                    <legend className="sr-only">{t('transactionManagement.type')}</legend>
+                    {(['Income', 'Expense'] as const).map(value => <label key={value}
+                        className={'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 font-semibold ' + (kind === value ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700')}>
+                        <input type="radio" name="kind" value={value} checked={kind === value} className="accent-emerald-500" onChange={() => setKind(value)} />
+                        {t(value === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}
+                    </label>)}
+                </fieldset>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <AverioField>{t('transactionManagement.account')}<AverioSelect value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => setAccountId(e.target.value)}>
+                        <option value="" disabled>{t('transactionManagement.account')}</option>
+                        {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
+                    </AverioSelect></AverioField>
+                    <AverioField>{t(recurring ? 'recurring.starts' : 'transactionManagement.date')}<AverioInput type="date" value={occurredOn} required disabled={busy || !!rule}
+                        min={recurring && !rule ? new Date().toISOString().slice(0, 10) : undefined} onChange={e => setOccurredOn(e.target.value)} /></AverioField>
+                </div>
+                <AverioField>{t('transactionManagement.merchant')}<AverioInput value={merchant} maxLength={160} disabled={busy}
+                    placeholder={t('transactionManagement.merchantPlaceholder')} onChange={e => setMerchant(e.target.value)} /></AverioField>
+            </AverioCard>
+            <AverioCard className="grid gap-3">
+                <div><h3 className="font-bold">{t('transactionManagement.labels')}</h3><p className="mt-1 text-xs">{t('transactionManagement.labelsHelp')}</p></div>
+                {labels.isPending && <p role="status">{t('common.status.loading')}</p>}
+                {labels.isError && <p role="alert">{labels.error.message}</p>}
+                {labels.isSuccess && !labels.data.length && <p className="text-xs">{t('transactionManagement.noLabelsYet')}</p>}
+                <div className="flex flex-wrap gap-2">
+                    {(labels.data ?? []).map(label => <AverioButton key={label.id} aria-pressed={resolvedLabelIds.includes(label.id)}
+                        disabled={busy} onClick={() => toggleLabel(label.id)}
+                        className={resolvedLabelIds.includes(label.id) ? 'border-emerald-500! bg-emerald-500/10!' : ''}>
+                        {resolvedLabelIds.includes(label.id) ? '✓ ' : ''}{label.name}
+                    </AverioButton>)}
+                    {!newLabelOpen && <AverioButton disabled={busy} onClick={() => { createLabelMutation.reset(); setNewLabelOpen(true); }}>
+                        + {t('transactionManagement.addNewLabel')}
+                    </AverioButton>}
+                </div>
+                {newLabelOpen && <div className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <AverioField>{t('transactionManagement.newLabel')}<AverioInput value={newLabelName} maxLength={40} autoFocus
+                        disabled={busy || createLabelMutation.isPending} onChange={e => setNewLabelName(e.target.value)} placeholder={t('transactionManagement.labelPlaceholder')} /></AverioField>
+                    <AverioField>{t('transactionManagement.labelScope')}<AverioSelect value={newLabelScope} disabled={busy || createLabelMutation.isPending} onChange={e => setNewLabelScope(e.target.value as LabelScope)}>
+                        <option value="Household">{t('transactionManagement.householdLabel')}</option><option value="Account">{t('transactionManagement.accountLabel')}</option>
+                    </AverioSelect></AverioField>
+                    <div className="flex flex-wrap gap-2">
+                        <AverioButton disabled={busy || createLabelMutation.isPending || !newLabelName.trim() || !resolvedAccountId} onClick={() => createLabelMutation.mutate()}>
+                            {t(createLabelMutation.isPending ? 'transactionManagement.creatingLabel' : 'transactionManagement.createLabel')}
+                        </AverioButton>
+                        <AverioButton disabled={busy || createLabelMutation.isPending} onClick={() => { createLabelMutation.reset(); setNewLabelName(''); setNewLabelScope('Household'); setNewLabelOpen(false); }}>{t('common.actions.cancel')}</AverioButton>
                     </div>
-                    <button type="button" className="av-icon-btn" onClick={onCancel}
-                        disabled={busy} aria-label={t('common.actions.close')}>×</button>
-                </header>
-
-                <form className="av-tx-form" onSubmit={submit}>
-                    <section className="av-tx-form-section av-tx-section-basics">
-                        <div className="av-tx-form-section-head">
-                            <span className="av-tx-section-number">1</span>
-                            <div>
-                                <h3>{t('transactionManagement.basics')}</h3>
-                                <p>{t('transactionManagement.basicsHelp')}</p>
-                            </div>
-                        </div>
-
-                        <fieldset className="av-tx-kind" disabled={busy}>
-                            {(['Income', 'Expense'] as const).map(value => (
-                                <label key={value}
-                                    className={`${value.toLowerCase()} ${kind === value ? 'active' : ''}`}>
-                                    <input type="radio" name="kind" value={value}
-                                        checked={kind === value} onChange={() => setKind(value)} />
-                                    <span>{t(value === 'Income'
-                                        ? 'transactionManagement.income'
-                                        : 'transactionManagement.expense')}</span>
-                                </label>
-                            ))}
-                        </fieldset>
-
-                        <div className="av-tx-form-grid">
-                            <label>
-                                <span>{t('transactionManagement.account')}</span>
-                                <select className="av-select" value={resolvedAccountId} disabled={busy}
-                                    onChange={event => setAccountId(event.target.value)} required>
-                                    <option value="" disabled>{t('transactionManagement.account')}</option>
-                                    {writableAccounts.map(item => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.name} · {item.currency}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                <span>{t('transactionManagement.date')}</span>
-                                <input type="date" value={occurredOn} disabled={busy}
-                                    onChange={event => setOccurredOn(event.target.value)} required />
-                            </label>
-                        </div>
-
-                        <label>
-                            <span>{t('transactionManagement.merchant')}</span>
-                            <input maxLength={160} value={merchant} disabled={busy}
-                                onChange={event => setMerchant(event.target.value)}
-                                placeholder={t('transactionManagement.merchantPlaceholder')} />
-                        </label>
-                    </section>
-
-                    <section className="av-tx-form-section av-tx-section-labels"
-                        aria-labelledby="transaction-labels-title">
-                        <div className="av-tx-form-section-head">
-                            <span className="av-tx-section-number">2</span>
-                            <div>
-                                <h3 id="transaction-labels-title">
-                                    {t('transactionManagement.labels')}
-                                </h3>
-                                <p>{t('transactionManagement.labelsHelp')}</p>
-                            </div>
-                        </div>
-
-                        {labels.isPending && (
-                            <p className="av-subtle">{t('common.status.loading')}</p>
-                        )}
-
-                        {labels.isSuccess
-                            && labels.data.length === 0
-                            && !newLabelOpen && (
-                            <p className="av-subtle">
-                                {t('transactionManagement.noLabelsYet')}
-                            </p>
-                        )}
-
-                        <div className="av-tx-label-catalog">
-                            {(labels.data ?? []).map(label => {
-                                const selected = resolvedLabelIds.includes(
-                                    label.id,
-                                );
-
-                                return (
-                                    <button
-                                        type="button"
-                                        key={label.id}
-                                        className={
-                                            `av-tx-label-choice ${label.scope.toLowerCase()} `
-                                            + (selected ? 'selected' : '')
-                                        }
-                                        aria-pressed={selected}
-                                        disabled={busy}
-                                        onClick={() => toggleLabel(label.id)}
-                                    >
-                                        <span className="av-tx-label-check">
-                                            {selected ? '✓' : ''}
-                                        </span>
-                                        <span aria-hidden="true">
-                                            {label.scope === 'Household'
-                                                ? '⌂'
-                                                : '▣'}
-                                        </span>
-                                        <span>{label.name}</span>
-                                    </button>
-                                );
-                            })}
-
-                            {!newLabelOpen && (
-                                <button
-                                    type="button"
-                                    className="av-tx-label-add"
-                                    disabled={
-                                        busy
-                                        || !resolvedAccountId
-                                        || labels.isPending
-                                    }
-                                    aria-label={t(
-                                        'transactionManagement.addNewLabel',
-                                    )}
-                                    title={t(
-                                        'transactionManagement.addNewLabel',
-                                    )}
-                                    onClick={() => {
-                                        createLabelMutation.reset();
-                                        setNewLabelOpen(true);
-                                    }}
-                                >
-                                    <ConceptIcon name="plus" />
-                                </button>
-                            )}
-                        </div>
-
-                        {newLabelOpen && (
-                            <div className="av-tx-label-create">
-                                <label>
-                                    <span>
-                                        {t('transactionManagement.newLabel')}
-                                    </span>
-                                    <input
-                                        value={newLabelName}
-                                        maxLength={40}
-                                        autoFocus
-                                        disabled={
-                                            busy
-                                            || createLabelMutation.isPending
-                                        }
-                                        onChange={event =>
-                                            setNewLabelName(
-                                                event.target.value,
-                                            )}
-                                        placeholder={t(
-                                            'transactionManagement.labelPlaceholder',
-                                        )}
-                                    />
-                                </label>
-
-                                <label>
-                                    <span>
-                                        {t('transactionManagement.labelScope')}
-                                    </span>
-                                    <select
-                                        className="av-select"
-                                        value={newLabelScope}
-                                        disabled={
-                                            busy
-                                            || createLabelMutation.isPending
-                                        }
-                                        onChange={event =>
-                                            setNewLabelScope(
-                                                event.target.value as LabelScope,
-                                            )}
-                                    >
-                                        <option value="Household">
-                                            {t(
-                                                'transactionManagement.householdLabel',
-                                            )}
-                                        </option>
-                                        <option value="Account">
-                                            {t(
-                                                'transactionManagement.accountLabel',
-                                            )}
-                                        </option>
-                                    </select>
-                                </label>
-
-                                <div className="av-tx-label-create-actions">
-                                    <button
-                                        type="button"
-                                        className="av-btn av-compact"
-                                        disabled={
-                                            busy
-                                            || createLabelMutation.isPending
-                                            || !newLabelName.trim()
-                                            || !resolvedAccountId
-                                        }
-                                        onClick={() =>
-                                            createLabelMutation.mutate()}
-                                    >
-                                        + {t(createLabelMutation.isPending
-                                            ? 'transactionManagement.creatingLabel'
-                                            : 'transactionManagement.createLabel')}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="av-btn av-compact"
-                                        disabled={
-                                            busy
-                                            || createLabelMutation.isPending
-                                        }
-                                        onClick={() => {
-                                            createLabelMutation.reset();
-                                            setNewLabelName('');
-                                            setNewLabelScope('Household');
-                                            setNewLabelOpen(false);
-                                        }}
-                                    >
-                                        {t('common.actions.cancel')}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {newLabelOpen && createLabelMutation.isError && (
-                            <p className="av-error" role="alert">
-                                {createLabelMutation.error instanceof Error
-                                    ? createLabelMutation.error.message
-                                    : t('errors.genericDescription')}
-                            </p>
-                        )}
-                    </section>
-
-                    <section className="av-tx-form-section av-tx-section-items"
-                        aria-labelledby="transaction-items-title">
-                        <div className="av-tx-form-section-head">
-                            <span className="av-tx-section-number">3</span>
-                            <div>
-                                <h3 id="transaction-items-title">
-                                    {t('transactionManagement.items')}
-                                </h3>
-                                <p>{t('transactionManagement.itemsHelp')}</p>
-                            </div>
-                            <button type="button" className="av-btn av-compact av-tx-section-action"
-                                onClick={addItem} disabled={busy || resolvedItems.length >= 100}>
-                                + {t('transactionManagement.addItem')}
-                            </button>
-                        </div>
-
-                        <div className="av-tx-item-list">
-                            {resolvedItems.map((item, index) => (
-                                <div className="av-tx-item-row" key={item.key}>
-                                    <span className="av-tx-item-number">{index + 1}</span>
-                                    <label className="av-tx-item-description">
-                                        <span>{t('transactionManagement.itemDescription')}</span>
-                                        <input value={item.description} maxLength={160} disabled={busy}
-                                            onChange={event => updateItem(item.key, {
-                                                description: event.target.value,
-                                            })}
-                                            placeholder={t('transactionManagement.itemDescriptionPlaceholder')}
-                                            required />
-                                    </label>
-                                    <div className="av-tx-category-field">
-                                        <span className="av-tx-field-label">
-                                            {t('transactionManagement.category')}
-                                        </span>
-                                        <CategoryPicker
-                                            categories={categories.data ?? []}
-                                            value={item.categoryId}
-                                            fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
-                                            disabled={busy || categories.isPending}
-                                            label={t('transactionManagement.category')}
-                                            onChange={categoryId => updateItem(item.key, {
-                                                categoryId,
-                                            })}
-                                        />
-                                    </div>
-                                    <label className="av-tx-item-amount-field">
-                                        <span>{t('transactionManagement.amount')}</span>
-                                        <div className="av-tx-amount-input">
-                                            <input inputMode="decimal" value={item.amount} disabled={busy}
-                                                onChange={event => updateItem(item.key, {
-                                                    amount: event.target.value,
-                                                })}
-                                                placeholder="0.00" required />
-                                            <strong>{currency}</strong>
-                                        </div>
-                                    </label>
-                                    <button type="button" className="av-icon-btn av-tx-remove-item"
-                                        disabled={busy || resolvedItems.length === 1}
-                                        onClick={() => removeItem(item.key)}
-                                        aria-label={t('transactionManagement.removeItem')}>×</button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className={`av-tx-total ${kind.toLowerCase()}`}>
-                            <span>{t('transactionManagement.total')}</span>
-                            <strong>
-                                {kind === 'Income' ? '+' : '−'}
-                                {currency
-                                    ? formatDecimalAmount(total, currency, language)
-                                    : total}
-                            </strong>
-                        </div>
-                    </section>
-
-                    <AverioCard className="grid gap-3 p-4">
-                        <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
-                        <p className="text-xs text-[#667085] dark:text-[#AAB4C4]">{t('activities.privateHelp')}</p>
-                    </AverioCard>
-                    <section className="av-tx-form-section av-tx-section-details">
-                        <div className="av-tx-form-section-head">
-                            <span className="av-tx-section-number">4</span>
-                            <div>
-                                <h3>{t('transactionManagement.detailsPrivacy')}</h3>
-                                <p>{t('transactionManagement.detailsPrivacyHelp')}</p>
-                            </div>
-                        </div>
-
-                        <label>
-                            <span>{t('transactionManagement.note')}</span>
-                            <textarea maxLength={500} value={note} disabled={busy}
-                                onChange={event => setNote(event.target.value)}
-                                placeholder={t('transactionManagement.notePlaceholder')} />
-                        </label>
-
-                        <label>
-                            <span>{t('transactionManagement.visibility')}</span>
-                            <select className="av-select" value={effectiveVisibility}
-                                disabled={busy || forcedVisibility !== undefined}
-                                onChange={event =>
-                                    setVisibility(event.target.value as TransactionVisibility)}>
-                                <option value="Household">{t('transactionManagement.household')}</option>
-                                <option value="Private">{t('transactionManagement.private')}</option>
-                            </select>
-                        </label>
-
-                        {effectiveVisibility === 'Private' && (
-                            <p className="av-tx-private-help">
-                                {t('transactionManagement.privateHelp')}
-                            </p>
-                        )}
-                        {currency && (
-                            <p className="av-subtle">
-                                {t('transactionManagement.currencyLocked')}
-                            </p>
-                        )}
-                    </section>
-
-                    {error && <p className="av-error" role="alert">{error}</p>}
-
-                    <footer className="av-tx-modal-actions">
-                        {transaction && onVoid && transaction.status === 'Posted' && (
-                            <button type="button" className="av-btn av-danger" disabled={busy}
-                                onClick={() => {
-                                    if (window.confirm(t('transactionManagement.voidConfirm'))) {
-                                        void onVoid(transaction.updatedAt).catch(reason => setError(
-                                            reason instanceof Error
-                                                ? reason.message
-                                                : t('errors.genericDescription'),
-                                        ));
-                                    }
-                                }}>
-                                {t('transactionManagement.void')}
-                            </button>
-                        )}
-                        <span className="av-tx-action-spacer" />
-                        <button type="button" className="av-btn" onClick={onCancel} disabled={busy}>
-                            {t('common.actions.cancel')}
-                        </button>
-                        <button type="submit" className="av-btn av-primary"
-                            disabled={busy || writableAccounts.length === 0
-                                || categories.isPending}>
-                            {t(busy ? 'transactionManagement.saving' : 'transactionManagement.save')}
-                        </button>
-                    </footer>
-                </form>
-            </section>
-        </div>
-    );
+                    {createLabelMutation.isError && <p role="alert">{createLabelMutation.error.message}</p>}
+                </div>}
+            </AverioCard>
+            <AverioCard className="grid gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div><h3 className="font-bold">{t('transactionManagement.items')}</h3><p className="mt-1 text-xs">{t('transactionManagement.itemsHelp')}</p></div>
+                    <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
+                </div>
+                {resolvedItems.map((item, index) => <div key={item.key} className="grid gap-3 border-b border-slate-200 pb-4 dark:border-slate-700 sm:grid-cols-2">
+                    <AverioField>{t('transactionManagement.itemDescription')}<AverioInput required value={item.description} maxLength={160} disabled={busy}
+                        onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} /></AverioField>
+                    <div><span className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.category')}</span>
+                        <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
+                            fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
+                            disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
+                    </div>
+                    <AverioField>{t('transactionManagement.amount')} · {currency}<AverioInput required inputMode="decimal" value={item.amount} disabled={busy}
+                        onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" /></AverioField>
+                    <div className="flex items-end justify-end"><AverioButton disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
+                        aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}>{t('transactionManagement.removeItem')}</AverioButton></div>
+                </div>)}
+                <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+                    <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
+                    <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(total, currency, language) : total}</strong>
+                </div>
+            </AverioCard>
+            <AverioCard className="grid gap-3">
+                <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
+                <p className="text-xs">{t('activities.privateHelp')}</p>
+            </AverioCard>
+            <AverioCard className="grid gap-4">
+                <div><h3 className="font-bold">{t('transactionManagement.detailsPrivacy')}</h3><p className="mt-1 text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p></div>
+                <AverioField>{t('transactionManagement.note')}<AverioTextarea value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
+                <AverioField>{t('transactionManagement.visibility')}<AverioSelect value={effectiveVisibility}
+                    disabled={busy || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
+                    <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
+                    <option value="Private" disabled={forcedVisibility === 'Household'}>{t('transactionManagement.private')}</option>
+                </AverioSelect></AverioField>
+                {effectiveVisibility === 'Private' && <p className="text-xs">{t('transactionManagement.privateHelp')}</p>}
+                {recurring && <p className="text-xs">{t('recurring.privacyHelp')}</p>}
+                <p className="text-xs">{t('transactionManagement.currencyLocked')}</p>
+            </AverioCard>
+            {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
+        </form>
+    </AverioDialog>;
 }
-
-

@@ -65,7 +65,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
                     <AverioButton onClick={() => setHistory(rule)}>{t('recurring.history')}</AverioButton>
                 </div></AverioCard>; })}
         {editor && <RecurringEditor userId={userId} householdId={householdId} rule={editor === 'new' ? null : editor}
-            accounts={writable.filter(a => a.status === 'Active' || (editor !== 'new' && a.id === editor.accountId))} onClose={() => setEditor(null)}
+            onClose={() => setEditor(null)}
             onSave={async request => { await mutation.mutateAsync({ rule: editor === 'new' ? null : editor, request }); setEditor(null); setNotice(t('recurring.saved')); }} />}
         {review && <OccurrenceDialog householdId={householdId} rule={review.rule} skip={review.skip} onClose={() => setReview(null)}
             onDone={async () => { await refresh(); setNotice(t(review.skip ? 'recurring.skipped' : 'recurring.recorded')); setReview(null); }} />}
@@ -75,14 +75,17 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
 
 function OccurrenceDialog({ householdId, rule, skip, onClose, onDone }: { householdId: string; rule: RecurringRuleResponse; skip: boolean; onClose: () => void; onDone: () => Promise<void> }) {
     const { t } = useTranslation();
-    const [amount, setAmount] = useState(rule.amount);
+    const [amounts, setAmounts] = useState(rule.items.map(i => i.amount));
     const mutation = useMutation({ mutationFn: () => recurringApi.apiV1HouseholdsHouseholdIdRecurringRuleIdOccurrencesPost({ householdId, ruleId: rule.id,
-        recurringOccurrenceRequest: { expectedVersion: rule.version, dueOn: rule.nextDueOn!, skip, amount: skip ? null : amount } }), onSuccess: onDone });
+        recurringOccurrenceRequest: { expectedVersion: rule.version, dueOn: rule.nextDueOn!, skip, itemAmounts: skip ? null : amounts } }), onSuccess: onDone });
     return <AverioDialog open title={t(skip ? 'recurring.skip' : 'recurring.confirmTitle')} closeLabel={t('recurring.cancel')} onDismiss={onClose} busy={mutation.isPending}
         actions={<><AverioButton disabled={mutation.isPending} onClick={onClose}>{t('recurring.cancel')}</AverioButton><AverioButton type="submit" form="recurring-occurrence" variant={skip ? 'danger' : 'primary'} disabled={mutation.isPending}>{t(skip ? 'recurring.skip' : 'recurring.record')}</AverioButton></>}>
         <form id="recurring-occurrence" onSubmit={e => { e.preventDefault(); mutation.mutate(); }} className="grid gap-4">
             <AverioCard><h3 className="font-bold">{rule.name} · {rule.nextDueOn}</h3><p className="mt-2">{t(skip ? 'recurring.skipHelp' : 'recurring.confirmHelp')}</p>
-                {!skip && <AverioField className="mt-4">{t('recurring.amount')} · {rule.currency}<AverioInput required inputMode="decimal" pattern="[0-9]+([.,][0-9]{1,4})?" value={amount} disabled={mutation.isPending} onChange={e => setAmount(e.target.value.replace(',', '.'))} /></AverioField>}</AverioCard>
+                {!skip && <div className="mt-4 grid gap-3"><p>{t('recurring.itemAmounts')}</p>{rule.items.map((item, index) => <AverioField key={index}>{t('recurring.amount')} · {item.description} · {rule.currency}
+                    <AverioInput required inputMode="decimal" pattern="[0-9]+([.,][0-9]{1,4})?" value={amounts[index]} disabled={mutation.isPending}
+                        onChange={e => setAmounts(current => current.map((amount, i) => i === index ? e.target.value.replace(',', '.') : amount))} />
+                </AverioField>)}</div>}</AverioCard>
             {mutation.isError && <p role="alert">{mutation.error instanceof ApiError ? mutation.error.message : t('errors.genericDescription')} {t('recurring.updatedElsewhere')}</p>}
         </form>
     </AverioDialog>;

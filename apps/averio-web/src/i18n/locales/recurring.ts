@@ -1,4 +1,8 @@
 export const recurringEN = {
+  "makeRecurring": "Recurring transaction",
+  "creationHelp": "Save these details as a schedule. Each occurrence repeats the items, labels, merchant, note and activity. Manage future occurrences in Recurring transactions.",
+  "itemAmounts": "Review each item amount",
+
   "title": "Recurring transactions",
   "intro": "Plan regular income and expenses. Your schedules are private; recorded transactions follow the selected account and visibility.",
   "add": "New recurring",
@@ -72,6 +76,10 @@ export const recurringEN = {
   "stopConfirm": "I understand that stopping is permanent."
 };
 export const recurringDE = {
+  "makeRecurring": "Wiederkehrende Buchung",
+  "creationHelp": "Speichere diese Angaben als Zeitplan. Jeder Termin übernimmt Positionen, Labels, Händler, Notiz und Aktivität. Verwalte zukünftige Termine unter Wiederkehrende Buchungen.",
+  "itemAmounts": "Betrag jeder Position prüfen",
+
   "title": "Wiederkehrende Buchungen",
   "intro": "Plane regelmäßige Einnahmen und Ausgaben. Deine Zeitpläne sind privat; erfasste Buchungen folgen Konto und Sichtbarkeit.",
   "add": "Neuer Zeitplan",
@@ -145,6 +153,10 @@ export const recurringDE = {
   "stopConfirm": "Ich verstehe, dass der Stopp dauerhaft ist."
 };
 export const recurringHU = {
+  "makeRecurring": "Ismétlődő tranzakció",
+  "creationHelp": "Mentsd a részleteket ütemezésként. Minden alkalom megismétli a tételeket, címkéket, kereskedőt, megjegyzést és tevékenységet. A jövőbeli alkalmakat az Ismétlődő tranzakciók oldalon kezelheted.",
+  "itemAmounts": "Ellenőrizd minden tétel összegét",
+
   "title": "Ismétlődő tranzakciók",
   "intro": "Tervezd meg rendszeres bevételeidet és kiadásaidat. Az ütemezéseid privátak; a rögzített tranzakciókra a kiválasztott számla és láthatóság szabályai érvényesek.",
   "add": "Új ütemezés",

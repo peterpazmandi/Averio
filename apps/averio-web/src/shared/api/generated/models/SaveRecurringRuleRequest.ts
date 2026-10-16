@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RecurringItemRequest } from './RecurringItemRequest';
+import {
+    RecurringItemRequestFromJSON,
+    RecurringItemRequestFromJSONTyped,
+    RecurringItemRequestToJSON,
+    RecurringItemRequestToJSONTyped,
+} from './RecurringItemRequest';
+
 /**
  * 
  * @export
@@ -71,6 +79,26 @@ export interface SaveRecurringRuleRequest {
      * 
      */
     expectedVersion?: string | null;
+    /**
+     * 
+     */
+    items?: Array<RecurringItemRequest> | null;
+    /**
+     * 
+     */
+    labelIds?: Array<string> | null;
+    /**
+     * 
+     */
+    merchant?: string | null;
+    /**
+     * 
+     */
+    note?: string | null;
+    /**
+     * 
+     */
+    activityId?: string | null;
 }
 
 /**
@@ -112,6 +140,11 @@ export function SaveRecurringRuleRequestFromJSONTyped(json: any, ignoreDiscrimin
         'isPaused': json['isPaused'] == null ? undefined : json['isPaused'],
         'isStopped': json['isStopped'] == null ? undefined : json['isStopped'],
         'expectedVersion': json['expectedVersion'] === undefined ? undefined : json['expectedVersion'] === null ? null : json['expectedVersion'],
+        'items': json['items'] === undefined ? undefined : json['items'] === null ? null : ((json['items'] as Array<any>).map(RecurringItemRequestFromJSON)),
+        'labelIds': json['labelIds'] === undefined ? undefined : json['labelIds'] === null ? null : json['labelIds'],
+        'merchant': json['merchant'] === undefined ? undefined : json['merchant'] === null ? null : json['merchant'],
+        'note': json['note'] === undefined ? undefined : json['note'] === null ? null : json['note'],
+        'activityId': json['activityId'] === undefined ? undefined : json['activityId'] === null ? null : json['activityId'],
     };
 }
 
@@ -139,6 +172,11 @@ export function SaveRecurringRuleRequestToJSONTyped(value?: SaveRecurringRuleReq
         'isPaused': value['isPaused'],
         'isStopped': value['isStopped'],
         'expectedVersion': value['expectedVersion'],
+        'items': value['items'] == null ? undefined : ((value['items'] as Array<any>).map(RecurringItemRequestToJSON)),
+        'labelIds': value['labelIds'],
+        'merchant': value['merchant'],
+        'note': value['note'],
+        'activityId': value['activityId'],
     };
 }
 

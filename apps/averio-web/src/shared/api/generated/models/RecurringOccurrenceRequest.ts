@@ -35,6 +35,10 @@ export interface RecurringOccurrenceRequest {
      * 
      */
     amount?: string | null;
+    /**
+     * 
+     */
+    itemAmounts?: Array<string> | null;
 }
 
 /**
@@ -60,6 +64,7 @@ export function RecurringOccurrenceRequestFromJSONTyped(json: any, ignoreDiscrim
         'dueOn': json['dueOn'],
         'skip': json['skip'] == null ? undefined : json['skip'],
         'amount': json['amount'] === undefined ? undefined : json['amount'] === null ? null : json['amount'],
+        'itemAmounts': json['itemAmounts'] === undefined ? undefined : json['itemAmounts'] === null ? null : json['itemAmounts'],
     };
 }
 
@@ -78,6 +83,7 @@ export function RecurringOccurrenceRequestToJSONTyped(value?: RecurringOccurrenc
         'dueOn': value['dueOn'],
         'skip': value['skip'],
         'amount': value['amount'],
+        'itemAmounts': value['itemAmounts'],
     };
 }
 

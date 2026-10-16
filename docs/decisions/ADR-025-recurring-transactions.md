@@ -1,6 +1,6 @@
 # ADR-025 — Recurring income and expenses
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-026](ADR-026-recurring-transaction-templates.md); retained as the original decision.
 **Date:** 2026-10-15
 
 ## Decision

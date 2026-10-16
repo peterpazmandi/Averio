@@ -1,17 +1,17 @@
 # Recurring transactions
 
-Recurring income and expenses use confirmation by default. Create a schedule from **Recurring transactions**, select an account and category, enter an exact amount, and choose weekly, monthly or yearly repetition. Each due occurrence can be reviewed with its actual amount, recorded or permanently skipped. Pending items do not affect balances. Recent occurrences link to the normal transaction editor.
+Recurring income and expenses use confirmation by default. Open **Add transaction**, select **Recurring transaction**, fill in the normal transaction details, and choose a schedule name and weekly, monthly or yearly repetition. Saving creates the schedule only; confirmation remains the default for the first due occurrence. The **New recurring** action opens the same form with recurrence enabled. Edit schedules from **Recurring transactions**. Each due occurrence can be reviewed with actual amounts for each item, recorded or permanently skipped. Pending items do not affect balances. Recent occurrences link to the normal transaction editor.
 
-Automatic recording is an explicit option for fixed amounts. It records ledger entries; it never makes bank payments. Pause retains missed dates. Resume catches up oldest first. Stop is permanent and retains existing transactions and receipts. Editing amount/category affects unprocessed occurrences only. To change account, type, cadence or first date, stop and replace the schedule.
+Automatic recording is an explicit option for fixed amounts. It records ledger entries; it never makes bank payments. Pause retains missed dates. Resume catches up oldest first. Stop is permanent and retains existing transactions and receipts. Editing items, labels, merchant, note or activity affects unprocessed occurrences only. To change account, type, cadence or first date, stop and replace the schedule.
 
 Dates use UTC. The original date anchors every occurrence, including January 31 and leap-day schedules. End dates are inclusive. New schedules cannot start before today. Rules are private to their creator; emitted transactions use normal account and transaction visibility. Household departure does not copy rules. Every execution rechecks membership, account access/status and category eligibility. Active members can pause or stop their own schedules even after losing posting permission. Resuming always revalidates that permission. If account privacy changes, the editor allows the schedule visibility to be corrected explicitly.
 
-The first release supports one category per income/expense, 100 unfinished schedules per member, and the latest 24 visible occurrence receipts. Transfers, allocations, notifications and custom intervals are outside this slice.
+Schedules repeat all transaction details: up to 100 ordered items with their own descriptions/categories/amounts, up to 20 labels, merchant, note and the creator’s private activity. Closed activities and invalid references block recording without consuming the due date. The feature supports 100 unfinished schedules per member, and the latest 24 visible occurrence receipts. Transfers, allocations, notifications and custom intervals are outside this slice.
 
 ## Deployment
 
 1. Back up the intended database and review the generated SQL. EF tooling now requires an explicit **AVERIO_MIGRATION_CONNECTION_STRING**; it never falls back to application user secrets. For scaffold/script-only commands use a localhost placeholder. For applying migrations set it deliberately to the intended target.
-2. Generate/review the script from AddSavedTransactionViews to AddRecurringTransactions, then apply AddRecurringTransactions before running the new API or worker. There are no startup migrations.
+2. Generate/review the script from AddSavedTransactionViews to AddRecurringTransactions, then apply AddRecurringTransactions and ExtendRecurringTemplates before running the new API or worker. ExtendRecurringTemplates preserves existing schedules by backfilling their single item; do not remove or reapply the earlier migration. There are no startup migrations.
 3. Deploy the API and frontend together, then run the separate **apps/Averio.Worker** executable with **ConnectionStrings__AverioDatabase** configured to the same database. The worker needs no web listener. Use a process supervisor to restart it after failure.
 4. Check one manual confirmation and one opt-in automatic schedule in staging. Confirm a single transaction, correct balance/report changes and advancement. Stop the worker and verify manual review still works; restart and verify missed automatic dates catch up.
 
@@ -19,7 +19,7 @@ Example PowerShell for generating SQL without a live database:
 
 ```powershell
 $env:AVERIO_MIGRATION_CONNECTION_STRING = 'Host=localhost;Port=55439;Database=averio_migration;Username=postgres;Password=placeholder'
-dotnet ef migrations script 20261013210249_AddSavedTransactionViews 20261015194439_AddRecurringTransactions --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output recurring.sql
+dotnet ef migrations script 20261013210249_AddSavedTransactionViews 20261016114211_ExtendRecurringTemplates --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output recurring.sql
 ```
 
 Publish the worker with `dotnet publish apps/Averio.Worker -c Release -o artifacts/worker`, then run `dotnet artifacts/worker/Averio.Worker.dll` in a supervised service with runtime configuration injected. Do not put connection strings in the repository or command history.
@@ -34,4 +34,4 @@ The transaction suite covers anchored calendar dates and lifecycle invariants. T
 
 Run the repository's existing verification workflow. PostgreSQL and browser tests create and clean up dedicated local test databases; never point **AVERIO_TEST_CONNECTION_STRING** at a shared environment.
 
-See [ADR-025](decisions/ADR-025-recurring-transactions.md) for the stable domain decisions.
+See [ADR-026](decisions/ADR-026-recurring-transaction-templates.md) for the stable domain decisions.

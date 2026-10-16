@@ -75,6 +75,7 @@ internal static class RecurringVerification
         var paused = await Read(pausedId);
         await Call(h => h.SaveAsync(f.HouseholdId, pausedId, paused.Version, input with { Automatic = true, IsPaused = true }, Ct));
         Check(!await Call(h => h.AutomaticAsync(new(pausedId, f.HouseholdId, f.OwnerUserId, paused.Version), Ct)), "Stale worker ignored pause");
+        await Templates();
         // References are checked again at execution, after a schedule was accepted.
         Guid categoryId;
         await using (var scope = provider.CreateAsyncScope())
@@ -115,6 +116,64 @@ internal static class RecurringVerification
         await Recovery();
         await Fairness();
         Console.WriteLine("PASS recurring persistence, privacy, exact money, idempotency, worker races, pause and archive handling");
+
+
+        async Task Templates()
+        {
+            Guid activityId, foreignActivityId;
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var activity = Averio.Domain.Activities.Activity.Create(f.HouseholdId, f.OwnerMemberId, "Recurring activity", null, null, clock.GetUtcNow());
+                var foreign = Averio.Domain.Activities.Activity.Create(f.HouseholdId, f.MemberId, "Other member activity", null, null, clock.GetUtcNow());
+                db.AddRange(activity, foreign); await db.SaveChangesAsync();
+                activityId = activity.Id; foreignActivityId = foreign.Id;
+            }
+            var template = input with {
+                Name = "Itemized bill", Amount = 12.3456m, Merchant = "Provider", Note = "Template note",
+                Items = [new("Service", TestIds.Groceries, 10.3456m), new("Extra", TestIds.Groceries, 2m)],
+                LabelIds = [f.HouseholdLabelId], ActivityId = activityId
+            };
+            await Throws<NotFoundException>(() => Call(h => h.SaveAsync(f.HouseholdId, null, null, template with { ActivityId = foreignActivityId }, Ct)));
+            await Throws<BusinessRuleException>(() => Call(h => h.SaveAsync(f.HouseholdId, null, null, template with { LabelIds = [f.PrivateLabelId] }, Ct)));
+            var rid = await Call(h => h.SaveAsync(f.HouseholdId, null, null, template, Ct));
+            var r = await Read(rid);
+            Check(r.Items.Count == 2 && r.Labels.Count == 1 && r.ActivityId == activityId, "Template details missing");
+            Check((await Call(h => h.HistoryAsync(f.HouseholdId, rid, Ct))).Count == 0, "Saving template posted immediately");
+            await Throws<BusinessRuleException>(() => Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, 9m, Ct)));
+            await Throws<BusinessRuleException>(() => Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, null, Ct, [1m])));
+            var txId = await Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, null, Ct, [15.1234m, 2m]));
+            Check(await Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, null, Ct, [15.1234m, 2m])) == txId, "Itemized retry duplicated transaction");
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var tx = await db.Transactions.Include(x => x.Items).Include(x => x.Labels).SingleAsync(x => x.Id == txId);
+                Check(tx.Amount == 17.1234m && tx.Merchant == "Provider" && tx.Note == "Template note", "Posted details or exact total lost");
+                Check(tx.Items.OrderBy(i => i.Position).Select(i => i.Description).SequenceEqual(["Service", "Extra"]), "Item descriptions/order lost");
+                Check(tx.Labels.Single().LabelId == f.HouseholdLabelId, "Labels not repeated");
+                Check(await db.Set<Averio.Domain.Activities.ActivityAssignment>().AnyAsync(x => x.TransactionId == txId && x.ActivityId == activityId && x.HouseholdMemberId == f.OwnerMemberId), "Creator's activity not assigned");
+            }
+            r = await Read(rid);
+            await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, template with { Note = "Changed for future", Automatic = true }, Ct));
+            r = await Read(rid);
+            Check(r.Items.Count == 2 && r.Labels.Single().LabelId == f.HouseholdLabelId, "Editing lost items or retained label");
+            await using (var scope = provider.CreateAsyncScope())
+                Check((await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Transactions.SingleAsync(x => x.Id == txId)).Note == "Template note", "Schedule edit rewrote posted history");
+            var autoId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, template with { Automatic = true }, Ct));
+            var automatic = await Read(autoId);
+            Check(await Call(h => h.AutomaticAsync(new(autoId, f.HouseholdId, f.OwnerUserId, automatic.Version), Ct)), "Itemized automatic posting failed");
+            var closedId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, template with { Automatic = true }, Ct));
+            var closed = await Read(closedId);
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var activity = await db.Set<Averio.Domain.Activities.Activity>().SingleAsync(x => x.Id == activityId);
+                activity.Update(activity.Name, null, null, true, clock.GetUtcNow()); await db.SaveChangesAsync();
+            }
+            await Throws<ConflictException>(() => Call(h => h.AutomaticAsync(new(closedId, f.HouseholdId, f.OwnerUserId, closed.Version), Ct)));
+            Check((await Call(h => h.HistoryAsync(f.HouseholdId, closedId, Ct))).Count == 0, "Closed activity failure consumed occurrence");
+            await Call(h => h.SaveAsync(f.HouseholdId, closedId, closed.Version, template with { IsPaused = true }, Ct));
+        }
 
         async Task Recovery()
         {

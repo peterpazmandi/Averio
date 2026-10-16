@@ -1,3 +1,4 @@
+import { recurringApi, recurringQueries } from '../../recurring/recurringQueries';
 import { Link, useRouter } from '@tanstack/react-router';
 import { ActivitySelect } from '../../activities/ActivitySelect';
 import { AssignActivityDialog } from '../../activities/AssignActivityDialog';
@@ -12,7 +13,7 @@ import { TransactionLinkDetail } from './TransactionLinkDetail';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
@@ -84,6 +85,7 @@ export function TransactionsPage({
     const accounts = useQuery(
         accountsQueries.list(userId, householdId, true),
     );
+    const queryClient = useQueryClient();
     const mutations = useTransactionMutations(userId, householdId);
     const busy = mutations.create.isPending
         || mutations.update.isPending
@@ -601,6 +603,12 @@ export function TransactionsPage({
                     transaction={activeEditor === 'new' ? null : activeEditor}
                     onCancel={closeEditor}
                     onSave={save}
+                    onSaveRecurring={async request => {
+                        await recurringApi.apiV1HouseholdsHouseholdIdRecurringPost({ householdId, saveRecurringRuleRequest: request });
+                        await queryClient.invalidateQueries(recurringQueries.list(userId, householdId));
+                        closeEditor();
+                        setNotice(t('recurring.saved'));
+                    }}
                     onVoid={activeEditor === 'new'
                         ? undefined
                         : voidCurrent}

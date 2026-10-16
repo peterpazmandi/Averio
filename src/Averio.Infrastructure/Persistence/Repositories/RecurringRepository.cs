@@ -6,10 +6,10 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class RecurringRepository(AverioDbContext db) : IRecurringRepository
 {
     public async Task<IReadOnlyList<RecurringRule>> ListAsync(Guid householdId, Guid memberId, CancellationToken ct)
-        => await db.Set<RecurringRule>().AsNoTracking().Where(x => x.HouseholdId == householdId && x.HouseholdMemberId == memberId)
+        => await db.Set<RecurringRule>().AsNoTracking().Include(x => x.Items).Include(x => x.Labels).AsSplitQuery().Where(x => x.HouseholdId == householdId && x.HouseholdMemberId == memberId)
             .OrderBy(x => x.IsStopped).ThenBy(x => x.NextDueOn).ThenBy(x => x.Name).ToArrayAsync(ct);
     public Task<RecurringRule?> GetAsync(Guid householdId, Guid memberId, Guid ruleId, CancellationToken ct)
-        => db.Set<RecurringRule>().SingleOrDefaultAsync(x => x.Id == ruleId && x.HouseholdId == householdId && x.HouseholdMemberId == memberId, ct);
+        => db.Set<RecurringRule>().Include(x => x.Items).Include(x => x.Labels).AsSplitQuery().SingleOrDefaultAsync(x => x.Id == ruleId && x.HouseholdId == householdId && x.HouseholdMemberId == memberId, ct);
     public Task<RecurringOccurrence?> OccurrenceAsync(Guid ruleId, DateOnly dueOn, CancellationToken ct)
         => db.Set<RecurringOccurrence>().AsNoTracking().SingleOrDefaultAsync(x => x.RuleId == ruleId && x.DueOn == dueOn, ct);
     public async Task<IReadOnlyList<RecurringOccurrence>> HistoryAsync(Guid householdId, Guid memberId, Guid ruleId, CancellationToken ct)

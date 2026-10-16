@@ -704,6 +704,72 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("RuleId", "Position");
+
+                    b.ToTable("recurring_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_recurring_item_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_recurring_item_description", "length(btrim(description)) > 0 AND position >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.RecurringLabel", b =>
+                {
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_id");
+
+                    b.Property<Guid>("LabelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("label_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.HasKey("RuleId", "LabelId");
+
+                    b.HasIndex("HouseholdId", "LabelId");
+
+                    b.HasIndex("HouseholdId", "RuleId");
+
+                    b.ToTable("recurring_labels", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringOccurrence", b =>
                 {
                     b.Property<Guid>("RuleId")
@@ -756,6 +822,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
+
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("activity_id");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(19, 4)
@@ -810,6 +880,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
 
+                    b.Property<string>("Merchant")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("merchant");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -819,6 +894,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly?>("NextDueOn")
                         .HasColumnType("date")
                         .HasColumnName("next_due_on");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
 
                     b.Property<int>("OccurrenceIndex")
                         .HasColumnType("integer")
@@ -853,6 +933,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("NextDueOn", "Id")
                         .HasFilter("automatic AND NOT is_paused AND NOT is_stopped AND NOT is_blocked");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "ActivityId");
 
                     b.ToTable("recurring_rules", null, t =>
                         {
@@ -1663,6 +1745,38 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_labels_accounts");
                 });
 
+            modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>
+                {
+                    b.HasOne("Averio.Domain.Categories.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Recurring.RecurringRule", null)
+                        .WithMany("Items")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.RecurringLabel", b =>
+                {
+                    b.HasOne("Averio.Domain.Labels.Label", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "LabelId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Recurring.RecurringRule", null)
+                        .WithMany("Labels")
+                        .HasForeignKey("HouseholdId", "RuleId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringOccurrence", b =>
                 {
                     b.HasOne("Averio.Domain.Recurring.RecurringRule", null)
@@ -1700,6 +1814,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Averio.Domain.Activities.Activity", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId", "ActivityId")
+                        .HasPrincipalKey("HouseholdId", "HouseholdMemberId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.SavedTransactionView", b =>
@@ -1841,6 +1961,13 @@ namespace Averio.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Averio.Domain.Households.Household", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.RecurringRule", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Labels");
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
