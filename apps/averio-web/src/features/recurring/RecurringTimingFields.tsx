@@ -17,7 +17,7 @@ export function RecurringTimingFields({ value, onChange, busy = false, anchorLoc
         <div className="grid gap-4 sm:grid-cols-2">
             <AverioField>{t('recurring.frequency')}
                 <AverioSelect aria-label={t('recurring.frequency')} value={value.frequency} disabled={busy || anchorLocked} onChange={e => onChange({ frequency: e.target.value })}>
-                    {['Weekly', 'Monthly', 'Yearly'].map(f => <option key={f} value={f}>{t('recurring.' + f)}</option>)}
+                    {['Daily', 'Weekly', 'Monthly', 'Yearly'].map(f => <option key={f} value={f}>{t('recurring.' + f)}</option>)}
                 </AverioSelect>
             </AverioField>
             {showStart && <AverioField>{t('recurring.starts')}

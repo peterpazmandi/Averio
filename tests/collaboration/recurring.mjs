@@ -26,7 +26,8 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     await editor().getByLabel('Description', { exact: true }).nth(1).fill('Equipment rental');
     await editor().getByLabel(/^Amount/).nth(1).fill('2');
     await editor().getByLabel('Recurring transaction', { exact: true }).check();
-    await editor().getByLabel('Name', { exact: true }).fill('Monthly broadband');
+    await editor().getByLabel('Name', { exact: true }).fill('Daily broadband');
+    await editor().getByLabel('Frequency', { exact: true }).selectOption('Daily');
     await editor().getByLabel('First date', { exact: true }).fill(f.date);
     assert.equal(await editor().getByLabel('Record automatically', { exact: true }).isChecked(), false);
     // Switching mode retains the draft instead of discarding fields.
@@ -39,6 +40,7 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     assert.equal(rules.length, 1);
     const initial = rules[0];
     assert.equal(initial.automatic, false);
+    assert.equal(initial.frequency, 'Daily');
     assert.equal(initial.amount, '12.3456');
     assert.equal(initial.items.length, 2);
     assert.equal(initial.merchant, 'Browser provider');
@@ -54,6 +56,8 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     await review.waitFor({ state: 'hidden' });
     const receipt = await ok(page, prefix + '/' + initial.id + '/occurrences');
     assert.equal(receipt.length, 1);
+    const tomorrow = new Date(f.date + 'T12:00:00Z'); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    assert.equal((await ok(page, prefix))[0].nextDueOn, tomorrow.toISOString().slice(0, 10));
     const retry = await ok(page, prefix + '/' + initial.id + '/occurrences', { method: 'POST',
         body: { expectedVersion: initial.version, dueOn: initial.nextDueOn, skip: false, itemAmounts: ['15.1234', '2'] } });
     assert.equal(retry.transactionId, receipt[0].transactionId);

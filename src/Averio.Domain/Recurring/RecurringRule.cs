@@ -1,7 +1,7 @@
 using Averio.Domain.Transactions;
 namespace Averio.Domain.Recurring;
 
-public enum RecurringFrequency { Weekly, Monthly, Yearly }
+public enum RecurringFrequency { Weekly, Monthly, Yearly, Daily }
 
 public sealed class RecurringRule
 {
@@ -98,6 +98,7 @@ public sealed class RecurringRule
     {
         if (index < 0 || !Enum.IsDefined(frequency)) throw new ArgumentOutOfRangeException(nameof(index));
         try { return frequency switch {
+            RecurringFrequency.Daily => anchor.AddDays(index),
             RecurringFrequency.Weekly => anchor.AddDays(checked(index * 7)),
             RecurringFrequency.Monthly => anchor.AddMonths(index),
             RecurringFrequency.Yearly => anchor.AddYears(index),

@@ -4,6 +4,15 @@ internal static class RecurringChecks
 {
     public static void Calendar()
     {
+        Check(RecurringRule.DueDate(new(2028, 2, 28), RecurringFrequency.Daily, 1) == new DateOnly(2028, 2, 29));
+        Check(RecurringRule.DueDate(new(2028, 2, 28), RecurringFrequency.Daily, 2) == new DateOnly(2028, 3, 1));
+        Check(RecurringRule.DueDate(new(2026, 12, 31), RecurringFrequency.Daily, 1) == new DateOnly(2027, 1, 1));
+        Check(RecurringRule.DueDate(DateOnly.MaxValue, RecurringFrequency.Daily, 1) is null);
+        var daily = RecurringRule.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Daily", 1m,
+            TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Daily,
+            new(2028, 2, 28), new(2028, 2, 29), false, DateTimeOffset.UtcNow);
+        daily.Advance(DateTimeOffset.UtcNow); Check(daily.NextDueOn == new DateOnly(2028, 2, 29));
+        daily.Advance(DateTimeOffset.UtcNow); Check(daily.NextDueOn is null);
         Check(RecurringRule.DueDate(new(2028, 1, 31), RecurringFrequency.Monthly, 1) == new DateOnly(2028, 2, 29));
         Check(RecurringRule.DueDate(new(2028, 1, 31), RecurringFrequency.Monthly, 2) == new DateOnly(2028, 3, 31));
         Check(RecurringRule.DueDate(new(2028, 2, 29), RecurringFrequency.Yearly, 1) == new DateOnly(2029, 2, 28));

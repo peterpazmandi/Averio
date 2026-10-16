@@ -18,7 +18,7 @@ public sealed class RecurringRuleConfiguration : IEntityTypeConfiguration<Recurr
             t.HasCheckConstraint("ck_recurring_amount", "amount > 0");
             t.HasCheckConstraint("ck_recurring_kind", "kind IN ('Income', 'Expense')");
             t.HasCheckConstraint("ck_recurring_visibility", "visibility IN ('Household', 'Private')");
-            t.HasCheckConstraint("ck_recurring_frequency", "frequency IN ('Weekly', 'Monthly', 'Yearly')");
+            t.HasCheckConstraint("ck_recurring_frequency", "frequency IN ('Daily', 'Weekly', 'Monthly', 'Yearly')");
             t.HasCheckConstraint("ck_recurring_dates", "(ends_on IS NULL OR ends_on >= starts_on) AND occurrence_index >= 0 AND (next_due_on IS NULL OR next_due_on >= starts_on)");
         });
         b.Property(x => x.Merchant).HasColumnName("merchant").HasMaxLength(160);
