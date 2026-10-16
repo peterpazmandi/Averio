@@ -416,7 +416,7 @@ export function TransactionEditor({
             </AverioCard>
             <AverioCard className="grid gap-4">
                 <div><h3 className="font-bold">{t('transactionManagement.detailsPrivacy')}</h3><p className="mt-1 text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p></div>
-                <AverioField>{t('transactionManagement.note')}<AverioTextarea value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
+                <AverioField>{t('transactionManagement.note')}<AverioTextarea aria-label={t('transactionManagement.note')} value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
                 <AverioField>{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
                     disabled={busy || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
                     <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
