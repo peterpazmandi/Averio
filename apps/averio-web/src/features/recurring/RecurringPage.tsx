@@ -51,6 +51,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
         <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold">{t('recurring.title')}</h2><p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{t('recurring.intro')}</p></div>
             <AverioButton variant="primary" disabled={!canCreate} onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton></div>
         {notice && <p role="status">{notice}</p>}
+        {mutation.isError && <p role="alert">{mutation.error.message}</p>}
         <div className="flex flex-wrap items-end gap-3"><AverioField>{t('recurring.status')}<AverioSelect aria-label={t('recurring.status')} value={status} onChange={e => setStatus(e.target.value)}>
             {['all', 'active', 'paused', 'stopped', 'completed', 'blocked'].map(value => <option key={value} value={value}>{t('recurring.' + value)}</option>)}</AverioSelect></AverioField>
             <AverioButton disabled={list.isFetching} onClick={() => { void refresh(); }}>{t('recurring.refresh')}</AverioButton></div>
@@ -66,6 +67,14 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
         <div className="grid min-w-0 gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {rows.map(rule => { const due = !!rule.nextDueOn && rule.nextDueOn <= today && !rule.isPaused && !rule.isStopped;
             const state = scheduleStatus(rule);
+            const accountVisible = (accounts.data ?? []).some(a => a.id === rule.accountId);
+            const suspend = async (stop: boolean) => {
+                if (stop && !window.confirm(t('recurring.stopConfirm'))) return;
+                try {
+                    await mutation.mutateAsync({ rule, request: { ...rule, expectedVersion: rule.version, isPaused: !stop, isStopped: stop } });
+                    setNotice(t('recurring.saved'));
+                } catch { /* The mutation error is displayed above the cards. */ }
+            };
             return <AverioCard key={rule.id} role="article" aria-label={rule.name} className="flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                     <h3 className="min-w-0 break-words text-lg font-bold">{rule.name}</h3>
@@ -73,12 +82,12 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
                         <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />{t('recurring.' + state)}
                     </span>
                 </div>
-                <p className="mt-3 text-sm break-words">{accounts.data?.find(a => a.id === rule.accountId)?.name} · {t('recurring.' + rule.frequency)}</p>
-                <div className="my-4 border-y border-slate-200 py-4 dark:border-slate-700">
+                <p className="mt-3 text-sm break-words">{accounts.data?.find(a => a.id === rule.accountId)?.name ?? t('recurring.unavailable')} · {t('recurring.' + rule.frequency)}</p>
+                {accountVisible && <div className="my-4 border-y border-slate-200 py-4 dark:border-slate-700">
                     <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">{t('recurring.amount')}</p>
                     <p className={rule.kind === 'Income' ? 'break-words text-2xl font-bold text-emerald-700 dark:text-emerald-400' : 'break-words text-2xl font-bold text-red-700 dark:text-red-400'}>{rule.kind === 'Income' ? '+' : '−'}{formatDecimalAmount(rule.amount, rule.currency, i18n.language)}</p>
                     {rule.nextDueOn && !rule.isStopped && <p className="mt-2 text-sm">{t(rule.isPaused ? 'recurring.pendingDate' : due ? 'recurring.due' : 'recurring.next')} · {date(rule.nextDueOn)}</p>}
-                </div>
+                </div>}
                 <dl className="grid gap-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.recordingMode')}</dt><dd className="font-semibold">{t(rule.automatic ? 'recurring.auto' : 'recurring.manual')}</dd></div>
                     <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.visibility')}</dt><dd className="font-semibold">{t('recurring.' + rule.visibility)}</dd></div>
@@ -86,10 +95,14 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
                 {state === 'blocked' && <p role="status" className="mt-3 text-sm">{t('recurring.blockedHelp')}</p>}
                 {!rule.canRecord && !rule.isStopped && <p className="mt-3 text-sm">{t('recurring.unavailable')}</p>}
                 <div className="mt-auto pt-4"><div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
-                    {due && <><AverioButton variant="primary" disabled={!rule.canRecord} onClick={() => setReview({ rule, skip: false })}>{t('recurring.review')}</AverioButton>
+                    {due && accountVisible && <><AverioButton variant="primary" disabled={!rule.canRecord} onClick={() => setReview({ rule, skip: false })}>{t('recurring.review')}</AverioButton>
                         <AverioButton disabled={!rule.canRecord} onClick={() => setReview({ rule, skip: true })}>{t('recurring.skip')}</AverioButton></>}
-                    {!rule.isStopped && <AverioButton onClick={() => setEditor(rule)}>{t('recurring.edit')}</AverioButton>}
-                    <AverioButton onClick={() => setHistory(rule)}>{t('recurring.history')}</AverioButton>
+                    {accountVisible && !rule.isStopped && <AverioButton onClick={() => setEditor(rule)}>{t('recurring.edit')}</AverioButton>}
+                    {accountVisible && <AverioButton onClick={() => setHistory(rule)}>{t('recurring.history')}</AverioButton>}
+                    {!accountVisible && accounts.isSuccess && !rule.isStopped && <>
+                        <AverioButton disabled={mutation.isPending || rule.isPaused} onClick={() => void suspend(false)}>{t('recurring.pause')}</AverioButton>
+                        <AverioButton variant="danger" disabled={mutation.isPending} onClick={() => void suspend(true)}>{t('recurring.stop')}</AverioButton>
+                    </>}
                 </div></div></AverioCard>; })}
         </div>
         {editor && <RecurringEditor userId={userId} householdId={householdId} rule={editor === 'new' ? null : editor}

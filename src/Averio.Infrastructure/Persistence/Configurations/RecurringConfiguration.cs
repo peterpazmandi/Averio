@@ -71,6 +71,7 @@ public sealed class RecurringOccurrenceConfiguration : IEntityTypeConfiguration<
         b.Property(x => x.DueOn).HasColumnName("due_on");
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
         b.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);
+        b.Property(x => x.ItemAmountsSnapshot).HasColumnName("item_amounts_snapshot").HasMaxLength(2200);
         b.Property(x => x.ProcessedAt).HasColumnName("processed_at");
         b.HasOne<RecurringRule>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.RuleId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);

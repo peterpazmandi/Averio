@@ -36,8 +36,9 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         var member = await Member(householdId, UserId, ct);
         var visible = await accounts.GetVisibleAsync(householdId, member.Id, true, ct);
         return (await rules.ListAsync(householdId, member.Id, ct))
-            .Where(r => visible.Any(a => a.Id == r.AccountId))
-            .Select(r => { var a = visible.Single(a => a.Id == r.AccountId);
+            .Select(r => { var a = visible.SingleOrDefault(a => a.Id == r.AccountId);
+                // The template belongs to its creator; never read hidden account details.
+                if (a is null) return new RecurringResult(r, string.Empty, false);
                 return new RecurringResult(r, a.Currency.Value, a.Status == AccountStatus.Active && TransactionAccess.CanModify(a, member)
                     && TransactionAccess.IsVisibilityAllowed(a, r.Visibility)); }).ToArray();
     }
@@ -62,9 +63,13 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
             || input.CategoryId != items[0].CategoryId)) throw Invalid();
         await ValidateAsync(householdId, member, input, items, labels, rule, active, ct);
         var drafts = items.Select(i => new RecurringItemDraft(i.Description, i.CategoryId, i.Amount)).ToArray();
+        var nextDue = RecurringRule.DueDate(input.StartsOn, input.Frequency, rule?.OccurrenceIndex ?? 0);
+        var willBeUnfinished = !input.IsStopped && nextDue is not null && (input.EndsOn is null || nextDue <= input.EndsOn);
+        if (willBeUnfinished && (rule is null || rule.NextDueOn is null)
+            && (await rules.ListAsync(householdId, member.Id, ct)).Count(x => !x.IsStopped && x.NextDueOn is not null) >= 100)
+            throw Invalid();
         if (rule is null)
         {
-            if ((await rules.ListAsync(householdId, member.Id, ct)).Count(x => !x.IsStopped) >= 100) throw Invalid();
             rule = RecurringRule.Create(householdId, member.Id, input.AccountId, input.CategoryId, input.Name, input.Amount,
                 input.Kind, input.Visibility, input.Frequency, input.StartsOn, input.EndsOn, input.Automatic, clock.GetUtcNow());
             rule.SetTemplate(drafts, labels, input.Merchant, input.Note, input.ActivityId);
@@ -123,6 +128,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         if (previous is not null)
         {
             if (skip != (previous.TransactionId is null) || (!skip && amount is decimal actual && actual != previous.Amount)) throw Changed();
+            if (!skip && itemAmounts is not null && !previous.MatchesItemAmounts(itemAmounts)) throw Changed();
             return previous.TransactionId;
         }
         if (rule.Version != expected) throw Changed();
@@ -160,7 +166,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
                 rule.AccountId, rule.Kind, rule.Visibility, rule.Merchant, rule.Note, dueOn,
                 items, rule.Labels.Select(l => l.LabelId).ToArray(),
                 rule.ActivityId is Guid activityId ? new Averio.Application.Activities.ActivityAssignmentInput(activityId, Guid.Empty) : null), userId, ct);
-        rules.Add(RecurringOccurrence.Create(rule, dueOn, transactionId, skip ? null : amount ?? rule.Amount, clock.GetUtcNow()));
+        rules.Add(RecurringOccurrence.Create(rule, dueOn, transactionId, skip ? null : amount ?? rule.Amount, clock.GetUtcNow(), skip ? null : items.Select(i => i.Amount).ToArray()));
         rule.Advance(clock.GetUtcNow()); await uow.SaveChangesAsync(ct);
         return transactionId;
     }

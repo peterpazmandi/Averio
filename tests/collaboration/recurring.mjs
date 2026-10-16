@@ -119,6 +119,25 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     assert.equal(repaired.visibility, 'Private');
     assert.equal(repaired.isPaused, false);
     assert.equal(repaired.canRecord, true);
+    // Losing visibility must leave only owner lifecycle controls, with no account/history access.
+    const ownerOptions = await ok(page, '/households/' + f.householdId + '/account-owner-options');
+    const other = ownerOptions.members.find(m => m.householdMemberId !== ownerOptions.currentMemberId);
+    assert(other);
+    const privateAccount = await ok(page, '/households/' + f.householdId + '/accounts/' + f.personalAccountId);
+    await ok(page, '/households/' + f.householdId + '/accounts/' + privateAccount.id, { method: 'PUT', body: {
+        name: privateAccount.name, type: privateAccount.type, ownerHouseholdMemberIds: [other.householdMemberId],
+        visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: privateAccount.updatedAt,
+    } });
+    await page.reload();
+    await recoveryCard().getByRole('button', { name: 'Pause schedule', exact: true }).click();
+    await poll(async () => (await ok(page, prefix)).find(r => r.id === recovery.id).isPaused, 'unavailable schedule pause');
+    assert.equal(await recoveryCard().getByRole('button', { name: 'Edit schedule', exact: true }).count(), 0);
+    assert.equal(await recoveryCard().getByRole('button', { name: 'Recent occurrences', exact: true }).count(), 0);
+    const unavailable = (await ok(page, prefix)).find(r => r.id === recovery.id);
+    assert.equal(unavailable.currency, ''); assert.equal(unavailable.canRecord, false);
+    page.once('dialog', d => d.accept());
+    await recoveryCard().getByRole('button', { name: 'Stop permanently', exact: true }).click();
+    await poll(async () => (await ok(page, prefix)).find(r => r.id === recovery.id).isStopped, 'unavailable schedule stop');
     const copy = localeFile('recurring');
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
         const labels = copy['recurring' + language.toUpperCase()];

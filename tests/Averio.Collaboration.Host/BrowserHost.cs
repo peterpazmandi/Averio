@@ -111,9 +111,9 @@ internal static class BrowserHost
         household.CompleteFinancialSetup(now);
         var member = household.Members.Single().Id;
         string? peerEmail = null;
-        if (email == "views@collaboration.test")
+        if (email is "views@collaboration.test" or "recurring@collaboration.test")
         {
-            peerEmail = "views-peer@collaboration.test";
+            peerEmail = email.Replace("@", "-peer@");
             var peer = await identity.CreateUserAsync(peerEmail, "Browser-test-password-123!", "en-US", default);
             var peerId = peer.UserId!.Value;
             var peerToken = await identity.GenerateEmailVerificationTokenAsync(peerId, default);

@@ -76,6 +76,7 @@ internal static class RecurringVerification
         await Call(h => h.SaveAsync(f.HouseholdId, pausedId, paused.Version, input with { Automatic = true, IsPaused = true }, Ct));
         Check(!await Call(h => h.AutomaticAsync(new(pausedId, f.HouseholdId, f.OwnerUserId, paused.Version), Ct)), "Stale worker ignored pause");
         await Templates();
+        await Quota();
         // References are checked again at execution, after a schedule was accepted.
         Guid categoryId;
         await using (var scope = provider.CreateAsyncScope())
@@ -153,10 +154,12 @@ internal static class RecurringVerification
                 Check(tx.Labels.Single().LabelId == f.HouseholdLabelId, "Labels not repeated");
                 Check(await db.Set<Averio.Domain.Activities.ActivityAssignment>().AnyAsync(x => x.TransactionId == txId && x.ActivityId == activityId && x.HouseholdMemberId == f.OwnerMemberId), "Creator's activity not assigned");
             }
+            await Throws<ConflictException>(() => Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, null, Ct, [14.1234m, 3m])));
             r = await Read(rid);
             await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, template with { Note = "Changed for future", Automatic = true }, Ct));
             r = await Read(rid);
             Check(r.Items.Count == 2 && r.Labels.Single().LabelId == f.HouseholdLabelId, "Editing lost items or retained label");
+            Check(await Call(h => h.ResolveAsync(f.HouseholdId, rid, r.Version, day, false, null, Ct, [15.12340m, 2m])) == txId, "Template edit broke item retry");
             await using (var scope = provider.CreateAsyncScope())
                 Check((await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Transactions.SingleAsync(x => x.Id == txId)).Note == "Template note", "Schedule edit rewrote posted history");
             var autoId = await Call(h => h.SaveAsync(f.HouseholdId, null, null, template with { Automatic = true }, Ct));
@@ -173,6 +176,54 @@ internal static class RecurringVerification
             await Throws<ConflictException>(() => Call(h => h.AutomaticAsync(new(closedId, f.HouseholdId, f.OwnerUserId, closed.Version), Ct)));
             Check((await Call(h => h.HistoryAsync(f.HouseholdId, closedId, Ct))).Count == 0, "Closed activity failure consumed occurrence");
             await Call(h => h.SaveAsync(f.HouseholdId, closedId, closed.Version, template with { IsPaused = true }, Ct));
+        }
+
+
+        async Task Quota()
+        {
+            // Seed completed history without disturbing the other verification schedules.
+            var added = new List<Guid>();
+            Guid completedId;
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                for (var i = 0; i < 100; i++)
+                {
+                    var r = RecurringRule.Create(f.HouseholdId, f.OwnerMemberId, accountId, TestIds.Groceries, "Completed", 1m,
+                        TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Daily, day, day, false, clock.GetUtcNow());
+                    r.Advance(clock.GetUtcNow()); db.Add(r); added.Add(r.Id);
+                }
+                await db.SaveChangesAsync(); completedId = added[0];
+            }
+            var created = await Call(h => h.SaveAsync(f.HouseholdId, null, null, input, Ct)); added.Add(created);
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var count = await db.Set<RecurringRule>().CountAsync(x => x.HouseholdMemberId == f.OwnerMemberId && !x.IsStopped && x.NextDueOn != null);
+                for (var i = count; i < 100; i++)
+                {
+                    var r = RecurringRule.Create(f.HouseholdId, f.OwnerMemberId, accountId, TestIds.Groceries, "Paused quota", 1m,
+                        TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Daily, day, null, false, clock.GetUtcNow());
+                    r.Update(r.CategoryId, r.Name, r.Amount, r.Visibility, null, false, true, false, clock.GetUtcNow());
+                    db.Add(r); added.Add(r.Id);
+                }
+                await db.SaveChangesAsync();
+            }
+            await Throws<BusinessRuleException>(() => Call(h => h.SaveAsync(f.HouseholdId, null, null, input, Ct)));
+            var completed = await Read(completedId);
+            await Throws<BusinessRuleException>(() => Call(h => h.SaveAsync(f.HouseholdId, completedId, completed.Version,
+                input with { Name = completed.Name, Amount = completed.Amount, Frequency = RecurringFrequency.Daily, EndsOn = null }, Ct)));
+            var open = await Read(created);
+            await Call(h => h.SaveAsync(f.HouseholdId, created, open.Version, input with { IsStopped = true }, Ct));
+            await Call(h => h.SaveAsync(f.HouseholdId, completedId, completed.Version,
+                input with { Name = completed.Name, Amount = completed.Amount, Frequency = RecurringFrequency.Daily, EndsOn = null }, Ct));
+            Check((await Read(completedId)).NextDueOn == day.AddDays(1), "Completed schedule did not reopen after freeing quota");
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                db.RemoveRange(await db.Set<RecurringRule>().Where(x => added.Contains(x.Id)).ToListAsync());
+                await db.SaveChangesAsync();
+            }
         }
 
         async Task Recovery()
@@ -205,11 +256,14 @@ internal static class RecurringVerification
             {
                 var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
                 var a = await db.Accounts.Include(x => x.Owners).SingleAsync(x => x.Id == personal);
-                a.Update(a.Name, a.Type, [f.MemberId], AccountVisibility.Household, true, clock.GetUtcNow());
+                a.Update(a.Name, a.Type, [f.MemberId], AccountVisibility.Private, false, clock.GetUtcNow());
                 await db.SaveChangesAsync();
             }
+            var unavailable = (await Call(h => h.ListAsync(f.HouseholdId, Ct))).Single(x => x.Rule.Id == rid);
+            Check(!unavailable.CanRecord && unavailable.Currency == string.Empty, "Unavailable owned schedule leaked account details or disappeared");
+            await Throws<NotFoundException>(() => Call(h => h.HistoryAsync(f.HouseholdId, rid, Ct)));
             var privateInput = original with { Visibility = TransactionVisibility.Private };
-            await Throws<ForbiddenException>(() => Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput, Ct)));
+            await Throws<NotFoundException>(() => Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput, Ct)));
             await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput with { IsPaused = true }, Ct));
             r = await Read(rid);
             user.UserId = f.MemberUserId;

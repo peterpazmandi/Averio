@@ -789,6 +789,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
 
+                    b.Property<string>("ItemAmountsSnapshot")
+                        .HasMaxLength(2200)
+                        .HasColumnType("character varying(2200)")
+                        .HasColumnName("item_amounts_snapshot");
+
                     b.Property<DateTimeOffset>("ProcessedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_at");
