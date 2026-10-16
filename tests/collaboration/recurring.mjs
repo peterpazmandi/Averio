@@ -103,7 +103,7 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
         visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: account.updatedAt,
     } });
     await page.reload();
-    const recoveryCard = () => page.getByRole('heading', { name: 'Privacy recovery', exact: true }).locator('..').locator('..').locator('..');
+    const recoveryCard = () => page.getByRole('article', { name: 'Privacy recovery', exact: true });
     await recoveryCard().getByRole('button', { name: 'Edit schedule', exact: true }).click();
     assert.equal(await editor().getByLabel('Visibility', { exact: true }).isEnabled(), true);
     await editor().getByLabel('Pause schedule', { exact: true }).check();

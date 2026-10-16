@@ -14,6 +14,18 @@ import { accountsQueries } from '../accounts/api/accountsQueries';
 import { recurringApi, recurringQueries } from './recurringQueries';
 import { RecurringEditor } from './RecurringEditor';
 
+
+function scheduleStatus(rule: RecurringRuleResponse) {
+    return rule.isStopped ? 'stopped' : !rule.nextDueOn ? 'completed' : rule.isPaused ? 'paused' : rule.isBlocked ? 'blocked' : 'active';
+}
+const statusStyles = {
+    active: 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    paused: 'border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-300',
+    stopped: 'border-red-500 bg-red-500/10 text-red-700 dark:text-red-400',
+    completed: 'border-slate-400 bg-slate-400/10 text-slate-600 dark:text-slate-300',
+    blocked: 'border-orange-500 bg-orange-500/10 text-orange-800 dark:text-orange-300',
+};
+
 export function RecurringPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const client = useQueryClient();
@@ -33,14 +45,14 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
         else await recurringApi.apiV1HouseholdsHouseholdIdRecurringPost({ householdId, saveRecurringRuleRequest: request });
     }, onSuccess: refresh });
     const today = new Date().toISOString().slice(0, 10);
-    const rows = (list.data ?? []).filter(r => status === 'all' || (status === 'active' ? !r.isPaused && !r.isStopped && !!r.nextDueOn : r.isPaused));
+    const rows = (list.data ?? []).filter(r => status === 'all' || scheduleStatus(r) === status);
     const date = (value: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     return <section className="grid min-w-0 gap-5">
         <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold">{t('recurring.title')}</h2><p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{t('recurring.intro')}</p></div>
             <AverioButton variant="primary" disabled={!canCreate} onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton></div>
         {notice && <p role="status">{notice}</p>}
-        <div className="flex flex-wrap items-end gap-3"><AverioField>{t('recurring.status')}<AverioSelect value={status} onChange={e => setStatus(e.target.value)}>
-            <option value="all">{t('recurring.all')}</option><option value="active">{t('recurring.active')}</option><option value="paused">{t('recurring.paused')}</option></AverioSelect></AverioField>
+        <div className="flex flex-wrap items-end gap-3"><AverioField>{t('recurring.status')}<AverioSelect aria-label={t('recurring.status')} value={status} onChange={e => setStatus(e.target.value)}>
+            {['all', 'active', 'paused', 'stopped', 'completed', 'blocked'].map(value => <option key={value} value={value}>{t('recurring.' + value)}</option>)}</AverioSelect></AverioField>
             <AverioButton disabled={list.isFetching} onClick={() => { void refresh(); }}>{t('recurring.refresh')}</AverioButton></div>
         {(list.isPending || accounts.isPending || owners.isPending) && <p role="status">{t('recurring.loading')}</p>}
         {(list.isError || accounts.isError || owners.isError) && <div role="alert">{t('recurring.error')} <AverioButton onClick={() => { void refresh(); }}>{t('recurring.retry')}</AverioButton></div>}
@@ -51,19 +63,35 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
             {status !== 'all' ? <AverioButton onClick={() => setStatus('all')}>{t('recurring.reset')}</AverioButton> : canCreate ? <AverioButton variant="primary" onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton> :
                 <Link to="/app/accounts/new" className="font-semibold text-emerald-700 underline dark:text-emerald-300">{t('recurring.createAccount')}</Link>}
         </AverioCard>}
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {rows.map(rule => { const due = !!rule.nextDueOn && rule.nextDueOn <= today && !rule.isPaused && !rule.isStopped;
-            return <AverioCard key={rule.id}><div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0"><h3 className="break-words text-lg font-bold">{rule.name}</h3><p className="mt-1 text-sm">{accounts.data?.find(a => a.id === rule.accountId)?.name} · {t('recurring.' + rule.frequency)} · {t('recurring.' + rule.visibility)}</p>
-                    <span className="mt-2 inline-block rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold">{t('recurring.' + (rule.isStopped ? 'stopped' : rule.isPaused ? 'paused' : rule.isBlocked ? 'blocked' : !rule.nextDueOn ? 'completed' : rule.automatic ? 'auto' : 'manual'))}</span></div>
-                <div className="min-w-0 text-right"><p className={rule.kind === 'Income' ? 'break-words text-xl font-bold text-emerald-700 dark:text-emerald-400' : 'break-words text-xl font-bold text-red-700 dark:text-red-400'}>{rule.kind === 'Income' ? '+' : '−'}{formatDecimalAmount(rule.amount, rule.currency, i18n.language)}</p>
-                    {rule.nextDueOn && <p className="mt-1 text-sm">{t(due ? 'recurring.due' : 'recurring.next')} · {date(rule.nextDueOn)}</p>}</div>
-            </div>{rule.isBlocked && <p role="status" className="mt-3 text-sm">{t('recurring.blockedHelp')}</p>}{!rule.canRecord && <p className="mt-3 text-sm">{t('recurring.unavailable')}</p>}
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+            const state = scheduleStatus(rule);
+            return <AverioCard key={rule.id} role="article" aria-label={rule.name} className="flex h-full flex-col">
+                <div className="flex items-start justify-between gap-3">
+                    <h3 className="min-w-0 break-words text-lg font-bold">{rule.name}</h3>
+                    <span className={'inline-flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ' + statusStyles[state]}>
+                        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />{t('recurring.' + state)}
+                    </span>
+                </div>
+                <p className="mt-3 text-sm break-words">{accounts.data?.find(a => a.id === rule.accountId)?.name} · {t('recurring.' + rule.frequency)}</p>
+                <div className="my-4 border-y border-slate-200 py-4 dark:border-slate-700">
+                    <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">{t('recurring.amount')}</p>
+                    <p className={rule.kind === 'Income' ? 'break-words text-2xl font-bold text-emerald-700 dark:text-emerald-400' : 'break-words text-2xl font-bold text-red-700 dark:text-red-400'}>{rule.kind === 'Income' ? '+' : '−'}{formatDecimalAmount(rule.amount, rule.currency, i18n.language)}</p>
+                    {rule.nextDueOn && !rule.isStopped && <p className="mt-2 text-sm">{t(rule.isPaused ? 'recurring.pendingDate' : due ? 'recurring.due' : 'recurring.next')} · {date(rule.nextDueOn)}</p>}
+                </div>
+                <dl className="grid gap-3 text-sm">
+                    <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.recordingMode')}</dt><dd className="font-semibold">{t(rule.automatic ? 'recurring.auto' : 'recurring.manual')}</dd></div>
+                    <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.visibility')}</dt><dd className="font-semibold">{t('recurring.' + rule.visibility)}</dd></div>
+                </dl>
+                {state === 'blocked' && <p role="status" className="mt-3 text-sm">{t('recurring.blockedHelp')}</p>}
+                {!rule.canRecord && !rule.isStopped && <p className="mt-3 text-sm">{t('recurring.unavailable')}</p>}
+                <div className="mt-auto pt-4"><div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
                     {due && <><AverioButton variant="primary" disabled={!rule.canRecord} onClick={() => setReview({ rule, skip: false })}>{t('recurring.review')}</AverioButton>
                         <AverioButton disabled={!rule.canRecord} onClick={() => setReview({ rule, skip: true })}>{t('recurring.skip')}</AverioButton></>}
                     {!rule.isStopped && <AverioButton onClick={() => setEditor(rule)}>{t('recurring.edit')}</AverioButton>}
                     <AverioButton onClick={() => setHistory(rule)}>{t('recurring.history')}</AverioButton>
-                </div></AverioCard>; })}
+                </div></div></AverioCard>; })}
+        </div>
         {editor && <RecurringEditor userId={userId} householdId={householdId} rule={editor === 'new' ? null : editor}
             onClose={() => setEditor(null)}
             onSave={async request => { await mutation.mutateAsync({ rule: editor === 'new' ? null : editor, request }); setEditor(null); setNotice(t('recurring.saved')); }} />}
