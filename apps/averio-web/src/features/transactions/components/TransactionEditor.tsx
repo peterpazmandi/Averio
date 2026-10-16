@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { createLabel } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
@@ -392,18 +393,18 @@ export function TransactionEditor({
                     <div><h3 className="font-bold">{t('transactionManagement.items')}</h3><p className="mt-1 text-xs">{t('transactionManagement.itemsHelp')}</p></div>
                     <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
                 </div>
-                {resolvedItems.map((item, index) => <div key={item.key} className="grid gap-3 border-b border-slate-200 pb-4 dark:border-slate-700 sm:grid-cols-2">
-                    <AverioField>{t('transactionManagement.itemDescription')}<AverioInput required value={item.description} maxLength={160} disabled={busy}
+                {resolvedItems.map((item, index) => <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-4 dark:border-slate-700 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
+                    <AverioField className="col-span-2 sm:col-span-1">{t('transactionManagement.itemDescription')}<AverioInput required value={item.description} maxLength={160} disabled={busy}
                         onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} /></AverioField>
-                    <div><span className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.category')}</span>
+                    <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.category')}</span>
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
                     </div>
                     <AverioField>{t('transactionManagement.amount')} · {currency}<AverioInput required inputMode="decimal" value={item.amount} disabled={busy}
                         onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" /></AverioField>
-                    <div className="flex items-end justify-end"><AverioButton disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
-                        aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}>{t('transactionManagement.removeItem')}</AverioButton></div>
+                    <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
+                        aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
                 </div>)}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
