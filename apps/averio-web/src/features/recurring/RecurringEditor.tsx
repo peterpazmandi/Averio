@@ -52,8 +52,8 @@ export function RecurringEditor({ userId, householdId, rule, accounts, onSave, o
                     {categories.isPending ? <p role="status">{t('recurring.loading')}</p> : categories.isError ? <AverioButton onClick={() => { void categories.refetch(); }}>{t('recurring.retry')}</AverioButton> :
                     <AverioCategorySelect label={t('recurring.category')} categories={(categories.data ?? []).filter(c => !c.isArchived)} contextCategories={categories.data ?? []}
                         value={draft.categoryId} onChange={id => change('categoryId', id)} disabled={busy} />}</div>
-                <AverioField>{t('recurring.visibility')}<AverioSelect aria-label={t('recurring.visibility')} value={draft.visibility} disabled={busy || account?.scope === 'Household' || account?.visibility === 'Private'} onChange={e => change('visibility', e.target.value)}>
-                    <option value="Household">{t('recurring.Household')}</option><option value="Private">{t('recurring.Private')}</option></AverioSelect></AverioField>
+                <AverioField>{t('recurring.visibility')}<AverioSelect aria-label={t('recurring.visibility')} value={draft.visibility} disabled={busy || (account?.scope === 'Household' && draft.visibility === 'Household') || (account?.visibility === 'Private' && draft.visibility === 'Private')} onChange={e => change('visibility', e.target.value)}>
+                    <option value="Household" disabled={account?.visibility === 'Private'}>{t('recurring.Household')}</option><option value="Private" disabled={account?.scope === 'Household'}>{t('recurring.Private')}</option></AverioSelect></AverioField>
             </div></AverioCard>
             <AverioCard><h3 className="mb-4 font-bold">{t('recurring.timing')}</h3><div className="grid gap-4 sm:grid-cols-2">
                 <AverioField>{t('recurring.frequency')}<AverioSelect aria-label={t('recurring.frequency')} value={draft.frequency} disabled={busy || !!rule} onChange={e => change('frequency', e.target.value)}>

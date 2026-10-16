@@ -61,6 +61,30 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     assert.equal((await ok(page, prefix + '/' + second.id + '/occurrences'))[0].transactionId, null);
     const missingCsrf = await api(page, prefix, { method: 'POST', csrf: false, body: { ...initial, name: 'Rejected' } });
     assert.equal(missingCsrf.status, 400);
+    // Recover a schedule after its personal account switches from shared to private.
+    const recovery = await ok(page, prefix, { method: 'POST', body: { ...initial, accountId: f.personalAccountId, name: 'Privacy recovery' } });
+    const account = await ok(page, '/households/' + f.householdId + '/accounts/' + f.personalAccountId);
+    await ok(page, '/households/' + f.householdId + '/accounts/' + account.id, { method: 'PUT', body: {
+        name: account.name, type: account.type, ownerHouseholdMemberIds: account.owners.map(x => x.householdMemberId),
+        visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: account.updatedAt,
+    } });
+    await page.reload();
+    const recoveryCard = () => page.getByRole('heading', { name: 'Privacy recovery', exact: true }).locator('..').locator('..').locator('..');
+    await recoveryCard().getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    assert.equal(await editor().getByLabel('Visibility', { exact: true }).isEnabled(), true);
+    await editor().getByLabel('Pause schedule', { exact: true }).check();
+    await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await editor().waitFor({ state: 'hidden' });
+    assert.equal((await ok(page, prefix)).find(r => r.id === recovery.id).isPaused, true);
+    await recoveryCard().getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    await editor().getByLabel('Visibility', { exact: true }).selectOption('Private');
+    await editor().getByLabel('Pause schedule', { exact: true }).uncheck();
+    await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await editor().waitFor({ state: 'hidden' });
+    const repaired = (await ok(page, prefix)).find(r => r.id === recovery.id);
+    assert.equal(repaired.visibility, 'Private');
+    assert.equal(repaired.isPaused, false);
+    assert.equal(repaired.canRecord, true);
     const copy = localeFile('recurring');
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
         const labels = copy['recurring' + language.toUpperCase()];

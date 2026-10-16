@@ -20,3 +20,5 @@ A separate .NET Worker polls due automatic rules, using existing application ser
 Rules and occurrence receipts are retained. User requests carry the original rule version and due date, preventing stale edits or a double click from consuming the next occurrence. Manual confirmation and worker execution use the same ledger posting implementation. Account privacy, archived categories, closed/cutover accounts and changed membership are revalidated at execution.
 
 Basic recurring tracking has no billing gate. Automatic posting records transactions only; it never moves money at a bank. Durable notifications, inferred patterns, itemized templates and advanced scheduling are later scope.
+
+Recovery clarification: suspension is authorized by active membership and rule ownership, independently of account posting access. Reactivation validates all current posting prerequisites. Worker batches traverse due rules with a date/ID cursor and wrap, including after failed posts, so one failing batch cannot monopolize later polls. The cursor is process-local and safely resets on restart; ledger idempotency remains database-backed.

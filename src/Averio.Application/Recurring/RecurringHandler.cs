@@ -50,8 +50,9 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
             || (rule is null && (input.StartsOn < Today || input.IsStopped || input.IsPaused))) throw Invalid();
         if (rule is not null && (input.AccountId != rule.AccountId || input.Kind != rule.Kind
             || input.Frequency != rule.Frequency || input.StartsOn != rule.StartsOn)) throw Invalid();
-        // Stopping/pausing must remain possible when a category or account was archived.
-        await ValidateAsync(householdId, member, input, (!input.IsPaused && !input.IsStopped) || (rule is not null && input.CategoryId != rule.CategoryId), ct);
+        // Owners can suspend their own automation without permission to post to its account.
+        var active = !input.IsPaused && !input.IsStopped;
+        await ValidateAsync(householdId, member, input, active, active || (rule is not null && input.CategoryId != rule.CategoryId), ct);
         if (rule is null)
         {
             if ((await rules.ListAsync(householdId, member.Id, ct)).Count(x => !x.IsStopped) >= 100) throw Invalid();
@@ -63,20 +64,20 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
             input.Automatic, input.IsPaused, input.IsStopped, clock.GetUtcNow());
         await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct); return rule.Id;
     }
-    private async Task ValidateAsync(Guid householdId, HouseholdMember member, RecurringInput input, bool active, CancellationToken ct)
+    private async Task ValidateAsync(Guid householdId, HouseholdMember member, RecurringInput input, bool active, bool validateCategory, CancellationToken ct)
     {
-        var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, input.AccountId, ct)
-            ?? throw new NotFoundException("account", input.AccountId);
-        if (!TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
-        if (!Enum.IsDefined(input.Visibility) || !TransactionAccess.IsVisibilityAllowed(account, input.Visibility)) throw Invalid();
         var items = new[] { new TransactionItemInput(input.Name, input.CategoryId, input.Amount) };
         await validator.ValidateAndThrowAsync(new TransactionInput(input.AccountId, input.Kind, input.Visibility,
             null, null, input.StartsOn, items, []), ct);
         if (active)
         {
+            var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, input.AccountId, ct)
+                ?? throw new NotFoundException("account", input.AccountId);
+            if (!TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
+            if (!Enum.IsDefined(input.Visibility) || !TransactionAccess.IsVisibilityAllowed(account, input.Visibility)) throw Invalid();
             if (account.Status != AccountStatus.Active) throw new ConflictException("account_archived", "Error_AccountArchived");
-            await references.ResolveItemsAsync(householdId, input.Kind, items, ct);
         }
+        if (validateCategory) await references.ResolveItemsAsync(householdId, input.Kind, items, ct);
     }
     public async Task<IReadOnlyList<RecurringOccurrence>> HistoryAsync(Guid householdId, Guid id, CancellationToken ct)
     {

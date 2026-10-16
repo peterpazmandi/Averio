@@ -4,7 +4,7 @@ Recurring income and expenses use confirmation by default. Create a schedule fro
 
 Automatic recording is an explicit option for fixed amounts. It records ledger entries; it never makes bank payments. Pause retains missed dates. Resume catches up oldest first. Stop is permanent and retains existing transactions and receipts. Editing amount/category affects unprocessed occurrences only. To change account, type, cadence or first date, stop and replace the schedule.
 
-Dates use UTC. The original date anchors every occurrence, including January 31 and leap-day schedules. End dates are inclusive. New schedules cannot start before today. Rules are private to their creator; emitted transactions use normal account and transaction visibility. Household departure does not copy rules. Every execution rechecks membership, account access/status and category eligibility.
+Dates use UTC. The original date anchors every occurrence, including January 31 and leap-day schedules. End dates are inclusive. New schedules cannot start before today. Rules are private to their creator; emitted transactions use normal account and transaction visibility. Household departure does not copy rules. Every execution rechecks membership, account access/status and category eligibility. Active members can pause or stop their own schedules even after losing posting permission. Resuming always revalidates that permission. If account privacy changes, the editor allows the schedule visibility to be corrected explicitly.
 
 The first release supports one category per income/expense, 100 unfinished schedules per member, and the latest 24 visible occurrence receipts. Transfers, allocations, notifications and custom intervals are outside this slice.
 
@@ -26,7 +26,7 @@ Publish the worker with `dotnet publish apps/Averio.Worker -c Release -o artifac
 
 The worker checks at startup and approximately every minute, up to 100 candidate rules per pass and one due occurrence per rule. Larger backlogs drain over subsequent passes. Multiple worker instances and simultaneous manual confirmation are serialized by the existing household lock and receipt key. With the worker offline, automatic dates remain pending until it returns. No exact-time delivery guarantee is made.
 
-Expected validation/access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account/category, edit and save the schedule to clear the blocked state. Infrastructure failures are retried later. Monitor worker errors and process availability. All amounts stay in account currency; no conversion is introduced.
+Expected validation/access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account/category, edit and save the schedule to clear the blocked state. Infrastructure failures are retried on a later traversal. The worker keeps an in-memory cursor across batches, moves past failed rules and wraps after reaching the end; restarting resets the cursor. This prevents a permanently failing first batch from starving later schedules. Monitor worker errors and process availability. All amounts stay in account currency; no conversion is introduced.
 
 ## Verification
 

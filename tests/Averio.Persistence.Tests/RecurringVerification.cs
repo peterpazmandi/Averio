@@ -1,4 +1,8 @@
 using Averio.Application.Recurring;
+using Averio.Application.Transactions.CreateTransaction;
+using Averio.Application.Transactions.Common;
+using Averio.Worker;
+using Microsoft.Extensions.Logging.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.VoidTransaction;
 using Averio.Domain.Accounts;
@@ -108,7 +112,100 @@ internal static class RecurringVerification
         await Call(h => h.SaveAsync(f.HouseholdId, blockedId, blockedVersion, input with { IsStopped = true }, Ct));
         Check((await Read(blockedId)).IsStopped, "Cannot stop unavailable schedule");
         await Throws<BusinessRuleException>(() => Call(h => h.SaveAsync(f.HouseholdId, null, null, input with { StartsOn = day.AddDays(-1) }, Ct)));
+        await Recovery();
+        await Fairness();
         Console.WriteLine("PASS recurring persistence, privacy, exact money, idempotency, worker races, pause and archive handling");
+
+        async Task Recovery()
+        {
+            Guid personal;
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var a = Account.Create(f.HouseholdId, [f.OwnerMemberId, f.MemberId], "Recovery", AccountType.Checking,
+                    AccountScope.Personal, AccountVisibility.Household, true, CurrencyCode.Eur, 0, day, clock.GetUtcNow());
+                db.Accounts.Add(a); await db.SaveChangesAsync(); personal = a.Id;
+            }
+            var original = input with { AccountId = personal };
+            var rid = await Call(h => h.SaveAsync(f.HouseholdId, null, null, original, Ct));
+            var r = await Read(rid);
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var a = await db.Accounts.Include(x => x.Owners).SingleAsync(x => x.Id == personal);
+                a.Update(a.Name, a.Type, [f.OwnerMemberId, f.MemberId], AccountVisibility.Private, false, clock.GetUtcNow());
+                await db.SaveChangesAsync();
+            }
+            await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, original with { IsPaused = true }, Ct));
+            r = await Read(rid);
+            await Throws<BusinessRuleException>(() => Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, original, Ct)));
+            await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, original with { Visibility = TransactionVisibility.Private }, Ct));
+            r = await Read(rid);
+            Check(!r.IsPaused && r.Visibility == TransactionVisibility.Private, "Privacy recovery failed");
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var a = await db.Accounts.Include(x => x.Owners).SingleAsync(x => x.Id == personal);
+                a.Update(a.Name, a.Type, [f.MemberId], AccountVisibility.Household, true, clock.GetUtcNow());
+                await db.SaveChangesAsync();
+            }
+            var privateInput = original with { Visibility = TransactionVisibility.Private };
+            await Throws<ForbiddenException>(() => Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput, Ct)));
+            await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput with { IsPaused = true }, Ct));
+            r = await Read(rid);
+            user.UserId = f.MemberUserId;
+            await Throws<NotFoundException>(() => Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput with { IsStopped = true }, Ct)));
+            user.UserId = f.OwnerUserId;
+            await Call(h => h.SaveAsync(f.HouseholdId, rid, r.Version, privateInput with { IsStopped = true }, Ct));
+            Check((await Read(rid)).IsStopped, "Former holder cannot stop owned schedule");
+        }
+
+        async Task Fairness()
+        {
+            var due = day.AddDays(-3);
+            Guid poisonAccount, healthyAccount, healthyRule;
+            List<Guid> poisonRules = [];
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var a = Account.Create(f.HouseholdId, [f.OwnerMemberId], "Overflow queue", AccountType.Checking,
+                    AccountScope.Household, AccountVisibility.Household, true, CurrencyCode.Eur, 0, due, clock.GetUtcNow());
+                var b = Account.Create(f.HouseholdId, [f.OwnerMemberId], "Healthy queue", AccountType.Checking,
+                    AccountScope.Household, AccountVisibility.Household, true, CurrencyCode.Eur, 0, due, clock.GetUtcNow());
+                db.Accounts.AddRange(a,b); await db.SaveChangesAsync(); poisonAccount=a.Id; healthyAccount=b.Id;
+                for (var i=0;i<100;i++)
+                {
+                    var rule = RecurringRule.Create(f.HouseholdId, f.OwnerMemberId, a.Id, TestIds.Groceries, "Poison", 1,
+                        TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Monthly, due, due, true, clock.GetUtcNow());
+                    poisonRules.Add(rule.Id); db.Add(rule);
+                }
+                var healthy = RecurringRule.Create(f.HouseholdId, f.OwnerMemberId, b.Id, TestIds.Groceries, "Healthy", 1,
+                    TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Monthly, due.AddDays(1), due.AddDays(1), true, clock.GetUtcNow());
+                db.Add(healthy); healthyRule=healthy.Id; await db.SaveChangesAsync();
+            }
+            Guid overflow;
+            await using (var scope = provider.CreateAsyncScope())
+                overflow = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(new(
+                    f.HouseholdId, poisonAccount, TransactionKind.Expense, TransactionVisibility.Household, null, null, due,
+                    [new TransactionItemInput("Capacity", TestIds.Groceries, 999999999999999.9999m)], []), Ct);
+            var batch = new RecurringBatch(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<RecurringBatch>.Instance, clock);
+            await batch.RunAsync(Ct); // All 100 postings overflow the persisted numeric aggregate and roll back.
+            await using (var scope = provider.CreateAsyncScope())
+                Check(!await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Set<RecurringOccurrence>()
+                    .AnyAsync(x => poisonRules.Contains(x.RuleId) || x.RuleId == healthyRule), "Failed batch consumed dates");
+            await batch.RunAsync(Ct);
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db=scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                Check(await db.Set<RecurringOccurrence>().AnyAsync(x => x.RuleId == healthyRule), "Healthy 101st rule starved");
+                var tx = await db.Transactions.SingleAsync(x => x.Id == overflow);
+                await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>().HandleAsync(f.HouseholdId, overflow, tx.UpdatedAt, Ct);
+            }
+            await batch.RunAsync(Ct); // Wrap to the repaired earlier rules.
+            await using (var scope = provider.CreateAsyncScope())
+                Check(await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Set<RecurringOccurrence>()
+                    .CountAsync(x => poisonRules.Contains(x.RuleId)) == 100, "Earlier failures were never retried after cursor wrap");
+        }
 
         async Task<T> Call<T>(Func<RecurringHandler, Task<T>> action) { await using var scope = provider.CreateAsyncScope(); return await action(scope.ServiceProvider.GetRequiredService<RecurringHandler>()); }
         async Task Command(Func<RecurringHandler, Task> action) { await using var scope = provider.CreateAsyncScope(); await action(scope.ServiceProvider.GetRequiredService<RecurringHandler>()); }

@@ -14,13 +14,18 @@ internal sealed class RecurringRepository(AverioDbContext db) : IRecurringReposi
         => db.Set<RecurringOccurrence>().AsNoTracking().SingleOrDefaultAsync(x => x.RuleId == ruleId && x.DueOn == dueOn, ct);
     public async Task<IReadOnlyList<RecurringOccurrence>> HistoryAsync(Guid householdId, Guid memberId, Guid ruleId, CancellationToken ct)
         => await db.Set<RecurringOccurrence>().AsNoTracking().Where(x => x.RuleId == ruleId && x.HouseholdId == householdId && (x.TransactionId == null || db.VisibleTransactions(householdId, memberId).Any(t => t.Id == x.TransactionId))).OrderByDescending(x => x.DueOn).Take(24).ToArrayAsync(ct);
-    public async Task<IReadOnlyList<RecurringCandidate>> DueAsync(DateOnly today, int limit, CancellationToken ct)
-        => await (from rule in db.Set<RecurringRule>().AsNoTracking()
+    public async Task<IReadOnlyList<RecurringCandidate>> DueAsync(DateOnly today, int limit, CancellationToken ct, RecurringCursor? after = null)
+    {
+        var afterDate = after?.DueOn;
+        var afterId = after?.RuleId ?? Guid.Empty;
+        return await (from rule in db.Set<RecurringRule>().AsNoTracking()
             join member in db.HouseholdMembers.AsNoTracking() on new { rule.HouseholdId, Id = rule.HouseholdMemberId } equals new { member.HouseholdId, member.Id }
             where rule.Automatic && !rule.IsPaused && !rule.IsStopped && !rule.IsBlocked && rule.NextDueOn <= today
                 && member.LeftAtUtc == null
+                && (afterDate == null || rule.NextDueOn > afterDate || (rule.NextDueOn == afterDate && rule.Id.CompareTo(afterId) > 0))
             orderby rule.NextDueOn, rule.Id
-            select new RecurringCandidate(rule.Id, rule.HouseholdId, member.UserId, rule.Version)).Take(limit).ToArrayAsync(ct);
+            select new RecurringCandidate(rule.Id, rule.HouseholdId, member.UserId, rule.Version, rule.NextDueOn!.Value)).Take(limit).ToArrayAsync(ct);
+    }
     public void Add(RecurringRule rule) => db.Add(rule);
     public void Add(RecurringOccurrence occurrence) => db.Add(occurrence);
 }
