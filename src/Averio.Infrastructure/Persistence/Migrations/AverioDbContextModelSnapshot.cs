@@ -1987,69 +1987,81 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Navigation("Labels");
                 });
 
-            // Frozen mappings at time of the Personal Money migration.
-            modelBuilder.Entity<PersonalMoneyWallet>(b =>
-            {
-                b.ToTable("personal_money_wallets", t =>
+            // Frozen string-based snapshot mappings, as generated EF snapshots use shared-type names.
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyWallet", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<Guid>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
+                    b.Property<Guid>("HouseholdMemberId").HasColumnType("uuid").HasColumnName("household_member_id");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3)
+                        .HasColumnType("character varying(3)").HasColumnName("currency");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.HasKey("Id");
+                    b.HasAlternateKey("HouseholdId", "Id").HasName("ak_personal_money_wallet_household_id_id");
+                    b.HasIndex("HouseholdId", "HouseholdMemberId").IsUnique();
+                    b.ToTable("personal_money_wallets", null, t =>
                         {
                             t.HasCheckConstraint("ck_personal_money_wallet_currency", "currency IN ('EUR','USD','HUF')");
                         });
-                        b.HasKey(x => x.Id);
-                        b.HasAlternateKey(x => new { x.HouseholdId, x.Id })
-                            .HasName("ak_personal_money_wallet_household_id_id");
-                        b.Property(x => x.Id).HasColumnName("id");
-                        b.Property(x => x.HouseholdId).HasColumnName("household_id");
-                        b.Property(x => x.HouseholdMemberId).HasColumnName("household_member_id");
-                        b.Property(x => x.Currency).HasColumnName("currency")
-                            .HasConversion<CurrencyCodeConverter>().HasMaxLength(3);
-                        b.Property(x => x.CreatedAt).HasColumnName("created_at");
-                        b.HasIndex(x => new { x.HouseholdId, x.HouseholdMemberId }).IsUnique();
-                        b.HasOne<HouseholdMember>().WithMany()
-                            .HasForeignKey(x => new { x.HouseholdId, x.HouseholdMemberId })
-                            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
-            });
-            modelBuilder.Entity<PersonalMoneyEntry>(b =>
-            {
-                b.ToTable("personal_money_entries", t =>
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyEntry", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<Guid>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
+                    b.Property<Guid>("WalletId").HasColumnType("uuid").HasColumnName("wallet_id");
+                    b.Property<string>("Kind").IsRequired().HasMaxLength(24).HasColumnType("character varying(24)").HasColumnName("kind");
+                    b.Property<decimal>("Amount").HasPrecision(19, 4).HasColumnType("numeric(19,4)").HasColumnName("amount");
+                    b.Property<DateOnly>("OccurredOn").HasColumnType("date").HasColumnName("occurred_on");
+                    b.Property<Guid?>("TransferId").HasColumnType("uuid").HasColumnName("transfer_id");
+                    b.Property<Guid?>("TransactionId").HasColumnType("uuid").HasColumnName("transaction_id");
+                    b.Property<Guid?>("ReversesEntryId").HasColumnType("uuid").HasColumnName("reverses_entry_id");
+                    b.Property<Guid?>("OperationId").HasColumnType("uuid").HasColumnName("operation_id");
+                    b.Property<DateTimeOffset>("RecordedAt").HasColumnType("timestamp with time zone").HasColumnName("recorded_at");
+                    b.HasKey("Id");
+                    b.HasIndex("TransferId");
+                    b.HasIndex("HouseholdId", "TransferId");
+                    b.HasIndex("HouseholdId", "TransactionId");
+                    b.HasIndex("WalletId", "OccurredOn", "RecordedAt");
+                    b.HasIndex("ReversesEntryId").IsUnique();
+                    b.HasIndex("WalletId", "OperationId").IsUnique();
+                    b.ToTable("personal_money_entries", null, t =>
                         {
                             t.HasCheckConstraint("ck_personal_money_entry_amount", "amount <> 0");
-                            t.HasCheckConstraint("ck_personal_money_entry_kind",
-                                "kind IN ('Grant','Funding','PrivateCharge')");
+                            t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge')");
                             t.HasCheckConstraint("ck_personal_money_entry_source",
                                 "(transfer_id IS NULL OR transaction_id IS NULL) AND " +
                                 "(kind <> 'Funding' OR transfer_id IS NOT NULL) AND " +
                                 "(kind <> 'PrivateCharge' OR transaction_id IS NOT NULL)");
                         });
-                        b.HasKey(x => x.Id);
-                        b.Property(x => x.Id).HasColumnName("id");
-                        b.Property(x => x.HouseholdId).HasColumnName("household_id");
-                        b.Property(x => x.WalletId).HasColumnName("wallet_id");
-                        b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(24);
-                        b.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);
-                        b.Property(x => x.OccurredOn).HasColumnName("occurred_on");
-                        b.Property(x => x.TransferId).HasColumnName("transfer_id");
-                        b.Property(x => x.TransactionId).HasColumnName("transaction_id");
-                        b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
-                        b.Property(x => x.OperationId).HasColumnName("operation_id");
-                        b.Property(x => x.RecordedAt).HasColumnName("recorded_at");
-                        b.HasOne<PersonalMoneyWallet>().WithMany()
-                            .HasForeignKey(x => new { x.HouseholdId, x.WalletId })
-                            .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
-                            .OnDelete(DeleteBehavior.Restrict);
-                        b.HasOne<Transfer>().WithMany()
-                            .HasForeignKey(x => x.TransferId).OnDelete(DeleteBehavior.Restrict);
-                        b.HasOne<Transaction>().WithMany()
-                            .HasForeignKey(x => new { x.HouseholdId, x.TransactionId })
-                            .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
-                            .OnDelete(DeleteBehavior.Restrict);
-                        b.HasOne<PersonalMoneyEntry>().WithMany()
-                            .HasForeignKey(x => x.ReversesEntryId).OnDelete(DeleteBehavior.Restrict);
-                        b.HasIndex(x => new { x.WalletId, x.OccurredOn, x.RecordedAt });
-                        b.HasIndex(x => new { x.HouseholdId, x.TransferId });
-                        b.HasIndex(x => new { x.HouseholdId, x.TransactionId });
-                        b.HasIndex(x => x.ReversesEntryId).IsUnique();
-                        b.HasIndex(x => new { x.WalletId, x.OperationId }).IsUnique();
-            });
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyWallet", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany().HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyEntry", b =>
+                {
+                    b.HasOne("Averio.Domain.PersonalMoney.PersonalMoneyWallet", null)
+                        .WithMany().HasForeignKey("HouseholdId", "WalletId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("Averio.Domain.Transfers.Transfer", null)
+                        .WithMany().HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany().HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("Averio.Domain.PersonalMoney.PersonalMoneyEntry", null)
+                        .WithMany().HasForeignKey("ReversesEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
 #pragma warning restore 612, 618
         }
     }
