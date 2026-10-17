@@ -32,7 +32,7 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
     {
         await handler.GrantAsync(householdId, request.RecipientMemberId,
             request.Currency, DecimalAmountMapper.ParseTransactionAmount(request.Amount),
-            request.OccurredOn, ct);
+            request.OccurredOn, request.OperationId, ct);
         return NoContent();
     }
 
