@@ -79,7 +79,7 @@ public sealed class PersonalMoneyHandler(
         if (wallet.Currency != record.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_TransferAmountsMismatch");
         if ((await repository.GetTransactionEntriesAsync(householdId, transactionId, ct))
-            .Any(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge))
+            .Where(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge).Sum(x => x.Amount) != 0)
             throw new ConflictException("personal_money_already_charged", "Error_TransactionChanged");
         repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
             PersonalMoneyEntryKind.PrivateCharge, -amount, record.OccurredOn, clock.GetUtcNow(),
@@ -131,17 +131,18 @@ public sealed class PersonalMoneyHandler(
         if (entries.Count == 0) return;
         foreach (var group in entries.GroupBy(x => new { x.WalletId, x.Kind }))
         {
-            var net = group.Sum(x => x.Amount);
             var expected = transfer.VoidedAt is not null ? 0m : transfer.SentAmount;
-            if (net == expected && group.All(x => x.OccurredOn == transfer.OccurredOn)) continue;
-            if (net != 0)
+            var originalTotals = group.GroupBy(x => x.OccurredOn)
+                .ToDictionary(x => x.Key, x => x.Sum(e => e.Amount));
+            var dates = originalTotals.Keys.Append(transfer.OccurredOn).Distinct();
+            foreach (var date in dates)
+            {
+                var target = date == transfer.OccurredOn ? expected : 0m;
+                var correction = target - originalTotals.GetValueOrDefault(date);
+                if (correction == 0) continue;
                 repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, group.Key.WalletId,
-                    group.Key.Kind, -net, group.First().OccurredOn, clock.GetUtcNow(),
-                    transferId: transfer.Id));
-            if (expected != 0)
-                repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, group.Key.WalletId,
-                    group.Key.Kind, expected, transfer.OccurredOn, clock.GetUtcNow(),
-                    transferId: transfer.Id));
+                    group.Key.Kind, correction, date, clock.GetUtcNow(), transferId: transfer.Id));
+            }
         }
     }
 
