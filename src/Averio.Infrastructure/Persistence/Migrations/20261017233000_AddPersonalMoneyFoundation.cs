@@ -75,6 +75,8 @@ public sealed class AddPersonalMoneyFoundation : Migration
 
         migrationBuilder.CreateIndex("IX_personal_money_wallets_household_id_household_member_id",
             "personal_money_wallets", new[] { "household_id", "household_member_id" }, unique: true);
+        migrationBuilder.CreateIndex("IX_personal_money_entries_household_id_wallet_id",
+            "personal_money_entries", new[] { "household_id", "wallet_id" });
         migrationBuilder.CreateIndex("IX_personal_money_entries_wallet_id_occurred_on_recorded_at",
             "personal_money_entries", new[] { "wallet_id", "occurred_on", "recorded_at" });
         migrationBuilder.CreateIndex("IX_personal_money_entries_household_id_transfer_id",
