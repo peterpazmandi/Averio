@@ -34,8 +34,6 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             { householdId, kind: 'Expense', pageSize: 50 }, { signal }),
     });
     const eligibleIds = new Set(privateAccounts.map(a => a.id));
-    const alreadyCharged = new Set((mine.data?.entries ?? [])
-        .filter(entry => entry.kind === 'PrivateCharge').map(() => ''));
     // Consumption occurs only after explicit selection; never infer it from an account.
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
         transaction.visibility === 'Private' && transaction.status === 'Posted'
