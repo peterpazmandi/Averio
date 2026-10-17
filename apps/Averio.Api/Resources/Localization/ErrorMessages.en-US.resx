@@ -334,6 +334,14 @@
   <data name="Error_SavedViewChanged" xml:space="preserve"><value>This view changed elsewhere. Reload it before editing.</value></data>
 <data name="Validation_Recurring" xml:space="preserve"><value>Choose a name, category, positive amount and a valid schedule starting today or later. Account, type, first date and frequency cannot change after creation. Up to 100 active schedules are allowed.</value></data>
 <data name="Error_RecurringChanged" xml:space="preserve"><value>This schedule changed or this occurrence is not due. Reload and review before trying again.</value></data>
+  <data name="Error_PersonalMoneyChargeNotAllowed" xml:space="preserve"><value>Only an eligible posted private expense can be charged to your personal allowance.</value></data>
+  <data name="Error_PersonalMoneyNotConfigured" xml:space="preserve"><value>Your personal-money wallet has not been set up yet.</value></data>
+  <data name="Error_PersonalMoneyCurrencyMismatch" xml:space="preserve"><value>The account or transaction currency does not match your personal-money wallet.</value></data>
+  <data name="Error_PersonalMoneyAlreadyCharged" xml:space="preserve"><value>This transaction is already charged to Personal Money.</value></data>
+  <data name="Error_PersonalMoneyFundingInvalid" xml:space="preserve"><value>Personal-money funding requires a shared source and your own private destination in the same currency.</value></data>
+  <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Create an allowance grant before using a transfer to fund it.</value></data>
+  <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>This transfer exceeds the personal allowance that has not yet been privately funded.</value></data>
+  <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Select a valid personal-money transfer purpose.</value></data>
 </root>
 
 
