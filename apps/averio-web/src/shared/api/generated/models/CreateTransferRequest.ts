@@ -43,6 +43,10 @@ export interface CreateTransferRequest {
      * 
      */
     note: string | null;
+    /**
+     * 
+     */
+    personalMoneyPurpose?: string | null;
 }
 
 /**
@@ -74,6 +78,7 @@ export function CreateTransferRequestFromJSONTyped(json: any, ignoreDiscriminato
         'receivedAmount': json['receivedAmount'],
         'occurredOn': json['occurredOn'],
         'note': json['note'],
+        'personalMoneyPurpose': json['personalMoneyPurpose'] === undefined ? undefined : json['personalMoneyPurpose'] === null ? null : json['personalMoneyPurpose'],
     };
 }
 
@@ -94,6 +99,7 @@ export function CreateTransferRequestToJSONTyped(value?: CreateTransferRequest |
         'receivedAmount': value['receivedAmount'],
         'occurredOn': value['occurredOn'],
         'note': value['note'],
+        'personalMoneyPurpose': value['personalMoneyPurpose'],
     };
 }
 
