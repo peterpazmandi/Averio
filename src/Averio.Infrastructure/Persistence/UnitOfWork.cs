@@ -24,6 +24,9 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         {
             if (exception.Entries.Any(entry => entry.Entity is SavedTransactionView))
                 throw new ConflictException("saved_view_changed", "Error_SavedViewChanged");
+            if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Recurring.RecurringRule))
+                throw new ConflictException("recurring_changed", "Error_RecurringChanged");
+
             if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Households.Household))
                 throw new ConflictException("household_changed", "Error_HouseholdChanged");
 

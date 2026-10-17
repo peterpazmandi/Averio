@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../apps/Averio.Worker/Averio.Worker.csproj" />
     <ProjectReference Include="../../src/Averio.Application/Averio.Application.csproj" />
     <ProjectReference Include="../../src/Averio.Domain/Averio.Domain.csproj" />
     <ProjectReference Include="../../src/Averio.Infrastructure/Averio.Infrastructure.csproj" />

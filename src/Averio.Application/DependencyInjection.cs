@@ -30,6 +30,7 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
+        services.AddScoped<Recurring.RecurringHandler>();
         services.AddScoped<RegisterUserHandler>();
         services.AddScoped<Households.Invitations.InvitationHandler>();
         services.AddScoped<LoginUserHandler>();

@@ -57,10 +57,11 @@ internal static class BrowserHost
             var dashboard = await Seed(factory.Services, clock, "dashboard@collaboration.test", "Dashboard home");
             var navigation = await Seed(factory.Services, clock, "navigation@collaboration.test", "Navigation home");
             var savedViews = await Seed(factory.Services, clock, "views@collaboration.test", "Saved views home");
+            var recurring = await Seed(factory.Services, clock, "recurring@collaboration.test", "Recurring home");
             var control = WebApplication.CreateBuilder();
             control.WebHost.UseUrls("http://127.0.0.1:5181");
             await using var app = control.Build();
-            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, savedViews, password = "Browser-test-password-123!" });
+            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, savedViews, recurring, password = "Browser-test-password-123!" });
             app.MapGet("/mail", (string email, string kind) => inbox.Messages.TryGetValue((email, kind), out var mail)
                 ? Results.Ok(mail) : Results.NotFound());
             app.MapPost("/delivery", (Delivery input) => { inbox.FailedEmail = input.FailedEmail; return Results.NoContent(); });
@@ -110,9 +111,9 @@ internal static class BrowserHost
         household.CompleteFinancialSetup(now);
         var member = household.Members.Single().Id;
         string? peerEmail = null;
-        if (email == "views@collaboration.test")
+        if (email is "views@collaboration.test" or "recurring@collaboration.test")
         {
-            peerEmail = "views-peer@collaboration.test";
+            peerEmail = email.Replace("@", "-peer@");
             var peer = await identity.CreateUserAsync(peerEmail, "Browser-test-password-123!", "en-US", default);
             var peerId = peer.UserId!.Value;
             var peerToken = await identity.GenerateEmailVerificationTokenAsync(peerId, default);

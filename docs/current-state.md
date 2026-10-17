@@ -139,7 +139,7 @@ been implemented.
 The following are not yet treated as implemented:
 
 - member removal, leaving and ownership transfer
-- recurring transaction domain and worker execution
+- advanced recurring schedules, recurring transfers and reminders
 - category drag reordering, shared system-category customization, and private categories
 - goals
 - personal-money allocation and rollover
@@ -161,7 +161,7 @@ restarted application's current production readiness.
 
 ## Recommended next implementation milestone
 
-Verify the two-person beta journey and operational email configuration next. Invitations implement ADR-023 lifecycle security and ADR-024 account cutover with retained, read-only history. Standalone leaving and removal remain deferred. Recurring execution remains a later milestone requiring idempotency and worker design.
+Verify the two-person beta journey and operational email configuration next. Invitations implement ADR-023 lifecycle security and ADR-024 account cutover with retained, read-only history. Standalone leaving and removal remain deferred. Recurring income/expense execution is implemented in ADR-025 with confirmation by default and an optional separate worker.
 
 ## Household settings — 2026-10-05
 
@@ -239,3 +239,8 @@ Includes the generated OpenAPI client, EN/DE/HU UI, `AddActivities` migration an
 Dashboard category card refinements: “This month so far” subtitle; adjacent currency and Expenses/Income selectors; independently ranked top four with a separated Other row; shared green-left-border surfaces across dashboard cards. See `dashboard-category-spending.md` for reporting semantics and browser coverage.
 
 Dashboard category reports now support contextual empty-state actions, simpler expandable help, URL-preserved date/currency/type filters, complete category totals and daily category drill-down. Transaction entry opens with the requested income/expense type.
+
+
+## Recurring transactions — 2026-10-15
+
+Member-private weekly/monthly/yearly schedules, review/actual amount/skip, opt-in automatic recording, pause/resume/stop, anchored dates, atomic idempotent ledger posting and visible occurrence history are implemented. The EN/DE/HU screens use shared Tailwind cards/dialogs and the canonical design. Apply AddRecurringTransactions explicitly and deploy Averio.Worker for automatic recording. See [Recurring transactions](recurring-transactions.md) for operation, limits and verification.

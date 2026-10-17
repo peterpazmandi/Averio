@@ -69,6 +69,9 @@ jobs:
       - name: Build backend
         run: dotnet build Averio.slnx --configuration Release --no-restore
 
+      - name: Verify worker dependency graph
+        run: dotnet run --project apps/Averio.Worker --configuration Release --no-build -- --verify-services
+
       - name: Run account regression suite
         run: >-
           dotnet run

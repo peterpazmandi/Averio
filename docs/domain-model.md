@@ -346,3 +346,10 @@ Categories support deeper nesting. A compatible active subcategory may be a pare
 
 `HouseholdInvitation` belongs to the target household, grants only Member, and stores inviter, normalized email, token hash, version, timestamps, delivery status and acceptance audit. SourceHouseholdId identifies the retained source household. Accepted and Revoked are terminal; Pending expiry is derived. Acceptance and the membership transition commit atomically. Source records are retained; account copies and individually authorized history snapshots commit with departure. See [invitation implementation](household-invitations.md) for locking, constraints and cutover semantics.
 
+
+
+## Recurring rules and occurrences (ADR-025)
+
+A RecurringRule belongs to one household member and account, with a category, exact decimal amount, income/expense kind, transaction visibility, original date, cadence, optional end date and version. Rule visibility is always personal. Its next date is derived from the original anchor and occurrence index. Pause retains dates; stop is terminal.
+
+A RecurringOccurrence receipt is uniquely identified by rule/date and belongs to the same household. A recorded receipt references a ledger transaction and original recorded amount; a skipped receipt references neither. The receipt, ledger, aggregates and next date commit atomically. Correcting or voiding a transaction never reopens its receipt. History filters current transaction visibility.

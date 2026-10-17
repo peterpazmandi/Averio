@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/apps/">
     <Project Path="apps/Averio.Api/Averio.Api.csproj" />
+    <Project Path="apps/Averio.Worker/Averio.Worker.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Averio.Application/Averio.Application.csproj" />

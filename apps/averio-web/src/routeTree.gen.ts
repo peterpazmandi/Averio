@@ -26,6 +26,7 @@ import { Route as AuthenticatedAppAccountsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppActivitiesRouteImport } from './routes/_authenticated.app.activities'
 import { Route as AuthenticatedAppCategoriesRouteImport } from './routes/_authenticated.app.categories'
 import { Route as AuthenticatedAppHouseholdRouteImport } from './routes/_authenticated.app.household'
+import { Route as AuthenticatedAppRecurringRouteImport } from './routes/_authenticated.app.recurring'
 import { Route as AuthenticatedAppStatisticsRouteImport } from './routes/_authenticated.app.statistics'
 import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated.app.transactions'
 import { Route as AuthenticatedAppTransfersRouteImport } from './routes/_authenticated.app.transfers'
@@ -120,6 +121,12 @@ const AuthenticatedAppHouseholdRoute =
     path: '/household',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppRecurringRoute =
+  AuthenticatedAppRecurringRouteImport.update({
+    id: '/recurring',
+    path: '/recurring',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppStatisticsRoute =
   AuthenticatedAppStatisticsRouteImport.update({
     id: '/statistics',
@@ -172,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/app/recurring': typeof AuthenticatedAppRecurringRoute
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -193,6 +201,7 @@ export interface FileRoutesByTo {
   '/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/app/recurring': typeof AuthenticatedAppRecurringRoute
   '/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -219,6 +228,7 @@ export interface FileRoutesById {
   '/_authenticated/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/_authenticated/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/_authenticated/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/_authenticated/app/recurring': typeof AuthenticatedAppRecurringRoute
   '/_authenticated/app/statistics': typeof AuthenticatedAppStatisticsRoute
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/_authenticated/app/transfers': typeof AuthenticatedAppTransfersRoute
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/app/activities'
     | '/app/categories'
     | '/app/household'
+    | '/app/recurring'
     | '/app/statistics'
     | '/app/transactions'
     | '/app/transfers'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/app/activities'
     | '/app/categories'
     | '/app/household'
+    | '/app/recurring'
     | '/app/statistics'
     | '/app/transactions'
     | '/app/transfers'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/activities'
     | '/_authenticated/app/categories'
     | '/_authenticated/app/household'
+    | '/_authenticated/app/recurring'
     | '/_authenticated/app/statistics'
     | '/_authenticated/app/transactions'
     | '/_authenticated/app/transfers'
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHouseholdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/recurring': {
+      id: '/_authenticated/app/recurring'
+      path: '/recurring'
+      fullPath: '/app/recurring'
+      preLoaderRoute: typeof AuthenticatedAppRecurringRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/statistics': {
       id: '/_authenticated/app/statistics'
       path: '/statistics'
@@ -495,6 +515,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppActivitiesRoute: typeof AuthenticatedAppActivitiesRoute
   AuthenticatedAppCategoriesRoute: typeof AuthenticatedAppCategoriesRoute
   AuthenticatedAppHouseholdRoute: typeof AuthenticatedAppHouseholdRoute
+  AuthenticatedAppRecurringRoute: typeof AuthenticatedAppRecurringRoute
   AuthenticatedAppStatisticsRoute: typeof AuthenticatedAppStatisticsRoute
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
   AuthenticatedAppTransfersRoute: typeof AuthenticatedAppTransfersRoute
@@ -506,6 +527,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppActivitiesRoute: AuthenticatedAppActivitiesRoute,
   AuthenticatedAppCategoriesRoute: AuthenticatedAppCategoriesRoute,
   AuthenticatedAppHouseholdRoute: AuthenticatedAppHouseholdRoute,
+  AuthenticatedAppRecurringRoute: AuthenticatedAppRecurringRoute,
   AuthenticatedAppStatisticsRoute: AuthenticatedAppStatisticsRoute,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
   AuthenticatedAppTransfersRoute: AuthenticatedAppTransfersRoute,

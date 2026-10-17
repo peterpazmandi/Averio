@@ -332,6 +332,8 @@
   <data name="Error_SavedViewDuplicate" xml:space="preserve"><value>Már van ilyen nevű mentett nézeted.</value></data>
   <data name="Error_SavedViewLimit" xml:space="preserve"><value>Háztartásonként legfeljebb 50 nézet menthető.</value></data>
   <data name="Error_SavedViewChanged" xml:space="preserve"><value>A nézet máshol megváltozott. Szerkesztés előtt töltsd újra.</value></data>
+<data name="Validation_Recurring" xml:space="preserve"><value>Adj meg nevet, kategóriát, pozitív összeget és mától induló érvényes ütemezést. A számla, típus, első dátum és gyakoriság létrehozás után nem módosítható. Legfeljebb 100 aktív ütemezés engedélyezett.</value></data>
+<data name="Error_RecurringChanged" xml:space="preserve"><value>Az ütemezés megváltozott, vagy az alkalom még nem esedékes. Töltsd újra és ellenőrizd.</value></data>
 </root>
 
 
