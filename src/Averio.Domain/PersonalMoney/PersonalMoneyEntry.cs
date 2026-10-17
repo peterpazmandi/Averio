@@ -22,12 +22,13 @@ public sealed class PersonalMoneyEntry
     public Guid? TransferId { get; private set; }
     public Guid? TransactionId { get; private set; }
     public Guid? ReversesEntryId { get; private set; }
+    public Guid? OperationId { get; private set; }
     public DateTimeOffset RecordedAt { get; private set; }
 
     public static PersonalMoneyEntry Create(Guid householdId, Guid walletId,
         PersonalMoneyEntryKind kind, decimal signedAmount, DateOnly occurredOn,
         DateTimeOffset now, Guid? transferId = null, Guid? transactionId = null,
-        Guid? reversesEntryId = null)
+        Guid? reversesEntryId = null, Guid? operationId = null)
     {
         if (householdId == Guid.Empty || walletId == Guid.Empty || !Enum.IsDefined(kind)
             || occurredOn == default || signedAmount == 0
@@ -43,7 +44,7 @@ public sealed class PersonalMoneyEntry
             Id = Guid.NewGuid(), HouseholdId = householdId, WalletId = walletId,
             Kind = kind, Amount = signedAmount, OccurredOn = occurredOn,
             RecordedAt = now, TransferId = transferId, TransactionId = transactionId,
-            ReversesEntryId = reversesEntryId
+            ReversesEntryId = reversesEntryId, OperationId = operationId
         };
     }
 }
