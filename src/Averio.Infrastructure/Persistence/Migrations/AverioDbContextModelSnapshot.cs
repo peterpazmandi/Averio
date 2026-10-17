@@ -1987,7 +1987,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Navigation("Labels");
                 });
 
-            // Frozen mapping for the Personal Money migration; independent of live EF configurations.
+            // Frozen mappings at time of the Personal Money migration.
             modelBuilder.Entity<PersonalMoneyWallet>(b =>
             {
                 b.ToTable("personal_money_wallets", t =>
@@ -2030,6 +2030,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         b.Property(x => x.TransferId).HasColumnName("transfer_id");
                         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
                         b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
+                        b.Property(x => x.OperationId).HasColumnName("operation_id");
                         b.Property(x => x.RecordedAt).HasColumnName("recorded_at");
                         b.HasOne<PersonalMoneyWallet>().WithMany()
                             .HasForeignKey(x => new { x.HouseholdId, x.WalletId })
@@ -2047,6 +2048,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         b.HasIndex(x => new { x.HouseholdId, x.TransferId });
                         b.HasIndex(x => new { x.HouseholdId, x.TransactionId });
                         b.HasIndex(x => x.ReversesEntryId).IsUnique();
+                        b.HasIndex(x => new { x.WalletId, x.OperationId }).IsUnique();
             });
 #pragma warning restore 612, 618
         }
