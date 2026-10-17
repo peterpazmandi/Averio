@@ -34,7 +34,7 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         {
             if (!Enum.TryParse<PersonalTransferPurpose>(personalMoneyPurpose, true, out var purpose)
                 || !Enum.IsDefined(purpose))
-                throw new BusinessRuleException("personal_money_purpose_invalid", "Error_TransferAmountsMismatch");
+                throw new BusinessRuleException("personal_money_purpose_invalid", "Error_PersonalMoneyPurposeInvalid");
             await personalMoney.LinkTransferAsync(transfer, member, source, destination, purpose, ct);
         }
         // Both legs are columns of one row: one SaveChanges is an atomic financial mutation.
