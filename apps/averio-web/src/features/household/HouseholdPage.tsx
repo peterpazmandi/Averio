@@ -9,6 +9,7 @@ import { householdQueries } from './householdQueries';
 import { HouseholdEditor } from './HouseholdEditor';
 import { PreviousHouseholds } from './PreviousHouseholds';
 import { HouseholdInvitations } from './HouseholdInvitations';
+import { PersonalMoneyPanel } from '../personal-money/PersonalMoneyPanel';
 
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
@@ -49,7 +50,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
         </div>}
         <div className="grid items-start gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
             <AverioCard role="navigation" aria-label={t('householdSettings.sections')} className="flex flex-wrap gap-1 p-3 lg:sticky lg:top-4 lg:flex-col">
-                {(['profile', 'members', 'privacy'] as const).map(section => <a key={section} href={'#household-' + section}
+                {(['profile', 'members', 'personalMoney', 'privacy'] as const).map(section => <a key={section} href={'#household-' + section}
                     className="rounded-xl px-3 py-3 text-sm font-semibold hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-emerald-900/40">
                     {t('householdSettings.' + section)}
                 </a>)}
@@ -86,6 +87,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                         </li>)}
                     </ul>
                 </AverioCard>
+                <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />
                 <PreviousHouseholds userId={userId} householdId={householdId} />
                 {owner && <HouseholdInvitations userId={userId} householdId={householdId} />}
                 <AverioCard id="household-privacy" className="scroll-mt-6 space-y-3 p-5 sm:p-6">
