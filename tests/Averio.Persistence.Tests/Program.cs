@@ -202,6 +202,7 @@ static async Task RunVerificationAsync(string connectionString)
         () => VerifyDatabaseConcurrencyAsync(provider, clock, fixture));
 
     await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
+    await PersonalMoneyVerification.RunAsync(provider, currentUser, fixture, clock);
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
