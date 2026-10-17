@@ -316,7 +316,7 @@ Transaction 0..* ── TransactionItem
 Category 0..1 ── * child Category
 Household 1 ── * Goal
 Household 1 ── * RecurringRule
-HouseholdMember 1 ── * PersonalMoneyPeriod/Allocation (future implementation)
+HouseholdMember 1 ── 0..1 PersonalMoneyWallet (initial scope)\nPersonalMoneyWallet 1 ── * PersonalMoneyEntry (immutable)
 ```
 
 Exact physical cardinalities can evolve through ADRs/migrations; the semantic separations above are the important invariants.
@@ -336,6 +336,16 @@ Reports continue to use stable category IDs and current category display data; p
 
 Categories support deeper nesting. A compatible active subcategory may be a parent; self/descendant moves are rejected under a household lock. Personal pins carry a persisted sequence. Shared definitions and financial snapshots remain independent of these preferences.
 
+
+## Personal Money — ADR-029
+
+Personal Money is an independently tracked member-specific entitlement, **not** a bank account, transaction category, or extra income/expense entry. A wallet belongs to exactly one `HouseholdMember` with an immutable EUR/USD/HUF denomination. Unused amounts roll forward automatically; a completed charge can make the entitlement negative.
+
+The append-only ledger uses signed `Grant`, `Funding`, and `PrivateCharge` entries. Entitlement is grants plus private charges (charges are negative), while attributed private funding is funding plus private charges. `Funding` transfers do not increase entitlement a second time. Manual grants have an idempotent operation ID. Transfers with explicit purposes either create-and-fund (owner/private-holder) or fund an existing entitlement (recipient private-holder). Ordinary transfers have no wallet effect.
+
+Existing transfer and transaction edit/void operations append corrective entries atomically. Chargeable private purchases are explicit and owner-visible only. Personal Money does not change existing categorized `TransactionAggregate` semantics. Cross-currency attribution, shared-account charge splits, boundary-flow reports, recurring grants and private funding return/settlement are separate follow-up slices.
+
+See [ADR-029](decisions/ADR-029-personal-money-entitlements-funding-attribution.md) and [Personal Money Foundation](personal-money.md).
 
 ## Personal activities
 
