@@ -243,6 +243,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasKey("HouseholdMemberId", "TransactionId");
 
                     b.HasIndex("HouseholdId", "TransactionId");
+                    b.HasIndex("HouseholdId", "WalletId");
 
                     b.HasIndex("HouseholdId", "HouseholdMemberId", "ActivityId");
 
