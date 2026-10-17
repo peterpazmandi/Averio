@@ -125,8 +125,14 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     assert(other);
     const privateAccount = await ok(page, '/households/' + f.householdId + '/accounts/' + f.personalAccountId);
     await ok(page, '/households/' + f.householdId + '/accounts/' + privateAccount.id, { method: 'PUT', body: {
-        name: privateAccount.name, type: privateAccount.type, ownerHouseholdMemberIds: [other.householdMemberId],
+        name: privateAccount.name, type: privateAccount.type, ownerHouseholdMemberIds: [ownerOptions.currentMemberId, other.householdMemberId],
         visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: privateAccount.updatedAt,
+    } });
+    const peerPage = await session(f.peerEmail, password);
+    const jointlyOwned = await ok(peerPage, '/households/' + f.householdId + '/accounts/' + privateAccount.id);
+    await ok(peerPage, '/households/' + f.householdId + '/accounts/' + privateAccount.id, { method: 'PUT', body: {
+        name: jointlyOwned.name, type: jointlyOwned.type, ownerHouseholdMemberIds: [other.householdMemberId],
+        visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: jointlyOwned.updatedAt,
     } });
     await page.reload();
     await recoveryCard().getByRole('button', { name: 'Pause schedule', exact: true }).click();
