@@ -20,8 +20,13 @@ internal static class PersonalMoneyVerification
         await using (var scope = provider.CreateAsyncScope())
         {
             var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            var operationId = Guid.Parse("ed2ef98f-6d9d-41c6-bc41-1e716c9b4c6b");
             await handler.GrantAsync(fixture.HouseholdId, fixture.OwnerMemberId,
-                "EUR", 300m, On, Guid.Parse("ed2ef98f-6d9d-41c6-bc41-1e716c9b4c6b"), Ct);
+                "EUR", 300m, On, operationId, Ct);
+            await handler.GrantAsync(fixture.HouseholdId, fixture.OwnerMemberId,
+                "EUR", 300m, On, operationId, Ct);
+            await FailureAsync<ConflictException>(() => handler.GrantAsync(fixture.HouseholdId,
+                fixture.OwnerMemberId, "EUR", 301m, On, operationId, Ct));
             await BalanceAsync(handler, fixture.HouseholdId, 300m, 0m);
         }
 
