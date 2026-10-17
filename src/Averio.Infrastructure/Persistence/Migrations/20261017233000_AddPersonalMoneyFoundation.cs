@@ -81,6 +81,8 @@ public sealed class AddPersonalMoneyFoundation : Migration
             "personal_money_entries", new[] { "household_id", "transfer_id" });
         migrationBuilder.CreateIndex("IX_personal_money_entries_household_id_transaction_id",
             "personal_money_entries", new[] { "household_id", "transaction_id" });
+        migrationBuilder.CreateIndex("IX_personal_money_entries_transfer_id",
+            "personal_money_entries", "transfer_id");
         migrationBuilder.CreateIndex("IX_personal_money_entries_wallet_id_operation_id",
             "personal_money_entries", new[] { "wallet_id", "operation_id" }, unique: true);
         migrationBuilder.CreateIndex("IX_personal_money_entries_reverses_entry_id",
