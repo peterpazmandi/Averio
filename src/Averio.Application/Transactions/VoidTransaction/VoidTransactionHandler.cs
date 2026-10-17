@@ -1,4 +1,5 @@
 using Averio.Application.Common.Abstractions;
+using Averio.Application.PersonalMoney;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.Common;
 using Averio.Domain.Transactions;
@@ -12,7 +13,8 @@ public sealed class VoidTransactionHandler(
     ITransactionRepository transactionRepository,
     TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    PersonalMoneyHandler personalMoney)
 {
     public async Task HandleAsync(
         Guid householdId,
@@ -64,6 +66,7 @@ public sealed class VoidTransactionHandler(
 
         try
         {
+            await personalMoney.ReverseTransactionChargeAsync(household.Id, transaction.Id, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
             transaction.Void(timeProvider.GetUtcNow());
             await unitOfWork.SaveChangesAsync(cancellationToken);
