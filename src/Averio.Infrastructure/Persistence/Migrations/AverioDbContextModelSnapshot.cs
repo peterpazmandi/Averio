@@ -243,7 +243,6 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasKey("HouseholdMemberId", "TransactionId");
 
                     b.HasIndex("HouseholdId", "TransactionId");
-                    b.HasIndex("HouseholdId", "WalletId");
 
                     b.HasIndex("HouseholdId", "HouseholdMemberId", "ActivityId");
 
@@ -2023,6 +2022,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasIndex("TransferId");
                     b.HasIndex("HouseholdId", "TransferId");
                     b.HasIndex("HouseholdId", "TransactionId");
+                    b.HasIndex("HouseholdId", "WalletId");
                     b.HasIndex("WalletId", "OccurredOn", "RecordedAt");
                     b.HasIndex("ReversesEntryId").IsUnique();
                     b.HasIndex("WalletId", "OperationId").IsUnique();
