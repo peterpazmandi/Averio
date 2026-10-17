@@ -38,9 +38,11 @@ public sealed class PersonalMoneyHandler(
 
     // The Owner approves discretionary household budget; no bank movement occurs.
     public async Task GrantAsync(Guid householdId, Guid recipientMemberId, string currency,
-        decimal amount, DateOnly date, CancellationToken ct)
+        decimal amount, DateOnly date, Guid operationId, CancellationToken ct)
     {
         ValidateAmount(amount, date);
+        if (operationId == Guid.Empty || !CurrencyCode.IsSupported(currency))
+            throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
         var denomination = CurrencyCode.From(currency);
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var actor = await MemberAsync(householdId, ct);
@@ -50,8 +52,17 @@ public sealed class PersonalMoneyHandler(
         if (!household.Members.Any(m => m.Id == recipientMemberId && m.LeftAtUtc is null))
             throw new NotFoundException("member", recipientMemberId);
         var wallet = await GetOrCreateAsync(householdId, recipientMemberId, denomination, ct);
+        var previous = await repository.GetByOperationAsync(wallet.Id, operationId, ct);
+        if (previous is not null)
+        {
+            if (previous.Kind != PersonalMoneyEntryKind.Grant || previous.Amount != amount
+                || previous.OccurredOn != date)
+                throw new ConflictException("personal_money_grant_conflict", "Error_PersonalMoneyAlreadyCharged");
+            await tx.CommitAsync(ct);
+            return;
+        }
         repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
-            PersonalMoneyEntryKind.Grant, amount, date, clock.GetUtcNow()));
+            PersonalMoneyEntryKind.Grant, amount, date, clock.GetUtcNow(), operationId: operationId));
         await unitOfWork.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
