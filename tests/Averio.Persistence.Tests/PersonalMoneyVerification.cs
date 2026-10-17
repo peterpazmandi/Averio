@@ -21,7 +21,7 @@ internal static class PersonalMoneyVerification
         {
             var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
             await handler.GrantAsync(fixture.HouseholdId, fixture.OwnerMemberId,
-                "EUR", 300m, On, Ct);
+                "EUR", 300m, On, Guid.Parse("ed2ef98f-6d9d-41c6-bc41-1e716c9b4c6b"), Ct);
             await BalanceAsync(handler, fixture.HouseholdId, 300m, 0m);
         }
 
@@ -121,7 +121,7 @@ internal static class PersonalMoneyVerification
             if (await personal.GetMineAsync(fixture.HouseholdId, Ct) is not null)
                 throw new Exception("Another member must not see the private wallet.");
             await FailureAsync<ForbiddenException>(() => personal.GrantAsync(
-                fixture.HouseholdId, fixture.MemberId, "EUR", 300m, On, Ct));
+                fixture.HouseholdId, fixture.MemberId, "EUR", 300m, On, Guid.NewGuid(), Ct));
         }
         currentUser.UserId = fixture.OwnerUserId;
         Console.WriteLine("PASS personal money: private wallet, funded/existing grants, corrections, voids and owner authority");
