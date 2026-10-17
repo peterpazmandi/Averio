@@ -129,6 +129,16 @@ public sealed class PersonalMoneyHandler(
     {
         var entries = await repository.GetTransferEntriesAsync(transfer.HouseholdId, transfer.Id, ct);
         if (entries.Count == 0) return;
+        var existingFunding = entries.Where(x => x.Kind == PersonalMoneyEntryKind.Funding).Sum(x => x.Amount);
+        var createsGrant = entries.Any(x => x.Kind == PersonalMoneyEntryKind.Grant);
+        if (!createsGrant && transfer.VoidedAt is null && transfer.SentAmount > existingFunding)
+        {
+            var walletId = entries.First().WalletId;
+            var balance = PersonalMoneyBalance.FromEntries(await repository.GetEntriesAsync(walletId, ct));
+            if (transfer.SentAmount - existingFunding > balance.FundingDifference)
+                throw new BusinessRuleException("personal_money_insufficient_unfunded",
+                    "Error_PersonalMoneyInsufficientUnfunded");
+        }
         foreach (var group in entries.GroupBy(x => new { x.WalletId, x.Kind }))
         {
             var expected = transfer.VoidedAt is not null ? 0m : transfer.SentAmount;
