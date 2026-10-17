@@ -72,15 +72,15 @@ public sealed class PersonalMoneyHandler(
             || account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
             || record.Visibility != TransactionVisibility.Private || record.Kind != TransactionKind.Expense
             || record.Status != TransactionStatus.Posted || amount > record.Amount)
-            throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_TransactionVisibilityNotAllowed");
+            throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
 
         var wallet = await repository.GetWalletAsync(householdId, me.Id, ct)
-            ?? throw new BusinessRuleException("personal_money_not_configured", "Error_TransactionVisibilityNotAllowed");
+            ?? throw new BusinessRuleException("personal_money_not_configured", "Error_PersonalMoneyNotConfigured");
         if (wallet.Currency != record.Currency)
-            throw new BusinessRuleException("personal_money_currency_mismatch", "Error_TransferAmountsMismatch");
+            throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
         if ((await repository.GetTransactionEntriesAsync(householdId, transactionId, ct))
             .Where(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge).Sum(x => x.Amount) != 0)
-            throw new ConflictException("personal_money_already_charged", "Error_TransactionChanged");
+            throw new ConflictException("personal_money_already_charged", "Error_PersonalMoneyAlreadyCharged");
         repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
             PersonalMoneyEntryKind.PrivateCharge, -amount, record.OccurredOn, clock.GetUtcNow(),
             transactionId: transactionId));
@@ -99,14 +99,14 @@ public sealed class PersonalMoneyHandler(
             || destination.IncludeInHouseholdReports || destination.Owners.Count != 1
             || !destination.Owners.Any(x => x.HouseholdMemberId == actor.Id)
             || source.Currency != destination.Currency)
-            throw new BusinessRuleException("personal_money_funding_invalid", "Error_TransferAmountsMismatch");
+            throw new BusinessRuleException("personal_money_funding_invalid", "Error_PersonalMoneyFundingInvalid");
         var wallet = await repository.GetWalletAsync(transfer.HouseholdId, actor.Id, ct);
         if (purpose == PersonalTransferPurpose.CreateAndFundGrant)
         {
             if (actor.Role != HouseholdRole.Owner) throw new ForbiddenException();
             wallet ??= await GetOrCreateAsync(transfer.HouseholdId, actor.Id, source.Currency, ct);
             if (wallet.Currency != source.Currency)
-                throw new BusinessRuleException("personal_money_currency_mismatch", "Error_TransferAmountsMismatch");
+                throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
             repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, wallet.Id,
                 PersonalMoneyEntryKind.Grant, transfer.SentAmount, transfer.OccurredOn,
                 clock.GetUtcNow(), transferId: transfer.Id));
@@ -114,10 +114,10 @@ public sealed class PersonalMoneyHandler(
         else
         {
             if (wallet is null || wallet.Currency != source.Currency)
-                throw new BusinessRuleException("personal_money_grant_required", "Error_TransferAmountsMismatch");
+                throw new BusinessRuleException("personal_money_grant_required", "Error_PersonalMoneyGrantRequired");
             var balance = PersonalMoneyBalance.FromEntries(await repository.GetEntriesAsync(wallet.Id, ct));
             if (balance.FundingDifference < transfer.SentAmount)
-                throw new BusinessRuleException("personal_money_insufficient_unfunded", "Error_TransferAmountsMismatch");
+                throw new BusinessRuleException("personal_money_insufficient_unfunded", "Error_PersonalMoneyInsufficientUnfunded");
         }
         repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, wallet!.Id,
             PersonalMoneyEntryKind.Funding, transfer.SentAmount, transfer.OccurredOn,
@@ -168,7 +168,7 @@ public sealed class PersonalMoneyHandler(
         if (wallet is not null)
         {
             if (wallet.Currency != currency)
-                throw new BusinessRuleException("personal_money_currency_mismatch", "Error_TransferAmountsMismatch");
+                throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
             return wallet;
         }
         wallet = PersonalMoneyWallet.Create(householdId, memberId, currency, clock.GetUtcNow());
