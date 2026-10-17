@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-12
+**Status date:** 2026-10-17
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -107,6 +107,12 @@ category totals without combining currencies.
 
 The dashboard category card shows month-to-date household-reportable expenses using daily aggregates through today (UTC), separate currencies, exact totals, and the largest four direct categories plus Other. It replaces the category placeholder with the canonical donut/legend design, localized states and browser verification. See [Dashboard category spending](dashboard-category-spending.md).
 
+## Personal Money foundation — in this PR (not yet merged)
+
+ADR-029 formalizes member-specific entitlement separate from financial accounts and reporting. This branch introduces Wallet/Entry persistence, manual Owner grants with operation idempotency, an owner-only wallet read, explicitly linked private charges, and explicit transfer funding purposes. Existing transfer edits/voids and transaction edits/voids append correcting entries. No automatic monthly grants or bank execution is introduced.
+
+Important first-slice limitations: no shared-account charges, no dedicated boundary cash-flow metric, no refund/return settlement, no cross-currency attribution, no wallet snapshot inside a departed household history, and no completed frontend creation/charge workflow. These must be resolved before presenting the feature as a complete household finance solution.
+
 ## Verification and CI — implemented
 
 The repository has three executable backend verification suites:
@@ -142,7 +148,7 @@ The following are not yet treated as implemented:
 - advanced recurring schedules, recurring transfers and reminders
 - category drag reordering, shared system-category customization, and private categories
 - goals
-- personal-money allocation and rollover
+- shared-account personal-money spending splits, funding returns and settlement, boundary cash-flow projections, recurring Personal Money grants
 - historical CSV/XLSX import
 - AI receipt scanning
 - bank connections
