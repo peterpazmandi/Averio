@@ -1,4 +1,5 @@
 using Averio.Application.Common.Abstractions;
+using Averio.Application.PersonalMoney;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transactions.Common;
 using Averio.Domain.Accounts;
@@ -31,7 +32,8 @@ public sealed class UpdateTransactionHandler(
     TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
-    Averio.Application.Activities.ActivityHandler activities)
+    Averio.Application.Activities.ActivityHandler activities,
+    PersonalMoneyHandler personalMoney)
 {
     public async Task HandleAsync(
         UpdateTransactionCommand command,
@@ -138,6 +140,7 @@ public sealed class UpdateTransactionHandler(
 
         try
         {
+            await personalMoney.ReverseTransactionChargeAsync(household.Id, transaction.Id, cancellationToken);
             await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
 
