@@ -3,6 +3,7 @@ using Averio.Domain.Accounts;
 using Averio.Domain.Categories;
 using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
+using Averio.Domain.PersonalMoney;
 using Averio.Infrastructure.Identity;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -25,6 +26,8 @@ public sealed class AverioDbContext(
     public DbSet<IconCatalogEntry> Icons => Set<IconCatalogEntry>();
     public DbSet<Label> Labels => Set<Label>();
     public DbSet<Averio.Domain.Transfers.Transfer> Transfers => Set<Averio.Domain.Transfers.Transfer>();
+    public DbSet<PersonalMoneyWallet> PersonalMoneyWallets => Set<PersonalMoneyWallet>();
+    public DbSet<PersonalMoneyEntry> PersonalMoneyEntries => Set<PersonalMoneyEntry>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<TransactionItem> TransactionItems => Set<TransactionItem>();
     public DbSet<TransactionLabel> TransactionLabels => Set<TransactionLabel>();
