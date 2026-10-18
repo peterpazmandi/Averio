@@ -40,6 +40,9 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         && eligibleIds.has(transaction.accountId));
     const [recipient, setRecipient] = useState(household.members.find(m => m.isCurrentUser)?.id ?? '');
     const [grantAmount, setGrantAmount] = useState('');
+    // Reuse this operation ID after network errors; only form edits start a new grant intent.
+    const [grantOperationId, setGrantOperationId] = useState(() => crypto.randomUUID());
+    const resetGrantIntent = () => setGrantOperationId(crypto.randomUUID());
     const [currency, setCurrency] = useState(household.preferredCurrency || 'EUR');
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [purchaseId, setPurchaseId] = useState('');
@@ -60,10 +63,10 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             householdId,
             grantPersonalMoneyRequest: {
                 recipientMemberId: recipient, currency, amount: normalized(grantAmount),
-                occurredOn: date, operationId: crypto.randomUUID(),
+                occurredOn: date, operationId: grantOperationId,
             },
         }),
-        onSuccess: async () => { await refresh(); setGrantAmount(''); setMessage(t('personalMoney.grantSuccess')); setError(''); },
+        onSuccess: async () => { await refresh(); setGrantAmount(''); resetGrantIntent(); setMessage(t('personalMoney.grantSuccess')); setError(''); },
         onError: (failure: Error) => { setError(failure.message); setMessage(''); },
     });
     const charge = useMutation({
@@ -109,21 +112,21 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <h4 className="font-semibold">{t('personalMoney.newGrant')}</h4>
             <div className="grid gap-4 sm:grid-cols-2">
                 <AverioField>{t('personalMoney.recipient')}
-                    <AverioSelect value={recipient} onChange={e => setRecipient(e.target.value)} required>
+                    <AverioSelect value={recipient} onChange={e => { setRecipient(e.target.value); resetGrantIntent(); }} required>
                         {household.members.map(member => <option key={member.id} value={member.id}>{member.displayName || t('householdSettings.unnamedMember')}</option>)}
                     </AverioSelect>
                 </AverioField>
                 <AverioField>{t('personalMoney.amount')}
                     <AverioInput inputMode="decimal" value={grantAmount} required pattern="[0-9]+([.,][0-9]{1,4})?"
-                        onChange={e => setGrantAmount(e.target.value)} />
+                        onChange={e => { setGrantAmount(e.target.value); resetGrantIntent(); }} />
                 </AverioField>
                 <AverioField>{t('personalMoney.currency')}
-                    <AverioSelect value={currency} onChange={e => setCurrency(e.target.value)}>
+                    <AverioSelect value={currency} onChange={e => { setCurrency(e.target.value); resetGrantIntent(); }}>
                         {['EUR', 'USD', 'HUF'].map(code => <option key={code} value={code}>{code}</option>)}
                     </AverioSelect>
                 </AverioField>
                 <AverioField>{t('personalMoney.date')}
-                    <AverioInput type="date" value={date} required onChange={e => setDate(e.target.value)} />
+                    <AverioInput type="date" value={date} required onChange={e => { setDate(e.target.value); resetGrantIntent(); }} />
                 </AverioField>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.grantHelp')}</p>
