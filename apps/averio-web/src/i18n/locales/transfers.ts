@@ -1,4 +1,9 @@
 export const transfersEN = {
+    "personalMoneyPurpose": "Transfer purpose",
+    "purposeOrdinary": "Ordinary transfer (no allowance change)",
+    "purposeFundExisting": "Fund an existing Personal Money allowance",
+    "purposeCreateAndFund": "Create and fund my Personal Money allowance",
+    "personalMoneyFundingHelp": "Eligible transfers from a shared account to your own private account can fund an allowance. Funding an existing grant does not grant it again.",
     "accountsChangedHelp": "An account is no longer available for this transfer. Choose active accounts you can manage. Your amounts, date and note have been kept.",
     "refreshAccounts": "Refresh accounts",
     "conflictHelp": "The transfer or its accounts have changed. Reload the latest version before continuing. Reloading discards your unsaved changes.",
@@ -51,6 +56,11 @@ export const transfersEN = {
     "needAccounts": "You need two active accounts you can manage. Create or reactivate an account on the Accounts page first."
 };
 export const transfersDE: typeof transfersEN = {
+    "personalMoneyPurpose": "Zweck der Umbuchung",
+    "purposeOrdinary": "Normale Umbuchung (kein Budgeteffekt)",
+    "purposeFundExisting": "Bereits zugeteiltes persönliches Budget finanzieren",
+    "purposeCreateAndFund": "Mein persönliches Budget zuteilen und finanzieren",
+    "personalMoneyFundingHelp": "Umbuchungen vom Gemeinschaftskonto auf dein eigenes Privatkonto können ein Budget finanzieren. Die Finanzierung einer bestehenden Zuteilung erzeugt keine neue.",
     "accountsChangedHelp": "Ein Konto ist für diese Umbuchung nicht mehr verfügbar. Wähle aktive Konten, die du verwalten darfst. Beträge, Datum und Notiz bleiben erhalten.",
     "refreshAccounts": "Konten aktualisieren",
     "conflictHelp": "Die Umbuchung oder ihre Konten wurden geändert. Lade vor dem Fortfahren die aktuelle Version. Deine ungespeicherten Änderungen werden dabei verworfen.",
@@ -103,6 +113,11 @@ export const transfersDE: typeof transfersEN = {
     "needAccounts": "Du brauchst zwei aktive Konten, die du verwalten darfst. Erstelle oder reaktiviere zuerst ein Konto auf der Kontenseite."
 };
 export const transfersHU: typeof transfersEN = {
+    "personalMoneyPurpose": "Átvezetés célja",
+    "purposeOrdinary": "Hagyományos átvezetés (nem érinti a keretet)",
+    "purposeFundExisting": "Meglévő személyes pénzkeret finanszírozása",
+    "purposeCreateAndFund": "Saját személyes pénzkeret létrehozása és finanszírozása",
+    "personalMoneyFundingHelp": "A közös számláról a saját privát számládra történő átvezetés finanszírozhatja a személyes keretedet. Egy meglévő keret finanszírozása nem hoz létre újabb juttatást.",
     "accountsChangedHelp": "Az egyik számla már nem használható ehhez az átvezetéshez. Válassz aktív, általad kezelhető számlákat. Az összegeket, dátumot és megjegyzést megőriztük.",
     "refreshAccounts": "Számlák frissítése",
     "conflictHelp": "Az átvezetés vagy a számlái megváltoztak. A folytatáshoz töltsd be a legfrissebb verziót. Ezzel a nem mentett módosításaid elvesznek.",
