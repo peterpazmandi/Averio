@@ -34,13 +34,14 @@ test('creation, update and void refresh account choices after conflicts or lost 
         '../../shared/api/generatedApiConfiguration': { generatedApiConfiguration: {} },
         '../accounts/api/accountsQueryKeys': { accountsQueryKeys: { household: () => ['accounts'] } },
         '../dashboard/api/dashboardQueryKeys': { dashboardQueryKeys: { household: () => ['dashboard'] } },
+        '../personal-money/personalMoneyQueries': { personalMoneyKeys: { mine: () => ['personal-money'] } },
     });
     const mutations = useTransferMutations('user', 'household');
     for (const operation of ['create', 'update', 'void']) {
         for (const status of [403, 404, 409]) {
             invalidations.length = 0;
             await mutations[operation].onError(new ApiError(status));
-            assert.equal(invalidations.length, 3, `${operation}: HTTP ${status}`);
+            assert.equal(invalidations.length, 4, `${operation}: HTTP ${status}`);
             assert.ok(invalidations.some(key => key[0] === 'accounts'));
         }
     }
