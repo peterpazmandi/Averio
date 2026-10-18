@@ -111,7 +111,7 @@ The dashboard category card shows month-to-date household-reportable expenses us
 
 ADR-029 formalizes member-specific entitlement separate from financial accounts and reporting. This branch introduces Wallet/Entry persistence, manual Owner grants with operation idempotency, an owner-only wallet read, explicitly linked private charges, and explicit transfer funding purposes. Existing transfer edits/voids and transaction edits/voids append correcting entries. No automatic monthly grants or bank execution is introduced.
 
-Important first-slice limitations: no shared-account charges, no dedicated boundary cash-flow metric, no refund/return settlement, no cross-currency attribution, no wallet snapshot inside a departed household history, and no completed frontend creation/charge workflow. These must be resolved before presenting the feature as a complete household finance solution.
+Important first-slice limitations: no shared-account charges, no dedicated boundary cash-flow metric, no refund/return settlement, no cross-currency attribution, no wallet snapshot inside a departed household history, and no dedicated Personal Money dashboard outside Household Settings. The initial EN/DE/HU Household Settings allowance controls, private purchase charge form, and transfer funding purpose selector are present, but dedicated end-to-end personal-money browser tests remain needed. These must be resolved before presenting the feature as a complete household finance solution.
 
 ## Verification and CI — implemented
 
