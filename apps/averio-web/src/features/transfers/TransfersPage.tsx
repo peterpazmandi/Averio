@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { CreateTransferRequest, TransferResponse } from '../../shared/api/generated';
 import { accountsQueries } from '../accounts/api/accountsQueries';
+import { householdQueries } from '../household/householdQueries';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { TransferEditor } from './TransferEditor';
 import { TransferTimeline } from './TransferTimeline';
@@ -21,6 +22,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
     const [editorRevision, setEditorRevision] = useState(0);
     const [notice, setNotice] = useState('');
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
+    const household = useQuery(householdQueries.detail(userId, householdId));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writable = (accounts.data ?? []).filter(a => a.scope === 'Household'
         || a.owners.some(o => o.householdMemberId === owners.data?.currentMemberId));
@@ -119,7 +121,9 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         {transfers.hasNextPage && <AverioButton disabled={transfers.isFetchingNextPage}
             onClick={() => { void transfers.fetchNextPage(); }}>{t('transfers.loadMore')}</AverioButton>}
         {editor && <TransferEditor key={`${editor === 'new' ? 'new' : editor.id}:${editorRevision}`}
-                transfer={editor === 'new' ? null : editor} accounts={writable} busy={busy}
+                transfer={editor === 'new' ? null : editor} accounts={writable}
+                currentMemberId={owners.data?.currentMemberId}
+                canCreateGrant={household.data?.role === 'owner'} busy={busy}
                 onClose={() => setEditor(null)} onSave={save} onVoid={voidCurrent} onReload={reloadCurrent} />}
     </section>;
 }
