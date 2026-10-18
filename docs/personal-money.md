@@ -97,6 +97,6 @@ This is **not** a complete personal-money user journey until the remaining PR wo
 - Wallet information in immutable previous-household snapshots.
 - Multi-currency attribution and exchange-rate policy.
 - Scheduled grants and any future bank automation.
-- Frontend editor controls, generated OpenAPI client update and EN/DE/HU UI strings.
+- A dedicated dashboard/standalone Personal Money page and full browser end-to-end scenarios. The initial household allowance panel, transfer funding selector, generated OpenAPI client, and EN/DE/HU UI strings are included in PR 1.
 
 The ordinary transfer dashboard cash-flow and category aggregates remain unchanged intentionally. Run the .NET transaction and PostgreSQL checks (including EF pending-model check), update generated OpenAPI client, and finish private-account browser verification before merging.
