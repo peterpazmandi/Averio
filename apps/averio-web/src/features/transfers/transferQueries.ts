@@ -5,6 +5,7 @@ import type { CreateTransferRequest, UpdateTransferRequest } from '../../shared/
 import { generatedApiConfiguration } from '../../shared/api/generatedApiConfiguration';
 import { accountsQueryKeys } from '../accounts/api/accountsQueryKeys';
 import { dashboardQueryKeys } from '../dashboard/api/dashboardQueryKeys';
+import { personalMoneyKeys } from '../personal-money/personalMoneyQueries';
 
 export const transferApi = new TransfersApi(generatedApiConfiguration);
 export const transferKeys = {
@@ -19,6 +20,7 @@ export function useTransferMutations(userId: string, householdId: string) {
         client.invalidateQueries({ queryKey: transferKeys.all(userId, householdId) }),
         client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
         client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
+        client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) }),
     ]);
     const refreshOnAccountOrTransferChange = async (error: Error) => {
         if (error instanceof ApiError && [403, 404, 409].includes(error.status)) await invalidate();
