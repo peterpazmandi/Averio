@@ -12,6 +12,8 @@ import { AverioField, AverioInput, AverioSelect, AverioTextarea } from '../../sh
 interface Props {
     transfer: TransferResponse | null;
     accounts: AccountResponse[];
+    currentMemberId?: string;
+    canCreateGrant?: boolean;
     busy: boolean;
     onClose: () => void;
     onSave: (request: CreateTransferRequest) => Promise<void>;
@@ -19,7 +21,7 @@ interface Props {
     onReload: () => Promise<void>;
 }
 
-export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose, onSave, onVoid, onReload }: Props) {
+export function TransferEditor({ transfer, accounts, currentMemberId, canCreateGrant = false, busy: mutationBusy, onClose, onSave, onVoid, onReload }: Props) {
     const { t } = useTranslation();
     const formId = useId();
     const [draftSourceId, setSourceId] = useState(transfer ? transfer.source?.accountId ?? '' : accounts.find(a => a.status === 'Active')?.id ?? '');
@@ -28,6 +30,7 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
     const [received, setReceived] = useState(transfer?.destination?.amount ?? '');
     const [date, setDate] = useState(transfer?.occurredOn ?? format(new Date(), 'yyyy-MM-dd'));
     const [note, setNote] = useState(transfer?.note ?? '');
+    const [personalPurpose, setPersonalPurpose] = useState<'Ordinary' | 'CreateAndFundGrant' | 'FundExistingGrant'>('Ordinary');
     const [error, setError] = useState('');
     const [conflict, setConflict] = useState(false);
     const [accountChange, setAccountChange] = useState(false);
@@ -39,6 +42,12 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
     const source = accounts.find(a => a.id === sourceId);
     const destination = accounts.find(a => a.id === destinationId);
     const sameCurrency = source?.currency === destination?.currency;
+    const personalPair = !transfer && !!source && !!destination && sameCurrency
+        && source.scope === 'Household' && source.includeInHouseholdReports
+        && destination.scope === 'Personal' && destination.visibility === 'Private'
+        && !destination.includeInHouseholdReports
+        && destination.owners.length === 1
+        && destination.owners[0].householdMemberId === currentMemberId;
     const activePair = source?.status === 'Active' && destination?.status === 'Active';
     const editable = !transfer || (transfer.canModify && !transfer.isVoided);
     const normalize = (amount: string) => amount.trim().replace(',', '.');
@@ -49,7 +58,8 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
         try {
             await onSave({ sourceAccountId: sourceId, destinationAccountId: destinationId,
                 sentAmount: normalize(sent), receivedAmount: normalize(sameCurrency ? sent : received),
-                occurredOn: date, note: note.trim() || null });
+                occurredOn: date, note: note.trim() || null,
+                personalMoneyPurpose: personalPair ? personalPurpose : 'Ordinary' });
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : t('transfers.failed'));
             if (failure instanceof ApiError && [403, 404, 409].includes(failure.status)) {
@@ -133,6 +143,16 @@ export function TransferEditor({ transfer, accounts, busy: mutationBusy, onClose
                         </AverioField>}
                     </div>
                     {source && destination && !sameCurrency && <p className="mt-3 text-[#667085] dark:text-[#AAB4C4]">{t('transfers.fxHelp')}</p>}
+                    {personalPair && <div className="mt-4 space-y-2 rounded-xl border border-emerald-500/20 p-3">
+                        <AverioField>{t('transfers.personalMoneyPurpose')}
+                            <AverioSelect value={personalPurpose} onChange={e => setPersonalPurpose(e.target.value as typeof personalPurpose)}>
+                                <option value="Ordinary">{t('transfers.purposeOrdinary')}</option>
+                                <option value="FundExistingGrant">{t('transfers.purposeFundExisting')}</option>
+                                {canCreateGrant && <option value="CreateAndFundGrant">{t('transfers.purposeCreateAndFund')}</option>}
+                            </AverioSelect>
+                        </AverioField>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">{t('transfers.personalMoneyFundingHelp')}</p>
+                    </div>}
                 </AverioCard>
                 <AverioCard role="group" aria-labelledby={`${formId}-details`}>
                     <h3 id={`${formId}-details`} className="mb-4 flex items-center gap-2 text-sm font-bold"><ConceptIcon name="receipt" />{t('transfers.detailsSection')}</h3>
