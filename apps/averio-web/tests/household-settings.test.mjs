@@ -112,6 +112,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         './HouseholdEditor': { HouseholdEditor: 'editor' },
         './PreviousHouseholds': { PreviousHouseholds: 'history' },
         './HouseholdInvitations': { HouseholdInvitations: 'invitations' },
+        '../personal-money/PersonalMoneyPanel': { PersonalMoneyPanel: 'personal-money' },
     });
     function render() { cursor = 0; return HouseholdPage({ userId: 'u', householdId: 'h' }); }
     function find(tree, type, text) {
