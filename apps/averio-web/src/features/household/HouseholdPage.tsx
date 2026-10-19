@@ -138,11 +138,13 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                             <span className="rounded-full border border-emerald-900/15 px-2 py-1 text-xs font-semibold dark:border-emerald-100/20">{t(member.role === 'owner' ? 'householdSettings.owner' : 'householdSettings.member')}</span>
                         </li>)}
                     </ul>
-                </AverioCard>
-                <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />
-                <PreviousHouseholds userId={userId} householdId={householdId} />
-                {owner && <HouseholdInvitations userId={userId} householdId={householdId} />}
-                <AverioCard id="household-privacy" className="scroll-mt-24 space-y-3 p-5 sm:p-6">
+                </AverioCard>}
+                {visibleSection === 'members' && <PreviousHouseholds userId={userId} householdId={householdId} />}
+                {visibleSection === 'personalMoney' && <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />}
+                {owner && visibleSection === 'invitations' && <section id="household-invitations" className="scroll-mt-24">
+                    <HouseholdInvitations userId={userId} householdId={householdId} />
+                </section>}
+                {visibleSection === 'privacy' && <AverioCard id="household-privacy" className="scroll-mt-24 space-y-3 p-5 sm:p-6">
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
                     <p className={muted}>{t('householdSettings.privacyHelp')}</p>
                     <p className={muted}>{t('householdSettings.balanceHelp')}</p>
