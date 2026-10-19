@@ -101,7 +101,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         },
     };
     const { HouseholdPage } = load('../src/features/household/HouseholdPage.tsx', {
-        react: { useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], value => { state[i] = value; }]; } },
+        react: { useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial; return [state[i], value => { state[i] = value; }]; } },
         'react/jsx-runtime': jsxRuntime,
         'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
         '@tanstack/react-query': { useQuery: () => query },
