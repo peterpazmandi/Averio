@@ -14,16 +14,34 @@ import { PersonalMoneyPanel } from '../personal-money/PersonalMoneyPanel';
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(householdQueries.detail(userId, householdId));
+    type Section = 'profile' | 'members' | 'invitations' | 'personalMoney' | 'privacy';
+    const decodeSection = (hash: string): Section => {
+        switch (hash) {
+            case '#household-members': return 'members';
+            case '#household-invitations': return 'invitations';
+            case '#household-personal-money': return 'personalMoney';
+            case '#household-privacy': return 'privacy';
+            default: return 'profile';
+        }
+    };
+    const [activeSection, setActiveSection] = useState<Section>(() =>
+        typeof window === 'undefined' ? 'profile' : decodeSection(window.location.hash));
     useEffect(() => {
-        if (!query.data) return;
-        const scrollToHash = () => {
-            const id = window.location.hash.slice(1);
-            if (id.startsWith('household-')) document.getElementById(id)?.scrollIntoView({ block: 'start' });
-        };
-        const frame = requestAnimationFrame(scrollToHash);
-        window.addEventListener('hashchange', scrollToHash);
-        return () => { cancelAnimationFrame(frame); window.removeEventListener('hashchange', scrollToHash); };
-    }, [query.data]);
+        const onHashChange = () => setActiveSection(decodeSection(window.location.hash));
+        window.addEventListener('hashchange', onHashChange);
+        return () => window.removeEventListener('hashchange', onHashChange);
+    }, []);
+    useEffect(() => {
+        if (!query.data || typeof window === 'undefined') return;
+        // A deep link can target a panel that wasn't in the DOM until the query finished.
+        if (window.location.hash === '#household-' + (activeSection === 'personalMoney' ? 'personal-money' : activeSection)) {
+            const frame = window.requestAnimationFrame(() => {
+                document.getElementById('household-' + (activeSection === 'personalMoney' ? 'personal-money' : activeSection))
+                    ?.scrollIntoView({ block: 'start' });
+            });
+            return () => window.cancelAnimationFrame(frame);
+        }
+    }, [query.data, activeSection]);
     const [draft, setDraft] = useState<HouseholdResponse | null>(null);
     const [saved, setSaved] = useState(false);
     const [reloadRequired, setReloadRequired] = useState(false);
@@ -45,6 +63,11 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
     </AverioCard>;
     const household = query.data;
     const owner = household.role === 'owner';
+    const visibleSection = !owner && activeSection === 'invitations' ? 'profile' : activeSection;
+    const sections: Section[] = owner
+        ? ['profile', 'members', 'invitations', 'personalMoney', 'privacy']
+        : ['profile', 'members', 'personalMoney', 'privacy'];
+    const menuIcons = { profile: 'household', members: 'group', invitations: 'receipt', personalMoney: 'savings', privacy: 'lock' } as const;
     const countryName = household.countryCode
         ? new Intl.DisplayNames([language], { type: 'region' }).of(household.countryCode) ?? household.countryCode
         : t('householdSettings.notSet');
@@ -59,18 +82,33 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
             <AverioButton disabled={query.isFetching} onClick={retry}>{t('common.actions.retry')}</AverioButton>
         </div>}
         <div className="grid items-start gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
-            <AverioCard role="navigation" aria-label={t('householdSettings.sections')} className="flex flex-wrap gap-1 p-3 lg:sticky lg:top-24 lg:flex-col">
-                {(['profile', 'members', 'personalMoney', 'privacy'] as const).map(section => <a key={section} href={'#household-' + (section === 'personalMoney' ? 'personal-money' : section)}
-                    onClick={event => {
-                        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                        document.getElementById(event.currentTarget.hash.slice(1))?.scrollIntoView({ block: 'start' });
-                    }}
-                    className="rounded-xl px-3 py-3 text-sm font-semibold hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-emerald-900/40">
-                    {t('householdSettings.' + section)}
-                </a>)}
+            <AverioCard role="navigation" aria-label={t('householdSettings.sections')}
+                className="flex flex-wrap gap-2 p-3 lg:sticky lg:top-24 lg:flex-col">
+                {sections.map(section => {
+                    const selected = visibleSection === section;
+                    const href = '#household-' + (section === 'personalMoney' ? 'personal-money' : section);
+                    return <a key={section} href={href} aria-current={selected ? 'page' : undefined}
+                        onClick={event => {
+                            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                            setActiveSection(section);
+                        }}
+                        className={`group flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 lg:w-full lg:flex-none ${selected
+                            ? 'border-l-emerald-500 bg-emerald-100 font-bold text-emerald-900 shadow-sm ring-1 ring-emerald-300/60 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-800'
+                            : 'border-l-transparent font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`}>
+                        <span className={`shrink-0 ${selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                            <ConceptIcon name={menuIcons[section]} />
+                        </span>
+                        <span className="min-w-0 text-left">
+                            <span className="block break-words">{t('householdSettings.' + section)}</span>
+                            <span className="mt-0.5 hidden text-[11px] font-normal leading-snug text-slate-600 dark:text-slate-300 lg:block">
+                                {t('householdSettings.navHelp.' + section)}
+                            </span>
+                        </span>
+                    </a>;
+                })}
             </AverioCard>
             <div className="min-w-0 space-y-5">
-                <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
+                {visibleSection === 'profile' && <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.profile')}</h3><p className={muted}>{t('householdSettings.profileHelp')}</p></div>
                         {owner && !draft && <AverioButton disabled={reloadRequired || query.isFetching}
@@ -84,8 +122,8 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                         <div><dt className={muted}>{t('householdSettings.currency')}</dt><dd className="mt-1 font-semibold">{household.preferredCurrency}</dd><p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t('householdSettings.currencyHelp')}</p></div>
                     </dl>}
                     {!owner && <p className={muted}>{t('householdSettings.readOnly')}</p>}
-                </AverioCard>
-                <AverioCard id="household-members" className="scroll-mt-24 space-y-4 p-5 sm:p-6">
+                </AverioCard>}
+                {visibleSection === 'members' && <AverioCard id="household-members" className="scroll-mt-24 space-y-4 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.members')}</h3><p className={muted}>{t('householdSettings.membersHelp')}</p></div>
                         <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100">{t('householdSettings.memberCount', { count: household.members.length })}</span>
@@ -108,7 +146,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
                     <p className={muted}>{t('householdSettings.privacyHelp')}</p>
                     <p className={muted}>{t('householdSettings.balanceHelp')}</p>
-                </AverioCard>
+                </AverioCard>}
             </div>
         </div>
     </div>;
