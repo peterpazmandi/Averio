@@ -72,6 +72,13 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    filterOnly: "Nur persönliches Budget",
+    loadedFilterHelp: "Dieser Filter prüft bereits geladene Buchungen und Umbuchungen. Lade weitere Datensätze für ältere Einträge.",
+    noLoadedRelations: "Keine Budgetverknüpfungen in den geladenen Einträgen. Lade weitere Datensätze.",
+    relationDetails: "Verknüpfung mit persönlichem Budget",
+    refundOriginalHint: "Diese Erstattung gehört zu einem zuvor zugeordneten Kauf.",
+    transactionLinkHelp: "Die Budgetzuordnung wird getrennt verwaltet. Eine Bearbeitung der Buchung kann die Zuordnung aufheben.",
+    transferLinkHelp: "Finanzierungsbewegungen beeinflussen die private Finanzierung, nicht die Ausgabenkategorien.",
     relations: {"PrivateCharge":"Privater Kauf → Budget","SharedCharge":"Gemeinsamer Kauf → Budget","PrivateRefund":"Private Erstattung → Budget","SharedRefund":"Gemeinsame Erstattung → Budget","AllowanceFunding":"Budget finanziert","FundingReturn":"Finanzierung zurückgeführt","CreateAndFundGrant":"Budget zugeteilt & finanziert"},
     sections: "Budgetbereiche",
     tabs: { mine: "Mein Budget", charges: "Käufe zuordnen", reconcile: "Erstattungen und Anpassungen", owner: "Budgetzuteilung", boundary: "Geldbewegungen" },
