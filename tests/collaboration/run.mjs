@@ -94,6 +94,7 @@ async function login(page, email, password) {
     await page.waitForURL(url => url.pathname === '/invitation' || url.pathname === '/app' || url.pathname.startsWith('/app/'));
 }
 async function invite(page, email) {
+    await page.locator('a[href="#household-invitations"]').click();
     await page.getByRole('button', { name: 'Invite a partner', exact: true }).click();
     await page.getByRole('dialog').getByLabel('Email address', { exact: true }).fill(email);
     await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
@@ -134,7 +135,7 @@ try {
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');
-    await owner.getByRole('button', { name: 'Invite a partner', exact: true }).waitFor();
+    await owner.locator('a[href="#household-invitations"]').waitFor();
     const partnerEmail = 'partner@collaboration.test';
     await invite(owner, partnerEmail);
     const invitation = await mail(partnerEmail, 'invitation');
