@@ -342,6 +342,8 @@
   <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Create an allowance grant before using a transfer to fund it.</value></data>
   <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>This transfer exceeds the personal allowance that has not yet been privately funded.</value></data>
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Select a valid personal-money transfer purpose.</value></data>
+  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Choose a posted refund in the same account and currency as your linked purchase. Refunds may not exceed the amount charged to Personal Money.</value></data>
+  <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>You can surrender only unused positive Personal Money entitlement.</value></data>
 </root>
 
 
