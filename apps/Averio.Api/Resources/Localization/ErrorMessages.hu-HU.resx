@@ -342,6 +342,8 @@
   <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Előbb hozz létre keretjuttatást, és csak utána finanszírozd átvezetéssel.</value></data>
   <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>Az átvezetés összege nagyobb a még nem finanszírozott személyes keretnél.</value></data>
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Válassz érvényes célt a személyes kerethez kapcsolódó átvezetéshez.</value></data>
+  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Válassz könyvelt visszatérítést ugyanazon a számlán és pénznemben, mint a kerethez kapcsolt vásárlás. A visszatérítés nem haladhatja meg az elszámolt összeget.</value></data>
+  <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Csak a még fel nem használt, pozitív személyes pénzkeretből mondhatsz le.</value></data>
 </root>
 
 
