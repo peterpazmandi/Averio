@@ -1,5 +1,8 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    surrenderDate: "Surrender date",
+    noRecordedRefund: "No matching recorded refund yet. Record the money received as an Income transaction on the same account first.",
+    goToTransactions: "Go to Transactions",
     filterOnly: "Personal Money related only",
     loadedFilterHelp: "This filter checks transactions or transfers already loaded on this page. Load more to check older records.",
     noLoadedRelations: "No Personal Money links in the loaded records. Try loading more.",
@@ -20,7 +23,7 @@ export const personalMoneyEN = {
     refundTitle: "Restore allowance from a refund",
     refundHelp: "Select a posted income refund on the same account as an already linked purchase. Refunds do not create another bank transaction.",
     refundOriginal: "Original charged purchase",
-    refundIncome: "Recorded refund (income)",
+    refundIncome: "Money received back (existing Income transaction)",
     selectRefund: "Choose a refund transaction",
     applyRefund: "Apply refund",
     refundSuccess: "Refund linked; allowance restored.",
@@ -72,6 +75,9 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    surrenderDate: "Datum der Budgetrückgabe",
+    noRecordedRefund: "Noch keine passende Erstattung erfasst. Buche den zurückerhaltenen Betrag zuerst als Einnahme auf demselben Konto.",
+    goToTransactions: "Zu den Buchungen",
     filterOnly: "Nur persönliches Budget",
     loadedFilterHelp: "Dieser Filter prüft bereits geladene Buchungen und Umbuchungen. Lade weitere Datensätze für ältere Einträge.",
     noLoadedRelations: "Keine Budgetverknüpfungen in den geladenen Einträgen. Lade weitere Datensätze.",
@@ -92,7 +98,7 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     refundTitle: "Budget durch Erstattung wiederherstellen",
     refundHelp: "Wähle eine gebuchte Einnahme als Erstattung auf demselben Konto wie der bereits zugeordnete Kauf. Es wird keine neue Bankbuchung erzeugt.",
     refundOriginal: "Ursprünglich zugeordneter Kauf",
-    refundIncome: "Gebuchte Erstattung (Einnahme)",
+    refundIncome: "Zurückerhaltenes Geld (bestehende Einnahme)",
     selectRefund: "Erstattung auswählen",
     applyRefund: "Erstattung zuordnen",
     refundSuccess: "Erstattung zugeordnet; Budget wiederhergestellt.",
@@ -144,6 +150,9 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    surrenderDate: "Keretleadás dátuma",
+    noRecordedRefund: "Még nincs megfelelő rögzített visszatérítés. Először vidd fel a visszakapott összeget bevételként ugyanarra a számlára.",
+    goToTransactions: "Tranzakciók megnyitása",
     filterOnly: "Csak a személyes kerethez kapcsolódók",
     loadedFilterHelp: "A szűrő a már betöltött tranzakciókat és átvezetéseket vizsgálja. Régebbiekhez tölts be továbbiakat.",
     noLoadedRelations: "A betöltött tételek között nincs személyes kerethez kapcsolódó. Tölts be továbbiakat.",
@@ -164,7 +173,7 @@ export const personalMoneyHU: typeof personalMoneyEN = {
     refundTitle: "Keret visszaállítása visszatérítésből",
     refundHelp: "Válassz könyvelt bevételt, amely ugyanarra a számlára érkezett, mint az eredeti elszámolt vásárlás. Nem jön létre új banki tranzakció.",
     refundOriginal: "Eredetileg elszámolt vásárlás",
-    refundIncome: "Könyvelt visszatérítés (bevétel)",
+    refundIncome: "Visszakapott pénz (meglévő bevétel)",
     selectRefund: "Válassz visszatérítést",
     applyRefund: "Visszatérítés elszámolása",
     refundSuccess: "A visszatérítést hozzárendeltük, a keret nőtt.",
