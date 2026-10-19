@@ -4,8 +4,13 @@ import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import type { TransactionDto } from '../api/transactionApi';
+import type { PersonalMoneyRelation } from '../../personal-money/personalMoneyRelations';
+import { PersonalMoneyRelationBadge } from '../../personal-money/PersonalMoneyRelationBadge';
 
-export function TransactionLinkDetail({ query, onClose }: { query: UseQueryResult<TransactionDto, Error>; onClose: () => void }) {
+export function TransactionLinkDetail({ query, onClose, personalRelation }: {
+    query: UseQueryResult<TransactionDto, Error>; onClose: () => void;
+    personalRelation?: PersonalMoneyRelation;
+}) {
     const { t, i18n } = useTranslation();
     const transaction = query.data;
     const money = (amount: string) => formatDecimalAmount(amount, transaction!.currency, i18n.resolvedLanguage ?? i18n.language);
@@ -17,6 +22,11 @@ export function TransactionLinkDetail({ query, onClose }: { query: UseQueryResul
         </div> : transaction && <div className="space-y-4">
             <p className="text-xs">{t('transactionLinks.readOnly')}</p>
             <h3 className="break-words text-base font-semibold">{transaction.description}</h3>
+            {personalRelation && <div className="rounded-xl border border-emerald-400/30 bg-emerald-50 p-4 dark:bg-emerald-950/30">
+                <p className="mb-2 text-xs font-bold">{t('personalMoney.relationDetails')}</p>
+                <PersonalMoneyRelationBadge relation={personalRelation} detail />
+                {personalRelation.relatedTransactionId && <p className="mt-2 text-xs">{t('personalMoney.refundOriginalHint')}</p>}
+            </div>}
             <dl className="grid grid-cols-2 gap-3">
                 <dt>{t('transactionManagement.account')}</dt><dd className="break-words">{transaction.accountName}</dd>
                 <dt>{t('transactionManagement.date')}</dt><dd>{new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(transaction.occurredOn + 'T00:00:00Z'))}</dd>
