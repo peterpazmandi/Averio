@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<Transactions.Common.TransactionReferenceResolver>();
         services.AddScoped<Transactions.Common.TransactionAggregateWriter>();
         services.AddScoped<Statistics.GetCashFlow.GetCashFlowHandler>();
+        services.AddScoped<Statistics.GetBoundaryCashFlow.BoundaryCashFlowHandler>();
         services.AddScoped<Statistics.GetCategoryCashFlow.GetCategoryCashFlowHandler>();
         services.AddScoped<Categories.ManageCategories.CategoryManagementHandler>();
         services.AddScoped<Categories.ManageCategories.CategoryPinHandler>();
