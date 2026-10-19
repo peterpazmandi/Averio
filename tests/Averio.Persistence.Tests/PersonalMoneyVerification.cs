@@ -2,6 +2,8 @@ using Averio.Application.PersonalMoney;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transfers;
 using Averio.Application.Transactions.VoidTransaction;
+using Averio.Application.Transactions.UpdateTransaction;
+using Averio.Application.Transactions.Common;
 using Averio.Domain.Common;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
@@ -78,7 +80,8 @@ internal static class PersonalMoneyVerification
         await using (var scope = provider.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
-            var category = await db.Categories.OrderBy(x => x.Id).FirstAsync(Ct);
+            var category = await db.Categories.Where(x => x.IsBase && !x.IsArchived
+                && x.Kind == Averio.Domain.Categories.CategoryKind.Expense).OrderBy(x => x.Id).FirstAsync(Ct);
             var record = Transaction.Create(fixture.HouseholdId, fixture.PrivateAccountId,
                 fixture.OwnerMemberId, TransactionKind.Expense, TransactionVisibility.Private,
                 CurrencyCode.Eur, "Sensitive private purchase", "private details", On,
@@ -163,6 +166,26 @@ internal static class PersonalMoneyVerification
             await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
                 active.Amount, active.Version, unlinkId, Ct);
             await BalanceAsync(handler, fixture.HouseholdId, 375m, 75m);
+        }
+
+        // Editing a corrected purchase retracts the net charge and invalidates its old version.
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var record = await db.Transactions.AsNoTracking().Include(x => x.Items)
+                .SingleAsync(x => x.Id == privateExpense, Ct);
+            var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            var active = (await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Single();
+            await scope.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(
+                new UpdateTransactionCommand(fixture.HouseholdId, privateExpense, record.AccountId,
+                    TransactionKind.Expense, TransactionVisibility.Private, "Corrected private purchase", null, On,
+                    [new TransactionItemInput("Updated private item", record.Items.First().CategoryId, 20m)],
+                    [], record.UpdatedAt), Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
+            await FailureAsync<ConflictException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 10m, active.Amount, active.Version, Guid.NewGuid(), Ct));
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 20m, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 380m, 80m);
         }
 
         await using (var scope = provider.CreateAsyncScope())

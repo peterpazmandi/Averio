@@ -212,6 +212,8 @@ function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onEr
     return <form className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
         onSubmit={event => { event.preventDefault(); if (valid && !correction.isPending) correction.mutate(normalized(amount)); }}>
         <p className="text-sm font-semibold">{label} · {formattedAmount}</p>
+        <a className="inline-block text-sm font-semibold text-emerald-700 underline focus-visible:outline-2 dark:text-emerald-300"
+            href={'/app/transactions?transaction=' + encodeURIComponent(item.transactionId)}>{t('transactionLinks.details')}</a>
         <AverioField>{t('personalMoney.changedAmount')}
             <AverioInput inputMode="decimal" value={amount} disabled={correction.isPending}
                 onChange={e => { setAmount(e.target.value); setIntent('save'); setOperationId(crypto.randomUUID()); }} />
