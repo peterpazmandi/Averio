@@ -8,6 +8,7 @@ import { activitiesEN, activitiesDE, activitiesHU } from './locales/activities';
 import { iconNamesEN, iconNamesDE, iconNamesHU } from './locales/iconNames';
 import { categoryManagementEN, categoryManagementDE, categoryManagementHU } from './locales/categoryManagement';
 import { transfersEN, transfersDE, transfersHU } from './locales/transfers';
+import { personalMoneyEN, personalMoneyDE, personalMoneyHU } from './locales/personalMoney';
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
@@ -35,15 +36,15 @@ void i18n
         resources: {
             en: {
                 translation: { ...en, transactionLinks: transactionLinksEN,
-            recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
+            recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, personalMoney: personalMoneyEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
                 translation: { ...de, transactionLinks: transactionLinksDE,
-            recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
+            recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, personalMoney: personalMoneyDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
                 translation: { ...hu, transactionLinks: transactionLinksHU,
-            recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
+            recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, personalMoney: personalMoneyHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 

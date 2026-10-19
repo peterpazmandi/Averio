@@ -118,6 +118,12 @@ jobs:
         working-directory: apps/averio-web
         run: npm run lint
 
+      - name: Verify Personal Money browser flows
+        working-directory: apps/averio-web
+        run: |
+          node tests/personal-money.browser.mjs
+          node tests/transaction-editor.browser.mjs
+
       - name: Verify collaboration in separate browser sessions
         working-directory: apps/averio-web
         run: npm run test:collaboration

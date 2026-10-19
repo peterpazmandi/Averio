@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<Transactions.SavedViews.SavedViewHandler>();
         services.AddScoped<Activities.ActivityHandler>();
         services.AddScoped<Transfers.TransferHandler>();
+        services.AddScoped<PersonalMoney.PersonalMoneyHandler>();
         services.AddScoped<Transactions.CreateTransaction.CreateTransactionHandler>();
         services.AddScoped<Transactions.UpdateTransaction.UpdateTransactionHandler>();
         services.AddScoped<Transactions.VoidTransaction.VoidTransactionHandler>();

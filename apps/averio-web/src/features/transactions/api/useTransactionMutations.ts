@@ -11,6 +11,7 @@ export function useTransactionMutations(userId: string, householdId: string) {
 
     async function invalidate() {
         await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['personal-money', userId, householdId] }),
             queryClient.invalidateQueries({ queryKey: activityKeys.all(userId, householdId) }),
             queryClient.invalidateQueries({
                 queryKey: transactionQueryKeys.all(userId, householdId),

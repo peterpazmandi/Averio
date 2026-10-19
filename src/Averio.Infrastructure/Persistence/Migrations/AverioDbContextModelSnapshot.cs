@@ -704,6 +704,132 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal?>("CorrectionExpectedAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("correction_expected_amount");
+
+                    b.Property<int?>("CorrectionExpectedVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("correction_expected_version");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateOnly>("OccurredOn")
+                        .HasColumnType("date")
+                        .HasColumnName("occurred_on");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<Guid?>("ReversesEntryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reverses_entry_id");
+
+                    b.Property<Guid?>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<Guid?>("TransferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transfer_id");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReversesEntryId")
+                        .IsUnique();
+
+                    b.HasIndex("TransferId");
+
+                    b.HasIndex("HouseholdId", "TransactionId");
+
+                    b.HasIndex("HouseholdId", "TransferId");
+
+                    b.HasIndex("HouseholdId", "WalletId");
+
+                    b.HasIndex("WalletId", "OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("WalletId", "OccurredOn", "RecordedAt");
+
+                    b.ToTable("personal_money_entries", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_personal_money_entry_amount", "amount <> 0");
+
+                            t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge')");
+
+                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind <> 'PrivateCharge' OR transaction_id IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyWallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("HouseholdId", "Id")
+                        .HasName("ak_personal_money_wallet_household_id_id");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId")
+                        .IsUnique();
+
+                    b.ToTable("personal_money_wallets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_personal_money_wallet_currency", "currency IN ('EUR','USD','HUF')");
+                        });
+                });
+
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1748,6 +1874,42 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_labels_accounts");
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyEntry", b =>
+                {
+                    b.HasOne("Averio.Domain.PersonalMoney.PersonalMoneyEntry", null)
+                        .WithMany()
+                        .HasForeignKey("ReversesEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.Transfers.Transfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.PersonalMoney.PersonalMoneyWallet", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "WalletId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.PersonalMoneyWallet", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>

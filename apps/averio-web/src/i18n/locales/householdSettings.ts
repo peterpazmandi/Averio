@@ -1,4 +1,5 @@
 export const householdSettingsEN = {
+    "personalMoney": "Personal Money",
     "title": "Household settings",
     "description": "A shared home for your finances, with room for personal privacy.",
     "sections": "Household settings sections",
@@ -36,6 +37,7 @@ export const householdSettingsEN = {
 };
 
 export const householdSettingsDE = {
+    "personalMoney": "Persönliches Budget",
     "title": "Haushaltseinstellungen",
     "description": "Ein gemeinsamer Ort für eure Finanzen – mit Raum für persönliche Privatsphäre.",
     "sections": "Bereiche der Haushaltseinstellungen",
@@ -73,6 +75,7 @@ export const householdSettingsDE = {
 };
 
 export const householdSettingsHU = {
+    "personalMoney": "Személyes pénzkeret",
     "title": "Háztartás beállításai",
     "description": "Közös hely a pénzügyeiteknek, a személyes magánszféra megőrzésével.",
     "sections": "A háztartás beállításainak részei",

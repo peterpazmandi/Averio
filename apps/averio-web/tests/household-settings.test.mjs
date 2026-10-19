@@ -101,7 +101,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         },
     };
     const { HouseholdPage } = load('../src/features/household/HouseholdPage.tsx', {
-        react: { useState: initial => { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], value => { state[i] = value; }]; } },
+        react: { useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], value => { state[i] = value; }]; } },
         'react/jsx-runtime': jsxRuntime,
         'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
         '@tanstack/react-query': { useQuery: () => query },
@@ -112,6 +112,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         './HouseholdEditor': { HouseholdEditor: 'editor' },
         './PreviousHouseholds': { PreviousHouseholds: 'history' },
         './HouseholdInvitations': { HouseholdInvitations: 'invitations' },
+        '../personal-money/PersonalMoneyPanel': { PersonalMoneyPanel: 'personal-money' },
     });
     function render() { cursor = 0; return HouseholdPage({ userId: 'u', householdId: 'h' }); }
     function find(tree, type, text) {

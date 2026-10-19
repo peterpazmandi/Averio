@@ -17,7 +17,8 @@ public sealed class TransfersController(TransferHandler handler) : ControllerBas
         CreateTransferRequest request, CancellationToken ct)
     {
         var id = await handler.CreateAsync(householdId, request.SourceAccountId, request.DestinationAccountId,
-            Input(request.SentAmount, request.ReceivedAmount, request.OccurredOn, request.Note), ct);
+            Input(request.SentAmount, request.ReceivedAmount, request.OccurredOn, request.Note), ct,
+            request.PersonalMoneyPurpose);
         return CreatedAtAction(nameof(Get), new { householdId, transferId = id }, new CreateTransferResponse(id));
     }
 

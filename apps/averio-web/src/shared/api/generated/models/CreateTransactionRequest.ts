@@ -70,6 +70,10 @@ export interface CreateTransactionRequest {
      * 
      */
     activityAssignment?: ActivityAssignmentRequest | null;
+    /**
+     * 
+     */
+    chargePersonalMoney?: boolean;
 }
 
 /**
@@ -106,6 +110,7 @@ export function CreateTransactionRequestFromJSONTyped(json: any, ignoreDiscrimin
         'items': ((json['items'] as Array<any>).map(TransactionItemRequestFromJSON)),
         'labelIds': json['labelIds'] == null ? null : json['labelIds'],
         'activityAssignment': json['activityAssignment'] === undefined ? undefined : json['activityAssignment'] === null ? null : ActivityAssignmentRequestFromJSON(json['activityAssignment']),
+        'chargePersonalMoney': json['chargePersonalMoney'] == null ? undefined : json['chargePersonalMoney'],
     };
 }
 
@@ -129,6 +134,7 @@ export function CreateTransactionRequestToJSONTyped(value?: CreateTransactionReq
         'items': ((value['items'] as Array<any>).map(TransactionItemRequestToJSON)),
         'labelIds': value['labelIds'],
         'activityAssignment': ActivityAssignmentRequestToJSON(value['activityAssignment']),
+        'chargePersonalMoney': value['chargePersonalMoney'],
     };
 }
 

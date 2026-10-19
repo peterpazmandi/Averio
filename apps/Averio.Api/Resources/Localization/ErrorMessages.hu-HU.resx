@@ -334,6 +334,14 @@
   <data name="Error_SavedViewChanged" xml:space="preserve"><value>A nézet máshol megváltozott. Szerkesztés előtt töltsd újra.</value></data>
 <data name="Validation_Recurring" xml:space="preserve"><value>Adj meg nevet, kategóriát, pozitív összeget és mától induló érvényes ütemezést. A számla, típus, első dátum és gyakoriság létrehozás után nem módosítható. Legfeljebb 100 aktív ütemezés engedélyezett.</value></data>
 <data name="Error_RecurringChanged" xml:space="preserve"><value>Az ütemezés megváltozott, vagy az alkalom még nem esedékes. Töltsd újra és ellenőrizd.</value></data>
+  <data name="Error_PersonalMoneyChargeNotAllowed" xml:space="preserve"><value>Csak megfelelő, könyvelt privát kiadás terhelhető a személyes keretre.</value></data>
+  <data name="Error_PersonalMoneyNotConfigured" xml:space="preserve"><value>A személyes pénzkereted még nincs beállítva.</value></data>
+  <data name="Error_PersonalMoneyCurrencyMismatch" xml:space="preserve"><value>A számla vagy tranzakció pénzneme eltér a személyes kereted pénznemétől.</value></data>
+  <data name="Error_PersonalMoneyAlreadyCharged" xml:space="preserve"><value>Ezt a tranzakciót már elszámoltad a személyes pénzkeretre.</value></data>
+  <data name="Error_PersonalMoneyFundingInvalid" xml:space="preserve"><value>A személyes keret finanszírozásához közös forrásszámla és saját privát célszámla szükséges, azonos pénznemben.</value></data>
+  <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Előbb hozz létre keretjuttatást, és csak utána finanszírozd átvezetéssel.</value></data>
+  <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>Az átvezetés összege nagyobb a még nem finanszírozott személyes keretnél.</value></data>
+  <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Válassz érvényes célt a személyes kerethez kapcsolódó átvezetéshez.</value></data>
 </root>
 
 

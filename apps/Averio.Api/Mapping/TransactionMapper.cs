@@ -27,7 +27,7 @@ internal static class TransactionMapper
             request.Note,
             request.OccurredOn,
             MapItems(request.Items),
-            request.LabelIds ?? [], MapAssignment(request.ActivityAssignment));
+            request.LabelIds ?? [], MapAssignment(request.ActivityAssignment), request.ChargePersonalMoney);
 
     public static UpdateTransactionCommand ToCommand(
         Guid householdId,

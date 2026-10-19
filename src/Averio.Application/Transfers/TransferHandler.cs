@@ -1,4 +1,5 @@
 using Averio.Application.Accounts.Common;
+using Averio.Application.PersonalMoney;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Domain.Accounts;
@@ -10,10 +11,11 @@ namespace Averio.Application.Transfers;
 
 public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdRepository households,
     ITransferRepository transfers, IValidator<TransferInput> validator,
-    IUnitOfWork unitOfWork, TimeProvider timeProvider)
+    IUnitOfWork unitOfWork, TimeProvider timeProvider,
+    PersonalMoneyHandler personalMoney)
 {
     public async Task<Guid> CreateAsync(Guid householdId, Guid sourceId, Guid destinationId,
-        TransferInput input, CancellationToken ct)
+        TransferInput input, CancellationToken ct, string? personalMoneyPurpose = null)
     {
         await validator.ValidateAndThrowAsync(input, ct);
         if (sourceId == destinationId)
@@ -28,6 +30,13 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
             source.Currency, destination.Currency, input.SentAmount, input.ReceivedAmount,
             input.OccurredOn, input.Note, timeProvider.GetUtcNow());
         transfers.Add(transfer);
+        if (!string.IsNullOrWhiteSpace(personalMoneyPurpose))
+        {
+            if (!Enum.TryParse<PersonalTransferPurpose>(personalMoneyPurpose, true, out var purpose)
+                || !Enum.IsDefined(purpose))
+                throw new BusinessRuleException("personal_money_purpose_invalid", "Error_PersonalMoneyPurposeInvalid");
+            await personalMoney.LinkTransferAsync(transfer, member, source, destination, purpose, ct);
+        }
         // Both legs are columns of one row: one SaveChanges is an atomic financial mutation.
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -50,6 +59,7 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         ValidateAmounts(source, destination, input);
         transfer.Update(input.SentAmount, input.ReceivedAmount, input.OccurredOn,
             input.Note, timeProvider.GetUtcNow());
+        await personalMoney.CorrectTransferAsync(transfer, member, source, destination, ct);
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
     }
@@ -60,11 +70,12 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         var member = await GetMemberAsync(householdId, ct);
         var transfer = await GetWritableAsync(member, id, ct);
         var locked = await transfers.GetLockedAccountsAsync(householdId, transfer.SourceAccountId, transfer.DestinationAccountId, ct);
-        GetWritableAccount(member, locked, transfer.SourceAccountId, false);
-        GetWritableAccount(member, locked, transfer.DestinationAccountId, false);
+        var source = GetWritableAccount(member, locked, transfer.SourceAccountId, false);
+        var destination = GetWritableAccount(member, locked, transfer.DestinationAccountId, false);
         if (transfer.VoidedAt is not null) return; // Authorized retries are idempotent.
         CheckVersion(transfer, expectedUpdatedAt);
         transfer.Void(timeProvider.GetUtcNow());
+        await personalMoney.CorrectTransferAsync(transfer, member, source, destination, ct);
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
     }
