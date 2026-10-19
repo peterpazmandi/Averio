@@ -10,6 +10,7 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { personalMoneyApi, personalMoneyQueries, personalMoneyKeys } from './personalMoneyQueries';
+import { PersonalMoneyReconciliationPanel, HouseholdBoundaryFlowPanel } from './PersonalMoneyReconciliationPanel';
 
 const transactionsApi = new TransactionsApi(generatedApiConfiguration);
 const decimalPattern = /^[0-9]+([.,][0-9]{1,4})?$/;
@@ -29,17 +30,22 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         && account.owners.some(owner => household.members.some(member =>
             member.isCurrentUser && member.id === owner.householdMemberId)));
     const transactions = useQuery({
-        queryKey: ['personal-money', userId, householdId, 'private-expenses'],
+        queryKey: ['personal-money', userId, householdId, 'eligible-expenses'],
         queryFn: ({ signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
             { householdId, kind: 'Expense', pageSize: 50 }, { signal }),
     });
-    const eligibleIds = new Set(privateAccounts.map(a => a.id));
+    const eligibleIds = new Set([
+        ...privateAccounts.map(a => a.id),
+        ...(accounts.data ?? []).filter(a => a.scope === 'Household'
+            && a.visibility === 'Household' && a.includeInHouseholdReports).map(a => a.id),
+    ]);
     // Consumption occurs only after explicit selection; never infer it from an account.
     const existingCharges = mine.data?.charges ?? [];
     const chargedIds = new Set(existingCharges.map(c => c.transactionId));
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
-        transaction.visibility === 'Private' && transaction.status === 'Posted'
-        && eligibleIds.has(transaction.accountId) && !chargedIds.has(transaction.id));
+        transaction.status === 'Posted' && eligibleIds.has(transaction.accountId)
+        && (!mine.data || transaction.currency === mine.data.currency)
+        && !chargedIds.has(transaction.id));
     const [recipient, setRecipient] = useState(household.members.find(m => m.isCurrentUser)?.id ?? '');
     const [grantAmount, setGrantAmount] = useState('');
     // Reuse this operation ID after network errors; only form edits start a new grant intent.
@@ -59,7 +65,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     };
     const refresh = async () => {
         await client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) });
-        await client.invalidateQueries({ queryKey: ['personal-money', userId, householdId, 'private-expenses'] });
+        await client.invalidateQueries({ queryKey: ['personal-money', userId, householdId, 'eligible-expenses'] });
     };
     const grant = useMutation({
         mutationFn: () => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneyGrantsPost({
@@ -176,6 +182,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     label={transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}
                     formattedAmount={money(item.amount, mine.data!.currency)} />)}
         </section>}
+        {mine.data && <PersonalMoneyReconciliationPanel userId={userId}
+            householdId={householdId} wallet={mine.data} />}
         {mine.data && <div className="space-y-2">
             <h4 className="font-semibold">{t('personalMoney.history')}</h4>
             {mine.data.entries.length === 0
@@ -187,7 +195,9 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     </li>)}
                 </ul>}
         </div>}
-    </AverioCard></section>;
+    </AverioCard>
+    <HouseholdBoundaryFlowPanel householdId={householdId} />
+    </section>;
 }
 
 function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onError }: {
