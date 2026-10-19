@@ -66,7 +66,9 @@ try {
         await page.evaluate(() => window.scrollTo(0, 0)); await link.click(); await checkPosition();
         await page.reload(); await checkPosition();
         await page.getByRole('heading', { name: copy.myWallet, exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.tabs.owner, exact: true }).click();
         assert.equal(await page.getByRole('heading', { name: copy.newGrant, exact: true }).count(), 1);
+        await page.getByRole('button', { name: copy.tabs.charges, exact: true }).click();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.screenshot({ path: path.join(artifacts, `${language}-${dark ? 'dark-mobile' : 'light-desktop'}.png`), fullPage: true });
         await page.getByLabel(copy.changedAmount, { exact: true }).fill('10');
