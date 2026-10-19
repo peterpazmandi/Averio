@@ -133,7 +133,7 @@ internal static class PersonalMoneyReconciliationVerification
             var pm = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
             if (await pm.GetMineAsync(fixture.HouseholdId, Ct) is not null)
                 throw new Exception("Other member must not see linked private/shared wallet charges.");
-            await ThrowsAsync<NotFoundException>(() => pm.RefundAsync(
+            await ThrowsAsync<BusinessRuleException>(() => pm.RefundAsync(
                 fixture.HouseholdId, privateRefund, privateExpense, 10m, Guid.NewGuid(), Ct));
         }
         user.UserId = fixture.OwnerUserId;
