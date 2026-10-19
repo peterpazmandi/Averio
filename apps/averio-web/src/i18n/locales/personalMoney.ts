@@ -144,6 +144,13 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    filterOnly: "Csak a személyes kerethez kapcsolódók",
+    loadedFilterHelp: "A szűrő a már betöltött tranzakciókat és átvezetéseket vizsgálja. Régebbiekhez tölts be továbbiakat.",
+    noLoadedRelations: "A betöltött tételek között nincs személyes kerethez kapcsolódó. Tölts be továbbiakat.",
+    relationDetails: "Kapcsolat a személyes pénzkerettel",
+    refundOriginalHint: "Ez a visszatérítés korábban a keretből elszámolt vásárláshoz tartozik.",
+    transactionLinkHelp: "A keretkapcsolat külön kezelhető. A tranzakció módosítása megszüntetheti a hozzárendelést.",
+    transferLinkHelp: "A finanszírozás a privát pénzkeret nyilvántartását módosítja, nem a kategória szerinti kiadásokat.",
     relations: {"PrivateCharge":"Privát vásárlás → keret","SharedCharge":"Közös vásárlás → keret","PrivateRefund":"Privát visszatérítés → keret","SharedRefund":"Közös visszatérítés → keret","AllowanceFunding":"Keret finanszírozva","FundingReturn":"Finanszírozás visszavezetve","CreateAndFundGrant":"Keret biztosítva és finanszírozva"},
     sections: "Személyes pénzkeret részei",
     tabs: { mine: "Saját keretem", charges: "Vásárlások elszámolása", reconcile: "Visszatérítések és korrekciók", owner: "Keretjuttatások kezelése", boundary: "Pénzmozgások" },
