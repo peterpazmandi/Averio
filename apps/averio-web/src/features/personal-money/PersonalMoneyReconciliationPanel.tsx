@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -109,6 +110,12 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
                         </option>)}
                     </AverioSelect>
                 </AverioField>
+                {selectedPurchase && refundOptions.length === 0 && <p className="text-xs text-slate-600 dark:text-slate-300">
+                    {t('personalMoney.noRecordedRefund')}{' '}
+                    <Link to="/app/transactions" className="font-semibold text-emerald-700 underline dark:text-emerald-300">
+                        {t('personalMoney.goToTransactions')}
+                    </Link>
+                </p>}
                 <AverioField>{t('personalMoney.refundIncome')}
                     <AverioSelect value={refundId} disabled={!selectedPurchase} onChange={e => {
                         setRefundId(e.target.value); setRefundAmount(refundOptions.find(x => x.id === e.target.value)?.amount ?? '');
@@ -135,7 +142,7 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
                     <AverioInput value={surrenderAmount} inputMode="decimal" disabled={surrender.isPending}
                         onChange={e => { setSurrenderAmount(e.target.value); setSurrenderOperation(crypto.randomUUID()); }} />
                 </AverioField>
-                <AverioField>{t('personalMoney.date')}
+                <AverioField>{t('personalMoney.surrenderDate')}
                     <AverioInput type="date" value={surrenderDate} disabled={surrender.isPending}
                         onChange={e => { setSurrenderDate(e.target.value); setSurrenderOperation(crypto.randomUUID()); }} />
                 </AverioField>
