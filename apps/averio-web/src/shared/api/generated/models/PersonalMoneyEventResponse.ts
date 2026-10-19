@@ -35,6 +35,18 @@ export interface PersonalMoneyEventResponse {
      * 
      */
     occurredOn: string;
+    /**
+     * 
+     */
+    transactionId: string | null;
+    /**
+     * 
+     */
+    transferId: string | null;
+    /**
+     * 
+     */
+    relatedTransactionId: string | null;
 }
 
 /**
@@ -45,6 +57,9 @@ export function instanceOfPersonalMoneyEventResponse(value: object): value is Pe
     if (!('kind' in value) || value['kind'] === undefined) return false;
     if (!('amount' in value) || value['amount'] === undefined) return false;
     if (!('occurredOn' in value) || value['occurredOn'] === undefined) return false;
+    if (!('transactionId' in value) || value['transactionId'] === undefined) return false;
+    if (!('transferId' in value) || value['transferId'] === undefined) return false;
+    if (!('relatedTransactionId' in value) || value['relatedTransactionId'] === undefined) return false;
     return true;
 }
 
@@ -62,6 +77,9 @@ export function PersonalMoneyEventResponseFromJSONTyped(json: any, ignoreDiscrim
         'kind': json['kind'],
         'amount': json['amount'],
         'occurredOn': json['occurredOn'],
+        'transactionId': json['transactionId'],
+        'transferId': json['transferId'],
+        'relatedTransactionId': json['relatedTransactionId'],
     };
 }
 
@@ -80,6 +98,9 @@ export function PersonalMoneyEventResponseToJSONTyped(value?: PersonalMoneyEvent
         'kind': value['kind'],
         'amount': value['amount'],
         'occurredOn': value['occurredOn'],
+        'transactionId': value['transactionId'],
+        'transferId': value['transferId'],
+        'relatedTransactionId': value['relatedTransactionId'],
     };
 }
 
