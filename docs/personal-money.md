@@ -57,6 +57,12 @@ Creation requires a fresh operation ID for each deliberate link. Retry the uncha
 
 An active member may explicitly link a posted **private** expense on an account they can manage. The wallet denomination and expense currency must match, and the charge must not exceed the expense. Ordinary private expenses remain uncharged. Updating or voiding a linked transaction reverses the charge in the same database transaction; an updated expense needs explicit relinking.
 
+### Link while creating a purchase
+
+The transaction creation popup offers **Use my Personal Money** in Basics for a private expense on an authorized personal/private account, in the existing wallet currency. It charges the full item total. The optional `chargePersonalMoney` flag on `POST /transactions` defaults to false. Purchase, ordinary aggregates, activity assignment and allowance entry commit in one database transaction; invalid attribution rolls everything back. Later amount correction/unlink remains available in Personal Money. Recurring schedules and income do not offer this option.
+
+Basics, Labels and Items remain expanded. Recurring settings, Activity and Notes/Privacy use shared compact disclosure cards; privacy and saved notes remain summarized when collapsed. Existing recurring settings open by default.
+
 ### Correct or unlink my charge
 
 `PUT /api/v1/households/{householdId}/personal-money/me/charges/{transactionId}`

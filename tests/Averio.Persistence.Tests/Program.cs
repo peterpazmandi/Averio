@@ -385,7 +385,8 @@ static async Task VerifyAtomicRollbackAsync(
             new TransactionAggregateWriter(new FailingAggregateRepository()),
             services.GetRequiredService<IUnitOfWork>(),
             services.GetRequiredService<TimeProvider>(),
-            services.GetRequiredService<Averio.Application.Activities.ActivityHandler>());
+            services.GetRequiredService<Averio.Application.Activities.ActivityHandler>(),
+            services.GetRequiredService<Averio.Application.PersonalMoney.PersonalMoneyHandler>());
 
         await ThrowsAsync<AggregateWriteFailedException>(() => handler.HandleAsync(
             new CreateTransactionCommand(

@@ -76,9 +76,18 @@ public sealed class PersonalMoneyHandler(
     public async Task ChargePrivateAsync(Guid householdId, Guid transactionId,
         decimal amount, Guid operationId, CancellationToken ct)
     {
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
+        await ChargeWithinTransactionAsync(householdId, transactionId, amount, operationId, ct);
+        await tx.CommitAsync(ct);
+    }
+
+    // Caller owns the transaction; creation and attribution must commit or roll back together.
+    internal async Task ChargeWithinTransactionAsync(Guid householdId, Guid transactionId,
+        decimal amount, Guid operationId, CancellationToken ct)
+    {
         if (operationId == Guid.Empty || amount <= 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount)
             throw new BusinessRuleException("personal_money_amount_invalid", "Validation_TransactionAmountInvalid");
-        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
+
         var me = await MemberAsync(householdId, ct);
         var record = await transactions.GetVisibleByIdAsync(householdId, me.Id, transactionId, ct)
             ?? throw new NotFoundException("transaction", transactionId);
@@ -95,7 +104,6 @@ public sealed class PersonalMoneyHandler(
                 || previous.Amount != -amount || previous.CorrectionExpectedVersion is not null
                 || previous.CorrectionExpectedAmount is not null)
                 throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
-            await tx.CommitAsync(ct);
             return;
         }
         if (account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
@@ -112,7 +120,6 @@ public sealed class PersonalMoneyHandler(
             PersonalMoneyEntryKind.PrivateCharge, -amount, record.OccurredOn, clock.GetUtcNow(),
             transactionId: transactionId, operationId: operationId));
         await unitOfWork.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
     }
 
     // Household lock serializes corrections with source edits/voids and membership changes.

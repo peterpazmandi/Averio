@@ -17,7 +17,8 @@ public sealed record CreateTransactionCommand(
     DateOnly OccurredOn,
     IReadOnlyList<TransactionItemInput> Items,
     IReadOnlyList<Guid> LabelIds,
-    Averio.Application.Activities.ActivityAssignmentInput? ActivityAssignment = null);
+    Averio.Application.Activities.ActivityAssignmentInput? ActivityAssignment = null,
+    bool ChargePersonalMoney = false);
 
 public sealed class CreateTransactionHandler(
     ICurrentUser currentUser,
@@ -29,7 +30,8 @@ public sealed class CreateTransactionHandler(
     TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
-    Averio.Application.Activities.ActivityHandler activities)
+    Averio.Application.Activities.ActivityHandler activities,
+    Averio.Application.PersonalMoney.PersonalMoneyHandler personalMoney)
 {
     public async Task<Guid> HandleAsync(
         CreateTransactionCommand command,
@@ -121,6 +123,9 @@ public sealed class CreateTransactionHandler(
         await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
+        if (command.ChargePersonalMoney)
+            await personalMoney.ChargeWithinTransactionAsync(household.Id, transaction.Id,
+                transaction.Amount, transaction.Id, cancellationToken);
         return transaction.Id;
     }
 }

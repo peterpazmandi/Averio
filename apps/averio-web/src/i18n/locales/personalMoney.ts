@@ -1,5 +1,9 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    chargeOnCreate: 'Use my Personal Money',
+    chargeOnCreateHelp: 'Charge the full purchase total to your allowance when you save. You can adjust or unlink it later in Personal Money.',
+    chargeOnCreateEligibility: 'Choose your private account in your allowance currency to use Personal Money. An allowance must already exist.',
+    extraConfigured: 'A selection is saved',
     ownerArea: "Household owner · Allowance management",
     ownerHelp: "Grant an allowance to any household member, including yourself. This sets their spending entitlement without giving you access to their private purchases.",
     myWallet: "My Personal Money",
@@ -38,6 +42,10 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase' },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    chargeOnCreate: 'Mein persönliches Budget verwenden',
+    chargeOnCreateHelp: 'Beim Speichern wird der gesamte Kaufbetrag deinem Budget belastet. Du kannst den Betrag später ändern oder die Verknüpfung entfernen.',
+    chargeOnCreateEligibility: 'Wähle dein privates Konto in der Währung deines bestehenden Budgets.',
+    extraConfigured: 'Eine Auswahl ist gespeichert',
     ownerArea: "Haushaltsleitung · Budgetzuteilung",
     ownerHelp: "Teile jedem Haushaltsmitglied, auch dir selbst, ein Budget zu. Die Zuteilung gewährt keinen Zugriff auf private Einkäufe.",
     myWallet: "Mein persönliches Budget",
@@ -76,6 +84,10 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe' },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    chargeOnCreate: 'Saját személyes keretem használata',
+    chargeOnCreateHelp: 'Mentéskor a vásárlás teljes összege a keretedet terheli. Később módosíthatod az összeget vagy megszüntetheted a kapcsolatot.',
+    chargeOnCreateEligibility: 'Válaszd a meglévő személyes kereted pénznemével egyező privát számládat.',
+    extraConfigured: 'Van mentett kiválasztás',
     ownerArea: "Háztartás tulajdonosa · Keretjuttatások",
     ownerHelp: "Biztosíts keretet bármely háztartástagnak, akár magadnak is. A juttatás nem ad hozzáférést a tag privát vásárlásaihoz.",
     myWallet: "Saját személyes pénzkeretem",

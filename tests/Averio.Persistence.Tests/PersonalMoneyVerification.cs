@@ -1,3 +1,4 @@
+using Averio.Application.Transactions.CreateTransaction;
 using Averio.Application.PersonalMoney;
 using Averio.Application.Accounts.UpdateAccount;
 using Averio.Domain.Accounts;
@@ -34,6 +35,8 @@ internal static class PersonalMoneyVerification
                 fixture.OwnerMemberId, "EUR", 301m, On, operationId, Ct));
             await BalanceAsync(handler, fixture.HouseholdId, 300m, 0m);
         }
+
+        await VerifyCreateAndChargeAsync(provider, fixture);
 
         Guid fundingTransfer;
         await using (var scope = provider.CreateAsyncScope())
@@ -253,6 +256,44 @@ internal static class PersonalMoneyVerification
         }
         currentUser.UserId = fixture.OwnerUserId;
         Console.WriteLine("PASS personal money: private wallet, funded/existing grants, corrections, voids and owner authority");
+    }
+
+    private static async Task VerifyCreateAndChargeAsync(IServiceProvider provider, Fixture fixture)
+    {
+        Guid categoryId;
+        int count;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            categoryId = await db.Categories.Where(x => x.IsBase && !x.IsArchived
+                && x.Kind == Averio.Domain.Categories.CategoryKind.Expense).Select(x => x.Id).FirstAsync(Ct);
+            count = await db.Transactions.CountAsync(Ct);
+        }
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await FailureAsync<BusinessRuleException>(() => scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
+                .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId, fixture.HouseholdAccountId,
+                    TransactionKind.Expense, TransactionVisibility.Household, "Rejected allowance purchase", null, On,
+                    [new TransactionItemInput("Item", categoryId, 7m)], [], ChargePersonalMoney: true), Ct));
+        }
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            if (await db.Transactions.CountAsync(Ct) != count)
+                throw new Exception("Rejected allowance attribution must roll back purchase creation.");
+            var personal = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            await BalanceAsync(personal, fixture.HouseholdId, 300m, 0m);
+            var id = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
+                .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId, fixture.PrivateAccountId,
+                    TransactionKind.Expense, TransactionVisibility.Private, "Allowance purchase", null, On,
+                    [new TransactionItemInput("Item", categoryId, 7m)], [], ChargePersonalMoney: true), Ct);
+            await BalanceAsync(personal, fixture.HouseholdId, 293m, -7m);
+            var charge = (await personal.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Single();
+            if (charge.TransactionId != id || charge.Amount != 7m) throw new Exception("Creation must charge the full purchase.");
+            var version = (await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == id, Ct)).UpdatedAt;
+            await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>().HandleAsync(fixture.HouseholdId, id, version, Ct);
+            await BalanceAsync(personal, fixture.HouseholdId, 300m, 0m);
+        }
     }
 
     private static async Task SetPrivateAccountAsync(IServiceProvider provider, Fixture fixture,
