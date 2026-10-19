@@ -15,6 +15,7 @@ var checks = new (string Name, Action Run)[]
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),
     ("transfer domain invariants and lifecycle", TransferChecks.Invariants),
     ("personal money ledger and rollover", PersonalMoneyChecks.Ledger),
+    ("personal money shared, refunds and reconciliation", PersonalMoneyChecks.SharedAndReconciliation),
     ("transfer EF constraints and migration snapshot", TransferChecks.PersistenceModel),
     ("itemized income derives total", ItemizedIncomeDerivesTotal),
     ("reject invalid item amount", RejectInvalidItemAmount),
