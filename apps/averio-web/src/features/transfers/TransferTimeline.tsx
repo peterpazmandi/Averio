@@ -3,6 +3,8 @@ import type { TransferResponse, TransferSideResponse } from '../../shared/api/ge
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { formatDecimalAmount } from '../../shared/money/decimalAmount';
+import type { PersonalMoneyRelation } from '../personal-money/personalMoneyRelations';
+import { PersonalMoneyRelationBadge } from '../personal-money/PersonalMoneyRelationBadge';
 
 function TransferSide({ side, label, language }: { side?: TransferSideResponse | null; label: string; language: string }) {
     const { t } = useTranslation();
@@ -18,8 +20,9 @@ function TransferSide({ side, label, language }: { side?: TransferSideResponse |
     </div>;
 }
 
-export function TransferTimeline({ rows, canEdit, onEdit }: {
+export function TransferTimeline({ rows, canEdit, onEdit, relations }: {
     rows: TransferResponse[];
+    relations: Map<string, PersonalMoneyRelation>;
     canEdit: boolean;
     onEdit: (transfer: TransferResponse) => void;
 }) {
@@ -40,6 +43,9 @@ export function TransferTimeline({ rows, canEdit, onEdit }: {
                 <footer className="mx-4 flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[#D9E9E2] py-3 text-xs text-[#667085] dark:border-[#25404B] dark:text-[#AAB4C4] min-[761px]:col-span-3 min-[761px]:mx-5">
                     <div className="min-w-0 flex-1 wrap-anywhere">
                         <span className="font-semibold">{t(row.isVoided ? 'transfers.voided' : 'transfers.posted')}</span>
+                        {relations.get(row.id) && <span className="mt-2 block">
+                            <PersonalMoneyRelationBadge relation={relations.get(row.id)!} detail />
+                        </span>}
                         {row.note && <p className="mt-1">{row.note}</p>}
                         {(!row.source || !row.destination) && <p className="mt-1">{t('transfers.redactedHelp')}</p>}
                     </div>
