@@ -148,6 +148,13 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <div><AverioButton type="submit" variant="primary" disabled={grant.isPending || !validGrant}>{t(grant.isPending ? 'common.actions.saving' : 'personalMoney.grant')}</AverioButton></div>
         </form></AverioCard>}
         {tab !== 'boundary' && tab !== 'owner' && <AverioCard className="space-y-5 p-5 sm:p-6">
+        {tab !== 'mine' && mine.isPending && <p role="status">{t('common.status.loading')}</p>}
+        {tab !== 'mine' && mine.isError && <div role="alert" className="space-y-2">
+            <p>{t('personalMoney.loadError')}</p>
+            <AverioButton onClick={() => void mine.refetch()}>{t('common.actions.retry')}</AverioButton>
+        </div>}
+        {tab !== 'mine' && mine.isSuccess && !mine.data &&
+            <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm dark:border-slate-700">{t('personalMoney.empty')}</p>}
         {tab === 'mine' && <header className="space-y-1">
             <h4 className="text-xl font-semibold">{t('personalMoney.myWallet')}</h4>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.walletHelp')}</p>
