@@ -57,6 +57,8 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
         b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
         b.Property(x => x.OperationId).HasColumnName("operation_id");
+        b.Property(x => x.CorrectionExpectedAmount).HasColumnName("correction_expected_amount").HasPrecision(19, 4);
+        b.Property(x => x.CorrectionExpectedVersion).HasColumnName("correction_expected_version");
         b.Property(x => x.RecordedAt).HasColumnName("recorded_at");
         b.HasOne<PersonalMoneyWallet>().WithMany()
             .HasForeignKey(x => new { x.HouseholdId, x.WalletId })

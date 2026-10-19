@@ -22,7 +22,21 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
             DecimalAmountMapper.Format(result.AttributedPrivateFunding),
             DecimalAmountMapper.Format(result.FundingDifference),
             result.Entries.Select(x => new PersonalMoneyEventResponse(x.Id, x.Kind,
-                DecimalAmountMapper.Format(x.Amount), x.OccurredOn)).ToArray()));
+                DecimalAmountMapper.Format(x.Amount), x.OccurredOn)).ToArray(),
+            result.Charges.Select(x => new PersonalMoneyChargeResponse(x.TransactionId,
+                DecimalAmountMapper.Format(x.Amount), x.Version)).ToArray()));
+    }
+
+    [HttpPut("me/charges/{transactionId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> CorrectCharge(Guid householdId, Guid transactionId,
+        CorrectPersonalMoneyChargeRequest request, CancellationToken ct)
+    {
+        await handler.CorrectChargeAsync(householdId, transactionId,
+            DecimalAmountMapper.ParseTransactionAmount(request.Amount),
+            DecimalAmountMapper.ParseTransactionAmount(request.ExpectedAmount),
+            request.ExpectedVersion, request.OperationId, ct);
+        return NoContent();
     }
 
     [HttpPost("grants")]

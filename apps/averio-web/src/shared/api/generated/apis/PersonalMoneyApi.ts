@@ -19,6 +19,11 @@ import {
     ChargePersonalMoneyRequestToJSON,
 } from '../models/ChargePersonalMoneyRequest';
 import {
+    type CorrectPersonalMoneyChargeRequest,
+    CorrectPersonalMoneyChargeRequestFromJSON,
+    CorrectPersonalMoneyChargeRequestToJSON,
+} from '../models/CorrectPersonalMoneyChargeRequest';
+import {
     type GrantPersonalMoneyRequest,
     GrantPersonalMoneyRequestFromJSON,
     GrantPersonalMoneyRequestToJSON,
@@ -49,6 +54,21 @@ export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesPostRequest {
      * 
      */
     chargePersonalMoneyRequest: ChargePersonalMoneyRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    transactionId: string;
+    /**
+     * 
+     */
+    correctPersonalMoneyChargeRequest: CorrectPersonalMoneyChargeRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeGetRequest {
@@ -165,6 +185,66 @@ export class PersonalMoneyApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut().'
+            );
+        }
+
+        if (requestParameters['transactionId'] == null) {
+            throw new runtime.RequiredError(
+                'transactionId',
+                'Required parameter "transactionId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut().'
+            );
+        }
+
+        if (requestParameters['correctPersonalMoneyChargeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'correctPersonalMoneyChargeRequest',
+                'Required parameter "correctPersonalMoneyChargeRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/me/charges/{transactionId}`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{transactionId}', encodeURIComponent(String(requestParameters['transactionId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CorrectPersonalMoneyChargeRequestToJSON(requestParameters['correctPersonalMoneyChargeRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPutRaw(requestParameters, initOverrides);
     }
 
     /**

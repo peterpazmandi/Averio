@@ -14,7 +14,9 @@ public enum PersonalTransferPurpose { Ordinary = 0, CreateAndFundGrant = 1, Fund
 
 public sealed record PersonalMoneySnapshot(Guid WalletId, string Currency, decimal Available,
     decimal AttributedPrivateFunding, decimal FundingDifference,
-    IReadOnlyList<PersonalMoneyEvent> Entries);
+    IReadOnlyList<PersonalMoneyEvent> Entries, IReadOnlyList<PersonalMoneyCharge> Charges);
+
+public sealed record PersonalMoneyCharge(Guid TransactionId, decimal Amount, int Version);
 
 public sealed record PersonalMoneyEvent(Guid Id, string Kind, decimal Amount, DateOnly OccurredOn);
 
@@ -33,7 +35,10 @@ public sealed class PersonalMoneyHandler(
         return new PersonalMoneySnapshot(wallet.Id, wallet.Currency.Value, balance.Entitlement,
             balance.AttributedPrivateFunding, balance.FundingDifference,
             entries.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.RecordedAt)
-                .Select(x => new PersonalMoneyEvent(x.Id, x.Kind.ToString(), x.Amount, x.OccurredOn)).ToArray());
+                .Select(x => new PersonalMoneyEvent(x.Id, x.Kind.ToString(), x.Amount, x.OccurredOn)).ToArray(),
+            entries.Where(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge)
+                .GroupBy(x => x.TransactionId!.Value).Where(g => g.Sum(x => x.Amount) < 0)
+                .Select(g => new PersonalMoneyCharge(g.Key, -g.Sum(x => x.Amount), g.Count())).ToArray());
     }
 
     // The Owner approves discretionary household budget; no bank movement occurs.
@@ -95,6 +100,54 @@ public sealed class PersonalMoneyHandler(
         repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
             PersonalMoneyEntryKind.PrivateCharge, -amount, record.OccurredOn, clock.GetUtcNow(),
             transactionId: transactionId));
+        await unitOfWork.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+    }
+
+    // Household lock serializes corrections with source edits/voids and membership changes.
+    // Version counts all source events, so even a change-away-and-back is detected.
+    public async Task CorrectChargeAsync(Guid householdId, Guid transactionId, decimal amount,
+        decimal expectedAmount, int expectedVersion, Guid operationId, CancellationToken ct)
+    {
+        if (amount < 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount
+            || expectedAmount <= 0 || expectedAmount > 999999999999999.9999m
+            || decimal.Round(expectedAmount, 4) != expectedAmount || expectedVersion < 1 || operationId == Guid.Empty)
+            throw new BusinessRuleException("personal_money_amount_invalid", "Validation_TransactionAmountInvalid");
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
+        var me = await MemberAsync(householdId, ct);
+        var wallet = await repository.GetWalletAsync(householdId, me.Id, ct)
+            ?? throw new NotFoundException("charge", transactionId);
+        var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
+        var own = entries.Where(x => x.WalletId == wallet.Id && x.Kind == PersonalMoneyEntryKind.PrivateCharge).ToArray();
+        if (own.Length == 0) throw new NotFoundException("charge", transactionId);
+        var record = await transactions.GetVisibleByIdAsync(householdId, me.Id, transactionId, ct)
+            ?? throw new NotFoundException("transaction", transactionId);
+        var account = await accounts.GetVisibleByIdAsync(householdId, me.Id, record.AccountId, ct)
+            ?? throw new NotFoundException("account", record.AccountId);
+        if (!AccountAccess.CanModify(account, me)) throw new ForbiddenException();
+        var correction = expectedAmount - amount;
+        var previous = await repository.GetByOperationAsync(wallet.Id, operationId, ct);
+        if (previous is not null)
+        {
+            if (previous.Kind != PersonalMoneyEntryKind.PrivateCharge || previous.TransactionId != transactionId
+                || previous.Amount != correction || previous.CorrectionExpectedAmount != expectedAmount
+                || previous.CorrectionExpectedVersion != expectedVersion)
+                throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
+            await tx.CommitAsync(ct);
+            return;
+        }
+        if (own.Length != expectedVersion || -own.Sum(x => x.Amount) != expectedAmount)
+            throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
+        if (account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
+            || record.Visibility != TransactionVisibility.Private || record.Kind != TransactionKind.Expense
+            || record.Status != TransactionStatus.Posted || wallet.Currency != record.Currency
+            || amount - entries.Where(x => x.WalletId != wallet.Id).Sum(x => x.Amount) > record.Amount)
+            throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
+        if (correction != 0)
+            repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
+                PersonalMoneyEntryKind.PrivateCharge, correction, record.OccurredOn, clock.GetUtcNow(),
+                transactionId: transactionId, operationId: operationId,
+                correctionExpectedAmount: expectedAmount, correctionExpectedVersion: expectedVersion));
         await unitOfWork.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }

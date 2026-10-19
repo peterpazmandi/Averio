@@ -55,6 +55,16 @@ The response includes owner-only ledger entries, entitlement, attributed private
 
 An active member may explicitly link a posted **private** expense on an account they can manage. The wallet denomination and expense currency must match, and the charge must not exceed the expense. Ordinary private expenses remain uncharged. Updating or voiding a linked transaction reverses the charge in the same database transaction; an updated expense needs explicit relinking.
 
+### Correct or unlink my charge
+
+`PUT /api/v1/households/{householdId}/personal-money/me/charges/{transactionId}`
+
+The wallet response includes all currently linked charges with decimal-string `amount` and integer `version`. Send `amount`, `expectedAmount`, `expectedVersion` and a fresh `operationId`; reuse the exact payload and ID after a network failure. An amount of zero unlinks the purchase. A positive amount changes the charge, capped at the source expense total across wallets. Both restore or consume entitlement and attributed funding through an append-only signed delta, without touching the purchase or bank balance.
+
+Corrections require the current wallet member and current source-account write access. Household Owner status does not authorize another person's charges. The existing household lock serializes changes with transaction edits, voids and membership departure. The version counts all source entries for this wallet, including reversals, preventing stale edits even after an amount changes away and back. Persisted retry metadata rejects changed payloads; an old successful retry never reapplies its delta after a later unlink/relink or source reversal. Unchanged amounts are no-ops without ledger entries.
+
+The household UI separates Owner grant administration from the member's own wallet. Existing charge controls allow changing the amount or confirming removal. Reassignment is explicitly two actions: unlink, then link the desired eligible purchase. There is no transfer of a charge to another member. The new-purchase picker retains its current most-recent-50-expenses limit; the existing-charge list covers all active links, including older purchases.
+
 ### Transfer purpose
 
 `POST /api/v1/households/{householdId}/transfers` now has optional `personalMoneyPurpose`:

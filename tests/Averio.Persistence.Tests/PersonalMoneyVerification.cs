@@ -99,6 +99,72 @@ internal static class PersonalMoneyVerification
                 fixture.HouseholdId, privateExpense, 25m, Ct));
         }
 
+        // Corrections append deltas, preserve the bank transaction, and reject stale intent.
+        var correctionId = Guid.NewGuid();
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 10m, 25m, 1, correctionId, Ct);
+            await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 10m, 25m, 1, correctionId, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 390m, 90m);
+            await FailureAsync<ConflictException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 9m, 25m, 1, correctionId, Ct));
+            await FailureAsync<ConflictException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 5m, 20m, 1, correctionId, Ct));
+            await FailureAsync<ConflictException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 20m, 25m, 1, Guid.NewGuid(), Ct));
+            await FailureAsync<BusinessRuleException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 26m, 10m, 2, Guid.NewGuid(), Ct));
+            await FailureAsync<BusinessRuleException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, -1m, 10m, 2, Guid.NewGuid(), Ct));
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            if ((await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == privateExpense, Ct)).Amount != 25m)
+                throw new Exception("Allowance correction must not change bank spending.");
+            var snapshot = await handler.GetMineAsync(fixture.HouseholdId, Ct);
+            if (snapshot!.Charges.Single().Amount != 10m || snapshot.Charges.Single().Version != 2)
+                throw new Exception("Active charge must expose net amount and source version.");
+        }
+        currentUser.UserId = fixture.MemberUserId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            await FailureAsync<NotFoundException>(() => handler.CorrectChargeAsync(
+                fixture.HouseholdId, privateExpense, 0m, 10m, 2, Guid.NewGuid(), Ct));
+        }
+        currentUser.UserId = fixture.OwnerUserId;
+        // Separate DbContexts compete for the same household lock. Exactly one version wins.
+        async Task<bool> Compete(decimal amount)
+        {
+            await using var scope = provider.CreateAsyncScope();
+            try
+            {
+                await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>().CorrectChargeAsync(
+                    fixture.HouseholdId, privateExpense, amount, 10m, 2, Guid.NewGuid(), Ct);
+                return true;
+            }
+            catch (ConflictException) { return false; }
+        }
+        var results = await Task.WhenAll(Compete(12m), Compete(14m));
+        if (results.Count(x => x) != 1) throw new Exception("Only one concurrent correction may win.");
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            var active = (await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Single();
+            var unlinkId = Guid.NewGuid();
+            await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
+                active.Amount, active.Version, unlinkId, Ct);
+            await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
+                active.Amount, active.Version, unlinkId, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
+            if ((await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Count != 0)
+                throw new Exception("Unlinked charge should leave active list, not history.");
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, Ct);
+            // An old retry must not unlink a later attribution again.
+            await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
+                active.Amount, active.Version, unlinkId, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 375m, 75m);
+        }
+
         await using (var scope = provider.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();

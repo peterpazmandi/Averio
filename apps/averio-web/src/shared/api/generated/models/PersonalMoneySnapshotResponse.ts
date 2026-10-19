@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { PersonalMoneyChargeResponse } from './PersonalMoneyChargeResponse';
+import {
+    PersonalMoneyChargeResponseFromJSON,
+    PersonalMoneyChargeResponseFromJSONTyped,
+    PersonalMoneyChargeResponseToJSON,
+    PersonalMoneyChargeResponseToJSONTyped,
+} from './PersonalMoneyChargeResponse';
 import type { PersonalMoneyEventResponse } from './PersonalMoneyEventResponse';
 import {
     PersonalMoneyEventResponseFromJSON,
@@ -51,6 +58,10 @@ export interface PersonalMoneySnapshotResponse {
      * 
      */
     entries: Array<PersonalMoneyEventResponse>;
+    /**
+     * 
+     */
+    charges: Array<PersonalMoneyChargeResponse>;
 }
 
 /**
@@ -63,6 +74,7 @@ export function instanceOfPersonalMoneySnapshotResponse(value: object): value is
     if (!('attributedPrivateFunding' in value) || value['attributedPrivateFunding'] === undefined) return false;
     if (!('fundingDifference' in value) || value['fundingDifference'] === undefined) return false;
     if (!('entries' in value) || value['entries'] === undefined) return false;
+    if (!('charges' in value) || value['charges'] === undefined) return false;
     return true;
 }
 
@@ -82,6 +94,7 @@ export function PersonalMoneySnapshotResponseFromJSONTyped(json: any, ignoreDisc
         'attributedPrivateFunding': json['attributedPrivateFunding'],
         'fundingDifference': json['fundingDifference'],
         'entries': ((json['entries'] as Array<any>).map(PersonalMoneyEventResponseFromJSON)),
+        'charges': ((json['charges'] as Array<any>).map(PersonalMoneyChargeResponseFromJSON)),
     };
 }
 
@@ -102,6 +115,7 @@ export function PersonalMoneySnapshotResponseToJSONTyped(value?: PersonalMoneySn
         'attributedPrivateFunding': value['attributedPrivateFunding'],
         'fundingDifference': value['fundingDifference'],
         'entries': ((value['entries'] as Array<any>).map(PersonalMoneyEventResponseToJSON)),
+        'charges': ((value['charges'] as Array<any>).map(PersonalMoneyChargeResponseToJSON)),
     };
 }
 

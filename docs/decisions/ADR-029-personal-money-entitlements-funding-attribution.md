@@ -85,3 +85,7 @@ The slices must **not** label grant totals as ordinary expenses or pretend that 
 ## Consequences
 
 The feature demands its own ledger and API read models, plus integrations in transfer and transaction commands. It avoids double counting, preserves private account security and allows future multi-currency, delegated funding and recurring grants without changing the meaning of existing bank transactions.
+
+## Implementation clarification — 2026-10-19
+
+PR 1 includes wallet-member charge correction and unlink. A correction appends a signed PrivateCharge delta and preserves the original purchase and all ledger history. Zero unlinks; positive values replace the effective charge amount within source caps. Optimistic source-entry count plus expected amount prevents lost updates; a unique operation ID and stored request metadata protect retries. Existing household-first locking keeps corrections atomic with transaction edits/voids and membership changes. Reassignment is unlink followed by an explicit new link; another member's wallet remains inaccessible to household administrators. This clarification implements the accepted reversible-attribution invariant without changing the ten accepted product requirements or the later shared-account and scheduling slices.
