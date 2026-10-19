@@ -18,13 +18,16 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     await editor().getByLabel('Description', { exact: true }).fill('Broadband service');
     await editor().getByLabel(/^Amount/).fill('10.3456');
     await editor().getByLabel('Merchant / Store', { exact: true }).fill('Browser provider');
+    await editor().locator('button[aria-controls]').filter({ hasText: 'Details & privacy' }).click();
     await editor().getByLabel('Note', { exact: true }).fill('Repeat these details');
     await editor().getByRole('button', { name: 'Recurring browser label', exact: true }).click();
-    await editor().getByRole('button', { name: /^Activity / }).click();
+    await editor().locator('button[aria-controls]').filter({ hasText: /^Activity/ }).click();
+    await editor().getByRole('button', { name: /^Activity / }).and(editor().locator('[aria-haspopup="dialog"]')).click();
     await page.getByRole('dialog').last().getByRole('button', { name: 'Recurring browser activity', exact: true }).click();
     await editor().getByRole('button', { name: /Add item/ }).click();
     await editor().getByLabel('Description', { exact: true }).nth(1).fill('Equipment rental');
     await editor().getByLabel(/^Amount/).nth(1).fill('2');
+    await editor().locator('button[aria-controls]').filter({ hasText: 'Recurring transaction' }).click();
     await editor().getByLabel('Recurring transaction', { exact: true }).check();
     await editor().getByLabel('Name', { exact: true }).fill('Daily broadband');
     await editor().getByLabel('Frequency', { exact: true }).selectOption('Daily');
@@ -111,6 +114,7 @@ export async function verifyRecurring({ fixture: f, password, session, api, ok, 
     await editor().waitFor({ state: 'hidden' });
     assert.equal((await ok(page, prefix)).find(r => r.id === recovery.id).isPaused, true);
     await recoveryCard().getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    await editor().locator('button[aria-controls]').filter({ hasText: 'Details & privacy' }).click();
     await editor().getByLabel('Visibility', { exact: true }).selectOption('Private');
     await editor().getByLabel('Pause schedule', { exact: true }).uncheck();
     await editor().getByRole('button', { name: 'Save schedule', exact: true }).click();
