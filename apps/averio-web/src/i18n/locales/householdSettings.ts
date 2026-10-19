@@ -79,6 +79,8 @@ export const householdSettingsDE = {
 };
 
 export const householdSettingsHU = {
+    invitations: "Meghívók",
+    navHelp: { profile: "Profil és beállítások", members: "Tagok és korábbi háztartások", invitations: "Partnerek meghívása, kezelése", personalMoney: "Keretek és vásárlások", privacy: "Pénzügyi adatok láthatósága" },
     "personalMoney": "Személyes pénzkeret",
     "title": "Háztartás beállításai",
     "description": "Közös hely a pénzügyeiteknek, a személyes magánszféra megőrzésével.",
