@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type BoundaryCashFlowResponse,
+    BoundaryCashFlowResponseFromJSON,
+    BoundaryCashFlowResponseToJSON,
+} from '../models/BoundaryCashFlowResponse';
+import {
     type CashFlowResponse,
     CashFlowResponseFromJSON,
     CashFlowResponseToJSON,
@@ -23,6 +28,21 @@ import {
     CategoryCashFlowResponseFromJSON,
     CategoryCashFlowResponseToJSON,
 } from '../models/CategoryCashFlowResponse';
+
+export interface ApiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    from: string;
+    /**
+     * 
+     */
+    to: string;
+}
 
 export interface ApiV1HouseholdsHouseholdIdStatisticsCashFlowGetRequest {
     /**
@@ -66,6 +86,71 @@ export interface ApiV1HouseholdsHouseholdIdStatisticsCategoryCashFlowGetRequest 
  * 
  */
 export class StatisticsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet().'
+            );
+        }
+
+        if (requestParameters['from'] == null) {
+            throw new runtime.RequiredError(
+                'from',
+                'Required parameter "from" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet().'
+            );
+        }
+
+        if (requestParameters['to'] == null) {
+            throw new runtime.RequiredError(
+                'to',
+                'Required parameter "to" was null or undefined when calling apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = requestParameters['from'];
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = requestParameters['to'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/statistics/boundary-flow`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BoundaryCashFlowResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => BoundaryCashFlowResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet(requestParameters: ApiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BoundaryCashFlowResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdStatisticsCashFlowGet without sending the request

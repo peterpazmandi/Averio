@@ -33,6 +33,16 @@ import {
     PersonalMoneySnapshotResponseFromJSON,
     PersonalMoneySnapshotResponseToJSON,
 } from '../models/PersonalMoneySnapshotResponse';
+import {
+    type RefundPersonalMoneyRequest,
+    RefundPersonalMoneyRequestFromJSON,
+    RefundPersonalMoneyRequestToJSON,
+} from '../models/RefundPersonalMoneyRequest';
+import {
+    type SurrenderPersonalMoneyRequest,
+    SurrenderPersonalMoneyRequestFromJSON,
+    SurrenderPersonalMoneyRequestToJSON,
+} from '../models/SurrenderPersonalMoneyRequest';
 
 export interface ApiV1HouseholdsHouseholdIdPersonalMoneyGrantsPostRequest {
     /**
@@ -76,6 +86,28 @@ export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeGetRequest {
      * 
      */
     householdId: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    refundPersonalMoneyRequest: RefundPersonalMoneyRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    surrenderPersonalMoneyRequest: SurrenderPersonalMoneyRequest;
 }
 
 /**
@@ -288,6 +320,110 @@ export class PersonalMoneyApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdPersonalMoneyMeGet(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PersonalMoneySnapshotResponse> {
         const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeGetRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPost().'
+            );
+        }
+
+        if (requestParameters['refundPersonalMoneyRequest'] == null) {
+            throw new runtime.RequiredError(
+                'refundPersonalMoneyRequest',
+                'Required parameter "refundPersonalMoneyRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/me/refunds`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: RefundPersonalMoneyRequestToJSON(requestParameters['refundPersonalMoneyRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost().'
+            );
+        }
+
+        if (requestParameters['surrenderPersonalMoneyRequest'] == null) {
+            throw new runtime.RequiredError(
+                'surrenderPersonalMoneyRequest',
+                'Required parameter "surrenderPersonalMoneyRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/me/surrenders`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SurrenderPersonalMoneyRequestToJSON(requestParameters['surrenderPersonalMoneyRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRaw(requestParameters, initOverrides);
     }
 
 }
