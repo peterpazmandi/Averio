@@ -64,6 +64,8 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    sections: "Budgetbereiche",
+    tabs: { mine: "Mein Budget", charges: "Käufe zuordnen", reconcile: "Erstattungen und Anpassungen", owner: "Budgetzuteilung", boundary: "Geldbewegungen" },
     chargeTitle: "Kauf dem persönlichen Budget belasten",
     chargeHelp: "Du kannst einen privaten Kauf oder eine ganze bzw. teilweise Ausgabe vom Gemeinschaftskonto ausdrücklich deinem Budget belasten. Der gemeinsame Kauf bleibt eine einzige Haushaltsausgabe.",
     purchase: "Privater oder gemeinsamer Kauf",
