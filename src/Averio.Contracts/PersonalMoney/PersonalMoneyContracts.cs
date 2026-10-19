@@ -14,3 +14,8 @@ public sealed record PersonalMoneySnapshotResponse(Guid WalletId, string Currenc
 public sealed record PersonalMoneyChargeResponse(Guid TransactionId, string Amount, int Version);
 public sealed record CorrectPersonalMoneyChargeRequest(string Amount, string ExpectedAmount,
     int ExpectedVersion, Guid OperationId);
+
+public sealed record RefundPersonalMoneyRequest(Guid RefundTransactionId,
+    Guid PurchaseTransactionId, string Amount, Guid OperationId);
+
+public sealed record SurrenderPersonalMoneyRequest(string Amount, DateOnly OccurredOn, Guid OperationId);
