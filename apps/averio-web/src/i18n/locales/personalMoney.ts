@@ -65,6 +65,7 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    relations: {"PrivateCharge":"Privater Kauf → Budget","SharedCharge":"Gemeinsamer Kauf → Budget","PrivateRefund":"Private Erstattung → Budget","SharedRefund":"Gemeinsame Erstattung → Budget","AllowanceFunding":"Budget finanziert","FundingReturn":"Finanzierung zurückgeführt","CreateAndFundGrant":"Budget zugeteilt & finanziert"},
     sections: "Budgetbereiche",
     tabs: { mine: "Mein Budget", charges: "Käufe zuordnen", reconcile: "Erstattungen und Anpassungen", owner: "Budgetzuteilung", boundary: "Geldbewegungen" },
     chargeTitle: "Kauf dem persönlichen Budget belasten",
