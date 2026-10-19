@@ -39,6 +39,8 @@ export const householdSettingsEN = {
 };
 
 export const householdSettingsDE = {
+    invitations: "Einladungen",
+    navHelp: { profile: "Profil und Einstellungen", members: "Mitglieder und bisherige Haushalte", invitations: "Partner einladen und verwalten", personalMoney: "Budget und Käufe", privacy: "Wer Finanzdaten sehen darf" },
     "personalMoney": "Persönliches Budget",
     "title": "Haushaltseinstellungen",
     "description": "Ein gemeinsamer Ort für eure Finanzen – mit Raum für persönliche Privatsphäre.",
