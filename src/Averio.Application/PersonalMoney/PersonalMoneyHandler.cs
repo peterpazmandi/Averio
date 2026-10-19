@@ -159,7 +159,9 @@ public sealed class PersonalMoneyHandler(
         if (own.Length != expectedVersion || -own.Sum(x => x.Amount) != expectedAmount)
             throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
         // Removing an existing link is allowed after account visibility changes.
-        var kind = own.First().Kind;
+        var kind = own.GroupBy(x => x.Kind)
+            .Where(g => g.Sum(x => x.Amount) < 0)
+            .Select(g => g.Key).Single();
         if (amount > 0 && (ChargeKind(account, record) != kind
             || record.Status != TransactionStatus.Posted || account.Status != AccountStatus.Active
             || wallet.Currency != record.Currency
