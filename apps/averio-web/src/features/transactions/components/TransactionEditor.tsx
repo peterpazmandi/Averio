@@ -6,6 +6,8 @@ import { ActivitySelect } from '../../activities/ActivitySelect';
 import { emptyAssignmentVersion } from '../../activities/activityQueries';
 import { AverioDisclosure } from '../../../shared/components/ui/AverioDisclosure';
 import { personalMoneyQueries } from '../../personal-money/personalMoneyQueries';
+import type { PersonalMoneyRelation } from '../../personal-money/personalMoneyRelations';
+import { PersonalMoneyRelationBadge } from '../../personal-money/PersonalMoneyRelationBadge';
 import { AverioCard } from '../../../shared/components/ui/AverioCard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +32,7 @@ interface Props {
     userId: string;
     householdId: string;
     transaction: TransactionDto | null;
+    personalRelation?: PersonalMoneyRelation;
     initialKind?: TransactionKind;
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
@@ -329,6 +332,11 @@ export function TransactionEditor({
             </AverioButton>
         </>}>
         <form id="transaction-editor" className="grid gap-4" onSubmit={submit}>
+            {transaction && personalRelation && <div className="rounded-xl border border-emerald-400/30 bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                <p className="mb-2 text-xs font-semibold">{t('personalMoney.relationDetails')}</p>
+                <PersonalMoneyRelationBadge relation={personalRelation} detail />
+                <p className="mt-2 text-xs">{t('personalMoney.transactionLinkHelp')}</p>
+            </div>}
 
             <AverioCard className="grid gap-4">
                 <div><h3 className="font-bold">{t('transactionManagement.basics')}</h3><p className="mt-1 text-xs">{t('transactionManagement.basicsHelp')}</p></div>
