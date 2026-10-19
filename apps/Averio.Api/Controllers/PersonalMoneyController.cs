@@ -39,6 +39,25 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
         return NoContent();
     }
 
+    [HttpPost("me/refunds")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Refund(Guid householdId, RefundPersonalMoneyRequest request, CancellationToken ct)
+    {
+        await handler.RefundAsync(householdId, request.RefundTransactionId,
+            request.PurchaseTransactionId, DecimalAmountMapper.ParseTransactionAmount(request.Amount),
+            request.OperationId, ct);
+        return NoContent();
+    }
+
+    [HttpPost("me/surrenders")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Surrender(Guid householdId, SurrenderPersonalMoneyRequest request, CancellationToken ct)
+    {
+        await handler.SurrenderAsync(householdId, DecimalAmountMapper.ParseTransactionAmount(request.Amount),
+            request.OccurredOn, request.OperationId, ct);
+        return NoContent();
+    }
+
     [HttpPost("grants")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Grant(Guid householdId,
