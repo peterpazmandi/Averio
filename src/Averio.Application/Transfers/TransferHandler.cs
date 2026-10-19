@@ -59,7 +59,7 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         ValidateAmounts(source, destination, input);
         transfer.Update(input.SentAmount, input.ReceivedAmount, input.OccurredOn,
             input.Note, timeProvider.GetUtcNow());
-        await personalMoney.CorrectTransferAsync(transfer, ct);
+        await personalMoney.CorrectTransferAsync(transfer, member, source, destination, ct);
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
     }
@@ -70,12 +70,12 @@ public sealed class TransferHandler(ICurrentUser currentUser, IHouseholdReposito
         var member = await GetMemberAsync(householdId, ct);
         var transfer = await GetWritableAsync(member, id, ct);
         var locked = await transfers.GetLockedAccountsAsync(householdId, transfer.SourceAccountId, transfer.DestinationAccountId, ct);
-        GetWritableAccount(member, locked, transfer.SourceAccountId, false);
-        GetWritableAccount(member, locked, transfer.DestinationAccountId, false);
+        var source = GetWritableAccount(member, locked, transfer.SourceAccountId, false);
+        var destination = GetWritableAccount(member, locked, transfer.DestinationAccountId, false);
         if (transfer.VoidedAt is not null) return; // Authorized retries are idempotent.
         CheckVersion(transfer, expectedUpdatedAt);
         transfer.Void(timeProvider.GetUtcNow());
-        await personalMoney.CorrectTransferAsync(transfer, ct);
+        await personalMoney.CorrectTransferAsync(transfer, member, source, destination, ct);
         await unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
     }

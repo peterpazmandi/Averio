@@ -1,4 +1,7 @@
 using Averio.Application.PersonalMoney;
+using Averio.Application.Accounts.UpdateAccount;
+using Averio.Domain.Accounts;
+using Averio.Domain.PersonalMoney;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Transfers;
 using Averio.Application.Transactions.VoidTransaction;
@@ -76,6 +79,7 @@ internal static class PersonalMoneyVerification
                 fixture.HouseholdId, 400m, 100m);
         }
 
+        var createChargeId = Guid.NewGuid();
         Guid privateExpense;
         await using (var scope = provider.CreateAsyncScope())
         {
@@ -96,10 +100,20 @@ internal static class PersonalMoneyVerification
             var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
             // Unlinked private expenses do not consume entitlement.
             await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
-            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, Ct);
+            await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ =>
+            {
+                await using var concurrent = provider.CreateAsyncScope();
+                await concurrent.ServiceProvider.GetRequiredService<PersonalMoneyHandler>().ChargePrivateAsync(
+                    fixture.HouseholdId, privateExpense, 25m, createChargeId, Ct);
+            }));
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, createChargeId, Ct);
+            await FailureAsync<ConflictException>(() => handler.ChargePrivateAsync(
+                fixture.HouseholdId, privateExpense, 24m, createChargeId, Ct));
+            await FailureAsync<BusinessRuleException>(() => handler.ChargePrivateAsync(
+                fixture.HouseholdId, privateExpense, 25m, Guid.Empty, Ct));
             await BalanceAsync(handler, fixture.HouseholdId, 375m, 75m);
             await FailureAsync<ConflictException>(() => handler.ChargePrivateAsync(
-                fixture.HouseholdId, privateExpense, 25m, Ct));
+                fixture.HouseholdId, privateExpense, 25m, Guid.NewGuid(), Ct));
         }
 
         // Corrections append deltas, preserve the bank transaction, and reject stale intent.
@@ -153,15 +167,21 @@ internal static class PersonalMoneyVerification
         {
             var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
             var active = (await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Single();
+            await SetPrivateAccountAsync(provider, fixture, AccountVisibility.Household, [fixture.OwnerMemberId]);
+            await FailureAsync<BusinessRuleException>(() => handler.CorrectChargeAsync(fixture.HouseholdId,
+                privateExpense, 1m, active.Amount, active.Version, Guid.NewGuid(), Ct));
             var unlinkId = Guid.NewGuid();
             await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
                 active.Amount, active.Version, unlinkId, Ct);
             await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
                 active.Amount, active.Version, unlinkId, Ct);
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, createChargeId, Ct);
             await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
             if ((await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Count != 0)
                 throw new Exception("Unlinked charge should leave active list, not history.");
-            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, Ct);
+            await SetPrivateAccountAsync(provider, fixture, AccountVisibility.Private, [fixture.OwnerMemberId]);
+            scope.ServiceProvider.GetRequiredService<AverioDbContext>().ChangeTracker.Clear();
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, Guid.NewGuid(), Ct);
             // An old retry must not unlink a later attribution again.
             await handler.CorrectChargeAsync(fixture.HouseholdId, privateExpense, 0m,
                 active.Amount, active.Version, unlinkId, Ct);
@@ -178,13 +198,15 @@ internal static class PersonalMoneyVerification
             var active = (await handler.GetMineAsync(fixture.HouseholdId, Ct))!.Charges.Single();
             await scope.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(
                 new UpdateTransactionCommand(fixture.HouseholdId, privateExpense, record.AccountId,
-                    TransactionKind.Expense, TransactionVisibility.Private, "Corrected private purchase", null, On,
+                    TransactionKind.Expense, TransactionVisibility.Private, "Corrected private purchase", null, On.AddMonths(1),
                     [new TransactionItemInput("Updated private item", record.Items.First().CategoryId, 20m)],
                     [], record.UpdatedAt), Ct);
             await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
             await FailureAsync<ConflictException>(() => handler.CorrectChargeAsync(
                 fixture.HouseholdId, privateExpense, 10m, active.Amount, active.Version, Guid.NewGuid(), Ct));
-            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 20m, Ct);
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, createChargeId, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 20m, Guid.NewGuid(), Ct);
             await BalanceAsync(handler, fixture.HouseholdId, 380m, 80m);
         }
 
@@ -198,6 +220,18 @@ internal static class PersonalMoneyVerification
             await BalanceAsync(scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>(),
                 fixture.HouseholdId, 400m, 100m);
         }
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            await handler.ChargePrivateAsync(fixture.HouseholdId, privateExpense, 25m, createChargeId, Ct);
+            await BalanceAsync(handler, fixture.HouseholdId, 400m, 100m);
+            var ledger = await scope.ServiceProvider.GetRequiredService<AverioDbContext>()
+                .Set<PersonalMoneyEntry>().AsNoTracking().Where(x => x.TransactionId == privateExpense).ToListAsync(Ct);
+            if (ledger.GroupBy(x => x.OccurredOn).Any(g => g.Sum(x => x.Amount) != 0))
+                throw new Exception("Source reversal must clear each date, not just the lifetime total.");
+        }
+        await VerifyTransferAuthorityAsync(provider, currentUser, fixture, combinedTransfer);
 
         await using (var scope = provider.CreateAsyncScope())
         {
@@ -219,6 +253,58 @@ internal static class PersonalMoneyVerification
         }
         currentUser.UserId = fixture.OwnerUserId;
         Console.WriteLine("PASS personal money: private wallet, funded/existing grants, corrections, voids and owner authority");
+    }
+
+    private static async Task SetPrivateAccountAsync(IServiceProvider provider, Fixture fixture,
+        AccountVisibility visibility, IReadOnlyList<Guid> holders)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var account = await scope.ServiceProvider.GetRequiredService<AverioDbContext>()
+            .Accounts.AsNoTracking().SingleAsync(x => x.Id == fixture.PrivateAccountId, Ct);
+        await scope.ServiceProvider.GetRequiredService<UpdateAccountHandler>().HandleAsync(
+            new UpdateAccountCommand(fixture.HouseholdId, account.Id, account.Name, account.Type,
+                holders, visibility, false, account.UpdatedAt), Ct);
+    }
+
+    private static async Task VerifyTransferAuthorityAsync(IServiceProvider provider,
+        MutableCurrentUser currentUser, Fixture fixture, Guid transferId)
+    {
+        await SetPrivateAccountAsync(provider, fixture, AccountVisibility.Private,
+            [fixture.OwnerMemberId, fixture.MemberId]);
+        currentUser.UserId = fixture.MemberUserId;
+        // Each rejection gets its own request scope, just like the API.
+        foreach (var voidTransfer in new[] { false, true })
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var transfers = scope.ServiceProvider.GetRequiredService<TransferHandler>();
+            var value = await transfers.GetAsync(fixture.HouseholdId, transferId, Ct);
+            await FailureAsync<ForbiddenException>(() => voidTransfer
+                ? transfers.VoidAsync(fixture.HouseholdId, transferId, value.UpdatedAt, Ct)
+                : transfers.UpdateAsync(fixture.HouseholdId, transferId,
+                    new TransferInput(200m, 200m, On, null), value.UpdatedAt, Ct));
+        }
+        currentUser.UserId = fixture.OwnerUserId;
+        foreach (var visibility in new[] { AccountVisibility.Private, AccountVisibility.Household })
+        {
+            await SetPrivateAccountAsync(provider, fixture, visibility,
+                visibility == AccountVisibility.Private ? [fixture.OwnerMemberId, fixture.MemberId] : [fixture.OwnerMemberId]);
+            await using var scope = provider.CreateAsyncScope();
+            var transfers = scope.ServiceProvider.GetRequiredService<TransferHandler>();
+            var value = await transfers.GetAsync(fixture.HouseholdId, transferId, Ct);
+            await FailureAsync<BusinessRuleException>(() => transfers.UpdateAsync(fixture.HouseholdId,
+                transferId, new TransferInput(200m, 200m, On, null), value.UpdatedAt, Ct));
+        }
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var transfers = scope.ServiceProvider.GetRequiredService<TransferHandler>();
+            var value = await transfers.GetAsync(fixture.HouseholdId, transferId, Ct);
+            if (value.Source!.Amount != 100m) throw new Exception("Rejected edit changed transfer amount.");
+            await BalanceAsync(scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>(), fixture.HouseholdId, 400m, 100m);
+            // Original wallet owner may clean up via void after the visibility change.
+            await transfers.VoidAsync(fixture.HouseholdId, transferId, value.UpdatedAt, Ct);
+            await BalanceAsync(scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>(), fixture.HouseholdId, 300m, 0m);
+        }
+        await SetPrivateAccountAsync(provider, fixture, AccountVisibility.Private, [fixture.OwnerMemberId]);
     }
 
     private static async Task BalanceAsync(PersonalMoneyHandler handler, Guid householdId,

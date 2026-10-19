@@ -3,7 +3,7 @@ namespace Averio.Contracts.PersonalMoney;
 public sealed record GrantPersonalMoneyRequest(Guid RecipientMemberId, string Currency,
     string Amount, DateOnly OccurredOn, Guid OperationId);
 
-public sealed record ChargePersonalMoneyRequest(Guid TransactionId, string Amount);
+public sealed record ChargePersonalMoneyRequest(Guid TransactionId, string Amount, Guid OperationId);
 
 public sealed record PersonalMoneyEventResponse(Guid Id, string Kind, string Amount, DateOnly OccurredOn);
 

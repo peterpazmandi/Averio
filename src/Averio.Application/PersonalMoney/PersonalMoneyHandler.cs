@@ -74,9 +74,9 @@ public sealed class PersonalMoneyHandler(
 
     // A private expense is explicitly linked by its owner; unlinked private spending is irrelevant.
     public async Task ChargePrivateAsync(Guid householdId, Guid transactionId,
-        decimal amount, CancellationToken ct)
+        decimal amount, Guid operationId, CancellationToken ct)
     {
-        if (amount <= 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount)
+        if (operationId == Guid.Empty || amount <= 0 || amount > 999999999999999.9999m || decimal.Round(amount, 4) != amount)
             throw new BusinessRuleException("personal_money_amount_invalid", "Validation_TransactionAmountInvalid");
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var me = await MemberAsync(householdId, ct);
@@ -84,14 +84,25 @@ public sealed class PersonalMoneyHandler(
             ?? throw new NotFoundException("transaction", transactionId);
         var account = await accounts.GetVisibleByIdAsync(householdId, me.Id, record.AccountId, ct)
             ?? throw new NotFoundException("account", record.AccountId);
-        if (!AccountAccess.CanModify(account, me)
-            || account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
+        if (!AccountAccess.CanModify(account, me)) throw new ForbiddenException();
+        var wallet = await repository.GetWalletAsync(householdId, me.Id, ct)
+            ?? throw new BusinessRuleException("personal_money_not_configured", "Error_PersonalMoneyNotConfigured");
+        // Creation receipts survive unlink, source edits and voids. A retry never replays spending.
+        var previous = await repository.GetByOperationAsync(wallet.Id, operationId, ct);
+        if (previous is not null)
+        {
+            if (previous.Kind != PersonalMoneyEntryKind.PrivateCharge || previous.TransactionId != transactionId
+                || previous.Amount != -amount || previous.CorrectionExpectedVersion is not null
+                || previous.CorrectionExpectedAmount is not null)
+                throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
+            await tx.CommitAsync(ct);
+            return;
+        }
+        if (account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
             || record.Visibility != TransactionVisibility.Private || record.Kind != TransactionKind.Expense
             || record.Status != TransactionStatus.Posted || amount > record.Amount)
             throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
 
-        var wallet = await repository.GetWalletAsync(householdId, me.Id, ct)
-            ?? throw new BusinessRuleException("personal_money_not_configured", "Error_PersonalMoneyNotConfigured");
         if (wallet.Currency != record.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
         if ((await repository.GetTransactionEntriesAsync(householdId, transactionId, ct))
@@ -99,7 +110,7 @@ public sealed class PersonalMoneyHandler(
             throw new ConflictException("personal_money_already_charged", "Error_PersonalMoneyAlreadyCharged");
         repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
             PersonalMoneyEntryKind.PrivateCharge, -amount, record.OccurredOn, clock.GetUtcNow(),
-            transactionId: transactionId));
+            transactionId: transactionId, operationId: operationId));
         await unitOfWork.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
@@ -138,10 +149,11 @@ public sealed class PersonalMoneyHandler(
         }
         if (own.Length != expectedVersion || -own.Sum(x => x.Amount) != expectedAmount)
             throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
-        if (account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
+        // Removing an existing link is allowed after account visibility changes.
+        if (amount > 0 && (account.Scope != AccountScope.Personal || account.Visibility != AccountVisibility.Private
             || record.Visibility != TransactionVisibility.Private || record.Kind != TransactionKind.Expense
             || record.Status != TransactionStatus.Posted || wallet.Currency != record.Currency
-            || amount - entries.Where(x => x.WalletId != wallet.Id).Sum(x => x.Amount) > record.Amount)
+            || amount - entries.Where(x => x.WalletId != wallet.Id).Sum(x => x.Amount) > record.Amount))
             throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         if (correction != 0)
             repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
@@ -189,12 +201,25 @@ public sealed class PersonalMoneyHandler(
     }
 
     // Existing-transfer mutations never silently mint another grant.
-    public async Task CorrectTransferAsync(Transfer transfer, CancellationToken ct)
+    public async Task CorrectTransferAsync(Transfer transfer, HouseholdMember actor,
+        Account source, Account destination, CancellationToken ct)
     {
         var entries = await repository.GetTransferEntriesAsync(transfer.HouseholdId, transfer.Id, ct);
         if (entries.Count == 0) return;
         var existingFunding = entries.Where(x => x.Kind == PersonalMoneyEntryKind.Funding).Sum(x => x.Amount);
         var createsGrant = entries.Any(x => x.Kind == PersonalMoneyEntryKind.Grant);
+        // Account co-ownership never delegates authority over the original recipient's wallet.
+        var wallet = await repository.GetWalletAsync(transfer.HouseholdId, actor.Id, ct);
+        if (actor.LeftAtUtc is not null || wallet is null || entries.Any(x => x.WalletId != wallet.Id)
+            || (createsGrant && actor.Role != HouseholdRole.Owner))
+            throw new ForbiddenException();
+        // A void may clean up a formerly eligible transfer after visibility/holder changes.
+        if (transfer.VoidedAt is null && (source.Scope != AccountScope.Household
+            || !source.IncludeInHouseholdReports || destination.Scope != AccountScope.Personal
+            || destination.Visibility != AccountVisibility.Private || destination.IncludeInHouseholdReports
+            || destination.Owners.Count != 1 || !destination.Owners.Any(x => x.HouseholdMemberId == actor.Id)
+            || source.Currency != destination.Currency || wallet.Currency != source.Currency))
+            throw new BusinessRuleException("personal_money_funding_invalid", "Error_PersonalMoneyFundingInvalid");
         if (!createsGrant && transfer.VoidedAt is null && transfer.SentAmount > existingFunding)
         {
             var walletId = entries.First().WalletId;
@@ -225,12 +250,12 @@ public sealed class PersonalMoneyHandler(
     {
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
         foreach (var group in entries.Where(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge)
-                     .GroupBy(x => x.WalletId))
+                     .GroupBy(x => new { x.WalletId, x.OccurredOn }))
         {
             var total = group.Sum(x => x.Amount);
             if (total != 0m)
-                repository.Add(PersonalMoneyEntry.Create(householdId, group.Key,
-                    PersonalMoneyEntryKind.PrivateCharge, -total, group.First().OccurredOn,
+                repository.Add(PersonalMoneyEntry.Create(householdId, group.Key.WalletId,
+                    PersonalMoneyEntryKind.PrivateCharge, -total, group.Key.OccurredOn,
                     clock.GetUtcNow(), transactionId: transactionId));
         }
     }

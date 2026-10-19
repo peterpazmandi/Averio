@@ -27,6 +27,10 @@ export interface ChargePersonalMoneyRequest {
      * 
      */
     amount: string;
+    /**
+     * 
+     */
+    operationId: string;
 }
 
 /**
@@ -35,6 +39,7 @@ export interface ChargePersonalMoneyRequest {
 export function instanceOfChargePersonalMoneyRequest(value: object): value is ChargePersonalMoneyRequest {
     if (!('transactionId' in value) || value['transactionId'] === undefined) return false;
     if (!('amount' in value) || value['amount'] === undefined) return false;
+    if (!('operationId' in value) || value['operationId'] === undefined) return false;
     return true;
 }
 
@@ -50,6 +55,7 @@ export function ChargePersonalMoneyRequestFromJSONTyped(json: any, ignoreDiscrim
         
         'transactionId': json['transactionId'],
         'amount': json['amount'],
+        'operationId': json['operationId'],
     };
 }
 
@@ -66,6 +72,7 @@ export function ChargePersonalMoneyRequestToJSONTyped(value?: ChargePersonalMone
         
         'transactionId': value['transactionId'],
         'amount': value['amount'],
+        'operationId': value['operationId'],
     };
 }
 

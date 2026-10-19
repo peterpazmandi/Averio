@@ -49,6 +49,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [purchaseId, setPurchaseId] = useState('');
     const [chargeAmount, setChargeAmount] = useState('');
+    const [chargeOperationId, setChargeOperationId] = useState(() => crypto.randomUUID());
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -74,9 +75,9 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     const charge = useMutation({
         mutationFn: () => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesPost({
             householdId,
-            chargePersonalMoneyRequest: { transactionId: purchaseId, amount: normalized(chargeAmount) },
+            chargePersonalMoneyRequest: { transactionId: purchaseId, amount: normalized(chargeAmount), operationId: chargeOperationId },
         }),
-        onSuccess: async () => { await refresh(); setPurchaseId(''); setChargeAmount(''); setMessage(t('personalMoney.chargeSuccess')); setError(''); },
+        onSuccess: async () => { await refresh(); setPurchaseId(''); setChargeAmount(''); setChargeOperationId(crypto.randomUUID()); setMessage(t('personalMoney.chargeSuccess')); setError(''); },
         onError: (failure: Error) => { setError(failure.message); setMessage(''); },
     });
     const canGrant = household.role === 'owner';
@@ -149,8 +150,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <h4 className="font-semibold">{t('personalMoney.chargeTitle')}</h4>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.chargeHelp')}</p>
             <AverioField>{t('personalMoney.purchase')}
-                <AverioSelect value={purchaseId} onChange={e => {
-                    const id = e.target.value; setPurchaseId(id);
+                <AverioSelect value={purchaseId} disabled={charge.isPending} onChange={e => {
+                    const id = e.target.value; setPurchaseId(id); setChargeOperationId(crypto.randomUUID());
                     setChargeAmount(purchases.find(p => p.id === id)?.amount ?? '');
                 }}>
                     <option value="">{t('personalMoney.selectPurchase')}</option>
@@ -160,8 +161,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                 </AverioSelect>
             </AverioField>
             <AverioField>{t('personalMoney.amount')}
-                <AverioInput value={chargeAmount} inputMode="decimal" pattern="[0-9]+([.,][0-9]{1,4})?"
-                    onChange={e => setChargeAmount(e.target.value)} />
+                <AverioInput value={chargeAmount} disabled={charge.isPending} inputMode="decimal" pattern="[0-9]+([.,][0-9]{1,4})?"
+                    onChange={e => { setChargeAmount(e.target.value); setChargeOperationId(crypto.randomUUID()); }} />
             </AverioField>
             <div><AverioButton type="submit" variant="primary" disabled={!validCharge || charge.isPending}>
                 {t(charge.isPending ? 'common.actions.saving' : 'personalMoney.charge')}</AverioButton></div>

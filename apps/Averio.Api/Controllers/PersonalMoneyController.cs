@@ -56,7 +56,7 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
         ChargePersonalMoneyRequest request, CancellationToken ct)
     {
         await handler.ChargePrivateAsync(householdId, request.TransactionId,
-            DecimalAmountMapper.ParseTransactionAmount(request.Amount), ct);
+            DecimalAmountMapper.ParseTransactionAmount(request.Amount), request.OperationId, ct);
         return NoContent();
     }
 }

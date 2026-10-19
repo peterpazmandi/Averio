@@ -50,8 +50,10 @@ The response includes owner-only ledger entries, entitlement, attributed private
 `POST /api/v1/households/{householdId}/personal-money/me/charges`
 
 ```json
-{ "transactionId": "00000000-0000-4000-8000-000000000003", "amount": "50.00" }
+{ "transactionId": "00000000-0000-4000-8000-000000000003", "amount": "50.00", "operationId": "00000000-0000-4000-8000-000000000004" }
 ```
+
+Creation requires a fresh operation ID for each deliberate link. Retry the unchanged payload with the same ID after a network failure. Its receipt survives unlink and source edit/void, so a late retry cannot restore spending. Changed payloads with the same ID conflict.
 
 An active member may explicitly link a posted **private** expense on an account they can manage. The wallet denomination and expense currency must match, and the charge must not exceed the expense. Ordinary private expenses remain uncharged. Updating or voiding a linked transaction reverses the charge in the same database transaction; an updated expense needs explicit relinking.
 
@@ -60,6 +62,8 @@ An active member may explicitly link a posted **private** expense on an account 
 `PUT /api/v1/households/{householdId}/personal-money/me/charges/{transactionId}`
 
 The wallet response includes all currently linked charges with decimal-string `amount` and integer `version`. Send `amount`, `expectedAmount`, `expectedVersion` and a fresh `operationId`; reuse the exact payload and ID after a network failure. An amount of zero unlinks the purchase. A positive amount changes the charge, capped at the source expense total across wallets. Both restore or consume entitlement and attributed funding through an append-only signed delta, without touching the purchase or bank balance.
+
+Unlink remains available after account visibility changes; positive corrections still require a currently eligible private expense.
 
 Corrections require the current wallet member and current source-account write access. Household Owner status does not authorize another person's charges. The existing household lock serializes changes with transaction edits, voids and membership departure. The version counts all source entries for this wallet, including reversals, preventing stale edits even after an amount changes away and back. Persisted retry metadata rejects changed payloads; an old successful retry never reapplies its delta after a later unlink/relink or source reversal. Unchanged amounts are no-ops without ledger entries.
 
@@ -76,6 +80,8 @@ The household UI separates Owner grant administration from the member's own wall
 All usual transfer rules still apply: write authority over both accounts, no cross-household transfer, two legs posted atomically, and source/destination currency settlement. Personal Money purposes additionally require identical wallet and account currency, Household-scope included source, Personal-scope Private excluded destination, and single-member private ownership.
 
 A household Owner cannot select another member's private account under the current account authorization model. Instead they can grant an allowance and let the destination holder create the linked transfer.
+
+Transfer edits and voids require the original active wallet recipient; linked grant changes additionally require Owner authority. Edits revalidate funding account eligibility, including exclusive private destination ownership. Voids allow that recipient to clean up after account visibility or holder changes, subject to write access on both accounts. Source charge reversals cancel each original occurrence date separately.
 
 Transfer edit/void rebalances linked grants and funding through new signed events, not by rewriting the original. This does not generate any ordinary expense transaction.
 
