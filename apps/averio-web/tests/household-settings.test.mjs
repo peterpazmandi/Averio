@@ -150,5 +150,23 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
     await completeReload(true, { ...original, version: 'v3' });
     edit().props.onClick();
     assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Retry releases editor only with refreshed version');
+
+    function locateAnchor(value, href) {
+        if (!value || typeof value !== 'object') return;
+        if (Array.isArray(value)) return value.map(child => locateAnchor(child, href)).find(Boolean);
+        if (value.type === 'a' && value.props.href === href) return value;
+        return locateAnchor(value.props?.children, href);
+    }
+    const personalTab = locateAnchor(render(), '#household-personal-money');
+    assert.equal(personalTab.props['aria-current'], undefined);
+    personalTab.props.onClick({ button: 0 });
+    assert.equal(find(render(), 'personal-money').type, 'personal-money');
+    assert.equal(find(render(), 'editor'), undefined, 'Unrelated profile panel is not rendered');
+    assert.equal(locateAnchor(render(), '#household-personal-money').props['aria-current'], 'page');
+    locateAnchor(render(), '#household-invitations').props.onClick({ button: 0 });
+    assert.equal(find(render(), 'invitations').type, 'invitations');
+    assert.equal(find(render(), 'personal-money'), undefined, 'Previous section is unmounted');
+    locateAnchor(render(), '#household-profile').props.onClick({ button: 0 });
+    assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Draft is preserved when changing sections');
 });
 
