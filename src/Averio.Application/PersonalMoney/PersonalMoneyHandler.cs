@@ -149,7 +149,7 @@ public sealed class PersonalMoneyHandler(
         var previous = await repository.GetByOperationAsync(wallet.Id, operationId, ct);
         if (previous is not null)
         {
-            if (previous.Kind != PersonalMoneyEntryKind.PrivateCharge || previous.TransactionId != transactionId
+            if (!IsCharge(previous) || previous.TransactionId != transactionId
                 || previous.Amount != correction || previous.CorrectionExpectedAmount != expectedAmount
                 || previous.CorrectionExpectedVersion != expectedVersion)
                 throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
@@ -278,13 +278,12 @@ public sealed class PersonalMoneyHandler(
         Account source, Account destination, PersonalTransferPurpose purpose, CancellationToken ct)
     {
         if (purpose == PersonalTransferPurpose.Ordinary) return;
-        if (!Enum.IsDefined(purpose)
-            || source.Scope != AccountScope.Household || !source.IncludeInHouseholdReports
-            || destination.Scope != AccountScope.Personal || destination.Visibility != AccountVisibility.Private
-            || destination.IncludeInHouseholdReports || destination.Owners.Count != 1
-            || !destination.Owners.Any(x => x.HouseholdMemberId == actor.Id)
-            || source.Currency != destination.Currency)
+        if (!Enum.IsDefined(purpose))
+            throw new BusinessRuleException("personal_money_purpose_invalid", "Error_PersonalMoneyPurposeInvalid");
+        var isReturn = purpose == PersonalTransferPurpose.ReturnFunding;
+        if (!EligibleFundingPair(source, destination, actor, isReturn))
             throw new BusinessRuleException("personal_money_funding_invalid", "Error_PersonalMoneyFundingInvalid");
+
         var wallet = await repository.GetWalletAsync(transfer.HouseholdId, actor.Id, ct);
         if (purpose == PersonalTransferPurpose.CreateAndFundGrant)
         {
@@ -301,52 +300,57 @@ public sealed class PersonalMoneyHandler(
             if (wallet is null || wallet.Currency != source.Currency)
                 throw new BusinessRuleException("personal_money_grant_required", "Error_PersonalMoneyGrantRequired");
             var balance = PersonalMoneyBalance.FromEntries(await repository.GetEntriesAsync(wallet.Id, ct));
-            if (balance.FundingDifference < transfer.SentAmount)
-                throw new BusinessRuleException("personal_money_insufficient_unfunded", "Error_PersonalMoneyInsufficientUnfunded");
+            if (isReturn && balance.AttributedPrivateFunding < transfer.SentAmount
+                || !isReturn && balance.FundingDifference < transfer.SentAmount)
+                throw new BusinessRuleException("personal_money_insufficient_unfunded",
+                    "Error_PersonalMoneyInsufficientUnfunded");
         }
         repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, wallet!.Id,
-            PersonalMoneyEntryKind.Funding, transfer.SentAmount, transfer.OccurredOn,
-            clock.GetUtcNow(), transferId: transfer.Id));
+            PersonalMoneyEntryKind.Funding, isReturn ? -transfer.SentAmount : transfer.SentAmount,
+            transfer.OccurredOn, clock.GetUtcNow(), transferId: transfer.Id));
     }
 
-    // Existing-transfer mutations never silently mint another grant.
+    // Retain the original sign of the transfer purpose across edits and voids.
     public async Task CorrectTransferAsync(Transfer transfer, HouseholdMember actor,
         Account source, Account destination, CancellationToken ct)
     {
         var entries = await repository.GetTransferEntriesAsync(transfer.HouseholdId, transfer.Id, ct);
         if (entries.Count == 0) return;
-        var existingFunding = entries.Where(x => x.Kind == PersonalMoneyEntryKind.Funding).Sum(x => x.Amount);
+        var originalFunding = entries.Where(x => x.Kind == PersonalMoneyEntryKind.Funding)
+            .OrderBy(x => x.RecordedAt).ThenBy(x => x.Id).First();
+        var isReturn = originalFunding.Amount < 0;
+        var currentFunding = entries.Where(x => x.Kind == PersonalMoneyEntryKind.Funding).Sum(x => x.Amount);
         var createsGrant = entries.Any(x => x.Kind == PersonalMoneyEntryKind.Grant);
-        // Account co-ownership never delegates authority over the original recipient's wallet.
         var wallet = await repository.GetWalletAsync(transfer.HouseholdId, actor.Id, ct);
         if (actor.LeftAtUtc is not null || wallet is null || entries.Any(x => x.WalletId != wallet.Id)
             || (createsGrant && actor.Role != HouseholdRole.Owner))
             throw new ForbiddenException();
-        // A void may clean up a formerly eligible transfer after visibility/holder changes.
-        if (transfer.VoidedAt is null && (source.Scope != AccountScope.Household
-            || !source.IncludeInHouseholdReports || destination.Scope != AccountScope.Personal
-            || destination.Visibility != AccountVisibility.Private || destination.IncludeInHouseholdReports
-            || destination.Owners.Count != 1 || !destination.Owners.Any(x => x.HouseholdMemberId == actor.Id)
-            || source.Currency != destination.Currency || wallet.Currency != source.Currency))
+        if (transfer.VoidedAt is null &&
+            (!EligibleFundingPair(source, destination, actor, isReturn) || wallet.Currency != source.Currency))
             throw new BusinessRuleException("personal_money_funding_invalid", "Error_PersonalMoneyFundingInvalid");
-        if (!createsGrant && transfer.VoidedAt is null && transfer.SentAmount > existingFunding)
+        if (transfer.VoidedAt is null && !createsGrant)
         {
-            var walletId = entries.First().WalletId;
-            var balance = PersonalMoneyBalance.FromEntries(await repository.GetEntriesAsync(walletId, ct));
-            if (transfer.SentAmount - existingFunding > balance.FundingDifference)
+            var balance = PersonalMoneyBalance.FromEntries(await repository.GetEntriesAsync(wallet.Id, ct));
+            var additionalFunding = isReturn
+                ? transfer.SentAmount + currentFunding // currentFunding negative: delta in return
+                : transfer.SentAmount - currentFunding;
+            if (additionalFunding > 0 && (isReturn
+                ? balance.AttributedPrivateFunding < additionalFunding
+                : balance.FundingDifference < additionalFunding))
                 throw new BusinessRuleException("personal_money_insufficient_unfunded",
                     "Error_PersonalMoneyInsufficientUnfunded");
         }
         foreach (var group in entries.GroupBy(x => new { x.WalletId, x.Kind }))
         {
-            var expected = transfer.VoidedAt is not null ? 0m : transfer.SentAmount;
-            var originalTotals = group.GroupBy(x => x.OccurredOn)
+            var expected = transfer.VoidedAt is not null ? 0m
+                : isReturn && group.Key.Kind == PersonalMoneyEntryKind.Funding ? -transfer.SentAmount
+                : transfer.SentAmount;
+            var totalsByDate = group.GroupBy(x => x.OccurredOn)
                 .ToDictionary(x => x.Key, x => x.Sum(e => e.Amount));
-            var dates = originalTotals.Keys.Append(transfer.OccurredOn).Distinct();
-            foreach (var date in dates)
+            foreach (var date in totalsByDate.Keys.Append(transfer.OccurredOn).Distinct())
             {
                 var target = date == transfer.OccurredOn ? expected : 0m;
-                var correction = target - originalTotals.GetValueOrDefault(date);
+                var correction = target - totalsByDate.GetValueOrDefault(date);
                 if (correction == 0) continue;
                 repository.Add(PersonalMoneyEntry.Create(transfer.HouseholdId, group.Key.WalletId,
                     group.Key.Kind, correction, date, clock.GetUtcNow(), transferId: transfer.Id));
@@ -354,18 +358,39 @@ public sealed class PersonalMoneyHandler(
         }
     }
 
+    private static bool EligibleFundingPair(Account source, Account destination,
+        HouseholdMember member, bool returning)
+    {
+        var householdAccount = returning ? destination : source;
+        var privateAccount = returning ? source : destination;
+        return householdAccount.Scope == AccountScope.Household
+            && householdAccount.IncludeInHouseholdReports
+            && privateAccount.Scope == AccountScope.Personal
+            && privateAccount.Visibility == AccountVisibility.Private
+            && !privateAccount.IncludeInHouseholdReports
+            && privateAccount.Owners.Count == 1
+            && privateAccount.Owners.Any(x => x.HouseholdMemberId == member.Id)
+            && source.Currency == destination.Currency;
+    }
+
     // Source mutations retract an explicitly linked charge atomically; the user can relink the updated expense.
     public async Task ReverseTransactionChargeAsync(Guid householdId, Guid transactionId, CancellationToken ct)
     {
+        // A source edit/void invalidates its own charged/refunded budget attribution.
+        // Editing/voiding the original purchase must also retract dependent refunds.
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
-        foreach (var group in entries.Where(x => x.Kind == PersonalMoneyEntryKind.PrivateCharge)
-                     .GroupBy(x => new { x.WalletId, x.OccurredOn }))
+        var dependents = await repository.GetRefundsOfPurchaseAsync(householdId, transactionId, ct);
+        var all = entries.Where(x => IsCharge(x) || IsRefund(x))
+            .Concat(dependents.Where(IsRefund)).DistinctBy(x => x.Id);
+        foreach (var group in all.GroupBy(x =>
+            new { x.WalletId, x.Kind, x.OccurredOn, x.TransactionId, x.RelatedTransactionId }))
         {
-            var total = group.Sum(x => x.Amount);
-            if (total != 0m)
-                repository.Add(PersonalMoneyEntry.Create(householdId, group.Key.WalletId,
-                    PersonalMoneyEntryKind.PrivateCharge, -total, group.Key.OccurredOn,
-                    clock.GetUtcNow(), transactionId: transactionId));
+            var net = group.Sum(x => x.Amount);
+            if (net == 0m) continue;
+            repository.Add(PersonalMoneyEntry.Create(householdId, group.Key.WalletId,
+                group.Key.Kind, -net, group.Key.OccurredOn, clock.GetUtcNow(),
+                transactionId: group.Key.TransactionId,
+                relatedTransactionId: group.Key.RelatedTransactionId));
         }
     }
 
