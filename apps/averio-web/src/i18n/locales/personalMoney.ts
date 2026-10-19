@@ -1,5 +1,7 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    sections: "Personal Money sections",
+    tabs: { mine: "My allowance", charges: "Charge purchases", reconcile: "Refunds & adjustments", owner: "Manage allowances", boundary: "Boundary flow" },
     chargeTitle: "Charge a purchase to my allowance",
     chargeHelp: "You may explicitly charge a private purchase or all/part of an expense paid from a shared account. A shared purchase remains one household expense.",
     purchase: "Private or shared purchase",
