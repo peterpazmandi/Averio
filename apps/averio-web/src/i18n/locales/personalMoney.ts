@@ -128,6 +128,8 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    sections: "Személyes pénzkeret részei",
+    tabs: { mine: "Saját keretem", charges: "Vásárlások elszámolása", reconcile: "Visszatérítések és korrekciók", owner: "Keretjuttatások kezelése", boundary: "Pénzmozgások" },
     chargeTitle: "Vásárlás elszámolása a személyes keretből",
     chargeHelp: "Privát vásárlást vagy közös számláról fizetett kiadás egészét/részét külön hozzárendelheted a keretedhez. A közös vásárlás továbbra is egyetlen háztartási kiadás.",
     purchase: "Privát vagy közös vásárlás",
