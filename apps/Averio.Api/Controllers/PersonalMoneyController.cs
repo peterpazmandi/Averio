@@ -22,7 +22,8 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
             DecimalAmountMapper.Format(result.AttributedPrivateFunding),
             DecimalAmountMapper.Format(result.FundingDifference),
             result.Entries.Select(x => new PersonalMoneyEventResponse(x.Id, x.Kind,
-                DecimalAmountMapper.Format(x.Amount), x.OccurredOn)).ToArray(),
+                DecimalAmountMapper.Format(x.Amount), x.OccurredOn,
+                x.TransactionId, x.TransferId, x.RelatedTransactionId)).ToArray(),
             result.Charges.Select(x => new PersonalMoneyChargeResponse(x.TransactionId,
                 DecimalAmountMapper.Format(x.Amount), x.Version)).ToArray()));
     }
