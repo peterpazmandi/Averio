@@ -55,6 +55,7 @@ test('creation draft survives account removal and insufficient remaining account
     let cursor = 0;
     const { TransferEditor } = load('../src/features/transfers/TransferEditor.tsx', {
         '../../shared/api/ApiError': { ApiError },
+        '../personal-money/PersonalMoneyRelationBadge': { PersonalMoneyRelationBadge: 'allowance-badge' },
         'react': { useId: () => 'editor', useState: initial => {
             const index = cursor++;
             if (!(index in state)) state[index] = initial;
