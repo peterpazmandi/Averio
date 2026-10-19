@@ -1,4 +1,4 @@
-name: Temporary regenerate Personal Money PR2 OpenAPI client
+name: Temporary regenerate Personal Money PR2 OpenAPI client (retry)
 on:
   push:
     branches: [feat/personal-money-shared-reconciliation]
@@ -53,5 +53,7 @@ jobs:
           git add -- apps/averio-web/src/shared/api/generated
           if ! git diff --cached --quiet; then
             git commit -m "build(api): regenerate shared Personal Money API client"
+            git fetch origin feat/personal-money-shared-reconciliation
+            git rebase origin/feat/personal-money-shared-reconciliation
             git push origin HEAD:feat/personal-money-shared-reconciliation
           fi
