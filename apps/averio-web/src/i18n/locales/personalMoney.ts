@@ -1,5 +1,6 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    relations: {"PrivateCharge":"Private purchase → allowance","SharedCharge":"Shared purchase → allowance","PrivateRefund":"Private refund → allowance","SharedRefund":"Shared refund → allowance","AllowanceFunding":"Allowance funded","FundingReturn":"Funding returned","CreateAndFundGrant":"Allowance granted & funded"},
     sections: "Personal Money sections",
     tabs: { mine: "My allowance", charges: "Charge purchases", reconcile: "Refunds & adjustments", owner: "Manage allowances", boundary: "Boundary flow" },
     chargeTitle: "Charge a purchase to my allowance",
