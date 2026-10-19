@@ -233,7 +233,12 @@ public sealed class PersonalMoneyHandler(
             || wallet.Currency != refund.Currency || wallet.Currency != purchase.Currency
             || account.Status != AccountStatus.Active)
             throw new BusinessRuleException("personal_money_refund_invalid", "Error_PersonalMoneyRefundInvalid");
-        var chargeKind = mine.First().Kind;
+        var activeChargeKind = mine.GroupBy(x => x.Kind)
+            .Where(g => g.Sum(x => x.Amount) < 0).Select(g => (PersonalMoneyEntryKind?)g.Key)
+            .SingleOrDefault();
+        if (activeChargeKind is null)
+            throw new BusinessRuleException("personal_money_refund_invalid", "Error_PersonalMoneyRefundInvalid");
+        var chargeKind = activeChargeKind.Value;
         var refundKind = chargeKind == PersonalMoneyEntryKind.PrivateCharge
             ? PersonalMoneyEntryKind.PrivateRefund : PersonalMoneyEntryKind.SharedRefund;
         if (ChargeKind(account, purchase) != chargeKind
