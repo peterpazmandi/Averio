@@ -1,5 +1,12 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    filterOnly: "Personal Money related only",
+    loadedFilterHelp: "This filter checks transactions or transfers already loaded on this page. Load more to check older records.",
+    noLoadedRelations: "No Personal Money links in the loaded records. Try loading more.",
+    relationDetails: "Personal Money relationship",
+    refundOriginalHint: "This refund was attributed to a previously charged purchase.",
+    transactionLinkHelp: "The allowance relationship is managed separately. Editing this transaction may reset its allocation.",
+    transferLinkHelp: "Funding changes attributed private funding, not the categorized expense totals.",
     relations: {"PrivateCharge":"Private purchase → allowance","SharedCharge":"Shared purchase → allowance","PrivateRefund":"Private refund → allowance","SharedRefund":"Shared refund → allowance","AllowanceFunding":"Allowance funded","FundingReturn":"Funding returned","CreateAndFundGrant":"Allowance granted & funded"},
     sections: "Personal Money sections",
     tabs: { mine: "My allowance", charges: "Charge purchases", reconcile: "Refunds & adjustments", owner: "Manage allowances", boundary: "Boundary flow" },
