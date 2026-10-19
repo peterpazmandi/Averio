@@ -1,4 +1,4 @@
-name: Temporary regenerate Personal Money relation client
+name: Temporary regenerate Personal Money relation client retry 2
 on:
   push:
     branches: [feat/personal-money-shared-reconciliation]
