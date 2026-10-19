@@ -85,6 +85,7 @@ export function TransactionEditor({
     userId,
     householdId,
     transaction: initialTransaction,
+    personalRelation,
     initialKind = 'Expense',
     recurringRule: initialRule,
     initialRecurring = false,
