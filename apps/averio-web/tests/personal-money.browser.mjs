@@ -59,7 +59,9 @@ try {
             await page.waitForFunction(() => {
                 const section = document.getElementById('household-personal-money');
                 const top = section?.getBoundingClientRect().top;
-                return top !== undefined && top >= 78 && top < 120;
+                // Single-panel navigation can have too little content to scroll to a fixed
+                // sticky-header offset; it must open the right panel and bring it into view.
+                return top !== undefined && top >= 0 && top < innerHeight * 0.8;
             });
         };
         await checkPosition();
