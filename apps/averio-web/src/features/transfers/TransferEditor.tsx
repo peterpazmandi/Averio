@@ -127,7 +127,7 @@ export function TransferEditor({ transfer, accounts, currentMemberId, canCreateG
                     <div className="grid grid-cols-1 gap-4 min-[621px]:grid-cols-2">
                         <AverioField>{t('transfers.fromAccount')}
                             <AverioSelect required value={sourceId} disabled={!!transfer}
-                                onChange={e => { setSourceId(e.target.value); setReceived(''); }}>
+                                onChange={e => { setSourceId(e.target.value); setReceived(''); setPersonalPurpose('Ordinary'); }}>
                                 <option value="">{t('transfers.chooseAccount')}</option>
                                 {accounts.filter(a => a.status === 'Active' || (!!transfer && a.id === sourceId)).map(a =>
                                     <option key={a.id} value={a.id} disabled={a.id === destinationId}>{a.name} · {a.currency}</option>)}
@@ -135,7 +135,7 @@ export function TransferEditor({ transfer, accounts, currentMemberId, canCreateG
                         </AverioField>
                         <AverioField>{t('transfers.toAccount')}
                             <AverioSelect required value={destinationId} disabled={!!transfer}
-                                onChange={e => { setDestinationId(e.target.value); setReceived(''); }}>
+                                onChange={e => { setDestinationId(e.target.value); setReceived(''); setPersonalPurpose('Ordinary'); }}>
                                 <option value="">{t('transfers.chooseAccount')}</option>
                                 {accounts.filter(a => a.status === 'Active' || (!!transfer && a.id === destinationId)).map(a =>
                                     <option key={a.id} value={a.id} disabled={a.id === sourceId}>{a.name} · {a.currency}</option>)}
