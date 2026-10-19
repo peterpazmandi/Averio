@@ -1,4 +1,6 @@
 export const householdSettingsEN = {
+    invitations: "Invitations",
+    navHelp: { profile: "Profile and preferences", members: "People and past households", invitations: "Invite or manage partners", personalMoney: "Allowances and purchases", privacy: "Who can see financial data" },
     "personalMoney": "Personal Money",
     "title": "Household settings",
     "description": "A shared home for your finances, with room for personal privacy.",
