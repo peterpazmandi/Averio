@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import type { AccountResponse, CreateTransferRequest, TransferResponse } from '../../shared/api/generated';
 import { AverioDialog } from '../../shared/components/ui/AverioDialog';
+import type { PersonalMoneyRelation } from '../personal-money/personalMoneyRelations';
+import { PersonalMoneyRelationBadge } from '../personal-money/PersonalMoneyRelationBadge';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
@@ -14,6 +16,7 @@ interface Props {
     accounts: AccountResponse[];
     currentMemberId?: string;
     canCreateGrant?: boolean;
+    personalRelation?: PersonalMoneyRelation;
     busy: boolean;
     onClose: () => void;
     onSave: (request: CreateTransferRequest) => Promise<void>;
@@ -21,7 +24,7 @@ interface Props {
     onReload: () => Promise<void>;
 }
 
-export function TransferEditor({ transfer, accounts, currentMemberId, canCreateGrant = false, busy: mutationBusy, onClose, onSave, onVoid, onReload }: Props) {
+export function TransferEditor({ transfer, accounts, currentMemberId, canCreateGrant = false, personalRelation, busy: mutationBusy, onClose, onSave, onVoid, onReload }: Props) {
     const { t } = useTranslation();
     const formId = useId();
     const [draftSourceId, setSourceId] = useState(transfer ? transfer.source?.accountId ?? '' : accounts.find(a => a.status === 'Active')?.id ?? '');
@@ -109,6 +112,11 @@ export function TransferEditor({ transfer, accounts, currentMemberId, canCreateG
         </>}>
         <form id={formId} className="grid gap-4 [&_p]:text-[13px] [&_p]:leading-relaxed [&_p]:wrap-anywhere" onSubmit={event => { event.preventDefault(); void submit(); }}>
             <p>{t('transfers.balanceHelp')}</p>
+            {transfer && personalRelation && <div className="rounded-xl border border-emerald-300/40 bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                <p className="mb-2 text-xs font-semibold">{t('personalMoney.relationDetails')}</p>
+                <PersonalMoneyRelationBadge relation={personalRelation} detail />
+                <p className="mt-2 text-xs">{t('personalMoney.transferLinkHelp')}</p>
+            </div>}
             {error && <p className="text-red-600 dark:text-red-400" role="alert">{error}</p>}
             {conflict && <div role="alert" className="grid justify-items-start gap-2">
                 <p>{t('transfers.conflictHelp')}</p>
