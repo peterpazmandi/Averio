@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import type { HouseholdResponse } from '../../shared/api/generated';
+import type { HouseholdResponse, PersonalMoneyChargeResponse } from '../../shared/api/generated';
 import { TransactionsApi } from '../../shared/api/generated';
 import { generatedApiConfiguration } from '../../shared/api/generatedApiConfiguration';
 import { accountsQueries } from '../accounts/api/accountsQueries';
@@ -35,9 +35,11 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     });
     const eligibleIds = new Set(privateAccounts.map(a => a.id));
     // Consumption occurs only after explicit selection; never infer it from an account.
+    const existingCharges = mine.data?.charges ?? [];
+    const chargedIds = new Set(existingCharges.map(c => c.transactionId));
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
         transaction.visibility === 'Private' && transaction.status === 'Posted'
-        && eligibleIds.has(transaction.accountId));
+        && eligibleIds.has(transaction.accountId) && !chargedIds.has(transaction.id));
     const [recipient, setRecipient] = useState(household.members.find(m => m.isCurrentUser)?.id ?? '');
     const [grantAmount, setGrantAmount] = useState('');
     // Reuse this operation ID after network errors; only form edits start a new grant intent.
@@ -83,33 +85,21 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     const validCharge = !!selectedPurchase && decimalPattern.test(chargeAmount) && Number(normalized(chargeAmount)) > 0
         && Number(normalized(chargeAmount)) <= Number(selectedPurchase.amount);
 
-    return <AverioCard id="household-personal-money" className="scroll-mt-6 space-y-5 p-5 sm:p-6">
+    return <section id="household-personal-money" aria-labelledby="personal-money-heading" className="scroll-mt-24 space-y-5">
         <header className="space-y-1">
-            <h3 className="text-lg font-semibold">{t('personalMoney.title')}</h3>
+            <h3 id="personal-money-heading" className="text-lg font-semibold">{t('personalMoney.title')}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.description')}</p>
         </header>
-        {mine.isPending ? <p role="status">{t('common.status.loading')}</p> : mine.isError
-            ? <div role="alert" className="space-y-2"><p>{t('personalMoney.loadError')}</p>
-                <AverioButton onClick={() => { void mine.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>
-            : mine.data ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-50 p-4 dark:bg-emerald-950/20">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.available')}</p>
-                    <p className="mt-2 break-words text-2xl font-bold">{money(mine.data.available, mine.data.currency)}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.funded')}</p>
-                    <p className="mt-2 break-words text-lg font-semibold">{money(mine.data.attributedPrivateFunding, mine.data.currency)}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.difference')}</p>
-                    <p className="mt-2 break-words text-lg font-semibold">{money(mine.data.fundingDifference, mine.data.currency)}</p>
-                </div>
-            </div> : <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">{t('personalMoney.empty')}</p>}
         {message && <p role="status" className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{message}</p>}
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        {canGrant && <form className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
+        {canGrant && <AverioCard className="space-y-4 p-5 sm:p-6">
+            <header className="space-y-2">
+                <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">{t('personalMoney.ownerArea')}</span>
+                <h4 className="text-xl font-semibold">{t('personalMoney.newGrant')}</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.ownerHelp')}</p>
+            </header>
+            <form className="grid gap-4"
             onSubmit={event => { event.preventDefault(); if (validGrant && !grant.isPending) grant.mutate(); }}>
-            <h4 className="font-semibold">{t('personalMoney.newGrant')}</h4>
             <div className="grid gap-4 sm:grid-cols-2">
                 <AverioField>{t('personalMoney.recipient')}
                     <AverioSelect value={recipient} onChange={e => { setRecipient(e.target.value); resetGrantIntent(); }} required>
@@ -131,7 +121,29 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.grantHelp')}</p>
             <div><AverioButton type="submit" variant="primary" disabled={grant.isPending || !validGrant}>{t(grant.isPending ? 'common.actions.saving' : 'personalMoney.grant')}</AverioButton></div>
-        </form>}
+        </form></AverioCard>}
+        <AverioCard className="space-y-5 p-5 sm:p-6">
+        <header className="space-y-1">
+            <h4 className="text-xl font-semibold">{t('personalMoney.myWallet')}</h4>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.walletHelp')}</p>
+        </header>
+        {mine.isPending ? <p role="status">{t('common.status.loading')}</p> : mine.isError
+            ? <div role="alert" className="space-y-2"><p>{t('personalMoney.loadError')}</p>
+                <AverioButton onClick={() => { void mine.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>
+            : mine.data ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-50 p-4 dark:bg-emerald-950/20">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.available')}</p>
+                    <p className="mt-2 break-words text-2xl font-bold">{money(mine.data.available, mine.data.currency)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.funded')}</p>
+                    <p className="mt-2 break-words text-lg font-semibold">{money(mine.data.attributedPrivateFunding, mine.data.currency)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.difference')}</p>
+                    <p className="mt-2 break-words text-lg font-semibold">{money(mine.data.fundingDifference, mine.data.currency)}</p>
+                </div>
+            </div> : <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">{t('personalMoney.empty')}</p>}
         {mine.data && <form className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
             onSubmit={event => { event.preventDefault(); if (validCharge && !charge.isPending) charge.mutate(); }}>
             <h4 className="font-semibold">{t('personalMoney.chargeTitle')}</h4>
@@ -154,6 +166,15 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <div><AverioButton type="submit" variant="primary" disabled={!validCharge || charge.isPending}>
                 {t(charge.isPending ? 'common.actions.saving' : 'personalMoney.charge')}</AverioButton></div>
         </form>}
+        {mine.data && <section className="space-y-3" aria-label={t('personalMoney.existingCharges')}>
+            <h4 className="font-semibold">{t('personalMoney.existingCharges')}</h4>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.correctionHelp')}</p>
+            {existingCharges.length === 0 ? <p className="text-sm">{t('personalMoney.noCharges')}</p>
+                : existingCharges.map(item => <ChargeEditor key={item.transactionId + ':' + item.version}
+                    item={item} householdId={householdId} refresh={refresh} onError={setError}
+                    label={transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}
+                    formattedAmount={money(item.amount, mine.data!.currency)} />)}
+        </section>}
         {mine.data && <div className="space-y-2">
             <h4 className="font-semibold">{t('personalMoney.history')}</h4>
             {mine.data.entries.length === 0
@@ -165,5 +186,47 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     </li>)}
                 </ul>}
         </div>}
-    </AverioCard>;
+    </AverioCard></section>;
+}
+
+function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onError }: {
+    item: PersonalMoneyChargeResponse; householdId: string; refresh: () => Promise<void>;
+    label: string; formattedAmount: string; onError: (message: string) => void;
+}) {
+    const { t } = useTranslation();
+    const [amount, setAmount] = useState(item.amount);
+    const [operationId, setOperationId] = useState(() => crypto.randomUUID());
+    const [intent, setIntent] = useState<'save' | 'remove'>('save');
+    const correction = useMutation({
+        mutationFn: (target: string) => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneyMeChargesTransactionIdPut({
+            householdId, transactionId: item.transactionId,
+            correctPersonalMoneyChargeRequest: { amount: target, expectedAmount: item.amount,
+                expectedVersion: item.version, operationId },
+        }),
+        onSuccess: async () => { onError(''); await refresh(); },
+        // Refresh stale versions after a conflict while retaining retry IDs on network failures.
+        onError: async (failure: Error) => { onError(failure.message); await refresh(); },
+    });
+    const valid = decimalPattern.test(amount) && Number(normalized(amount)) > 0
+        && normalized(amount) !== item.amount;
+    return <form className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
+        onSubmit={event => { event.preventDefault(); if (valid && !correction.isPending) correction.mutate(normalized(amount)); }}>
+        <p className="text-sm font-semibold">{label} · {formattedAmount}</p>
+        <AverioField>{t('personalMoney.changedAmount')}
+            <AverioInput inputMode="decimal" value={amount} disabled={correction.isPending}
+                onChange={e => { setAmount(e.target.value); setIntent('save'); setOperationId(crypto.randomUUID()); }} />
+        </AverioField>
+        <div className="flex flex-wrap gap-2">
+            <AverioButton type="submit" disabled={!valid || correction.isPending || intent === 'remove'}>{t('personalMoney.saveCharge')}</AverioButton>
+            <AverioButton type="button" disabled={correction.isPending} onClick={() => {
+                // A fresh intent gets a fresh ID; repeated remove retries reuse it.
+                if (intent !== 'remove') { setIntent('remove'); setOperationId(crypto.randomUUID()); }
+            }}>{t('personalMoney.removeCharge')}</AverioButton>
+            {intent === 'remove' && <AverioButton type="button" disabled={correction.isPending}
+                onClick={() => correction.mutate('0')}>{t('personalMoney.confirmUnlink')}</AverioButton>}
+            {intent === 'remove' && <AverioButton type="button" disabled={correction.isPending} onClick={() => { setIntent('save'); setOperationId(crypto.randomUUID()); }}>{t('common.actions.cancel')}</AverioButton>}
+        </div>
+        {intent === 'remove' && <p className="text-sm">{t('personalMoney.unlinkHelp')}</p>}
+        {correction.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{correction.error.message}</p>}
+    </form>;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HouseholdResponse } from '../../shared/api/generated';
@@ -14,6 +14,16 @@ import { PersonalMoneyPanel } from '../personal-money/PersonalMoneyPanel';
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(householdQueries.detail(userId, householdId));
+    useEffect(() => {
+        if (!query.data) return;
+        const scrollToHash = () => {
+            const id = window.location.hash.slice(1);
+            if (id.startsWith('household-')) document.getElementById(id)?.scrollIntoView({ block: 'start' });
+        };
+        const frame = requestAnimationFrame(scrollToHash);
+        window.addEventListener('hashchange', scrollToHash);
+        return () => { cancelAnimationFrame(frame); window.removeEventListener('hashchange', scrollToHash); };
+    }, [query.data]);
     const [draft, setDraft] = useState<HouseholdResponse | null>(null);
     const [saved, setSaved] = useState(false);
     const [reloadRequired, setReloadRequired] = useState(false);
@@ -49,14 +59,18 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
             <AverioButton disabled={query.isFetching} onClick={retry}>{t('common.actions.retry')}</AverioButton>
         </div>}
         <div className="grid items-start gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
-            <AverioCard role="navigation" aria-label={t('householdSettings.sections')} className="flex flex-wrap gap-1 p-3 lg:sticky lg:top-4 lg:flex-col">
-                {(['profile', 'members', 'personalMoney', 'privacy'] as const).map(section => <a key={section} href={'#household-' + section}
+            <AverioCard role="navigation" aria-label={t('householdSettings.sections')} className="flex flex-wrap gap-1 p-3 lg:sticky lg:top-24 lg:flex-col">
+                {(['profile', 'members', 'personalMoney', 'privacy'] as const).map(section => <a key={section} href={'#household-' + (section === 'personalMoney' ? 'personal-money' : section)}
+                    onClick={event => {
+                        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                        document.getElementById(event.currentTarget.hash.slice(1))?.scrollIntoView({ block: 'start' });
+                    }}
                     className="rounded-xl px-3 py-3 text-sm font-semibold hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-emerald-900/40">
                     {t('householdSettings.' + section)}
                 </a>)}
             </AverioCard>
             <div className="min-w-0 space-y-5">
-                <AverioCard id="household-profile" className="scroll-mt-6 space-y-5 p-5 sm:p-6">
+                <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.profile')}</h3><p className={muted}>{t('householdSettings.profileHelp')}</p></div>
                         {owner && !draft && <AverioButton disabled={reloadRequired || query.isFetching}
@@ -71,7 +85,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                     </dl>}
                     {!owner && <p className={muted}>{t('householdSettings.readOnly')}</p>}
                 </AverioCard>
-                <AverioCard id="household-members" className="scroll-mt-6 space-y-4 p-5 sm:p-6">
+                <AverioCard id="household-members" className="scroll-mt-24 space-y-4 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.members')}</h3><p className={muted}>{t('householdSettings.membersHelp')}</p></div>
                         <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100">{t('householdSettings.memberCount', { count: household.members.length })}</span>
@@ -90,7 +104,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                 <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />
                 <PreviousHouseholds userId={userId} householdId={householdId} />
                 {owner && <HouseholdInvitations userId={userId} householdId={householdId} />}
-                <AverioCard id="household-privacy" className="scroll-mt-6 space-y-3 p-5 sm:p-6">
+                <AverioCard id="household-privacy" className="scroll-mt-24 space-y-3 p-5 sm:p-6">
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
                     <p className={muted}>{t('householdSettings.privacyHelp')}</p>
                     <p className={muted}>{t('householdSettings.balanceHelp')}</p>
