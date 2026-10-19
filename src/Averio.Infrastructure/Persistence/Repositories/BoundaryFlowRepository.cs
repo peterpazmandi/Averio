@@ -8,7 +8,7 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class BoundaryFlowRepository(AverioDbContext db) : IBoundaryFlowRepository
 {
     public async Task<IReadOnlyList<BoundaryFlowMonth>> GetMonthsAsync(Guid householdId,
-        DateOnly from, DateOnly to, CancellationToken ct)
+        DateOnly fromDate, DateOnly toDate, CancellationToken ct)
     {
         var rows = await (from transfer in db.Transfers.AsNoTracking()
             join source in db.Accounts.AsNoTracking()
@@ -19,7 +19,7 @@ internal sealed class BoundaryFlowRepository(AverioDbContext db) : IBoundaryFlow
                 equals new { destination.HouseholdId, destination.Id }
             where transfer.HouseholdId == householdId
                 && transfer.VoidedAt == null
-                && transfer.OccurredOn >= from && transfer.OccurredOn <= to
+                && transfer.OccurredOn >= fromDate && transfer.OccurredOn <= toDate
                 && source.IncludeInHouseholdReports != destination.IncludeInHouseholdReports
             select new
             {
