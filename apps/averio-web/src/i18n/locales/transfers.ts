@@ -1,4 +1,6 @@
 export const transfersEN = {
+    "purposeReturnFunding": "Return Personal Money funding to a shared account",
+    "personalMoneyReturnHelp": "This transfers real cash back to household funds and reduces attributed private funding. Your spending entitlement stays unchanged.",
     "personalMoneyPurpose": "Transfer purpose",
     "purposeOrdinary": "Ordinary transfer (no allowance change)",
     "purposeFundExisting": "Fund an existing Personal Money allowance",
@@ -56,6 +58,8 @@ export const transfersEN = {
     "needAccounts": "You need two active accounts you can manage. Create or reactivate an account on the Accounts page first."
 };
 export const transfersDE: typeof transfersEN = {
+    "purposeReturnFunding": "Privat finanzierte Mittel auf ein Gemeinschaftskonto zurückführen",
+    "personalMoneyReturnHelp": "Diese Umbuchung führt Geld zum Haushalt zurück und reduziert die zugeordnete private Finanzierung. Dein Ausgabenbudget bleibt bestehen.",
     "personalMoneyPurpose": "Zweck der Umbuchung",
     "purposeOrdinary": "Normale Umbuchung (kein Budgeteffekt)",
     "purposeFundExisting": "Bereits zugeteiltes persönliches Budget finanzieren",
@@ -113,6 +117,8 @@ export const transfersDE: typeof transfersEN = {
     "needAccounts": "Du brauchst zwei aktive Konten, die du verwalten darfst. Erstelle oder reaktiviere zuerst ein Konto auf der Kontenseite."
 };
 export const transfersHU: typeof transfersEN = {
+    "purposeReturnFunding": "Személyes keret finanszírozásának visszavezetése közös számlára",
+    "personalMoneyReturnHelp": "Ez valódi pénzt vezet vissza a közös számlára, csökkentve a privát finanszírozást. A személyes költési jogosultság változatlan marad.",
     "personalMoneyPurpose": "Átvezetés célja",
     "purposeOrdinary": "Hagyományos átvezetés (nem érinti a keretet)",
     "purposeFundExisting": "Meglévő személyes pénzkeret finanszírozása",
