@@ -86,3 +86,18 @@ This is deliberately a distinct read model rather than adding transfer amounts t
 Run `dotnet build Averio.slnx --configuration Release`; run transaction domain checks and PostgreSQL integration suite with the existing `AVERIO_TEST_CONNECTION_STRING`; run the frontend typecheck, lint, browser tests and `api:generate` drift check in CI. Confirm historical snapshot privacy separately, and ensure no double counted `TransactionAggregate` rows on shared purchases.
 
 **Explicit limits:** cross-currency reconciliation, same-bank refund matching across accounts, split allocations across multiple members in a single editor, automatically detected refunds, automatic settlement, and scheduled allowances (PR 3) are outside this slice.
+
+
+## Household Settings navigation and linked activity indicators
+
+Household Settings is a **single active section** interface: Profile, Members (including previous-household history), Invitations (household Owner only), Personal Money, and Privacy. The left menu has a visibly selected state, icons, short descriptions and stable URL hashes such as `#household-personal-money`. The browser back/forward and direct deep links restore the selected section. Only the selected section is mounted, which avoids eager personal-money queries while viewing other settings.
+
+Personal Money provides smaller role-aware views: My allowance, Charge purchases, Refunds & adjustments, Owner allowance management (Owner only), and Boundary flow. The owner management view **never** permits reading another member's private charges, accounts or wallet history.
+
+Transactions and Transfers display a compact badge when a posted record is **currently linked to the signed-in member's Personal Money**. Transaction badges distinguish PrivateCharge, SharedCharge, PrivateRefund and SharedRefund. Transfers distinguish Grant+Funding, Funding and ReturnFunding. The read-only transaction detail, edit dialog and transfer editor explain the linked impact, with an amount visible only through the user's own authorized wallet.
+
+The relation data comes from the existing `/personal-money/me` read model, augmented with source identifiers for **that wallet only**. Signed append-only corrections are reduced by source ID and event kind; voided/reversed links with net zero are not marked as active. No new public household feed discloses another member's private purchase or allocation; a household Owner still cannot read it. Financial totals and `TransactionAggregate` are unchanged.
+
+The **Personal Money only** overview toggle operates on the already loaded transaction/transfer pages and makes that limitation explicit in its helper text. Users can load further pages for older links. A future backend-paginated server filter can replace this without changing the marker semantics or privacy rule.
+
+The refund form now calls the selection **Money received back**, explains how to record the actual Income first, and calls the other date field **Surrender date**. These labels and new navigation sections are localized in EN/DE/HU.
