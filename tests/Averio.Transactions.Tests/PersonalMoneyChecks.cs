@@ -88,6 +88,52 @@ internal static class PersonalMoneyChecks
             PersonalMoneyEntryKind.SharedCharge, -5m, date, now));
     }
 
+    public static void MonthlyRecurring()
+    {
+        var household = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        var now = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var start = new DateOnly(2026, 1, 31);
+        var rule = RecurringAllowanceRule.Create(household, member, CurrencyCode.Eur,
+            300m, start, new DateOnly(2026, 4, 30), Guid.NewGuid(), now);
+        if (rule.NextDueOn != start || rule.Version == Guid.Empty)
+            throw new Exception("Monthly schedule must have a stable first due date and version.");
+        rule.Advance(now);
+        if (rule.NextDueOn != new DateOnly(2026, 2, 28))
+            throw new Exception("January 31 must clamp to February 28.");
+        rule.Advance(now);
+        if (rule.NextDueOn != new DateOnly(2026, 3, 31))
+            throw new Exception("March due day must use the original anchor, not the clamped February date.");
+        rule.Update(350m, rule.EndsOn, true, now);
+        if (!rule.IsPaused || rule.NextDueOn != new DateOnly(2026, 3, 31))
+            throw new Exception("Pausing must preserve unpaid due occurrences.");
+        rule.Update(350m, rule.EndsOn, false, now);
+        rule.Advance(now);
+        rule.Advance(now);
+        if (rule.NextDueOn is not null)
+            throw new Exception("Completed rules must have no next occurrence.");
+        rule.Stop(now);
+        if (!rule.IsStopped || rule.NextDueOn is not null)
+            throw new Exception("Stop must permanently disable a schedule.");
+        Reject(() => RecurringAllowanceRule.Create(household, member, CurrencyCode.Eur,
+            -1m, start, null, Guid.NewGuid(), now));
+        Reject(() => RecurringAllowanceRule.Create(household, member, CurrencyCode.Eur,
+            300m, start, start.AddDays(-1), Guid.NewGuid(), now));
+        var leapStart = new DateOnly(2028, 1, 31);
+        if (RecurringAllowanceRule.MonthlyDueDate(leapStart, 1) != new DateOnly(2028, 2, 29)
+            || RecurringAllowanceRule.MonthlyDueDate(leapStart, 2) != new DateOnly(2028, 3, 31))
+            throw new Exception("Leap-year monthly anchoring failed.");
+        var wallet = PersonalMoneyWallet.Create(household, member, CurrencyCode.Eur, now);
+        var event1 = PersonalMoneyEntry.Create(household, wallet.Id, PersonalMoneyEntryKind.Grant,
+            300m, start, now, recurringAllowanceRuleId: rule.Id);
+        var event2 = PersonalMoneyEntry.Create(household, wallet.Id, PersonalMoneyEntryKind.Grant,
+            350m, new DateOnly(2026, 2, 28), now, recurringAllowanceRuleId: rule.Id);
+        AssertBalance([event1, event2], 650m, 0m);
+        Reject(() => PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.Funding, 300m, start, now, transferId: Guid.NewGuid(),
+            recurringAllowanceRuleId: rule.Id));
+    }
+
     private static void AssertBalance(IEnumerable<PersonalMoneyEntry> entries,
         decimal entitlement, decimal funding)
     {
