@@ -33,8 +33,10 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
     const [endsOn, setEndsOn] = useState(schedule.endsOn ?? '');
     const [confirmStop, setConfirmStop] = useState(false);
     const [error, setError] = useState('');
+    const [historyExpanded, setHistoryExpanded] = useState(false);
     const history = useQuery({
         queryKey: recurringAllowanceKeys.history(userId, householdId, schedule.id),
+        enabled: historyExpanded,
         queryFn: ({ signal }) => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGet(
             { householdId, scheduleId: schedule.id }, { signal }),
     });
@@ -105,7 +107,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                 onClick={() => setConfirmStop(false)}>{t('common.actions.cancel')}</AverioButton>}
         </div>}
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        <details className="text-sm">
+        <details className="text-sm" onToggle={event => setHistoryExpanded(event.currentTarget.open)}>
             <summary className="cursor-pointer font-semibold">{t('personalMoney.recurring.history')}</summary>
             {history.isLoading && <p role="status">{t('common.status.loading')}</p>}
             {history.isError && <p role="alert">{t('personalMoney.recurring.historyError')}</p>}

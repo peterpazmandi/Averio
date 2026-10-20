@@ -35,6 +35,7 @@ try {
         let role = 'owner', failFirstCreate = true;
         let schedule;
         const creationAttempts = [], updates = [];
+        let historyRequests = 0;
         await page.route('**/api/v1/**', async route => {
             const request = route.request();
             const pathname = new URL(request.url()).pathname;
@@ -64,9 +65,12 @@ try {
             }
             if (pathname.endsWith('/personal-money/schedules') && request.method() === 'GET')
                 return json(schedule ? [schedule] : []);
-            if (pathname.includes('/personal-money/schedules/scheduled-1/history')) return json([
+            if (pathname.includes('/personal-money/schedules/scheduled-1/history')) {
+                historyRequests++;
+                return json([
                 { dueOn: '2026-10-01', amount: '220.0000' },
-            ]);
+                ]);
+            }
             if (pathname.endsWith('/personal-money/schedules/scheduled-1') && request.method() === 'PUT') {
                 const data = request.postDataJSON(); updates.push(data);
                 assert.equal(data.expectedVersion, schedule.version);
@@ -114,6 +118,10 @@ try {
         await page.getByText(copy.recurring.created, { exact: true }).waitFor();
         assert.equal(creationAttempts.length, 2);
         assert.deepEqual(creationAttempts[0], creationAttempts[1], 'Create retries must reuse the same operation ID.');
+        assert.equal(historyRequests, 0, 'Collapsed grant histories must not trigger API requests.');
+        await page.getByText(copy.recurring.history, { exact: true }).click();
+        await page.waitForFunction(() => document.body.textContent.includes('2026-10-01'));
+        assert.equal(historyRequests, 1, 'Expanding one grant history should request only that schedule.');
         await page.getByRole('button', { name: copy.recurring.pause, exact: true }).click();
         await page.getByText(copy.recurring.status.paused, { exact: true }).waitFor();
         assert.equal(updates[0].isPaused, true);
