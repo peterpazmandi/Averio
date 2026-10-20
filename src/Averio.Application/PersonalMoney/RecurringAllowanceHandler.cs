@@ -76,8 +76,8 @@ public sealed class RecurringAllowanceHandler(
         if (existing is not null)
         {
             if (existing.RecipientMemberId != input.RecipientMemberId
-                || existing.Currency.Value != input.Currency || existing.Amount != input.Amount
-                || existing.StartsOn != input.StartsOn || existing.EndsOn != input.EndsOn)
+                || existing.Currency.Value != input.Currency || existing.CreationAmount != input.Amount
+                || existing.StartsOn != input.StartsOn || existing.CreationEndsOn != input.EndsOn)
                 throw Changed();
             await tx.CommitAsync(ct);
             return existing.Id;

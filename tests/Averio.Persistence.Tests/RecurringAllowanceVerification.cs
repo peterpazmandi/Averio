@@ -104,6 +104,14 @@ internal static class RecurringAllowanceVerification
             var current = (await schedules.ListAsync(fixture.HouseholdId, Ct)).Single(x => x.Id == id);
             await schedules.UpdateAsync(fixture.HouseholdId, id,
                 new RecurringAllowanceUpdate(240m, null, true, false, current.Version), Ct);
+            var replay = await schedules.CreateAsync(fixture.HouseholdId,
+                new RecurringAllowanceInput(fixture.OwnerMemberId, "EUR", 220m,
+                    starts, null, operation), Ct);
+            if (replay != id)
+                throw new Exception("Edited schedules must preserve their original create idempotency.");
+            await ThrowsAsync<ConflictException>(() => schedules.CreateAsync(fixture.HouseholdId,
+                new RecurringAllowanceInput(fixture.OwnerMemberId, "EUR", 240m,
+                    starts, null, operation), Ct));
         }
         clock.Advance(TimeSpan.FromDays(35));
         await using (var scope = provider.CreateAsyncScope())

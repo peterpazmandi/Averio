@@ -42,6 +42,15 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("balance_anchor_date");
 
+                    b.Property<decimal>("CreationAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("creation_amount");
+
+                    b.Property<DateOnly?>("CreationEndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("creation_ends_on");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");

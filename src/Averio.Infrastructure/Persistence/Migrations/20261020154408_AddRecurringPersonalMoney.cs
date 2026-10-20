@@ -31,6 +31,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     recipient_member_id = table.Column<Guid>(type: "uuid", nullable: false),
                     currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     amount = table.Column<decimal>(type: "numeric(19,4)", precision: 19, scale: 4, nullable: false),
+                    creation_amount = table.Column<decimal>(type: "numeric(19,4)", precision: 19, scale: 4, nullable: false),
+                    creation_ends_on = table.Column<DateOnly>(type: "date", nullable: true),
                     starts_on = table.Column<DateOnly>(type: "date", nullable: false),
                     ends_on = table.Column<DateOnly>(type: "date", nullable: true),
                     occurrence_index = table.Column<int>(type: "integer", nullable: false),

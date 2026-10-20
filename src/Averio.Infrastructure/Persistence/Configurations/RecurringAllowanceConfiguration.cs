@@ -27,6 +27,8 @@ internal sealed class RecurringAllowanceConfiguration : IEntityTypeConfiguration
         b.Property(x => x.Currency).HasColumnName("currency")
             .HasConversion<CurrencyCodeConverter>().HasMaxLength(3);
         b.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);
+        b.Property(x => x.CreationAmount).HasColumnName("creation_amount").HasPrecision(19, 4);
+        b.Property(x => x.CreationEndsOn).HasColumnName("creation_ends_on");
         b.Property(x => x.StartsOn).HasColumnName("starts_on");
         b.Property(x => x.EndsOn).HasColumnName("ends_on");
         b.Property(x => x.OccurrenceIndex).HasColumnName("occurrence_index");

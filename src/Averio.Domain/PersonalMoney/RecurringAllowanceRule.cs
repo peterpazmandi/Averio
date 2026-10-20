@@ -12,6 +12,9 @@ public sealed class RecurringAllowanceRule
     public Guid RecipientMemberId { get; private set; }
     public CurrencyCode Currency { get; private set; }
     public decimal Amount { get; private set; }
+    // Immutable create-request identity: later edits must not break idempotent POST replay.
+    public decimal CreationAmount { get; private set; }
+    public DateOnly? CreationEndsOn { get; private set; }
     public DateOnly StartsOn { get; private set; }
     public DateOnly? EndsOn { get; private set; }
     public int OccurrenceIndex { get; private set; }
@@ -35,7 +38,8 @@ public sealed class RecurringAllowanceRule
         {
             Id = Guid.NewGuid(), CreationOperationId = creationOperationId,
             HouseholdId = householdId, RecipientMemberId = recipientMemberId,
-            Currency = currency, Amount = amount, StartsOn = startsOn, EndsOn = endsOn,
+            Currency = currency, Amount = amount, CreationAmount = amount,
+            CreationEndsOn = endsOn, StartsOn = startsOn, EndsOn = endsOn,
             NextDueOn = startsOn, CreatedAt = now, UpdatedAt = now, Version = Guid.NewGuid()
         };
     }
