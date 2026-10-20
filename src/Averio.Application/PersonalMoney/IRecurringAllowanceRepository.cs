@@ -3,7 +3,7 @@ using Averio.Domain.PersonalMoney;
 namespace Averio.Application.PersonalMoney;
 
 public sealed record RecurringAllowanceCandidate(Guid RuleId, Guid HouseholdId,
-    Guid RecipientMemberId, Guid Version, DateOnly DueOn);
+    Guid RecipientMemberId, Guid RecipientUserId, Guid Version, DateOnly DueOn);
 public sealed record RecurringAllowanceCursor(DateOnly DueOn, Guid RuleId);
 
 public interface IRecurringAllowanceRepository
