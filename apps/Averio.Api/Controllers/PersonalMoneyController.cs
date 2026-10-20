@@ -64,7 +64,8 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler,
             DecimalAmountMapper.Format(result.FundingDifference),
             result.Entries.Select(x => new PersonalMoneyEventResponse(x.Id, x.Kind,
                 DecimalAmountMapper.Format(x.Amount), x.OccurredOn,
-                x.TransactionId, x.TransferId, x.RelatedTransactionId)).ToArray(),
+                x.TransactionId, x.TransferId, x.RelatedTransactionId,
+                x.RecurringAllowanceRuleId)).ToArray(),
             result.Charges.Select(x => new PersonalMoneyChargeResponse(x.TransactionId,
                 DecimalAmountMapper.Format(x.Amount), x.Version)).ToArray()));
     }
