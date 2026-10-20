@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { PersonalMoneySnapshotResponse } from '../../shared/api/generated';
 import { StatisticsApi, TransactionsApi } from '../../shared/api/generated';
@@ -10,6 +10,8 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { personalMoneyApi, personalMoneyKeys } from './personalMoneyQueries';
+import { nextRefundPage, refundEligibility, validRefundAmount } from './refundEligibility';
+import type { RefundCursor } from './refundEligibility';
 
 const transactionsApi = new TransactionsApi(generatedApiConfiguration);
 const statisticsApi = new StatisticsApi(generatedApiConfiguration);
@@ -33,28 +35,29 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
     const formatMoney = (amount: string, currency = wallet.currency) =>
         new Intl.NumberFormat(locale, { style: 'currency', currency }).format(Number(amount));
 
-    const purchases = useQuery({
+    const purchases = useInfiniteQuery({
         queryKey: ['personal-money', userId, householdId, 'refundable-purchases'],
-        queryFn: ({ signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
-            { householdId, kind: 'Expense', pageSize: 100 }, { signal }),
+        initialPageParam: undefined as RefundCursor | undefined,
+        queryFn: ({ pageParam, signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
+            { householdId, kind: 'Expense', pageSize: 100, ...pageParam }, { signal }),
+        getNextPageParam: nextRefundPage,
     });
-    const incomes = useQuery({
+    const incomes = useInfiniteQuery({
         queryKey: ['personal-money', userId, householdId, 'refund-incomes'],
-        queryFn: ({ signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
-            { householdId, kind: 'Income', pageSize: 100 }, { signal }),
+        initialPageParam: undefined as RefundCursor | undefined,
+        queryFn: ({ pageParam, signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
+            { householdId, kind: 'Income', pageSize: 100, ...pageParam }, { signal }),
+        getNextPageParam: nextRefundPage,
     });
-    const charged = new Map(wallet.charges.map(x => [x.transactionId, x]));
-    const refundable = (purchases.data?.items ?? []).filter(x =>
-        charged.has(x.id) && x.status === 'Posted' && x.currency === wallet.currency);
+    const eligibility = refundEligibility(wallet);
+    const refundable = (purchases.data?.pages.flatMap(page => page.items) ?? []).filter(x =>
+        eligibility.remaining.has(x.id) && x.status === 'Posted' && x.currency === wallet.currency);
     const selectedPurchase = refundable.find(x => x.id === purchaseId);
-    const refundOptions = (incomes.data?.items ?? []).filter(x =>
-        x.status === 'Posted' && x.accountId === selectedPurchase?.accountId
-        && x.currency === wallet.currency);
+    const refundOptions = (incomes.data?.pages.flatMap(page => page.items) ?? []).filter(x =>
+        eligibility.canUseIncome(x, selectedPurchase));
     const selectedRefund = refundOptions.find(x => x.id === refundId);
-    const validRefund = Boolean(selectedPurchase && selectedRefund && decimalPattern.test(refundAmount)
-        && Number(normalize(refundAmount)) > 0
-        && Number(normalize(refundAmount)) <= Number(selectedRefund?.amount ?? 0)
-        && Number(normalize(refundAmount)) <= Number(charged.get(purchaseId)?.amount ?? 0));
+    const validRefund = Boolean(selectedPurchase && selectedRefund
+        && validRefundAmount(refundAmount, selectedRefund.amount, eligibility.remaining.get(purchaseId) ?? '0'));
     const validSurrender = decimalPattern.test(surrenderAmount) && Number(normalize(surrenderAmount)) > 0
         && Number(normalize(surrenderAmount)) <= Number(wallet.available);
 
@@ -100,24 +103,30 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
                 <h5 className="font-semibold">{t('personalMoney.refundTitle')}</h5>
                 <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.refundHelp')}</p>
                 <AverioField>{t('personalMoney.refundOriginal')}
-                    <AverioSelect value={purchaseId} onChange={e => {
+                    <AverioSelect aria-label={t('personalMoney.refundOriginal')} value={purchaseId} disabled={refund.isPending} onChange={e => {
                         setPurchaseId(e.target.value); setRefundId(''); setRefundAmount('');
                         setRefundOperation(crypto.randomUUID());
                     }}>
                         <option value="">{t('personalMoney.selectPurchase')}</option>
                         {refundable.map(x => <option key={x.id} value={x.id}>
-                            {x.occurredOn} · {x.merchant || x.description} · {formatMoney(charged.get(x.id)!.amount)}
+                            {x.occurredOn} · {x.merchant || x.description} · {formatMoney(eligibility.remaining.get(x.id)!)}
                         </option>)}
                     </AverioSelect>
                 </AverioField>
-                {selectedPurchase && refundOptions.length === 0 && <p className="text-xs text-slate-600 dark:text-slate-300">
+                {purchases.isPending && <p role="status">{t('common.status.loading')}</p>}
+                {purchases.isError && <p role="alert">{t('personalMoney.refundLoadError')}</p>}
+                {(purchases.hasNextPage || purchases.isError) && <AverioButton disabled={purchases.isFetching || refund.isPending}
+                    onClick={() => { void (purchases.isError && !purchases.isFetchNextPageError ? purchases.refetch() : purchases.fetchNextPage()); }}>
+                    {t(purchases.isError ? 'common.actions.retry' : 'transactionManagement.loadMore')}
+                </AverioButton>}
+                {selectedPurchase && incomes.isSuccess && !incomes.hasNextPage && refundOptions.length === 0 && <p className="text-xs text-slate-600 dark:text-slate-300">
                     {t('personalMoney.noRecordedRefund')}{' '}
                     <Link to="/app/transactions" className="font-semibold text-emerald-700 underline dark:text-emerald-300">
                         {t('personalMoney.goToTransactions')}
                     </Link>
                 </p>}
                 <AverioField>{t('personalMoney.refundIncome')}
-                    <AverioSelect value={refundId} disabled={!selectedPurchase} onChange={e => {
+                    <AverioSelect aria-label={t('personalMoney.refundIncome')} value={refundId} disabled={!selectedPurchase || refund.isPending} onChange={e => {
                         setRefundId(e.target.value); setRefundAmount(refundOptions.find(x => x.id === e.target.value)?.amount ?? '');
                         setRefundOperation(crypto.randomUUID());
                     }}>
@@ -127,6 +136,12 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
                         </option>)}
                     </AverioSelect>
                 </AverioField>
+                {incomes.isPending && <p role="status">{t('common.status.loading')}</p>}
+                {incomes.isError && <p role="alert">{t('personalMoney.refundLoadError')}</p>}
+                {(incomes.hasNextPage || incomes.isError) && <AverioButton disabled={incomes.isFetching || refund.isPending}
+                    onClick={() => { void (incomes.isError && !incomes.isFetchNextPageError ? incomes.refetch() : incomes.fetchNextPage()); }}>
+                    {t(incomes.isError ? 'common.actions.retry' : 'transactionManagement.loadMore')}
+                </AverioButton>}
                 <AverioField>{t('personalMoney.amount')}
                     <AverioInput inputMode="decimal" value={refundAmount} disabled={!selectedRefund || refund.isPending}
                         onChange={e => { setRefundAmount(e.target.value); setRefundOperation(crypto.randomUUID()); }} />
@@ -153,13 +168,13 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
     </section>;
 }
 
-export function HouseholdBoundaryFlowPanel({ householdId }: { householdId: string }) {
+export function HouseholdBoundaryFlowPanel({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const now = new Date();
     const from = format(new Date(now.getFullYear(), now.getMonth() - 5, 1), 'yyyy-MM-dd');
     const to = format(now, 'yyyy-MM-dd');
     const report = useQuery({
-        queryKey: ['household-boundary-flow', householdId, from, to],
+        queryKey: [...personalMoneyKeys.boundary(userId, householdId), from, to],
         queryFn: ({ signal }) => statisticsApi.apiV1HouseholdsHouseholdIdStatisticsBoundaryFlowGet(
             { householdId, from, to }, { signal }),
     });

@@ -235,7 +235,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         </div>}
     </AverioCard>
     </Activity>
-    {tab === 'boundary' && <HouseholdBoundaryFlowPanel householdId={householdId} />}
+    {tab === 'boundary' && <HouseholdBoundaryFlowPanel userId={userId} householdId={householdId} />}
     </section>;
 }
 

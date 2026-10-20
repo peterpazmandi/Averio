@@ -6,6 +6,7 @@ export const personalMoneyApi = new PersonalMoneyApi(generatedApiConfiguration);
 
 export const personalMoneyKeys = {
     mine: (userId: string, householdId: string) => ['personal-money', userId, householdId, 'mine'] as const,
+    boundary: (userId: string, householdId: string) => ['statistics', userId, householdId, 'boundary-flow'] as const,
 };
 
 export const personalMoneyQueries = {

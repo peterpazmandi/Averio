@@ -27,6 +27,8 @@ try {
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
         }, { language, dark });
         let amount = '25', version = 1, role = 'owner';
+        let reconciliation = false, failIncome = true, refunded = false;
+        const refundWrites = [];
         const writes = [], creations = [];
         await page.route('**/api/v1/**', async route => {
             const request = route.request(); const pathname = new URL(request.url()).pathname;
@@ -42,6 +44,24 @@ try {
             if (pathname.endsWith('/personal-money/me/charges') && request.method() === 'POST') {
                 creations.push(request.postDataJSON());
                 return route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Retry test' }) });
+            }
+            if (reconciliation && pathname.endsWith('/personal-money/me/refunds')) {
+                refundWrites.push(request.postDataJSON()); refunded = true;
+                return route.fulfill({ status: 204 });
+            }
+            if (reconciliation && pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: '60', attributedPrivateFunding: '60', fundingDifference: '0',
+                entries: [{ id: 'used-event', kind: 'PrivateRefund', amount: '60', transactionId: 'used-income', relatedTransactionId: 'purchase', occurredOn: '2026-10-01', recordedAt: '2026-10-01T00:00:00Z' },
+                    ...(refunded ? [{ id: 'new-event', kind: 'PrivateRefund', amount: '40', transactionId: 'free-income', relatedTransactionId: 'purchase', occurredOn: '2026-10-01', recordedAt: '2026-10-01T00:00:00Z' }] : [])],
+                charges: [{ transactionId: 'purchase', amount: '100', version: 1 }] });
+            if (reconciliation && pathname.endsWith('/transactions')) {
+                const params = new URL(request.url()).searchParams;
+                const kind = params.get('kind');
+                if (kind === 'Income' && failIncome) { failIncome = false; return route.fulfill({ status: 503 }); }
+                const record = (id, accountId = 'private') => ({ id, accountId, visibility: 'Private', status: 'Posted', kind, amount: '60', currency: 'EUR', occurredOn: '2026-10-01', createdAt: '2026-10-01T00:00:00Z', merchant: id, items: [], labels: [] });
+                if (!params.has('cursorId')) return json({ items: Array.from({length:100}, (_, i) => record('newer-' + i, 'other')), hasMore: true });
+                assert.equal(params.get('cursorId'), 'newer-99');
+                assert.equal(params.get('cursorCreatedAt'), '2026-10-01T00:00:00Z');
+                return json({ items: kind === 'Expense' ? [record('purchase')] : [record('used-income'), record('free-income')], hasMore: false });
             }
             if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: String(100 - Number(amount)), attributedPrivateFunding: '0', fundingDifference: '100', entries: [], charges: amount === '0' ? [] : [{ transactionId: 'purchase', amount, version }] });
             if (pathname.endsWith('/households/home')) {
@@ -103,6 +123,29 @@ try {
         await picker.locator('xpath=ancestor::form').locator('input').fill('15');
         await Promise.all([page.waitForResponse(r => r.url().endsWith('/personal-money/me/charges') && r.status() === 503), submit.click()]);
         assert.notEqual(creations[1].operationId, creations[2].operationId);
+        reconciliation = true; await page.reload();
+        await openTab('reconcile');
+        const form = page.locator('form').filter({ has: page.getByRole('heading', { name: copy.refundTitle, exact: true }) });
+        await form.getByRole('alert').waitFor();
+        await form.getByRole('button').nth(1).click(); // Retry the failed income page.
+        await form.getByRole('alert').waitFor({ state: 'hidden' });
+        await form.getByRole('button').nth(0).click(); // Older purchases.
+        await form.getByLabel(copy.refundOriginal, { exact: true }).selectOption('purchase');
+        await form.getByRole('button').nth(0).click(); // Older income transactions.
+        const incomeSelect = form.getByLabel(copy.refundIncome, { exact: true });
+        await incomeSelect.locator('option[value="free-income"]').waitFor({ state: 'attached' });
+        assert.equal(await incomeSelect.locator('option[value="used-income"]').count(), 0);
+        await incomeSelect.selectOption('free-income');
+        const apply = form.getByRole('button', { name: copy.applyRefund, exact: true });
+        assert.equal(await apply.isDisabled(), true); // €60 exceeds the €40 remainder.
+        await form.getByLabel(copy.amount, { exact: true }).fill('40');
+        assert.equal(await apply.isEnabled(), true);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.screenshot({ path: path.join(artifacts, language + (dark ? '-dark' : '-light') + '-refund.png'), fullPage: true });
+        await apply.click();
+        await page.getByText(copy.refundSuccess, { exact: true }).waitFor();
+        assert.equal(refundWrites.length, 1); assert.equal(refundWrites[0].amount, '40');
+        assert.equal(await form.locator('option[value="purchase"]').count(), 0);
         role = 'member'; await page.reload();
         await page.getByRole('heading', { name: copy.myWallet, exact: true }).waitFor();
         assert.equal(await page.getByRole('heading', { name: copy.newGrant, exact: true }).count(), 0);

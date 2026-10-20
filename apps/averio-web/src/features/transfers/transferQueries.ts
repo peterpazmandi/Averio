@@ -21,6 +21,7 @@ export function useTransferMutations(userId: string, householdId: string) {
         client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
         client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
         client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) }),
+        client.invalidateQueries({ queryKey: personalMoneyKeys.boundary(userId, householdId) }),
     ]);
     const refreshOnAccountOrTransferChange = async (error: Error) => {
         if (error instanceof ApiError && [403, 404, 409].includes(error.status)) await invalidate();

@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { QueryClient } from '@tanstack/react-query';
 
 // Exercise the real hook callbacks and editor render/event handlers without a browser.
 // Native dialog layout/focus behavior remains a separate browser check.
@@ -24,30 +25,42 @@ function load(path, mocks) {
 
 test('creation, update and void refresh account choices after conflicts or lost access', async () => {
     const invalidations = [];
+    const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
+    const reportKey = ['statistics', 'user', 'household', 'boundary-flow', '2026-05-01', '2026-10-20'];
     const { useTransferMutations } = load('../src/features/transfers/transferQueries.ts', {
         '../../shared/api/ApiError': { ApiError },
         '@tanstack/react-query': {
             useMutation: config => config,
-            useQueryClient: () => ({ invalidateQueries: async args => invalidations.push(args.queryKey) }),
+            useQueryClient: () => ({ invalidateQueries: async args => {
+                invalidations.push(args.queryKey);
+                await client.invalidateQueries(args);
+            } }),
         },
         '../../shared/api/generated': { TransfersApi: class {} },
         '../../shared/api/generatedApiConfiguration': { generatedApiConfiguration: {} },
         '../accounts/api/accountsQueryKeys': { accountsQueryKeys: { household: () => ['accounts'] } },
         '../dashboard/api/dashboardQueryKeys': { dashboardQueryKeys: { household: () => ['dashboard'] } },
-        '../personal-money/personalMoneyQueries': { personalMoneyKeys: { mine: () => ['personal-money'] } },
+        '../personal-money/personalMoneyQueries': { personalMoneyKeys: { mine: () => ['personal-money'], boundary: () => ['statistics', 'user', 'household', 'boundary-flow'] } },
     });
     const mutations = useTransferMutations('user', 'household');
     for (const operation of ['create', 'update', 'void']) {
+        client.setQueryData(reportKey, 'old totals');
+        invalidations.length = 0;
+        await mutations[operation].onSuccess();
+        assert.ok(invalidations.some(key => key.join('/') === 'statistics/user/household/boundary-flow'));
+        assert.equal(await client.fetchQuery({ queryKey: reportKey, queryFn: async () => 'updated totals' }), 'updated totals',
+            `${operation} must refetch even inside the 30-second freshness window`);
         for (const status of [403, 404, 409]) {
             invalidations.length = 0;
             await mutations[operation].onError(new ApiError(status));
-            assert.equal(invalidations.length, 4, `${operation}: HTTP ${status}`);
+            assert.equal(invalidations.length, 5, `${operation}: HTTP ${status}`);
             assert.ok(invalidations.some(key => key[0] === 'accounts'));
         }
     }
     invalidations.length = 0;
     await mutations.create.onError(new ApiError(400));
     assert.equal(invalidations.length, 0, 'Validation errors must not reset account choices');
+    client.clear();
 });
 
 test('creation draft survives account removal and insufficient remaining accounts', async () => {
