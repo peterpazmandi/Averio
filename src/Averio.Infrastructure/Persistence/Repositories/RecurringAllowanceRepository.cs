@@ -40,7 +40,7 @@ internal sealed class RecurringAllowanceRepository(AverioDbContext db) : IRecurr
                     || (rule.NextDueOn == afterDate && rule.Id.CompareTo(afterId) > 0))
             orderby rule.NextDueOn, rule.Id
             select new RecurringAllowanceCandidate(rule.Id, rule.HouseholdId,
-                rule.RecipientMemberId, rule.Version, rule.NextDueOn!.Value))
+                rule.RecipientMemberId, member.UserId, rule.Version, rule.NextDueOn!.Value))
             .Take(limit).ToArrayAsync(ct);
     }
     public void Add(RecurringAllowanceRule rule) => db.RecurringAllowanceRules.Add(rule);
