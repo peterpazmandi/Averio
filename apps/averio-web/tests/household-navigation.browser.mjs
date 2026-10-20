@@ -57,9 +57,15 @@ try {
         const moneyNav = page.getByRole('navigation', { name: m.sections, exact: true });
         const hash = section => '#household-' + (section === 'personalMoney' ? 'personal-money' : section);
         const openSection = async section => {
+            await page.evaluate(() => window.scrollTo(0, 0));
+            const before = await householdNav.boundingBox();
             if (width < 1024) await householdNav.getByRole('combobox').selectOption(section);
             else await householdNav.locator(`a[href="${hash(section)}"]`).click();
             await page.waitForFunction(expected => location.hash === expected, hash(section));
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+            assert.equal(await page.evaluate(() => scrollY), 0, 'Selecting a section must not scroll the page');
+            const after = await householdNav.boundingBox();
+            assert.ok(Math.abs(after.y - before.y) <= 1, 'Section picker must stay in place');
         };
         const openTab = async tab => {
             if (width < 1024) await moneyNav.getByRole('combobox').selectOption(tab);
@@ -109,6 +115,10 @@ try {
             assert.equal(await householdNav.locator('[aria-current="page"]').getAttribute('href'), hash('profile'));
         }
         await screenshot('profile');
+        // Reproduce repeated switching between tall and short sections from the recording.
+        for (const section of ['personalMoney', 'privacy', 'members', 'invitations', 'profile']) {
+            await openSection(section);
+        }
         // Real local editor state must survive moving away and browser history.
         await page.getByRole('button', { name: h.edit, exact: true }).click();
         await page.getByLabel(h.name, { exact: true }).fill('Unsaved household draft');

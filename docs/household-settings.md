@@ -50,6 +50,8 @@ sticky icon sidebar on desktop. Personal Money uses the same compact selector on
 small screens. Short EN/DE/HU option labels keep every choice readable; desktop
 navigation retains the full labels and descriptions. Hash links and browser
 back/forward select the corresponding section. Invitations remain owner-only.
+Section selection updates the router hash without resetting scroll or scrolling
+to an anchor, so the navigation stays in place. Query refreshes do not scroll.
 Profile, invitation, Personal Money and adjustment drafts survive section switches within
 the current page session; a reload still discards unsaved input.
 

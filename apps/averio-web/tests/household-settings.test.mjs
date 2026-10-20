@@ -100,7 +100,16 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
             return reloadPromise;
         },
     };
+    let hash = '';
     const { HouseholdPage } = load('../src/features/household/HouseholdPage.tsx', {
+        '@tanstack/react-router': {
+            useLocation: ({ select }) => select({ hash }),
+            useNavigate: () => options => {
+                assert.equal(options.resetScroll, false);
+                assert.equal(options.hashScrollIntoView, false);
+                hash = options.hash;
+            },
+        },
         react: { Activity: 'activity', useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial; return [state[i], value => { state[i] = value; }]; } },
         'react/jsx-runtime': jsxRuntime,
         'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
@@ -161,14 +170,14 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
     }
     const personalTab = locateAnchor(render(), '#household-personal-money');
     assert.equal(personalTab.props['aria-current'], undefined);
-    personalTab.props.onClick({ button: 0 });
+    personalTab.props.onClick({ button: 0, preventDefault() {} });
     assert.equal(find(render(), 'personal-money').type, 'personal-money');
     assert.equal(find(render(), 'editor'), undefined, 'Unrelated profile panel is hidden');
     assert.equal(locateAnchor(render(), '#household-personal-money').props['aria-current'], 'page');
-    locateAnchor(render(), '#household-invitations').props.onClick({ button: 0 });
+    locateAnchor(render(), '#household-invitations').props.onClick({ button: 0, preventDefault() {} });
     assert.equal(find(render(), 'invitations').type, 'invitations');
     assert.equal(find(render(), 'personal-money'), undefined, 'Previous section is hidden');
-    locateAnchor(render(), '#household-profile').props.onClick({ button: 0 });
+    locateAnchor(render(), '#household-profile').props.onClick({ button: 0, preventDefault() {} });
     assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Draft is preserved when changing sections');
 });
 

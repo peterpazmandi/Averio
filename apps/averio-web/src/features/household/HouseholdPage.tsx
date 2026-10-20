@@ -1,4 +1,5 @@
-import { Activity, useEffect, useState } from 'react';
+import { Activity, useState } from 'react';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HouseholdResponse } from '../../shared/api/generated';
@@ -26,24 +27,17 @@ const decodeSection = (hash: string): Section => {
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(householdQueries.detail(userId, householdId));
-    const [activeSection, setActiveSection] = useState<Section>(() =>
-        typeof window === 'undefined' ? 'profile' : decodeSection(window.location.hash));
-    useEffect(() => {
-        const onHashChange = () => setActiveSection(decodeSection(window.location.hash));
-        window.addEventListener('hashchange', onHashChange);
-        return () => window.removeEventListener('hashchange', onHashChange);
-    }, []);
-    useEffect(() => {
-        if (!query.data || typeof window === 'undefined') return;
-        // A deep link can target a panel that wasn't in the DOM until the query finished.
-        if (window.location.hash === '#household-' + (activeSection === 'personalMoney' ? 'personal-money' : activeSection)) {
-            const frame = window.requestAnimationFrame(() => {
-                document.getElementById('household-' + (activeSection === 'personalMoney' ? 'personal-money' : activeSection))
-                    ?.scrollIntoView({ block: 'start' });
-            });
-            return () => window.cancelAnimationFrame(frame);
-        }
-    }, [query.data, activeSection]);
+    const navigate = useNavigate();
+    const hash = useLocation({ select: location => location.hash });
+    const activeSection = decodeSection('#' + hash);
+    const selectSection = (section: Section) => {
+        // Section changes update history without moving the navigation out of view.
+        void navigate({
+            hash: 'household-' + (section === 'personalMoney' ? 'personal-money' : section),
+            resetScroll: false,
+            hashScrollIntoView: false,
+        });
+    };
     const [draft, setDraft] = useState<HouseholdResponse | null>(null);
     const [saved, setSaved] = useState(false);
     const [reloadRequired, setReloadRequired] = useState(false);
@@ -89,10 +83,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                 <div className="lg:hidden">
                     <AverioSectionSelect label={t('householdSettings.sections')} value={visibleSection}
                         items={sections.map(section => ({ value: section, label: t('householdSettings.compact.' + section), icon: menuIcons[section] }))}
-                        onChange={section => {
-                            setActiveSection(section);
-                            window.location.hash = 'household-' + (section === 'personalMoney' ? 'personal-money' : section);
-                        }} />
+                        onChange={selectSection} />
                 </div>
                 <div className="hidden gap-2 lg:grid">
                 {sections.map(section => {
@@ -101,7 +92,8 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                     return <a key={section} href={href} aria-current={selected ? 'page' : undefined}
                         onClick={event => {
                             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                            setActiveSection(section);
+                            event.preventDefault();
+                            selectSection(section);
                         }}
                         className={`group flex min-h-12 min-w-0 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 ${selected
                             ? 'border-l-emerald-500 bg-emerald-100 font-bold text-emerald-900 shadow-sm ring-1 ring-emerald-300/60 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-800'
