@@ -21,6 +21,7 @@ internal sealed class RecurringAllowanceConfiguration : IEntityTypeConfiguration
         b.HasKey(x => x.Id);
         b.HasAlternateKey(x => new { x.HouseholdId, x.Id });
         b.Property(x => x.Id).HasColumnName("id");
+        b.Property(x => x.CreationOperationId).HasColumnName("creation_operation_id");
         b.Property(x => x.HouseholdId).HasColumnName("household_id");
         b.Property(x => x.RecipientMemberId).HasColumnName("recipient_member_id");
         b.Property(x => x.Currency).HasColumnName("currency")
@@ -43,5 +44,6 @@ internal sealed class RecurringAllowanceConfiguration : IEntityTypeConfiguration
         b.HasIndex(x => new { x.NextDueOn, x.Id })
             .HasFilter("NOT is_paused AND NOT is_stopped AND NOT is_blocked AND next_due_on IS NOT NULL");
         b.HasIndex(x => new { x.HouseholdId, x.RecipientMemberId });
+        b.HasIndex(x => new { x.HouseholdId, x.CreationOperationId }).IsUnique();
     }
 }
