@@ -20,3 +20,10 @@ export const personalMoneyQueries = {
         },
     }),
 };
+
+export const recurringAllowanceKeys = {
+    list: (userId: string, householdId: string) =>
+        ['personal-money', userId, householdId, 'schedules'] as const,
+    history: (userId: string, householdId: string, id: string) =>
+        ['personal-money', userId, householdId, 'schedules', id, 'history'] as const,
+};
