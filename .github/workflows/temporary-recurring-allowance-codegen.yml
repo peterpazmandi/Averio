@@ -1,0 +1,67 @@
+name: Temporary PR3 EF and OpenAPI codegen
+on:
+  push:
+    branches: [feat/personal-money-recurring-allowances]
+    paths:
+      - .github/workflows/temporary-recurring-allowance-codegen.yml
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    if: github.repository == 'peterpazmandi/Averio'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/personal-money-recurring-allowances
+          persist-credentials: true
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: 10.0.x}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - run: dotnet restore Averio.slnx
+      - name: Generate EF migration and snapshot
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ConnectionStrings__AverioDatabase: Host=localhost;Database=unused;Username=unused;Password=unused
+        run: |
+          set -euo pipefail
+          dotnet tool install --global dotnet-ef --version 10.0.11
+          dotnet ef migrations add AddRecurringPersonalMoney --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output-dir Persistence/Migrations
+      - run: dotnet build Averio.slnx --configuration Release --no-restore
+      - run: npm ci
+        working-directory: apps/averio-web
+      - name: Generate typed client
+        working-directory: apps/averio-web
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5180
+          ConnectionStrings__AverioDatabase: Host=localhost;Database=unused;Username=unused;Password=unused
+        run: |
+          set -euo pipefail
+          dotnet run --project ../../apps/Averio.Api/Averio.Api.csproj --configuration Release --no-build --no-launch-profile >/tmp/api.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 35); do
+            if curl --fail --silent http://localhost:5180/openapi/v1.json >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://localhost:5180/openapi/v1.json >/dev/null || { tail -100 /tmp/api.log; exit 1; }
+          npm run api:generate
+      - name: Publish generated files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- src/Averio.Infrastructure/Persistence/Migrations apps/averio-web/src/shared/api/generated
+          if ! git diff --cached --quiet; then
+            git commit -m "build(personal-money): generate recurring allowance EF migration and API client"
+            git fetch origin feat/personal-money-recurring-allowances
+            git rebase origin/feat/personal-money-recurring-allowances
+            git push origin HEAD:feat/personal-money-recurring-allowances
+          fi
