@@ -337,15 +337,15 @@ Reports continue to use stable category IDs and current category display data; p
 Categories support deeper nesting. A compatible active subcategory may be a parent; self/descendant moves are rejected under a household lock. Personal pins carry a persisted sequence. Shared definitions and financial snapshots remain independent of these preferences.
 
 
-## Personal Money — ADR-029 / ADR-030
+## Personal Money — ADR-029 / ADR-030 / ADR-031
 
 Personal Money is an independently tracked member-specific entitlement, **not** a bank account, transaction category, or extra income/expense entry. A wallet belongs to exactly one `HouseholdMember` with an immutable EUR/USD/HUF denomination. Unused amounts roll forward automatically; a completed charge can make the entitlement negative.
 
 The append-only ledger uses signed `Grant`, `Funding`, `PrivateCharge`, `SharedCharge`, `PrivateRefund`, `SharedRefund` and `Surrender` entries. Linked refunds reference both the real Income transaction and the original purchase; shared-account charges and refunds modify entitlement without affecting attributed private funding. A `ReturnFunding` transfer is a negative Funding event from private to included household cash. Entitlement is grants plus private charges (charges are negative), while attributed private funding is funding plus private charges. `Funding` transfers do not increase entitlement a second time. Manual grants have an idempotent operation ID. Transfers with explicit purposes either create-and-fund (owner/private-holder) or fund an existing entitlement (recipient private-holder). Ordinary transfers have no wallet effect.
 
-Existing transfer and transaction edit/void operations append corrective entries atomically. Chargeable private purchases are explicit and owner-visible only. Personal Money does not change existing categorized `TransactionAggregate` semantics. Cross-currency attribution, automatic settlement and recurring grants remain future slices. Manual shared-account charge splits, refund attribution, funding returns, surrender and monthly boundary-flow reporting are covered by ADR-030/PR 2.
+Existing transfer and transaction edit/void operations append corrective entries atomically. Chargeable private purchases are explicit and owner-visible only. Personal Money does not change existing categorized `TransactionAggregate` semantics. Cross-currency attribution and automatic settlement remain future slices. Monthly recurring entitlement grants are represented by `RecurringAllowanceRule`, with one append-only `Grant` event per due month linked through `recurring_allowance_rule_id`. The worker never moves bank funds, and the original membership/currency scope remains immutable. Manual shared-account charge splits, refund attribution, funding returns, surrender and monthly boundary-flow reporting are covered by ADR-030/PR 2.
 
-See [ADR-029](decisions/ADR-029-personal-money-entitlements-funding-attribution.md), [ADR-030](decisions/ADR-030-personal-money-shared-spending-reconciliation.md), [Personal Money Foundation](personal-money.md) and [Reconciliation](personal-money-reconciliation.md).
+See [ADR-029](decisions/ADR-029-personal-money-entitlements-funding-attribution.md), [ADR-030](decisions/ADR-030-personal-money-shared-spending-reconciliation.md), [Personal Money Foundation](personal-money.md), [Reconciliation](personal-money-reconciliation.md), [ADR-031](decisions/ADR-031-recurring-personal-money-allowances.md) and [Recurring Personal Money](personal-money-recurring.md).
 
 ## Personal activities
 
