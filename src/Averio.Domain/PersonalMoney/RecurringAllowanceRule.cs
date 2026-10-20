@@ -7,6 +7,7 @@ public sealed class RecurringAllowanceRule
 {
     private RecurringAllowanceRule() { }
     public Guid Id { get; private set; }
+    public Guid CreationOperationId { get; private set; }
     public Guid HouseholdId { get; private set; }
     public Guid RecipientMemberId { get; private set; }
     public CurrencyCode Currency { get; private set; }
@@ -23,15 +24,17 @@ public sealed class RecurringAllowanceRule
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public static RecurringAllowanceRule Create(Guid householdId, Guid recipientMemberId,
-        CurrencyCode currency, decimal amount, DateOnly startsOn, DateOnly? endsOn, DateTimeOffset now)
+        CurrencyCode currency, decimal amount, DateOnly startsOn, DateOnly? endsOn,
+        Guid creationOperationId, DateTimeOffset now)
     {
-        if (householdId == Guid.Empty || recipientMemberId == Guid.Empty
+        if (householdId == Guid.Empty || recipientMemberId == Guid.Empty || creationOperationId == Guid.Empty
             || !CurrencyCode.IsSupported(currency.Value))
             throw new ArgumentException("A scheduled allowance requires a valid household, member and currency.");
         Validate(amount, startsOn, endsOn);
         return new RecurringAllowanceRule
         {
-            Id = Guid.NewGuid(), HouseholdId = householdId, RecipientMemberId = recipientMemberId,
+            Id = Guid.NewGuid(), CreationOperationId = creationOperationId,
+            HouseholdId = householdId, RecipientMemberId = recipientMemberId,
             Currency = currency, Amount = amount, StartsOn = startsOn, EndsOn = endsOn,
             NextDueOn = startsOn, CreatedAt = now, UpdatedAt = now, Version = Guid.NewGuid()
         };
