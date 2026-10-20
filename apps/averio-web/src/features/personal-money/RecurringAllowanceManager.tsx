@@ -216,15 +216,30 @@ export function MyRecurringAllowances({ userId, householdId, memberId }: {
     const { t, i18n } = useTranslation();
     const schedules = useSchedules(userId, householdId);
     const mine = (schedules.data ?? []).filter(x => x.recipientMemberId === memberId && !x.isStopped);
+    const upcoming = mine.filter(x => x.nextDueOn !== null && !x.isPaused && !x.isBlocked);
+    const inactive = mine.filter(x => x.nextDueOn === null || x.isPaused || x.isBlocked);
     if (schedules.isLoading || schedules.isError || mine.length === 0) return null;
-    return <section className="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+    const money = (item: RecurringAllowanceResponse) =>
+        new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language,
+            { style: 'currency', currency: item.currency }).format(Number(item.amount));
+    return <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
         <h4 className="font-semibold">{t('personalMoney.recurring.myUpcoming')}</h4>
-        <ul className="space-y-2">
-            {mine.map(x => <li key={x.id} className="flex flex-wrap justify-between gap-2 text-sm">
-                <span>{x.nextDueOn ?? '—'} · {t('personalMoney.recurring.monthly')}</span>
-                <strong>{new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language,
-                    { style: 'currency', currency: x.currency }).format(Number(x.amount))}</strong>
+        {upcoming.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-300">
+            {t('personalMoney.recurring.noUpcoming')}</p>}
+        {upcoming.length > 0 && <ul className="space-y-2">
+            {upcoming.map(x => <li key={x.id} className="flex flex-wrap justify-between gap-2 text-sm">
+                <span>{x.nextDueOn} · {t('personalMoney.recurring.monthly')}</span>
+                <strong>{money(x)}</strong>
             </li>)}
-        </ul>
+        </ul>}
+        {inactive.length > 0 && <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <h5 className="text-sm font-semibold">{t('personalMoney.recurring.notUpcoming')}</h5>
+            <ul className="space-y-2">
+                {inactive.map(x => <li key={x.id} className="flex flex-wrap justify-between gap-2 text-sm">
+                    <span>{money(x)} · {t('personalMoney.recurring.status.' +
+                        (x.isBlocked ? 'blocked' : x.isPaused ? 'paused' : 'completed'))}</span>
+                </li>)}
+            </ul>
+        </div>}
     </section>;
 }
