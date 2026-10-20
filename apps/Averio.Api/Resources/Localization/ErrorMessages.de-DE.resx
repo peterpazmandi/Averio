@@ -342,6 +342,8 @@
   <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Erstelle zuerst eine Zuteilung, bevor du sie durch eine Umbuchung finanzierst.</value></data>
   <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>Die Umbuchung übersteigt den noch nicht privat finanzierten Betrag deiner Zuteilung.</value></data>
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Wähle einen gültigen Zweck für diese persönliche Umbuchung.</value></data>
+  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Wähle eine gebuchte Erstattung auf demselben Konto und in derselben Währung wie der zugeordnete Kauf. Erstattungen dürfen die Budgetbelastung nicht übersteigen.</value></data>
+  <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Du kannst nur ungenutztes, positives persönliches Budget zurückgeben.</value></data>
 </root>
 
 

@@ -113,6 +113,10 @@ ADR-029 formalizes member-specific entitlement separate from financial accounts 
 
 Important first-slice limitations: no shared-account charges, no dedicated boundary cash-flow metric, no refund/return settlement, no cross-currency attribution, no wallet snapshot inside a departed household history, and no dedicated Personal Money dashboard outside Household Settings. The initial EN/DE/HU Household Settings allowance controls, private purchase charge form, and transfer funding purpose selector are present, but dedicated end-to-end personal-money browser tests remain needed. These must be resolved before presenting the feature as a complete household finance solution.
 
+## Personal Money Shared Spending & Reconciliation — PR 2 (draft)
+
+This new PR adds ADR-030, shared-account spending attribution, manual refund linkage, private funding returns and entitlement surrender, plus a distinct monthly financial-boundary projection that does not mutate existing categorized income/expense aggregates. UI includes shared purchases, refund/surrender and funding return selection. The complete source and integration checks must pass before merge. Cross-currency matching, automation and scheduled grants remain deferred.
+
 ## Verification and CI — implemented
 
 The repository has three executable backend verification suites:
@@ -148,7 +152,7 @@ The following are not yet treated as implemented:
 - advanced recurring schedules, recurring transfers and reminders
 - category drag reordering, shared system-category customization, and private categories
 - goals
-- shared-account personal-money spending splits, funding returns and settlement, boundary cash-flow projections, recurring Personal Money grants
+- cross-currency personal-money attribution, bank refund detection, automatic settlement and recurring Personal Money grants
 - historical CSV/XLSX import
 - AI receipt scanning
 - bank connections

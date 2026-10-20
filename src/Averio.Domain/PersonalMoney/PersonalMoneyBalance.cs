@@ -18,9 +18,16 @@ public sealed record PersonalMoneyBalance(decimal Entitlement, decimal Attribute
                     funding += entry.Amount;
                     break;
                 case PersonalMoneyEntryKind.PrivateCharge:
-                    // A signed private charge reduces both entitlement and attributed funding.
+                case PersonalMoneyEntryKind.PrivateRefund:
+                    // Private outgoings/refunds affect entitlement and attributed private funding.
                     entitlement += entry.Amount;
                     funding += entry.Amount;
+                    break;
+                case PersonalMoneyEntryKind.SharedCharge:
+                case PersonalMoneyEntryKind.SharedRefund:
+                case PersonalMoneyEntryKind.Surrender:
+                    // Spending from shared funds or giving up rights does not move private cash.
+                    entitlement += entry.Amount;
                     break;
             }
         }

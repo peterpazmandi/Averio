@@ -261,20 +261,23 @@ internal static class PersonalMoneyVerification
     private static async Task VerifyCreateAndChargeAsync(IServiceProvider provider, Fixture fixture)
     {
         Guid categoryId;
+        Guid incomeCategoryId;
         int count;
         await using (var scope = provider.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             categoryId = await db.Categories.Where(x => x.IsBase && !x.IsArchived
                 && x.Kind == Averio.Domain.Categories.CategoryKind.Expense).Select(x => x.Id).FirstAsync(Ct);
+            incomeCategoryId = await db.Categories.Where(x => x.IsBase && !x.IsArchived
+                && x.Kind == Averio.Domain.Categories.CategoryKind.Income).Select(x => x.Id).FirstAsync(Ct);
             count = await db.Transactions.CountAsync(Ct);
         }
         await using (var scope = provider.CreateAsyncScope())
         {
             await FailureAsync<BusinessRuleException>(() => scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
                 .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId, fixture.HouseholdAccountId,
-                    TransactionKind.Expense, TransactionVisibility.Household, "Rejected allowance purchase", null, On,
-                    [new TransactionItemInput("Item", categoryId, 7m)], [], ChargePersonalMoney: true), Ct));
+                    TransactionKind.Income, TransactionVisibility.Household, "Rejected income allowance charge", null, On,
+                    [new TransactionItemInput("Item", incomeCategoryId, 7m)], [], ChargePersonalMoney: true), Ct));
         }
         await using (var scope = provider.CreateAsyncScope())
         {
@@ -282,6 +285,17 @@ internal static class PersonalMoneyVerification
             if (await db.Transactions.CountAsync(Ct) != count)
                 throw new Exception("Rejected allowance attribution must roll back purchase creation.");
             var personal = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            await BalanceAsync(personal, fixture.HouseholdId, 300m, 0m);
+            // Shared expenses are now eligible; the charge changes entitlement but not funding.
+            var sharedId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
+                .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId, fixture.HouseholdAccountId,
+                    TransactionKind.Expense, TransactionVisibility.Household, "Shared allowance purchase", null, On,
+                    [new TransactionItemInput("Item", categoryId, 7m)], [], ChargePersonalMoney: true), Ct);
+            await BalanceAsync(personal, fixture.HouseholdId, 293m, 0m);
+            var sharedVersion = (await db.Transactions.AsNoTracking()
+                .SingleAsync(x => x.Id == sharedId, Ct)).UpdatedAt;
+            await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>()
+                .HandleAsync(fixture.HouseholdId, sharedId, sharedVersion, Ct);
             await BalanceAsync(personal, fixture.HouseholdId, 300m, 0m);
             var id = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
                 .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId, fixture.PrivateAccountId,

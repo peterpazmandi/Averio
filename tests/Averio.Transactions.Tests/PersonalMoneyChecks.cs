@@ -47,6 +47,47 @@ internal static class PersonalMoneyChecks
             PersonalMoneyEntryKind.PrivateCharge, -1.00001m, date, now, transactionId: purchase));
     }
 
+    public static void SharedAndReconciliation()
+    {
+        var household = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        var wallet = PersonalMoneyWallet.Create(household, member, CurrencyCode.Huf, DateTimeOffset.UtcNow);
+        var date = new DateOnly(2026, 10, 19);
+        var now = DateTimeOffset.UtcNow;
+        var transfer = Guid.NewGuid();
+        var expense = Guid.NewGuid();
+        var refund = Guid.NewGuid();
+        var events = new List<PersonalMoneyEntry>
+        {
+            PersonalMoneyEntry.Create(household, wallet.Id, PersonalMoneyEntryKind.Grant, 300m, date, now),
+            PersonalMoneyEntry.Create(household, wallet.Id, PersonalMoneyEntryKind.Funding, 300m, date, now, transferId: transfer),
+            PersonalMoneyEntry.Create(household, wallet.Id, PersonalMoneyEntryKind.SharedCharge, -80m, date, now, transactionId: expense),
+        };
+        AssertBalance(events, 220m, 300m); // Shared purchase is one bank expense, not another payout.
+        events.Add(PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.SharedRefund, 20m, date, now, transactionId: refund,
+            relatedTransactionId: expense));
+        AssertBalance(events, 240m, 300m);
+        events.Add(PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.Funding, -80m, date, now, transferId: Guid.NewGuid()));
+        AssertBalance(events, 240m, 220m);
+        events.Add(PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.Surrender, -20m, date, now));
+        AssertBalance(events, 220m, 220m);
+        events.Add(PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.PrivateCharge, -50m, date, now, transactionId: Guid.NewGuid()));
+        AssertBalance(events, 170m, 170m);
+        events.Add(PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.PrivateRefund, 5m, date, now, transactionId: Guid.NewGuid(),
+            relatedTransactionId: expense));
+        AssertBalance(events, 175m, 175m);
+
+        Reject(() => PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.SharedRefund, 5m, date, now, transactionId: refund));
+        Reject(() => PersonalMoneyEntry.Create(household, wallet.Id,
+            PersonalMoneyEntryKind.SharedCharge, -5m, date, now));
+    }
+
     private static void AssertBalance(IEnumerable<PersonalMoneyEntry> entries,
         decimal entitlement, decimal funding)
     {

@@ -27,6 +27,9 @@ import type {
 } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { useTransactionMutations } from '../api/useTransactionMutations';
+import { personalMoneyQueries } from '../../personal-money/personalMoneyQueries';
+import { personalMoneyRelations } from '../../personal-money/personalMoneyRelations';
+import { PersonalMoneyRelationBadge } from '../../personal-money/PersonalMoneyRelationBadge';
 import { TransactionEditor } from './TransactionEditor';
 import '../transactions.css';
 
@@ -54,6 +57,7 @@ export function TransactionsPage({
     const today = useTransactionToday();
 
     const [search, setSearch] = useState('');
+    const [personalMoneyOnly, setPersonalMoneyOnly] = useState(false);
     const router = useRouter();
     const openedFromList = useRef<string | null>(null);
     const activityId = urlState.activity ?? '';
@@ -69,7 +73,7 @@ export function TransactionsPage({
     const setPeriod = (value: DatePreset) => onUrlChange({ period: value, dates: undefined,
         from: value === 'custom' ? from : undefined, to: value === 'custom' ? to : undefined });
     const [selecting, setSelecting] = useState(false);
-    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search]);
+    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search, personalMoneyOnly]);
     const [selection, setSelection] = useState<{ scope: string; values: Record<string, string> }>({ scope: '', values: {} });
     const selected = selection.scope === selectionScope ? selection.values : {};
     const setSelected = (value: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) =>
@@ -82,9 +86,9 @@ export function TransactionsPage({
     const searchInput = useRef<HTMLInputElement>(null);
     const filterToggle = useRef<HTMLButtonElement>(null);
 
-    const accounts = useQuery(
-        accountsQueries.list(userId, householdId, true),
-    );
+    const accounts = useQuery(accountsQueries.list(userId, householdId, true));
+    const personalMoney = useQuery(personalMoneyQueries.mine(userId, householdId));
+    const relations = useMemo(() => personalMoneyRelations(personalMoney.data), [personalMoney.data]);
     const queryClient = useQueryClient();
     const mutations = useTransactionMutations(userId, householdId);
     const busy = mutations.create.isPending
@@ -103,7 +107,8 @@ export function TransactionsPage({
         ? accounts.data?.find(account => account.id === accountId)?.name
         : undefined;
 
-    const filterCount = Number(accountId !== '')
+    const filterCount = Number(personalMoneyOnly)
+        + Number(accountId !== '')
         + Number(kind !== '')
         + Number(period !== 'this-month') + Number(activityId !== '') + labelIds.length;
 
@@ -156,6 +161,7 @@ export function TransactionsPage({
     });
 
     const items = invalidRange ? [] : transactions.data?.pages.flatMap(page => page.items) ?? [];
+    const visibleItems = personalMoneyOnly ? items.filter(item => relations.transactions.has(item.id)) : items;
 
     const formatter = new Intl.DateTimeFormat(language, {
         weekday: 'short',
@@ -167,6 +173,7 @@ export function TransactionsPage({
 
     function resetFilters() {
         setSearch('');
+        setPersonalMoneyOnly(false);
         setSelected({});
         onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: undefined, labels: undefined });
         searchInput.current?.focus();
@@ -329,6 +336,12 @@ export function TransactionsPage({
                             </div>
                         </fieldset>
                     </div>
+                    <label className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-emerald-300/40 bg-emerald-50 p-3 text-sm font-semibold dark:bg-emerald-950/30">
+                        <input type="checkbox" className="size-4 accent-emerald-500" checked={personalMoneyOnly}
+                            disabled={personalMoney.isPending || personalMoney.isError}
+                            onChange={event => { setPersonalMoneyOnly(event.target.checked); setSelected({}); }} />
+                        {t('personalMoney.filterOnly')}
+                    </label>
                     <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
                         <LabelFilters userId={userId} householdId={householdId} value={labelIds}
                             onChange={labels => onUrlChange({ labels: labels.length ? labels : undefined })} />
@@ -347,6 +360,7 @@ export function TransactionsPage({
                                 {selectedAccountName}
                             </span>
                         )}
+                        {personalMoneyOnly && <span className="av-badge">{t('personalMoney.filterOnly')}</span>}
                         {kind && (
                             <span
                                 className={
@@ -422,15 +436,24 @@ export function TransactionsPage({
             {assigning && <AssignActivityDialog userId={userId} householdId={householdId}
                 transactions={Object.entries(selected).map(([transactionId, expectedVersion]) => ({ transactionId, expectedVersion }))}
                 onClose={() => setAssigning(false)} onSaved={() => { setAssigning(false); setSelected({}); setSelecting(false); setNotice(t('activities.assigned')); }} />}
-            {items.length > 0 && (
+            {personalMoneyOnly && personalMoney.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
+            {personalMoneyOnly && personalMoney.isSuccess && items.length > 0 && visibleItems.length === 0 && (
+                <p role="status" className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">
+                    {t('personalMoney.noLoadedRelations')}
+                </p>
+            )}
+            {personalMoneyOnly && <p className="text-xs text-slate-600 dark:text-slate-300">
+                {t('personalMoney.loadedFilterHelp')}
+            </p>}
+            {visibleItems.length > 0 && (
                 <div
                     className="av-timeline"
                     aria-label={t('transactionManagement.title')}
                 >
-                    {items.map((transaction, index) => {
+                    {visibleItems.map((transaction, index) => {
                         const showDate =
                             index === 0
-                            || items[index - 1]?.occurredOn
+                            || visibleItems[index - 1]?.occurredOn
                                 !== transaction.occurredOn;
 
                         const dateLabel = formatter.format(
@@ -509,6 +532,8 @@ export function TransactionsPage({
                                             {title}
                                         </strong>
 
+                                        {relations.transactions.get(transaction.id) && <PersonalMoneyRelationBadge
+                                            relation={relations.transactions.get(transaction.id)!} detail />}
                                         {transaction.activityName && <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{transaction.activityName}</span>}
                                         {transaction.items.length > 1 && (
                                             <span className="av-tx-item-count">
@@ -593,7 +618,8 @@ export function TransactionsPage({
             )}
 
             {urlState.transaction && !activeEditor && <TransactionLinkDetail
-                query={detail} onClose={closeEditor} />}
+                query={detail} onClose={closeEditor}
+                personalRelation={relations.transactions.get(urlState.transaction)} />}
             {activeEditor && (
                 <TransactionEditor
                     userId={userId}
@@ -601,6 +627,7 @@ export function TransactionsPage({
                     key={activeEditor === 'new' ? (initialKind ?? 'Expense') : activeEditor.id}
                     initialKind={initialKind}
                     transaction={activeEditor === 'new' ? null : activeEditor}
+                    personalRelation={activeEditor === 'new' ? undefined : relations.transactions.get(activeEditor.id)}
                     onCancel={closeEditor}
                     onSave={save}
                     onSaveRecurring={async request => {

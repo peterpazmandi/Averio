@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Activity, useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,8 +8,11 @@ import { generatedApiConfiguration } from '../../shared/api/generatedApiConfigur
 import { accountsQueries } from '../accounts/api/accountsQueries';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
+import { AverioSectionSelect } from '../../shared/components/ui/AverioSectionSelect';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { personalMoneyApi, personalMoneyQueries, personalMoneyKeys } from './personalMoneyQueries';
+import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
+import { PersonalMoneyReconciliationPanel, HouseholdBoundaryFlowPanel } from './PersonalMoneyReconciliationPanel';
 
 const transactionsApi = new TransactionsApi(generatedApiConfiguration);
 const decimalPattern = /^[0-9]+([.,][0-9]{1,4})?$/;
@@ -29,17 +32,29 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         && account.owners.some(owner => household.members.some(member =>
             member.isCurrentUser && member.id === owner.householdMemberId)));
     const transactions = useQuery({
-        queryKey: ['personal-money', userId, householdId, 'private-expenses'],
+        queryKey: ['personal-money', userId, householdId, 'eligible-expenses'],
         queryFn: ({ signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
             { householdId, kind: 'Expense', pageSize: 50 }, { signal }),
     });
-    const eligibleIds = new Set(privateAccounts.map(a => a.id));
+    const eligibleIds = new Set([
+        ...privateAccounts.map(a => a.id),
+        ...(accounts.data ?? []).filter(a => a.scope === 'Household'
+            && a.visibility === 'Household' && a.includeInHouseholdReports).map(a => a.id),
+    ]);
     // Consumption occurs only after explicit selection; never infer it from an account.
     const existingCharges = mine.data?.charges ?? [];
     const chargedIds = new Set(existingCharges.map(c => c.transactionId));
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
-        transaction.visibility === 'Private' && transaction.status === 'Posted'
-        && eligibleIds.has(transaction.accountId) && !chargedIds.has(transaction.id));
+        transaction.status === 'Posted' && eligibleIds.has(transaction.accountId)
+        && (!mine.data || transaction.currency === mine.data.currency)
+        && !chargedIds.has(transaction.id));
+    type MoneyTab = 'mine' | 'charges' | 'reconcile' | 'owner' | 'boundary';
+    const [tab, setTab] = useState<MoneyTab>('mine');
+    const tabs: MoneyTab[] = household.role === 'owner'
+        ? ['mine', 'charges', 'reconcile', 'owner', 'boundary']
+        : ['mine', 'charges', 'reconcile', 'boundary'];
+    const tabIcons = { mine: 'savings', charges: 'receipt', reconcile: 'transfers',
+        owner: 'group', boundary: 'statistics' } as const;
     const [recipient, setRecipient] = useState(household.members.find(m => m.isCurrentUser)?.id ?? '');
     const [grantAmount, setGrantAmount] = useState('');
     // Reuse this operation ID after network errors; only form edits start a new grant intent.
@@ -59,7 +74,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     };
     const refresh = async () => {
         await client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) });
-        await client.invalidateQueries({ queryKey: ['personal-money', userId, householdId, 'private-expenses'] });
+        await client.invalidateQueries({ queryKey: ['personal-money', userId, householdId, 'eligible-expenses'] });
     };
     const grant = useMutation({
         mutationFn: () => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneyGrantsPost({
@@ -91,9 +106,26 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <h3 id="personal-money-heading" className="text-lg font-semibold">{t('personalMoney.title')}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.description')}</p>
         </header>
+        <nav aria-label={t('personalMoney.sections')}>
+            <div className="lg:hidden">
+                <AverioSectionSelect label={t('personalMoney.sections')} value={tab}
+                    items={tabs.map(item => ({ value: item, label: t('personalMoney.compactTabs.' + item), icon: tabIcons[item] }))}
+                    onChange={setTab} />
+            </div>
+            <div className="hidden gap-2 lg:grid lg:grid-cols-2 xl:grid-cols-3">
+            {tabs.map(item => <button key={item} type="button" aria-current={tab === item ? 'page' : undefined}
+                onClick={() => setTab(item)}
+                className={`flex min-h-14 min-w-0 items-center gap-3 rounded-xl border-l-[3px] px-4 py-3 text-left text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-primary-500 ${tab === item
+                    ? 'border-l-emerald-500 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-800'
+                    : 'border-l-transparent bg-white hover:bg-emerald-50 dark:bg-[#0D1726] dark:hover:bg-emerald-950/30'}`}>
+                <ConceptIcon name={tabIcons[item]} />
+                <span className="min-w-0 wrap-normal">{t('personalMoney.tabs.' + item)}</span>
+            </button>)}
+            </div>
+        </nav>
         {message && <p role="status" className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{message}</p>}
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        {canGrant && <AverioCard className="space-y-4 p-5 sm:p-6">
+        {canGrant && tab === 'owner' && <AverioCard className="space-y-4 p-5 sm:p-6">
             <header className="space-y-2">
                 <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">{t('personalMoney.ownerArea')}</span>
                 <h4 className="text-xl font-semibold">{t('personalMoney.newGrant')}</h4>
@@ -123,15 +155,23 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.grantHelp')}</p>
             <div><AverioButton type="submit" variant="primary" disabled={grant.isPending || !validGrant}>{t(grant.isPending ? 'common.actions.saving' : 'personalMoney.grant')}</AverioButton></div>
         </form></AverioCard>}
-        <AverioCard className="space-y-5 p-5 sm:p-6">
-        <header className="space-y-1">
+        <Activity mode={tab !== 'boundary' && tab !== 'owner' ? 'visible' : 'hidden'}>
+        <AverioCard className="@container space-y-5 p-5 sm:p-6">
+        {tab !== 'mine' && mine.isPending && <p role="status">{t('common.status.loading')}</p>}
+        {tab !== 'mine' && mine.isError && <div role="alert" className="space-y-2">
+            <p>{t('personalMoney.loadError')}</p>
+            <AverioButton onClick={() => void mine.refetch()}>{t('common.actions.retry')}</AverioButton>
+        </div>}
+        {tab !== 'mine' && mine.isSuccess && !mine.data &&
+            <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm dark:border-slate-700">{t('personalMoney.empty')}</p>}
+        {tab === 'mine' && <header className="space-y-1">
             <h4 className="text-xl font-semibold">{t('personalMoney.myWallet')}</h4>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.walletHelp')}</p>
-        </header>
-        {mine.isPending ? <p role="status">{t('common.status.loading')}</p> : mine.isError
+        </header>}
+        {tab === 'mine' && (mine.isPending ? <p role="status">{t('common.status.loading')}</p> : mine.isError
             ? <div role="alert" className="space-y-2"><p>{t('personalMoney.loadError')}</p>
                 <AverioButton onClick={() => { void mine.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>
-            : mine.data ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            : mine.data ? <div className="grid grid-cols-1 gap-3 @min-[36rem]:grid-cols-3">
                 <div className="rounded-xl border border-emerald-500/20 bg-emerald-50 p-4 dark:bg-emerald-950/20">
                     <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.available')}</p>
                     <p className="mt-2 break-words text-2xl font-bold">{money(mine.data.available, mine.data.currency)}</p>
@@ -144,8 +184,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.difference')}</p>
                     <p className="mt-2 break-words text-lg font-semibold">{money(mine.data.fundingDifference, mine.data.currency)}</p>
                 </div>
-            </div> : <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">{t('personalMoney.empty')}</p>}
-        {mine.data && <form className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
+            </div> : <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">{t('personalMoney.empty')}</p>)}
+        {tab === 'charges' && mine.data && <form className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
             onSubmit={event => { event.preventDefault(); if (validCharge && !charge.isPending) charge.mutate(); }}>
             <h4 className="font-semibold">{t('personalMoney.chargeTitle')}</h4>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.chargeHelp')}</p>
@@ -167,6 +207,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <div><AverioButton type="submit" variant="primary" disabled={!validCharge || charge.isPending}>
                 {t(charge.isPending ? 'common.actions.saving' : 'personalMoney.charge')}</AverioButton></div>
         </form>}
+        <Activity mode={tab === 'charges' ? 'visible' : 'hidden'}>
         {mine.data && <section className="space-y-3" aria-label={t('personalMoney.existingCharges')}>
             <h4 className="font-semibold">{t('personalMoney.existingCharges')}</h4>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.correctionHelp')}</p>
@@ -176,7 +217,12 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     label={transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}
                     formattedAmount={money(item.amount, mine.data!.currency)} />)}
         </section>}
-        {mine.data && <div className="space-y-2">
+        </Activity>
+        <Activity mode={tab === 'reconcile' ? 'visible' : 'hidden'}>
+        {mine.data && <PersonalMoneyReconciliationPanel userId={userId}
+            householdId={householdId} wallet={mine.data} />}
+        </Activity>
+        {tab === 'mine' && mine.data && <div className="space-y-2">
             <h4 className="font-semibold">{t('personalMoney.history')}</h4>
             {mine.data.entries.length === 0
                 ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.noEntries')}</p>
@@ -187,7 +233,10 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     </li>)}
                 </ul>}
         </div>}
-    </AverioCard></section>;
+    </AverioCard>
+    </Activity>
+    {tab === 'boundary' && <HouseholdBoundaryFlowPanel userId={userId} householdId={householdId} />}
+    </section>;
 }
 
 function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onError }: {

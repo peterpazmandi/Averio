@@ -94,6 +94,7 @@ async function login(page, email, password) {
     await page.waitForURL(url => url.pathname === '/invitation' || url.pathname === '/app' || url.pathname.startsWith('/app/'));
 }
 async function invite(page, email) {
+    await page.locator('a[href="#household-invitations"]').click();
     await page.getByRole('button', { name: 'Invite a partner', exact: true }).click();
     await page.getByRole('dialog').getByLabel('Email address', { exact: true }).fill(email);
     await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
@@ -134,7 +135,7 @@ try {
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');
-    await owner.getByRole('button', { name: 'Invite a partner', exact: true }).waitFor();
+    await owner.locator('a[href="#household-invitations"]').waitFor();
     const partnerEmail = 'partner@collaboration.test';
     await invite(owner, partnerEmail);
     const invitation = await mail(partnerEmail, 'invitation');
@@ -255,6 +256,10 @@ try {
     const snapshot = await ok(existing, `/household-history/${history[0].id}`);
     assert.ok(snapshot.transactions.some(t => t.id === old.sharedTransactionId));
     await denied(partner, `/household-history/${history[0].id}`);
+    // Deep-linked Members view must restore the departed member's history after accepting
+    // an invitation, without relying on cached pre-acceptance household settings data.
+    await existing.goto(ui + '/app/household#household-members');
+    await existing.getByRole('heading', { name: 'Members', exact: true }).waitFor();
     await existing.getByRole('button', { name: 'View history', exact: true }).click();
     await existing.getByText('This is your personal snapshot at departure.', { exact: false }).waitFor();
     const retry = { token: new URL(fresh.url).hash.slice(1), confirmed: true, expectedSourceVersion: reviewed.departure.version,

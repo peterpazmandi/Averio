@@ -1,4 +1,7 @@
 export const householdSettingsEN = {
+    compact: { profile: "Profile", members: "Members", invitations: "Invitations", personalMoney: "Personal Money", privacy: "Privacy" },
+    invitations: "Invitations",
+    navHelp: { profile: "Profile and preferences", members: "People and past households", invitations: "Invite or manage partners", personalMoney: "Allowances and purchases", privacy: "Who can see financial data" },
     "personalMoney": "Personal Money",
     "title": "Household settings",
     "description": "A shared home for your finances, with room for personal privacy.",
@@ -37,6 +40,9 @@ export const householdSettingsEN = {
 };
 
 export const householdSettingsDE = {
+    compact: { profile: "Profil", members: "Mitglieder", invitations: "Einladungen", personalMoney: "Persönliches Budget", privacy: "Privatsphäre" },
+    invitations: "Einladungen",
+    navHelp: { profile: "Profil und Einstellungen", members: "Mitglieder und bisherige Haushalte", invitations: "Partner einladen und verwalten", personalMoney: "Budget und Käufe", privacy: "Wer Finanzdaten sehen darf" },
     "personalMoney": "Persönliches Budget",
     "title": "Haushaltseinstellungen",
     "description": "Ein gemeinsamer Ort für eure Finanzen – mit Raum für persönliche Privatsphäre.",
@@ -75,6 +81,9 @@ export const householdSettingsDE = {
 };
 
 export const householdSettingsHU = {
+    compact: { profile: "Profil", members: "Tagok", invitations: "Meghívók", personalMoney: "Személyes pénzkeret", privacy: "Adatvédelem" },
+    invitations: "Meghívók",
+    navHelp: { profile: "Profil és beállítások", members: "Tagok és korábbi háztartások", invitations: "Partnerek meghívása, kezelése", personalMoney: "Keretek és vásárlások", privacy: "Pénzügyi adatok láthatósága" },
     "personalMoney": "Személyes pénzkeret",
     "title": "Háztartás beállításai",
     "description": "Közös hely a pénzügyeiteknek, a személyes magánszféra megőrzésével.",

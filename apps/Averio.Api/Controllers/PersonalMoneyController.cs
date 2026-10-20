@@ -22,7 +22,8 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
             DecimalAmountMapper.Format(result.AttributedPrivateFunding),
             DecimalAmountMapper.Format(result.FundingDifference),
             result.Entries.Select(x => new PersonalMoneyEventResponse(x.Id, x.Kind,
-                DecimalAmountMapper.Format(x.Amount), x.OccurredOn)).ToArray(),
+                DecimalAmountMapper.Format(x.Amount), x.OccurredOn,
+                x.TransactionId, x.TransferId, x.RelatedTransactionId)).ToArray(),
             result.Charges.Select(x => new PersonalMoneyChargeResponse(x.TransactionId,
                 DecimalAmountMapper.Format(x.Amount), x.Version)).ToArray()));
     }
@@ -36,6 +37,25 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler) : Cont
             DecimalAmountMapper.ParseTransactionAmount(request.Amount),
             DecimalAmountMapper.ParseTransactionAmount(request.ExpectedAmount),
             request.ExpectedVersion, request.OperationId, ct);
+        return NoContent();
+    }
+
+    [HttpPost("me/refunds")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Refund(Guid householdId, RefundPersonalMoneyRequest request, CancellationToken ct)
+    {
+        await handler.RefundAsync(householdId, request.RefundTransactionId,
+            request.PurchaseTransactionId, DecimalAmountMapper.ParseTransactionAmount(request.Amount),
+            request.OperationId, ct);
+        return NoContent();
+    }
+
+    [HttpPost("me/surrenders")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Surrender(Guid householdId, SurrenderPersonalMoneyRequest request, CancellationToken ct)
+    {
+        await handler.SurrenderAsync(householdId, DecimalAmountMapper.ParseTransactionAmount(request.Amount),
+            request.OccurredOn, request.OperationId, ct);
         return NoContent();
     }
 

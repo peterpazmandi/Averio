@@ -747,6 +747,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_at");
 
+                    b.Property<Guid?>("RelatedTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_transaction_id");
+
                     b.Property<Guid?>("ReversesEntryId")
                         .HasColumnType("uuid")
                         .HasColumnName("reverses_entry_id");
@@ -772,6 +776,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("HouseholdId", "TransactionId");
 
+                    b.HasIndex("HouseholdId", "RelatedTransactionId");
+
                     b.HasIndex("HouseholdId", "TransferId");
 
                     b.HasIndex("HouseholdId", "WalletId");
@@ -785,9 +791,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_personal_money_entry_amount", "amount <> 0");
 
-                            t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge')");
+                            t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge','SharedCharge','PrivateRefund','SharedRefund','Surrender')");
 
-                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind <> 'PrivateCharge' OR transaction_id IS NOT NULL)");
+                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND (kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND (related_transaction_id IS NULL OR transaction_id IS NOT NULL)");
                         });
                 });
 
@@ -1891,6 +1897,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasOne("Averio.Domain.Transactions.Transaction", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "RelatedTransactionId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 

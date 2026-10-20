@@ -40,11 +40,13 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         {
             t.HasCheckConstraint("ck_personal_money_entry_amount", "amount <> 0");
             t.HasCheckConstraint("ck_personal_money_entry_kind",
-                "kind IN ('Grant','Funding','PrivateCharge')");
+                "kind IN ('Grant','Funding','PrivateCharge','SharedCharge','PrivateRefund','SharedRefund','Surrender')");
             t.HasCheckConstraint("ck_personal_money_entry_source",
                 "(transfer_id IS NULL OR transaction_id IS NULL) AND " +
                 "(kind <> 'Funding' OR transfer_id IS NOT NULL) AND " +
-                "(kind <> 'PrivateCharge' OR transaction_id IS NOT NULL)");
+                "(kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND " +
+                "(kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND " +
+                "(related_transaction_id IS NULL OR transaction_id IS NOT NULL)");
         });
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id");
@@ -55,6 +57,7 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.Property(x => x.OccurredOn).HasColumnName("occurred_on");
         b.Property(x => x.TransferId).HasColumnName("transfer_id");
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
+        b.Property(x => x.RelatedTransactionId).HasColumnName("related_transaction_id");
         b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
         b.Property(x => x.OperationId).HasColumnName("operation_id");
         b.Property(x => x.CorrectionExpectedAmount).HasColumnName("correction_expected_amount").HasPrecision(19, 4);
@@ -70,11 +73,16 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
             .HasForeignKey(x => new { x.HouseholdId, x.TransactionId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
             .OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Transaction>().WithMany()
+            .HasForeignKey(x => new { x.HouseholdId, x.RelatedTransactionId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
         b.HasOne<PersonalMoneyEntry>().WithMany()
             .HasForeignKey(x => x.ReversesEntryId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.WalletId, x.OccurredOn, x.RecordedAt });
         b.HasIndex(x => new { x.HouseholdId, x.TransferId });
         b.HasIndex(x => new { x.HouseholdId, x.TransactionId });
+        b.HasIndex(x => new { x.HouseholdId, x.RelatedTransactionId });
         b.HasIndex(x => x.ReversesEntryId).IsUnique();
         b.HasIndex(x => new { x.WalletId, x.OperationId }).IsUnique();
     }

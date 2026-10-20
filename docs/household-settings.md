@@ -45,6 +45,24 @@ the PATCH contract now requires a version. Standard API startup does not migrate
 
 ## Verification
 
+Household section navigation uses a labeled native selector below 1024px and a
+sticky icon sidebar on desktop. Personal Money uses the same compact selector on
+small screens. Short EN/DE/HU option labels keep every choice readable; desktop
+navigation retains the full labels and descriptions. Hash links and browser
+back/forward select the corresponding section. Invitations remain owner-only.
+Section selection updates the router hash without resetting scroll or scrolling
+to an anchor, so the navigation stays in place. Query refreshes do not scroll.
+Profile, invitation, Personal Money and adjustment drafts survive section switches within
+the current page session; a reload still discards unsaved input.
+
+Run `node tests/household-navigation.browser.mjs` from `apps/averio-web` for the
+responsive regression matrix: 320, 375 (iPhone SE), 390, 768, 1024 and 1440px,
+all three languages, light and dark. It checks navigation, permissions, keyboard
+selection, draft retention, label fit, tap targets and overflow using the real
+components and shell content widths with deterministic API fixtures.
+Screenshots are written to `test-results/household-navigation` and uploaded by CI.
+These browser fixtures complement the database-backed collaboration suite below.
+
 The PostgreSQL suite includes household member/owner/outsider/anonymous access,
 directory projection, settings normalization, invalid input, stale writes,
 concurrent contexts, unchanged account currencies and closed onboarding paths.

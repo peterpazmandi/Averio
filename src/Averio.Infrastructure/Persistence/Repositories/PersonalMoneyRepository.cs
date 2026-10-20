@@ -24,6 +24,10 @@ internal sealed class PersonalMoneyRepository(AverioDbContext db) : IPersonalMon
         => await db.Set<PersonalMoneyEntry>().AsNoTracking().Where(x =>
             x.HouseholdId == householdId && x.TransactionId == transactionId).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<PersonalMoneyEntry>> GetRefundsOfPurchaseAsync(Guid householdId, Guid purchaseId, CancellationToken ct)
+        => await db.Set<PersonalMoneyEntry>().AsNoTracking().Where(x =>
+            x.HouseholdId == householdId && x.RelatedTransactionId == purchaseId).ToListAsync(ct);
+
     public Task<PersonalMoneyEntry?> GetByOperationAsync(Guid walletId, Guid operationId, CancellationToken ct)
         => db.Set<PersonalMoneyEntry>().AsNoTracking().SingleOrDefaultAsync(x =>
             x.WalletId == walletId && x.OperationId == operationId, ct);
