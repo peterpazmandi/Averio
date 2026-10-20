@@ -32,6 +32,7 @@ internal sealed class RecurringAllowanceConfiguration : IEntityTypeConfiguration
         b.Property(x => x.NextDueOn).HasColumnName("next_due_on");
         b.Property(x => x.IsPaused).HasColumnName("is_paused");
         b.Property(x => x.IsStopped).HasColumnName("is_stopped");
+        b.Property(x => x.IsBlocked).HasColumnName("is_blocked");
         b.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
         b.Property(x => x.CreatedAt).HasColumnName("created_at");
         b.Property(x => x.UpdatedAt).HasColumnName("updated_at");
@@ -40,7 +41,7 @@ internal sealed class RecurringAllowanceConfiguration : IEntityTypeConfiguration
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
             .OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.NextDueOn, x.Id })
-            .HasFilter("NOT is_paused AND NOT is_stopped AND next_due_on IS NOT NULL");
+            .HasFilter("NOT is_paused AND NOT is_stopped AND NOT is_blocked AND next_due_on IS NOT NULL");
         b.HasIndex(x => new { x.HouseholdId, x.RecipientMemberId });
     }
 }
