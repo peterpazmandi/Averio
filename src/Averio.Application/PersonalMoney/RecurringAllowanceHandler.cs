@@ -61,7 +61,7 @@ public sealed class RecurringAllowanceHandler(
         CancellationToken ct)
     {
         if (input.OperationId == Guid.Empty || !CurrencyCode.IsSupported(input.Currency)
-            || input.StartsOn < Today || input.StartsOn == default)
+            || input.StartsOn == default)
             throw Invalid();
         ValidateAmount(input.Amount);
         if (input.EndsOn < input.StartsOn) throw Invalid();
@@ -83,6 +83,10 @@ public sealed class RecurringAllowanceHandler(
             return existing.Id;
         }
         // One currency per membership: never create an incompatible pending rule.
+        if (input.StartsOn < Today) throw Invalid();
+        if (all.Any(x => !x.IsStopped && x.RecipientMemberId == input.RecipientMemberId
+            && x.Currency.Value != input.Currency))
+            throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
         var wallet = await personalMoney.GetWalletAsync(householdId, input.RecipientMemberId, ct);
         if (wallet is not null && wallet.Currency.Value != input.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
@@ -109,7 +113,9 @@ public sealed class RecurringAllowanceHandler(
         if (input.IsStopped) rule.Stop(clock.GetUtcNow());
         else
         {
-            if (input.EndsOn < rule.StartsOn) throw Invalid();
+            if (input.EndsOn < rule.StartsOn
+                || input.EndsOn is DateOnly end && rule.NextDueOn is DateOnly next && end < next)
+                throw Invalid();
             var wallet = await personalMoney.GetWalletAsync(householdId, rule.RecipientMemberId, ct);
             if (wallet is not null && wallet.Currency != rule.Currency)
                 throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
