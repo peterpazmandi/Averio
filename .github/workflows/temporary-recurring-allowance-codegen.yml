@@ -1,4 +1,4 @@
-name: Temporary PR3 EF and OpenAPI codegen (retry)
+name: Temporary PR3 EF and OpenAPI codegen (tool path fix)
 on:
   workflow_dispatch:
   push:
@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           dotnet tool install --global dotnet-ef --version 10.0.11
-          dotnet ef migrations add AddRecurringPersonalMoney --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output-dir Persistence/Migrations
+          $HOME/.dotnet/tools/dotnet-ef migrations add AddRecurringPersonalMoney --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output-dir Persistence/Migrations
       - run: dotnet build Averio.slnx --configuration Release --no-restore
       - run: npm ci
         working-directory: apps/averio-web
