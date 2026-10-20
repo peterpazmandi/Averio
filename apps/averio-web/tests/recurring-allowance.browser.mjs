@@ -91,8 +91,15 @@ try {
         }
         const form = page.locator('form').filter({ has: page.getByRole('heading',
             { name: copy.recurring.create, exact: true }) });
-        await form.getByLabel(copy.recipient, { exact: true }).selectOption('member1');
-        await form.getByLabel(copy.amount, { exact: true }).fill('220');
+        await form.waitFor({ timeout: 8000 }).catch(async () => {
+            const visible = (await page.locator('body').innerText()).slice(0, 3000);
+            await page.screenshot({ path: path.join(artifactDir, 'failure-' + language + '-' + width + '.png'), fullPage: true });
+            throw new Error('Recurring owner form was not rendered: ' + visible + '; page errors: ' + errors.join(' | '));
+        });
+        // The controls are nested inside reusable labels, and the generated select text
+        // may contribute to its accessible name in Chromium. Scope to this single form.
+        await form.locator('select').first().selectOption('member1');
+        await form.locator('input[inputmode="decimal"]').first().fill('220');
         // Start date should not be in the past relative to the test clock.
         const nextMonth = new Date();
         nextMonth.setDate(1); nextMonth.setMonth(nextMonth.getMonth() + 1);
