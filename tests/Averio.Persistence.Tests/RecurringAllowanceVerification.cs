@@ -58,7 +58,7 @@ internal static class RecurringAllowanceVerification
         {
             var repository = scope.ServiceProvider.GetRequiredService<IRecurringAllowanceRepository>();
             var sameDay = (await repository.DueAsync(starts, 1000, Ct))
-                .Where(x => x.DueOn == starts).OrderBy(x => x.RuleId).ToArray();
+                .Where(x => x.DueOn == starts).ToArray(); // Preserve PostgreSQL UUID order.
             var firstIndex = Array.FindIndex(sameDay, x => x.RuleId == id);
             if (firstIndex < 0 || !sameDay.Any(x => x.RuleId != id))
                 throw new Exception("Missing due rules for keyset pagination regression.");
