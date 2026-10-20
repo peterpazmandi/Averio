@@ -17,6 +17,7 @@ public sealed class RecurringAllowanceRule
     public DateOnly? NextDueOn { get; private set; }
     public bool IsPaused { get; private set; }
     public bool IsStopped { get; private set; }
+    public bool IsBlocked { get; private set; }
     public Guid Version { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -46,8 +47,11 @@ public sealed class RecurringAllowanceRule
         Amount = amount;
         EndsOn = endsOn;
         IsPaused = paused;
+        IsBlocked = false;
         Touch(now);
     }
+
+    public void Block(DateTimeOffset now) { IsBlocked = true; Touch(now); }
 
     public void Stop(DateTimeOffset now)
     {
@@ -60,6 +64,7 @@ public sealed class RecurringAllowanceRule
     {
         if (IsStopped || NextDueOn is null) throw new InvalidOperationException("No pending allowance occurrence.");
         OccurrenceIndex = checked(OccurrenceIndex + 1);
+        IsBlocked = false;
         NextDueOn = MonthlyDueDate(StartsOn, OccurrenceIndex);
         if (EndsOn is not null && NextDueOn > EndsOn) NextDueOn = null;
         Touch(now);
