@@ -60,9 +60,13 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.Property(x => x.RelatedTransactionId).HasColumnName("related_transaction_id");
         b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
         b.Property(x => x.OperationId).HasColumnName("operation_id");
+        b.Property(x => x.RecurringAllowanceRuleId).HasColumnName("recurring_allowance_rule_id");
         b.Property(x => x.CorrectionExpectedAmount).HasColumnName("correction_expected_amount").HasPrecision(19, 4);
         b.Property(x => x.CorrectionExpectedVersion).HasColumnName("correction_expected_version");
         b.Property(x => x.RecordedAt).HasColumnName("recorded_at");
+        b.HasOne<RecurringAllowanceRule>().WithMany()
+            .HasForeignKey(x => new { x.HouseholdId, x.RecurringAllowanceRuleId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<PersonalMoneyWallet>().WithMany()
             .HasForeignKey(x => new { x.HouseholdId, x.WalletId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id })
@@ -85,5 +89,7 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.HasIndex(x => new { x.HouseholdId, x.RelatedTransactionId });
         b.HasIndex(x => x.ReversesEntryId).IsUnique();
         b.HasIndex(x => new { x.WalletId, x.OperationId }).IsUnique();
+        b.HasIndex(x => new { x.RecurringAllowanceRuleId, x.OccurredOn }).IsUnique()
+            .HasFilter("recurring_allowance_rule_id IS NOT NULL");
     }
 }
