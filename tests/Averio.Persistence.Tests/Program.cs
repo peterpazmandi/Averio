@@ -212,6 +212,7 @@ static async Task RunVerificationAsync(string connectionString)
     await InvitationVerification.RunAsync(provider, fixture, clock);
     await DepartureVerification.RunAsync(provider, fixture, clock);
     await InvitationReviewVerification.RunAsync(provider, clock);
+    await RecurringAllowanceVerification.RunAsync(provider, currentUser, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
