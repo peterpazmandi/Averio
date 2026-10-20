@@ -1,4 +1,4 @@
-name: Temporary PR3 EF and OpenAPI codegen (tool path fix)
+name: Temporary PR3 EF and OpenAPI codegen (migration env fix)
 on:
   workflow_dispatch:
   push:
@@ -29,6 +29,7 @@ jobs:
       - name: Generate EF migration and snapshot
         env:
           ASPNETCORE_ENVIRONMENT: Development
+          AVERIO_MIGRATION_CONNECTION_STRING: Host=localhost;Database=unused;Username=unused;Password=unused
           ConnectionStrings__AverioDatabase: Host=localhost;Database=unused;Username=unused;Password=unused
         run: |
           set -euo pipefail
