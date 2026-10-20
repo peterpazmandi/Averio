@@ -83,7 +83,7 @@ try {
         });
         await page.goto(url);
         if (mobile) {
-            await page.getByRole('navigation').first().getByRole('combobox').selectOption('personalMoney');
+            await page.getByRole('combobox').first().selectOption('personalMoney');
             await page.getByRole('combobox', { name: copy.sections }).selectOption('owner');
         } else {
             await page.locator('a[href="#household-personal-money"]').click();
@@ -93,21 +93,20 @@ try {
             { name: copy.recurring.create, exact: true }) });
         await form.getByLabel(copy.recipient, { exact: true }).selectOption('member1');
         await form.getByLabel(copy.amount, { exact: true }).fill('220');
-        await form.getByLabel(copy.recurring.start, { exact: true }).fill('2026-11-01');
         // Start date should not be in the past relative to the test clock.
         const nextMonth = new Date();
         nextMonth.setDate(1); nextMonth.setMonth(nextMonth.getMonth() + 1);
         const due = [nextMonth.getFullYear(), String(nextMonth.getMonth()+1).padStart(2,'0'),'01'].join('-');
         await form.getByLabel(copy.recurring.start, { exact: true }).fill(due);
         const create = form.getByRole('button', { name: copy.recurring.create, exact: true });
-        for (let i = 0; i < 2; i++) {
-            await create.click();
-            await page.waitForFunction(expected => document.body.textContent.includes(expected),
-                i === 0 ? 'Retry me' : copy.recurring.created);
-        }
+        await Promise.all([page.waitForResponse(response =>
+            response.url().endsWith('/personal-money/schedules') && response.status() === 503), create.click()]);
+        await Promise.all([page.waitForResponse(response =>
+            response.url().endsWith('/personal-money/schedules') && response.status() === 200
+            && response.request().method() === 'POST'), create.click()]);
+        await page.getByText(copy.recurring.created, { exact: true }).waitFor();
         assert.equal(creationAttempts.length, 2);
         assert.deepEqual(creationAttempts[0], creationAttempts[1], 'Create retries must reuse the same operation ID.');
-        const card = page.getByText(copy.recurring.monthly, { exact: false }).last().locator('xpath=ancestor::div[contains(@class,"rounded-xl")]');
         await page.getByRole('button', { name: copy.recurring.pause, exact: true }).click();
         await page.getByText(copy.recurring.status.paused, { exact: true }).waitFor();
         assert.equal(updates[0].isPaused, true);
