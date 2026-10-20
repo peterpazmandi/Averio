@@ -8,8 +8,10 @@ import { HouseholdPage } from '../../src/features/household/HouseholdPage';
 // Exercise the real page and shell header CSS with deterministic HTTP fixtures.
 createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <div className="av-ui"><header className="av-topbar">Averio</header>
-            <main className="p-4"><HouseholdPage userId="user" householdId="home" /></main>
+        <div className="av-ui"><div className="av-shell">
+            <header className="av-topbar">Averio</header>
+            <main className="av-content"><HouseholdPage userId="user" householdId="home" /></main>
+        </div>
         </div>
     </QueryClientProvider>,
 );

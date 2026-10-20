@@ -54,7 +54,13 @@ try {
         });
         await page.goto(url);
         const link = page.locator('a[href="#household-personal-money"]');
-        await link.click();
+        const openMoney = () => dark
+            ? page.getByRole('combobox').first().selectOption('personalMoney')
+            : link.click();
+        const openTab = tab => dark
+            ? page.getByRole('combobox', { name: copy.sections, exact: true }).selectOption(tab)
+            : page.getByRole('button', { name: copy.tabs[tab], exact: true }).click();
+        await openMoney();
         const checkPosition = async () => {
             await page.waitForFunction(() => {
                 const section = document.getElementById('household-personal-money');
@@ -65,15 +71,18 @@ try {
             });
         };
         await checkPosition();
-        await page.evaluate(() => window.scrollTo(0, 0)); await link.click(); await checkPosition();
+        await page.evaluate(() => window.scrollTo(0, 0)); await openMoney(); await checkPosition();
         await page.reload(); await checkPosition();
         await page.getByRole('heading', { name: copy.myWallet, exact: true }).waitFor();
-        await page.getByRole('button', { name: copy.tabs.owner, exact: true }).click();
+        await openTab('owner');
         assert.equal(await page.getByRole('heading', { name: copy.newGrant, exact: true }).count(), 1);
-        await page.getByRole('button', { name: copy.tabs.charges, exact: true }).click();
+        await openTab('charges');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.screenshot({ path: path.join(artifacts, `${language}-${dark ? 'dark-mobile' : 'light-desktop'}.png`), fullPage: true });
         await page.getByLabel(copy.changedAmount, { exact: true }).fill('10');
+        await openTab('mine');
+        await openTab('charges');
+        assert.equal(await page.getByLabel(copy.changedAmount, { exact: true }).inputValue(), '10');
         await page.getByRole('button', { name: copy.saveCharge, exact: true }).click();
         await page.waitForFunction(() => document.querySelector('input[inputmode="decimal"]') !== null);
         await page.getByRole('button', { name: copy.removeCharge, exact: true }).click();

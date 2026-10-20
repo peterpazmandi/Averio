@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { Activity, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HouseholdResponse } from '../../shared/api/generated';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
+import { AverioSectionSelect } from '../../shared/components/ui/AverioSectionSelect';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { householdQueries } from './householdQueries';
 import { HouseholdEditor } from './HouseholdEditor';
@@ -82,9 +83,18 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
             <p>{t('householdSettings.loadError')}</p>
             <AverioButton disabled={query.isFetching} onClick={retry}>{t('common.actions.retry')}</AverioButton>
         </div>}
-        <div className="grid items-start gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
             <AverioCard role="navigation" aria-label={t('householdSettings.sections')}
-                className="flex flex-wrap gap-2 p-3 lg:sticky lg:top-24 lg:flex-col">
+                className="p-3 lg:sticky lg:top-24">
+                <div className="lg:hidden">
+                    <AverioSectionSelect label={t('householdSettings.sections')} value={visibleSection}
+                        items={sections.map(section => ({ value: section, label: t('householdSettings.compact.' + section), icon: menuIcons[section] }))}
+                        onChange={section => {
+                            setActiveSection(section);
+                            window.location.hash = 'household-' + (section === 'personalMoney' ? 'personal-money' : section);
+                        }} />
+                </div>
+                <div className="hidden gap-2 lg:grid">
                 {sections.map(section => {
                     const selected = visibleSection === section;
                     const href = '#household-' + (section === 'personalMoney' ? 'personal-money' : section);
@@ -93,23 +103,25 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                             setActiveSection(section);
                         }}
-                        className={`group flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 lg:w-full lg:flex-none ${selected
+                        className={`group flex min-h-12 min-w-0 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 ${selected
                             ? 'border-l-emerald-500 bg-emerald-100 font-bold text-emerald-900 shadow-sm ring-1 ring-emerald-300/60 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-800'
                             : 'border-l-transparent font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`}>
                         <span className={`shrink-0 ${selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}>
                             <ConceptIcon name={menuIcons[section]} />
                         </span>
                         <span className="min-w-0 text-left">
-                            <span className="block break-words">{t('householdSettings.' + section)}</span>
+                            <span className="block wrap-normal">{t('householdSettings.' + section)}</span>
                             <span className="mt-0.5 hidden text-[11px] font-normal leading-snug text-slate-600 dark:text-slate-300 lg:block">
                                 {t('householdSettings.navHelp.' + section)}
                             </span>
                         </span>
                     </a>;
                 })}
+                </div>
             </AverioCard>
             <div className="min-w-0 space-y-5">
-                {visibleSection === 'profile' && <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
+                <Activity mode={visibleSection === 'profile' ? 'visible' : 'hidden'}>
+                <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.profile')}</h3><p className={muted}>{t('householdSettings.profileHelp')}</p></div>
                         {owner && !draft && <AverioButton disabled={reloadRequired || query.isFetching}
@@ -123,7 +135,8 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                         <div><dt className={muted}>{t('householdSettings.currency')}</dt><dd className="mt-1 font-semibold">{household.preferredCurrency}</dd><p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t('householdSettings.currencyHelp')}</p></div>
                     </dl>}
                     {!owner && <p className={muted}>{t('householdSettings.readOnly')}</p>}
-                </AverioCard>}
+                </AverioCard>
+                </Activity>
                 {visibleSection === 'members' && <AverioCard id="household-members" className="scroll-mt-24 space-y-4 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                         <div><h3 className="text-lg font-semibold">{t('householdSettings.members')}</h3><p className={muted}>{t('householdSettings.membersHelp')}</p></div>
@@ -141,10 +154,14 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                     </ul>
                 </AverioCard>}
                 {visibleSection === 'members' && <PreviousHouseholds userId={userId} householdId={householdId} />}
-                {visibleSection === 'personalMoney' && <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />}
-                {owner && visibleSection === 'invitations' && <section id="household-invitations" className="scroll-mt-24">
-                    <HouseholdInvitations userId={userId} householdId={householdId} />
-                </section>}
+                <Activity mode={visibleSection === 'personalMoney' ? 'visible' : 'hidden'}>
+                    <PersonalMoneyPanel userId={userId} householdId={householdId} household={household} />
+                </Activity>
+                {owner && <Activity mode={visibleSection === 'invitations' ? 'visible' : 'hidden'}>
+                    <section id="household-invitations" className="scroll-mt-24">
+                        <HouseholdInvitations userId={userId} householdId={householdId} />
+                    </section>
+                </Activity>}
                 {visibleSection === 'privacy' && <AverioCard id="household-privacy" className="scroll-mt-24 space-y-3 p-5 sm:p-6">
                     <h3 className="text-lg font-semibold">{t('householdSettings.privacy')}</h3>
                     <p className={muted}>{t('householdSettings.privacyHelp')}</p>

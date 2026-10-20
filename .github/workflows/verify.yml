@@ -123,6 +123,16 @@ jobs:
         run: |
           node tests/personal-money.browser.mjs
           node tests/transaction-editor.browser.mjs
+          node tests/household-navigation.browser.mjs
+
+      - name: Upload responsive navigation screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: household-navigation-screenshots
+          path: test-results/household-navigation
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Verify collaboration in separate browser sessions
         working-directory: apps/averio-web

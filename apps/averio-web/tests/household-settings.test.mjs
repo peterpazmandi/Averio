@@ -101,12 +101,13 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         },
     };
     const { HouseholdPage } = load('../src/features/household/HouseholdPage.tsx', {
-        react: { useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial; return [state[i], value => { state[i] = value; }]; } },
+        react: { Activity: 'activity', useEffect: () => {}, useState: initial => { const i = cursor++; if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial; return [state[i], value => { state[i] = value; }]; } },
         'react/jsx-runtime': jsxRuntime,
         'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
         '@tanstack/react-query': { useQuery: () => query },
         '../../shared/components/ui/AverioCard': { AverioCard: 'section' },
         '../../shared/components/ui/AverioButton': { AverioButton: 'button' },
+        '../../shared/components/ui/AverioSectionSelect': { AverioSectionSelect: 'section-select' },
         '../../shared/components/concept/ConceptIcon': { ConceptIcon: 'icon' },
         './householdQueries': { householdQueries: { detail: () => ({}) } },
         './HouseholdEditor': { HouseholdEditor: 'editor' },
@@ -118,6 +119,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
     function find(tree, type, text) {
         if (!tree || typeof tree !== 'object') return undefined;
         if (Array.isArray(tree)) return tree.map(child => find(child, type, text)).find(Boolean);
+        if (tree.type === 'activity' && tree.props.mode === 'hidden') return undefined;
         if (tree.type === type && (text === undefined || tree.props.children === text)) return tree;
         return find(tree.props?.children, type, text);
     }
@@ -161,11 +163,11 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
     assert.equal(personalTab.props['aria-current'], undefined);
     personalTab.props.onClick({ button: 0 });
     assert.equal(find(render(), 'personal-money').type, 'personal-money');
-    assert.equal(find(render(), 'editor'), undefined, 'Unrelated profile panel is not rendered');
+    assert.equal(find(render(), 'editor'), undefined, 'Unrelated profile panel is hidden');
     assert.equal(locateAnchor(render(), '#household-personal-money').props['aria-current'], 'page');
     locateAnchor(render(), '#household-invitations').props.onClick({ button: 0 });
     assert.equal(find(render(), 'invitations').type, 'invitations');
-    assert.equal(find(render(), 'personal-money'), undefined, 'Previous section is unmounted');
+    assert.equal(find(render(), 'personal-money'), undefined, 'Previous section is hidden');
     locateAnchor(render(), '#household-profile').props.onClick({ button: 0 });
     assert.equal(find(render(), 'editor').props.household.version, 'v3', 'Draft is preserved when changing sections');
 });
