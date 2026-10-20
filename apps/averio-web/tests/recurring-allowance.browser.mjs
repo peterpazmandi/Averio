@@ -28,7 +28,12 @@ try {
     for (const language of ['en', 'de', 'hu']) for (const width of [375, 1440]) {
         const copy = translations.exports['personalMoney' + language.toUpperCase()];
         const mobile = width < 1024;
-        const page = await browser.newPage({ viewport: { width, height: 720 } });
+        const page = await browser.newPage({ viewport: { width, height: 720 },
+            timezoneId: mobile ? 'Pacific/Kiritimati' : 'America/Los_Angeles' });
+        // At these instants, the local date is respectively a day ahead/behind UTC.
+        // Both must still follow the API's UTC calendar-day contract.
+        const mockedUtc = mobile ? '2026-10-15T23:30:00Z' : '2026-10-15T00:30:00Z';
+        await page.clock.install({ time: new Date(mockedUtc) });
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(language => localStorage.setItem('i18nextLng', language), language);
@@ -104,11 +109,11 @@ try {
         // may contribute to its accessible name in Chromium. Scope to this single form.
         await form.locator('select').first().selectOption('member1');
         await form.locator('input[inputmode="decimal"]').first().fill('220');
-        // Start date should not be in the past relative to the test clock.
-        const nextMonth = new Date();
-        nextMonth.setDate(1); nextMonth.setMonth(nextMonth.getMonth() + 1);
-        const due = [nextMonth.getFullYear(), String(nextMonth.getMonth()+1).padStart(2,'0'),'01'].join('-');
-        await form.getByLabel(copy.recurring.start, { exact: true }).fill(due);
+        const start = form.getByLabel(copy.recurring.start, { exact: true });
+        assert.equal(await start.getAttribute('min'), '2026-10-15',
+            'Minimum due date must use UTC even when the browser is in another date.');
+        const due = '2026-11-01';
+        await start.fill(due);
         const create = form.getByRole('button', { name: copy.recurring.create, exact: true });
         await Promise.all([page.waitForResponse(response =>
             response.url().endsWith('/personal-money/schedules') && response.status() === 503), create.click()]);

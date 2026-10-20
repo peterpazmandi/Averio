@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import type { HouseholdResponse, RecurringAllowanceResponse } from '../../shared/api/generated';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
@@ -10,9 +9,12 @@ import { personalMoneyApi, personalMoneyKeys, recurringAllowanceKeys } from './p
 
 const amountPattern = /^[0-9]+([.,][0-9]{1,4})?$/;
 const normalized = (v: string) => v.trim().replace(',', '.');
+// The API posts due occurrences on UTC calendar dates, not the browser's time zone.
+const utcToday = () => new Date().toISOString().slice(0, 10);
 const nextMonth = () => {
     const d = new Date();
-    return format(new Date(d.getFullYear(), d.getMonth() + 1, 1), 'yyyy-MM-dd');
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))
+        .toISOString().slice(0, 10);
 };
 
 function useSchedules(userId: string, householdId: string) {
@@ -155,7 +157,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
         onError: (failure: Error) => { setError(failure.message); setFeedback(''); },
     });
     const valid = !!recipient && amountPattern.test(amount) && Number(normalized(amount)) > 0
-        && startsOn >= format(new Date(), 'yyyy-MM-dd') && (!endsOn || endsOn >= startsOn);
+        && startsOn >= utcToday() && (!endsOn || endsOn >= startsOn);
     const names = new Map(household.members.map(x => [x.id, x.displayName || t('householdSettings.unnamedMember')]));
     if (household.role !== 'owner') return null;
     return <AverioCard className="space-y-4 p-5 sm:p-6">
@@ -184,7 +186,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
                     </AverioSelect>
                 </AverioField>
                 <AverioField>{t('personalMoney.recurring.start')}
-                    <AverioInput type="date" value={startsOn} required min={format(new Date(), 'yyyy-MM-dd')}
+                    <AverioInput type="date" value={startsOn} required min={utcToday()}
                         onChange={e => { setStartsOn(e.target.value); setOperationId(crypto.randomUUID()); }} />
                 </AverioField>
                 <AverioField>{t('personalMoney.recurring.end')}
