@@ -29,6 +29,10 @@ internal static class RecurringAllowanceVerification
             var input = new RecurringAllowanceInput(fixture.OwnerMemberId, "EUR",
                 220m, starts, null, operation);
             id = await schedules.CreateAsync(fixture.HouseholdId, input, Ct);
+            // Two rules on the same day exercise the UUID tie-breaker of keyset pagination.
+            var secondId = await schedules.CreateAsync(fixture.HouseholdId,
+                input with { OperationId = Guid.NewGuid(), Amount = 110m }, Ct);
+            if (secondId == id) throw new Exception("Different schedule intents cannot share an ID.");
             var retried = await schedules.CreateAsync(fixture.HouseholdId, input, Ct);
             if (retried != id) throw new Exception("Retry created duplicate schedule.");
             await ThrowsAsync<ConflictException>(() => schedules.CreateAsync(fixture.HouseholdId,
@@ -52,7 +56,20 @@ internal static class RecurringAllowanceVerification
         await using (var scope = provider.CreateAsyncScope())
         {
             var repository = scope.ServiceProvider.GetRequiredService<IRecurringAllowanceRepository>();
-            candidate = (await repository.DueAsync(starts, 100, Ct)).Single(x => x.RuleId == id);
+            var sameDay = (await repository.DueAsync(starts, 1000, Ct))
+                .Where(x => x.DueOn == starts).OrderBy(x => x.RuleId).ToArray();
+            var firstIndex = Array.FindIndex(sameDay, x => x.RuleId == id);
+            if (firstIndex < 0 || !sameDay.Any(x => x.RuleId != id))
+                throw new Exception("Missing due rules for keyset pagination regression.");
+            // Exercise the non-null cursor against PostgreSQL, including equal dates.
+            for (var i = 0; i + 1 < sameDay.Length; i++)
+            {
+                var page = await repository.DueAsync(starts, 100, Ct,
+                    new RecurringAllowanceCursor(sameDay[i].DueOn, sameDay[i].RuleId));
+                if (page.Count == 0 || page[0].RuleId != sameDay[i + 1].RuleId)
+                    throw new Exception("Due-rule UUID cursor skipped, duplicated or reordered a row.");
+            }
+            candidate = sameDay[firstIndex];
             if (await repository.HasReceiptAsync(id, starts, Ct))
                 throw new Exception("Future allowance granted before due.");
         }

@@ -25,9 +25,15 @@ internal sealed class RecurringAllowanceRepository(AverioDbContext db) : IRecurr
     public async Task<IReadOnlyList<RecurringAllowanceCandidate>> DueAsync(DateOnly today, int limit,
         CancellationToken ct, RecurringAllowanceCursor? after = null)
     {
-        var afterDate = after?.DueOn;
-        var afterId = after?.RuleId ?? Guid.Empty;
-        return await (from rule in db.RecurringAllowanceRules.AsNoTracking()
+        // PostgreSQL's uuid comparison defines the same keyset order as ORDER BY id.
+        // Use a composable, parameterized query: Guid.CompareTo is not consistently
+        // translatable to SQL across EF providers.
+        IQueryable<RecurringAllowanceRule> scheduleRules = after is null
+            ? db.RecurringAllowanceRules.AsNoTracking()
+            : db.RecurringAllowanceRules.FromSqlInterpolated(
+                $"SELECT * FROM recurring_allowance_rules WHERE next_due_on > {after.DueOn} OR (next_due_on = {after.DueOn} AND id > {after.RuleId})")
+                .AsNoTracking();
+        return await (from rule in scheduleRules
             join member in db.HouseholdMembers.AsNoTracking()
                 on new { rule.HouseholdId, Id = rule.RecipientMemberId }
                 equals new { member.HouseholdId, member.Id }
@@ -36,8 +42,6 @@ internal sealed class RecurringAllowanceRepository(AverioDbContext db) : IRecurr
             where !rule.IsPaused && !rule.IsStopped && !rule.IsBlocked
                 && rule.NextDueOn <= today && member.LeftAtUtc == null
                 && household.ArchivedAtUtc == null && household.FinancialSetupCompletedAtUtc != null
-                && (afterDate == null || rule.NextDueOn > afterDate
-                    || (rule.NextDueOn == afterDate && rule.Id.CompareTo(afterId) > 0))
             orderby rule.NextDueOn, rule.Id
             select new RecurringAllowanceCandidate(rule.Id, rule.HouseholdId,
                 rule.RecipientMemberId, member.UserId, rule.Version, rule.NextDueOn!.Value))
