@@ -747,6 +747,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_at");
 
+                    b.Property<Guid?>("RecurringAllowanceRuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recurring_allowance_rule_id");
+
                     b.Property<Guid?>("RelatedTransactionId")
                         .HasColumnType("uuid")
                         .HasColumnName("related_transaction_id");
@@ -774,13 +778,19 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TransferId");
 
-                    b.HasIndex("HouseholdId", "TransactionId");
+                    b.HasIndex("HouseholdId", "RecurringAllowanceRuleId");
 
                     b.HasIndex("HouseholdId", "RelatedTransactionId");
+
+                    b.HasIndex("HouseholdId", "TransactionId");
 
                     b.HasIndex("HouseholdId", "TransferId");
 
                     b.HasIndex("HouseholdId", "WalletId");
+
+                    b.HasIndex("RecurringAllowanceRuleId", "OccurredOn")
+                        .IsUnique()
+                        .HasFilter("recurring_allowance_rule_id IS NOT NULL");
 
                     b.HasIndex("WalletId", "OperationId")
                         .IsUnique();
@@ -793,7 +803,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge','SharedCharge','PrivateRefund','SharedRefund','Surrender')");
 
-                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND (kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND (related_transaction_id IS NULL OR transaction_id IS NOT NULL)");
+                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND (kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND (related_transaction_id IS NULL OR transaction_id IS NOT NULL) AND (recurring_allowance_rule_id IS NULL OR kind = 'Grant')");
                         });
                 });
 
@@ -833,6 +843,97 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.ToTable("personal_money_wallets", null, t =>
                         {
                             t.HasCheckConstraint("ck_personal_money_wallet_currency", "currency IN ('EUR','USD','HUF')");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.RecurringAllowanceRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreationOperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creation_operation_id");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("ends_on");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_blocked");
+
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_paused");
+
+                    b.Property<bool>("IsStopped")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_stopped");
+
+                    b.Property<DateOnly?>("NextDueOn")
+                        .HasColumnType("date")
+                        .HasColumnName("next_due_on");
+
+                    b.Property<int>("OccurrenceIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("occurrence_index");
+
+                    b.Property<Guid>("RecipientMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recipient_member_id");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date")
+                        .HasColumnName("starts_on");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "CreationOperationId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "RecipientMemberId");
+
+                    b.HasIndex("NextDueOn", "Id")
+                        .HasFilter("NOT is_paused AND NOT is_stopped AND NOT is_blocked AND next_due_on IS NOT NULL");
+
+                    b.ToTable("recurring_allowance_rules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_recurring_allowance_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_recurring_allowance_currency", "currency IN ('EUR','USD','HUF')");
+
+                            t.HasCheckConstraint("ck_recurring_allowance_dates", "(ends_on IS NULL OR ends_on >= starts_on) AND occurrence_index >= 0 AND (next_due_on IS NULL OR next_due_on >= starts_on)");
                         });
                 });
 
@@ -1894,15 +1995,21 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TransferId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                    b.HasOne("Averio.Domain.PersonalMoney.RecurringAllowanceRule", null)
                         .WithMany()
-                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasForeignKey("HouseholdId", "RecurringAllowanceRuleId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Averio.Domain.Transactions.Transaction", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId", "RelatedTransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "TransactionId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -1919,6 +2026,16 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasOne("Averio.Domain.Households.HouseholdMember", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.PersonalMoney.RecurringAllowanceRule", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "RecipientMemberId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
