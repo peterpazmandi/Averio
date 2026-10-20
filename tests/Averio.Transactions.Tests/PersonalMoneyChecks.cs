@@ -117,7 +117,12 @@ internal static class PersonalMoneyChecks
         completed.Advance(now);
         if (completed.NextDueOn is not null)
             throw new Exception("Single-month schedule must complete after posting.");
-        Reject(() => completed.Update(20m, null, false, now));
+        try
+        {
+            completed.Update(20m, null, false, now);
+            throw new Exception("Completed schedules must reject ineffective edits.");
+        }
+        catch (InvalidOperationException) { /* Expected terminal lifecycle state. */ }
         rule.Stop(now);
         if (!rule.IsStopped || rule.NextDueOn is not null)
             throw new Exception("Stop must permanently disable a schedule.");
