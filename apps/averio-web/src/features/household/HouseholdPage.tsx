@@ -11,19 +11,20 @@ import { PreviousHouseholds } from './PreviousHouseholds';
 import { HouseholdInvitations } from './HouseholdInvitations';
 import { PersonalMoneyPanel } from '../personal-money/PersonalMoneyPanel';
 
+type Section = 'profile' | 'members' | 'invitations' | 'personalMoney' | 'privacy';
+const decodeSection = (hash: string): Section => {
+    switch (hash) {
+        case '#household-members': return 'members';
+        case '#household-invitations': return 'invitations';
+        case '#household-personal-money': return 'personalMoney';
+        case '#household-privacy': return 'privacy';
+        default: return 'profile';
+    }
+};
+
 export function HouseholdPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(householdQueries.detail(userId, householdId));
-    type Section = 'profile' | 'members' | 'invitations' | 'personalMoney' | 'privacy';
-    const decodeSection = (hash: string): Section => {
-        switch (hash) {
-            case '#household-members': return 'members';
-            case '#household-invitations': return 'invitations';
-            case '#household-personal-money': return 'personalMoney';
-            case '#household-privacy': return 'privacy';
-            default: return 'profile';
-        }
-    };
     const [activeSection, setActiveSection] = useState<Section>(() =>
         typeof window === 'undefined' ? 'profile' : decodeSection(window.location.hash));
     useEffect(() => {
