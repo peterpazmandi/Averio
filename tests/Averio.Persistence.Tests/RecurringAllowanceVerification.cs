@@ -1,6 +1,7 @@
 using Averio.Application.Common.Exceptions;
 using Averio.Application.PersonalMoney;
 using Averio.Infrastructure.Persistence;
+using Averio.Domain.PersonalMoney;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -155,6 +156,26 @@ internal static class RecurringAllowanceVerification
                 throw new Exception("Monthly rollover/amount update changed historical grant.");
             if (wallet.Entries.Count(x => x.RecurringAllowanceRuleId == id) != 2)
                 throw new Exception("Two monthly due dates must have two unique grants.");
+        }
+        // Record enough historical grants to exceed the old silent 100-row limit.
+        // This is deliberately after balance assertions so synthetic audit fixtures do
+        // not affect the economic-state checks above.
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var wallet = await db.PersonalMoneyWallets.SingleAsync(x =>
+                x.HouseholdId == fixture.HouseholdId &&
+                x.HouseholdMemberId == fixture.OwnerMemberId, Ct);
+            for (var i = 2; i < 104; i++)
+                db.PersonalMoneyEntries.Add(PersonalMoneyEntry.Create(
+                    fixture.HouseholdId, wallet.Id, PersonalMoneyEntryKind.Grant,
+                    1m, starts.AddMonths(i), clock.GetUtcNow(), recurringAllowanceRuleId: id));
+            await db.SaveChangesAsync(Ct);
+            var repository = scope.ServiceProvider.GetRequiredService<IRecurringAllowanceRepository>();
+            var history = await repository.HistoryAsync(fixture.HouseholdId, id, Ct);
+            if (history.Count != 104 || history[0].OccurredOn != starts.AddMonths(103)
+                || history[^1].OccurredOn != starts)
+                throw new Exception("Scheduled grant history must not silently truncate at 100 records.");
         }
         Console.WriteLine("PASS monthly Personal Money: owner, privacy, retry, pause, catch-up, stop, no bank postings");
     }

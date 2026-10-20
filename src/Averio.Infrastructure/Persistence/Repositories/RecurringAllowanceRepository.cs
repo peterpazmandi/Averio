@@ -16,7 +16,9 @@ internal sealed class RecurringAllowanceRepository(AverioDbContext db) : IRecurr
     public async Task<IReadOnlyList<PersonalMoneyEntry>> HistoryAsync(Guid householdId, Guid ruleId, CancellationToken ct)
         => await db.PersonalMoneyEntries.AsNoTracking()
             .Where(x => x.HouseholdId == householdId && x.RecurringAllowanceRuleId == ruleId)
-            .OrderByDescending(x => x.OccurredOn).Take(100).ToArrayAsync(ct);
+            // A monthly rule yields at most one record per month. Return the complete
+            // auditable history rather than silently cutting off older grants.
+            .OrderByDescending(x => x.OccurredOn).ToArrayAsync(ct);
 
     public Task<bool> HasReceiptAsync(Guid ruleId, DateOnly dueOn, CancellationToken ct)
         => db.PersonalMoneyEntries.AnyAsync(x => x.RecurringAllowanceRuleId == ruleId
