@@ -46,7 +46,8 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
                 "(kind <> 'Funding' OR transfer_id IS NOT NULL) AND " +
                 "(kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND " +
                 "(kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND " +
-                "(related_transaction_id IS NULL OR transaction_id IS NOT NULL)");
+                "(related_transaction_id IS NULL OR transaction_id IS NOT NULL) AND " +
+                "(recurring_allowance_rule_id IS NULL OR kind = 'Grant')");
         });
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id");
