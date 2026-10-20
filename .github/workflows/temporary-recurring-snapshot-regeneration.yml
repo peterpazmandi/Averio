@@ -1,0 +1,44 @@
+name: Temporary recurring allowance snapshot regeneration
+on:
+  push:
+    branches: [feat/personal-money-recurring-allowances]
+    paths: [.github/workflows/temporary-recurring-snapshot-regeneration.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    if: github.repository == 'peterpazmandi/Averio'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/personal-money-recurring-allowances
+          persist-credentials: true
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: 10.0.x}
+      - name: Restore
+        run: dotnet restore Averio.slnx
+      - name: Scaffold current EF model
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          AVERIO_MIGRATION_CONNECTION_STRING: Host=localhost;Database=unused;Username=unused;Password=unused
+          ConnectionStrings__AverioDatabase: Host=localhost;Database=unused;Username=unused;Password=unused
+        run: |
+          set -euo pipefail
+          dotnet tool install --global dotnet-ef --version 10.0.11
+          $HOME/.dotnet/tools/dotnet-ef migrations remove --force --project src/Averio.Infrastructure --startup-project apps/Averio.Api
+          $HOME/.dotnet/tools/dotnet-ef migrations add AddRecurringPersonalMoney --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output-dir Persistence/Migrations
+      - name: Verify design-time model and commit
+        run: |
+          set -euo pipefail
+          dotnet run --project tests/Averio.Transactions.Tests -c Release
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A src/Averio.Infrastructure/Persistence/Migrations
+          if ! git diff --cached --quiet; then
+            git commit -m "build(personal-money): regenerate EF metadata for immutable create intent"
+            git fetch origin feat/personal-money-recurring-allowances
+            git rebase origin/feat/personal-money-recurring-allowances
+            git push origin HEAD:feat/personal-money-recurring-allowances
+          fi
