@@ -256,6 +256,8 @@ try {
     const snapshot = await ok(existing, `/household-history/${history[0].id}`);
     assert.ok(snapshot.transactions.some(t => t.id === old.sharedTransactionId));
     await denied(partner, `/household-history/${history[0].id}`);
+    // Former-household history is an intentional subview of Members, not the Profile panel.
+    await existing.locator('a[href="#household-members"]').click();
     await existing.getByRole('button', { name: 'View history', exact: true }).click();
     await existing.getByText('This is your personal snapshot at departure.', { exact: false }).waitFor();
     const retry = { token: new URL(fresh.url).hash.slice(1), confirmed: true, expectedSourceVersion: reviewed.departure.version,
