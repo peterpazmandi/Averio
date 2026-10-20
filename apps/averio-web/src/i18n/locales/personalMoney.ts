@@ -1,5 +1,6 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    recurring: {"title":"Monthly Personal Money","create":"Create monthly allowance","existing":"Scheduled allowances","monthly":"Monthly","start":"First grant date","end":"End date (optional)","nextDue":"Next grant","save":"Save changes","pause":"Pause","resume":"Resume","stop":"Stop schedule","confirmStop":"Confirm stop","history":"Grant history","noHistory":"No grants issued yet","none":"No recurring allowances yet.","created":"Monthly allowance scheduled.","myUpcoming":"My scheduled allowances","description":"Each month adds spending entitlement, never a bank transfer. Unused amounts carry over.","noBankTransfer":"Each month adds spending entitlement, never a bank transfer. Unused amounts carry over.","loadError":"Could not load recurring allowances.","historyError":"Could not load grant history.","status":{"active":"Active","paused":"Paused","blocked":"Needs review","stopped":"Stopped","completed":"Completed"}},
     surrenderDate: "Surrender date",
     noRecordedRefund: "No matching recorded refund yet. Record the money received as an Income transaction on the same account first.",
     goToTransactions: "Go to Transactions",
@@ -74,9 +75,10 @@ export const personalMoneyEN = {
     charge: 'Charge allowance',
     history: 'Allowance history',
     noEntries: 'No allowance activity yet.',
-    kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" },
+    kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" , RecurringGrant: "Monthly allowance granted" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    recurring: {"title":"Monatliches persönliches Budget","create":"Monatliche Zuteilung einrichten","existing":"Geplante Zuteilungen","monthly":"Monatlich","start":"Erste Zuteilung","end":"Enddatum (optional)","nextDue":"Nächste Zuteilung","save":"Änderungen speichern","pause":"Pausieren","resume":"Fortsetzen","stop":"Zeitplan beenden","confirmStop":"Beenden bestätigen","history":"Zuteilungsverlauf","noHistory":"Noch keine Zuteilungen.","none":"Noch keine Zeitpläne.","created":"Monatliche Zuteilung eingerichtet.","myUpcoming":"Meine geplanten Zuteilungen","description":"Die Zuteilung erhöht nur das Budget und überweist kein Geld. Restbeträge bleiben erhalten.","noBankTransfer":"Die Zuteilung erhöht nur das Budget und überweist kein Geld. Restbeträge bleiben erhalten.","loadError":"Zeitpläne konnten nicht geladen werden.","historyError":"Verlauf konnte nicht geladen werden.","status":{"active":"Aktiv","paused":"Pausiert","blocked":"Prüfung erforderlich","stopped":"Beendet","completed":"Abgeschlossen"}},
     surrenderDate: "Datum der Budgetrückgabe",
     noRecordedRefund: "Noch keine passende Erstattung erfasst. Buche den zurückerhaltenen Betrag zuerst als Einnahme auf demselben Konto.",
     goToTransactions: "Zu den Buchungen",
@@ -151,9 +153,10 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     charge: 'Budget belasten',
     history: 'Budgetverlauf',
     noEntries: 'Noch keine Budgetbewegungen.',
-    kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" },
+    kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" , RecurringGrant: "Monatliches Budget zugeteilt" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    recurring: {"title":"Havi személyes pénzkeret","create":"Havi keret létrehozása","existing":"Ütemezett juttatások","monthly":"Havonta","start":"Első juttatás dátuma","end":"Befejezés dátuma (opcionális)","nextDue":"Következő juttatás","save":"Mentés","pause":"Szüneteltetés","resume":"Folytatás","stop":"Ütemezés leállítása","confirmStop":"Leállítás megerősítése","history":"Juttatási előzmények","noHistory":"Még nem történt juttatás.","none":"Még nincs ütemezés.","created":"Havi keret beütemezve.","myUpcoming":"Várható havi juttatásaim","description":"Ez csak költési jogosultságot ad, nem mozgat pénzt. A maradék keret továbbvihető.","noBankTransfer":"Ez csak költési jogosultságot ad, nem mozgat pénzt. A maradék keret továbbvihető.","loadError":"Nem sikerült betölteni az ütemezéseket.","historyError":"Nem sikerült betölteni az előzményeket.","status":{"active":"Aktív","paused":"Szünetel","blocked":"Ellenőrzést igényel","stopped":"Leállítva","completed":"Befejeződött"}},
     surrenderDate: "Keretleadás dátuma",
     noRecordedRefund: "Még nincs megfelelő rögzített visszatérítés. Először vidd fel a visszakapott összeget bevételként ugyanarra a számlára.",
     goToTransactions: "Tranzakciók megnyitása",
@@ -228,5 +231,5 @@ export const personalMoneyHU: typeof personalMoneyEN = {
     charge: 'Elszámolás a keretből',
     history: 'Keret előzményei',
     noEntries: 'Még nincs keretmozgás.',
-    kind: { Grant: 'Keretjuttatás', Funding: 'Privát finanszírozás', PrivateCharge: 'Privát kiadás', SharedCharge: "Közös számlás vásárlás", PrivateRefund: "Privát visszatérítés", SharedRefund: "Közös vásárlás visszatérítése", Surrender: "Keretleadás" },
+    kind: { Grant: 'Keretjuttatás', Funding: 'Privát finanszírozás', PrivateCharge: 'Privát kiadás', SharedCharge: "Közös számlás vásárlás", PrivateRefund: "Privát visszatérítés", SharedRefund: "Közös vásárlás visszatérítése", Surrender: "Keretleadás" , RecurringGrant: "Havi keret jóváírva" },
 };
