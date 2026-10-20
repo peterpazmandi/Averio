@@ -6,20 +6,13 @@ import type { HouseholdResponse, RecurringAllowanceResponse } from '../../shared
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
-import { personalMoneyApi, personalMoneyKeys } from './personalMoneyQueries';
+import { personalMoneyApi, personalMoneyKeys, recurringAllowanceKeys } from './personalMoneyQueries';
 
 const amountPattern = /^[0-9]+([.,][0-9]{1,4})?$/;
 const normalized = (v: string) => v.trim().replace(',', '.');
 const nextMonth = () => {
     const d = new Date();
     return format(new Date(d.getFullYear(), d.getMonth() + 1, 1), 'yyyy-MM-dd');
-};
-
-export const recurringAllowanceKeys = {
-    list: (userId: string, householdId: string) =>
-        ['personal-money', userId, householdId, 'schedules'] as const,
-    history: (userId: string, householdId: string, id: string) =>
-        ['personal-money', userId, householdId, 'schedules', id, 'history'] as const,
 };
 
 function useSchedules(userId: string, householdId: string) {
