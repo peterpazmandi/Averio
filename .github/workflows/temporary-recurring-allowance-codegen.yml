@@ -1,5 +1,6 @@
-name: Temporary PR3 EF and OpenAPI codegen
+name: Temporary PR3 EF and OpenAPI codegen (retry)
 on:
+  workflow_dispatch:
   push:
     branches: [feat/personal-money-recurring-allowances]
     paths:
