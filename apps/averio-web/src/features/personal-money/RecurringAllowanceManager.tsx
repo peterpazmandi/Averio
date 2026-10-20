@@ -51,7 +51,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                 householdId, scheduleId: schedule.id,
                 updateRecurringAllowanceRequest: {
                     amount: action === 'save' ? normalized(amount) : schedule.amount,
-                    endsOn: action === 'save' ? endsOn || undefined : schedule.endsOn,
+                    endsOn: action === 'save' ? endsOn || null : schedule.endsOn,
                     isPaused: action === 'toggle' ? !schedule.isPaused : schedule.isPaused,
                     isStopped: action === 'stop',
                     expectedVersion: schedule.version,
@@ -150,7 +150,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
         mutationFn: () => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPost({
             householdId, createRecurringAllowanceRequest: {
                 recipientMemberId: recipient, currency, amount: normalized(amount),
-                startsOn, endsOn: endsOn || undefined, operationId,
+                startsOn, endsOn: endsOn || null, operationId,
             },
         }),
         onSuccess: async () => {
