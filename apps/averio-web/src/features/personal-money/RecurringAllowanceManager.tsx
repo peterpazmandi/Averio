@@ -81,7 +81,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                     schedule.nextDueOn ? 'active' : 'completed'))}
             </span>
         </div>
-        {!schedule.isStopped && <div className="grid gap-3 sm:grid-cols-2">
+        {!schedule.isStopped && schedule.nextDueOn !== null && <div className="grid gap-3 sm:grid-cols-2">
             <AverioField>{t('personalMoney.amount')}
                 <AverioInput inputMode="decimal" disabled={mutate.isPending} value={amount}
                     onChange={e => setAmount(e.target.value)} />
@@ -91,7 +91,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                     onChange={e => setEndsOn(e.target.value)} />
             </AverioField>
         </div>}
-        {!schedule.isStopped && <div className="flex flex-wrap gap-2">
+        {!schedule.isStopped && schedule.nextDueOn !== null && <div className="flex flex-wrap gap-2">
             <AverioButton type="button" disabled={!valid || mutate.isPending ||
                 (normalized(amount) === schedule.amount && endsOn === (schedule.endsOn ?? ''))}
                 onClick={() => mutate.mutate('save')}>{t('personalMoney.recurring.save')}</AverioButton>

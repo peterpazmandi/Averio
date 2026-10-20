@@ -112,6 +112,12 @@ internal static class PersonalMoneyChecks
         rule.Advance(now);
         if (rule.NextDueOn is not null)
             throw new Exception("Completed rules must have no next occurrence.");
+        var completed = RecurringAllowanceRule.Create(household, member, CurrencyCode.Eur,
+            15m, start, start, Guid.NewGuid(), now);
+        completed.Advance(now);
+        if (completed.NextDueOn is not null)
+            throw new Exception("Single-month schedule must complete after posting.");
+        Reject(() => completed.Update(20m, null, false, now));
         rule.Stop(now);
         if (!rule.IsStopped || rule.NextDueOn is not null)
             throw new Exception("Stop must permanently disable a schedule.");

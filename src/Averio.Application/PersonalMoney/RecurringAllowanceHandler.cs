@@ -109,7 +109,8 @@ public sealed class RecurringAllowanceHandler(
         if (actor.Role != HouseholdRole.Owner) throw new ForbiddenException();
         var rule = await rules.GetAsync(householdId, id, ct)
             ?? throw new NotFoundException("allowance schedule", id);
-        if (rule.Version != input.ExpectedVersion || rule.IsStopped) throw Changed();
+        if (rule.Version != input.ExpectedVersion || rule.IsStopped || rule.NextDueOn is null)
+            throw Changed();
         if (input.IsStopped) rule.Stop(clock.GetUtcNow());
         else
         {

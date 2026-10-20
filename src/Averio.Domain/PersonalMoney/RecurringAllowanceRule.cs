@@ -47,7 +47,8 @@ public sealed class RecurringAllowanceRule
     // Recipient, currency and anchor never change: historical occurrences retain their meaning.
     public void Update(decimal amount, DateOnly? endsOn, bool paused, DateTimeOffset now)
     {
-        if (IsStopped) throw new InvalidOperationException("A stopped allowance cannot be restarted.");
+        if (IsStopped || NextDueOn is null)
+            throw new InvalidOperationException("A stopped or completed allowance cannot be restarted.");
         Validate(amount, StartsOn, endsOn);
         if (endsOn is not null && NextDueOn is not null && endsOn < NextDueOn)
             throw new ArgumentException("Use Stop to end a schedule before its next due date.");
