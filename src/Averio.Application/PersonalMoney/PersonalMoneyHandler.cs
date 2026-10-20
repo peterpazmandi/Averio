@@ -19,7 +19,8 @@ public sealed record PersonalMoneySnapshot(Guid WalletId, string Currency, decim
 public sealed record PersonalMoneyCharge(Guid TransactionId, decimal Amount, int Version);
 
 public sealed record PersonalMoneyEvent(Guid Id, string Kind, decimal Amount, DateOnly OccurredOn,
-    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId);
+    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
+    Guid? RecurringAllowanceRuleId);
 
 public sealed class PersonalMoneyHandler(
     ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
@@ -37,7 +38,8 @@ public sealed class PersonalMoneyHandler(
             balance.AttributedPrivateFunding, balance.FundingDifference,
             entries.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.RecordedAt)
                 .Select(x => new PersonalMoneyEvent(x.Id, x.Kind.ToString(), x.Amount, x.OccurredOn,
-                    x.TransactionId, x.TransferId, x.RelatedTransactionId)).ToArray(),
+                    x.TransactionId, x.TransferId, x.RelatedTransactionId,
+                    x.RecurringAllowanceRuleId)).ToArray(),
             entries.Where(x => x.Kind is PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge)
                 .GroupBy(x => x.TransactionId!.Value).Where(g => g.Sum(x => x.Amount) < 0)
                 .Select(g => new PersonalMoneyCharge(g.Key, -g.Sum(x => x.Amount), g.Count())).ToArray());
