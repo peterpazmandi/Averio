@@ -96,3 +96,35 @@ causes and is not necessarily a migration problem.
 ## Manual QA
 
 Set a rule for the owner and a partner; verify active Owner-only controls and the partner's read-only upcoming grant. Check a rule starting tomorrow, then a due occurrence and a catch-up after the worker is temporarily stopped. Change the amount after the first grant: previous history stays unchanged, future grants use the new amount. Pause/resume and stop; confirm no additional grants while paused/stopped. Repeat POST with same OperationId; verify one rule. Confirm accounts, transfers, transactions and categorized statistics are unchanged.
+
+## Upgrade compatibility for already-applied PR3 migrations
+
+The original `20261020154408_AddRecurringPersonalMoney` migration was revised
+during code review to introduce immutable `creation_amount` and
+`creation_ends_on` values for safe creation retries. Databases that had
+already recorded that migration ID **do not replay it**. Such installations
+may have the table but return PostgreSQL `42703` (undefined column) when
+loading schedules.
+
+A subsequent, forward-only migration,
+`20261021150000_RepairRecurringAllowanceCreationColumns`, conditionally adds the missing fields and
+backfills existing rules **only when the fields were missing**. It does not
+delete rules, receipts, or previously stored creation fingerprints. Fresh
+installations already containing the two columns are left unchanged.
+The repair migration's `Down` is deliberately non-destructive.
+
+**Recovery limitation:** For legacy rules changed before the original
+fingerprint columns existed, the original POST payload cannot always be
+reconstructed. Backfill uses the last stored amount/end date for those
+records; do not assume old edited requests can replay perfectly. A rule
+created after the repair retains its original payload normally.
+
+Apply database upgrades through the controlled migration process before
+deploying the updated API/worker. Do **not** delete entries from the EF
+migration-history table in a real environment. The persistence regression
+suite deliberately simulates historical drift only in a disposable test
+database, and verifies that grant receipts and schedules survive.
+
+In addition to missing-table SQLSTATE `42P01`, the schedule endpoints now
+treat known missing creation fields (SQLSTATE `42703`) as schema-not-ready
+rather than generic HTTP 500. Unexpected column errors are not reclassified.

@@ -34,7 +34,7 @@ public sealed class GlobalExceptionHandler(
         }
 
         var response =
-            MapException(exception);
+            MapException(exception, httpContext.Request.Path.Value ?? string.Empty);
 
         if (exception is AverioException)
         {
@@ -189,7 +189,7 @@ public sealed class GlobalExceptionHandler(
     }
 
     private ExceptionResponse MapException(
-        Exception exception)
+        Exception exception, string requestPath)
     {
         return exception switch
         {
@@ -273,9 +273,7 @@ public sealed class GlobalExceptionHandler(
             // A development or deployment database may not have had the new
             // Personal Money recurring migration applied yet. Report that specific
             // condition without exposing SQL statements or connection details.
-            PostgresException pg when pg.SqlState == PostgresErrorCodes.UndefinedTable
-                && (string.Equals(pg.TableName, "recurring_allowance_rules", StringComparison.Ordinal)
-                    || pg.MessageText.Contains("\"recurring_allowance_rules\"", StringComparison.Ordinal)) =>
+            PostgresException pg when IsRecurringAllowanceSchemaFailure(pg, requestPath) =>
                 new ExceptionResponse(
                     StatusCodes.Status503ServiceUnavailable,
                     "Title_RecurringAllowanceUnavailable",
@@ -291,6 +289,28 @@ public sealed class GlobalExceptionHandler(
                         "Error_Unexpected"
                     ])
         };
+    }
+
+    private static bool IsRecurringAllowanceSchemaFailure(PostgresException error, string requestPath)
+    {
+        // Schema-repair messages are limited to the scheduling endpoints.
+        // Other SQL errors must retain their original diagnostics and generic 500.
+        if (!requestPath.Contains("/personal-money/schedules", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (error.SqlState == PostgresErrorCodes.UndefinedTable)
+            return string.Equals(error.TableName, "recurring_allowance_rules", StringComparison.Ordinal)
+                || error.MessageText.Contains("\"recurring_allowance_rules\"", StringComparison.Ordinal);
+
+        if (error.SqlState != PostgresErrorCodes.UndefinedColumn)
+            return false;
+
+        // PostgreSQL 42703 commonly reports the missing column only in MessageText,
+        // not ColumnName (for example "column r.creation_amount does not exist").
+        return string.Equals(error.ColumnName, "creation_amount", StringComparison.Ordinal)
+            || string.Equals(error.ColumnName, "creation_ends_on", StringComparison.Ordinal)
+            || error.MessageText.Contains("r.creation_amount", StringComparison.Ordinal)
+            || error.MessageText.Contains("r.creation_ends_on", StringComparison.Ordinal);
     }
 
     private string Localize(AverioException exception)

@@ -1,3 +1,4 @@
+using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.PersonalMoney;
 using Averio.Infrastructure.Persistence;
@@ -16,6 +17,7 @@ internal static class RecurringAllowanceVerification
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         var starts = today.AddDays(1);
         Guid id;
+        Guid secondId;
         var operation = Guid.NewGuid();
         decimal beforeBalance;
         int transactionsBefore, transfersBefore;
@@ -31,13 +33,37 @@ internal static class RecurringAllowanceVerification
                 220m, starts, null, operation);
             id = await schedules.CreateAsync(fixture.HouseholdId, input, Ct);
             // Two rules on the same day exercise the UUID tie-breaker of keyset pagination.
-            var secondId = await schedules.CreateAsync(fixture.HouseholdId,
+            secondId = await schedules.CreateAsync(fixture.HouseholdId,
                 input with { OperationId = Guid.NewGuid(), Amount = 110m }, Ct);
             if (secondId == id) throw new Exception("Different schedule intents cannot share an ID.");
             var retried = await schedules.CreateAsync(fixture.HouseholdId, input, Ct);
             if (retried != id) throw new Exception("Retry created duplicate schedule.");
             await ThrowsAsync<ConflictException>(() => schedules.CreateAsync(fixture.HouseholdId,
                 input with { Amount = 221m }, Ct));
+        }
+
+        // Exercise the EF update-token failure, not just the application-level
+        // ExpectedVersion pre-check. Different DbContexts must report an
+        // allowance-specific conflict instead of an unrelated account conflict.
+        await using (var staleScope = provider.CreateAsyncScope())
+        await using (var freshScope = provider.CreateAsyncScope())
+        {
+            var staleDb = staleScope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var freshDb = freshScope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var stale = await staleDb.RecurringAllowanceRules.SingleAsync(x => x.Id == secondId, Ct);
+            var fresh = await freshDb.RecurringAllowanceRules.SingleAsync(x => x.Id == secondId, Ct);
+            fresh.Update(fresh.Amount, fresh.EndsOn, false, clock.GetUtcNow());
+            await freshDb.SaveChangesAsync(Ct);
+            stale.Update(stale.Amount, stale.EndsOn, false, clock.GetUtcNow());
+            try
+            {
+                await staleScope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+                throw new Exception("Expected an EF allowance concurrency conflict.");
+            }
+            catch (ConflictException error) when (error.Code == "recurring_allowance_changed")
+            {
+                // Correct error category.
+            }
         }
 
         user.UserId = fixture.MemberUserId;

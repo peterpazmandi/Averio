@@ -213,6 +213,10 @@ static async Task RunVerificationAsync(string connectionString)
     await DepartureVerification.RunAsync(provider, fixture, clock);
     await InvitationReviewVerification.RunAsync(provider, clock);
     await RecurringAllowanceVerification.RunAsync(provider, currentUser, fixture, clock);
+
+    await CheckAsync(
+        "previously applied allowance migration repairs live records",
+        () => VerifyLegacyRecurringAllowanceUpgradeAsync(provider, currentUser, fixture));
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -258,6 +262,54 @@ static async Task VerifyMigrationsAndSeedsAsync(IServiceProvider provider)
             category.IsBase
             && category.SystemKey != null
             && category.Name == null));
+}
+
+// Reproduce a deployed database that recorded PR3's earlier migration ID
+// without its later-added immutable create-request columns. This runs only
+// against the disposable PostgreSQL database created by this test executable.
+static async Task VerifyLegacyRecurringAllowanceUpgradeAsync(
+    IServiceProvider provider, MutableCurrentUser user, Fixture fixture)
+{
+    user.UserId = fixture.OwnerUserId;
+    await using var scope = provider.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+    var rulesBefore = await context.RecurringAllowanceRules.CountAsync();
+    var receiptsBefore = await context.PersonalMoneyEntries.CountAsync(x =>
+        x.RecurringAllowanceRuleId != null);
+    var original = await context.RecurringAllowanceRules.AsNoTracking()
+        .SingleAsync(x => x.HouseholdId == fixture.HouseholdId && x.Amount == 110m);
+
+    // The original PR3 migration remains in __EFMigrationsHistory. Removing only
+    // the repair migration's history row reproduces the missing-column upgrade.
+    await context.Database.ExecuteSqlRawAsync("""
+        ALTER TABLE recurring_allowance_rules DROP COLUMN creation_amount;
+        ALTER TABLE recurring_allowance_rules DROP COLUMN creation_ends_on;
+        DELETE FROM "__EFMigrationsHistory"
+        WHERE "MigrationId" = '20261021150000_RepairRecurringAllowanceCreationColumns';
+        """);
+
+    await context.Database.MigrateAsync();
+
+    var recovered = await context.RecurringAllowanceRules.AsNoTracking()
+        .SingleAsync(x => x.Id == original.Id);
+    if (recovered.CreationAmount != original.Amount || recovered.CreationEndsOn != original.EndsOn)
+        throw new Exception("Repair did not backfill immutable request identity on legacy records.");
+    if (await context.RecurringAllowanceRules.CountAsync() != rulesBefore
+        || await context.PersonalMoneyEntries.CountAsync(x => x.RecurringAllowanceRuleId != null) != receiptsBefore)
+        throw new Exception("Repair must retain schedules and existing grant receipts.");
+
+    // The unchanged 110 EUR rule has a reconstructable original request.
+    // Retrying it after the migration must still return the original rule ID.
+    var handler = scope.ServiceProvider.GetRequiredService<RecurringAllowanceHandler>();
+    var replay = await handler.CreateAsync(fixture.HouseholdId,
+        new RecurringAllowanceInput(original.RecipientMemberId, original.Currency.Value,
+            original.Amount, original.StartsOn, original.EndsOn,
+            original.CreationOperationId), CancellationToken.None);
+    if (replay != original.Id)
+        throw new Exception("Post-repair operation replay created a second schedule.");
+
+    if ((await context.Database.GetPendingMigrationsAsync()).Any())
+        throw new Exception("Repair migration is still pending after the legacy upgrade.");
 }
 
 static async Task<Fixture> SeedFixtureAsync(
