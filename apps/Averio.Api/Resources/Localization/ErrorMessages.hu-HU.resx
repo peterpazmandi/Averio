@@ -345,6 +345,8 @@
   <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Válassz könyvelt visszatérítést ugyanazon a számlán és pénznemben, mint a kerethez kapcsolt vásárlás. A visszatérítés nem haladhatja meg az elszámolt összeget.</value></data>
   <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Csak a még fel nem használt, pozitív személyes pénzkeretből mondhatsz le.</value></data>
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Érvénytelen havi személyespénz-ütemezés. Ellenőrizd az összeget, a dátumokat és a háztartástagot.</value></data>
+  <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>A havi juttatások átmenetileg nem érhetők el</value></data>
+  <data name="Error_RecurringAllowanceDatabaseUpdateRequired" xml:space="preserve"><value>Az ütemezett juttatásokhoz adatbázis-frissítés szükséges. Kérd az üzemeltetőt a legújabb EF-migrációk alkalmazására, majd próbáld újra.</value></data>
 </root>
 
 
