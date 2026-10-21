@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../apps/Averio.Api/Averio.Api.csproj" />
     <ProjectReference Include="../../src/Averio.Application/Averio.Application.csproj" />
     <ProjectReference Include="../../src/Averio.Domain/Averio.Domain.csproj" />
     <ProjectReference Include="../../src/Averio.Infrastructure/Averio.Infrastructure.csproj" />

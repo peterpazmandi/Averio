@@ -113,6 +113,21 @@ delete rules, receipts, or previously stored creation fingerprints. Fresh
 installations already containing the two columns are left unchanged.
 The repair migration's `Down` is deliberately non-destructive.
 
+Both published repair IDs (`20261021125815` and `20261021150000`) are retained.
+They use distinct CLR classes so the backend compiles and EF discovers both.
+The later repair is a compatibility pass for databases with the earlier repair
+already recorded. Run `database update` through the latest migration, rather
+than targeting only `AddRecurringPersonalMoney`. No migration-history edits
+or table recreation are needed in an application database.
+
+Regression coverage checks all three migration target models and the current
+snapshot, the fresh migration chain, both legacy upgrade paths, existing
+creation fingerprints (including legitimate NULL end dates), receipt retention,
+and list/create/retry after repair. API checks cover SELECT and EF-wrapped INSERT
+missing-column errors, unrelated-column exclusions, and endpoint boundaries.
+The persistence suite also forces a stale EF concurrency token and expects
+`recurring_allowance_changed`.
+
 **Recovery limitation:** For legacy rules changed before the original
 fingerprint columns existed, the original POST payload cannot always be
 reconstructed. Backfill uses the last stored amount/end date for those

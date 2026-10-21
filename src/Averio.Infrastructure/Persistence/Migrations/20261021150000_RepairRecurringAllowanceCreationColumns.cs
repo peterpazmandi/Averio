@@ -9,7 +9,7 @@ namespace Averio.Infrastructure.Persistence.Migrations;
 /// before the immutable create-request fields were added to that migration.
 /// The original migration now includes these fields for fresh installations.
 /// </summary>
-public partial class RepairRecurringAllowanceCreationColumns : Migration
+public partial class RepairRecurringAllowanceCreationColumnsCompatibility : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

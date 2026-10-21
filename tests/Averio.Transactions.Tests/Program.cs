@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
+    ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
+    ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
     ("recurring calendar anchors", RecurringChecks.Calendar),
     ("recurring lifecycle", RecurringChecks.Lifecycle),
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),

@@ -13,7 +13,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AverioDbContext))]
     [Migration("20261021150000_RepairRecurringAllowanceCreationColumns")]
-    partial class RepairRecurringAllowanceCreationColumns
+    partial class RepairRecurringAllowanceCreationColumnsCompatibility
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

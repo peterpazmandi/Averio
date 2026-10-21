@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Averio.Api.ErrorHandling;
@@ -273,7 +274,9 @@ public sealed class GlobalExceptionHandler(
             // A development or deployment database may not have had the new
             // Personal Money recurring migration applied yet. Report that specific
             // condition without exposing SQL statements or connection details.
-            PostgresException pg when IsRecurringAllowanceSchemaFailure(pg, requestPath) =>
+            Exception error when IsRecurringAllowanceSchemaFailure(
+                error is DbUpdateException { InnerException: PostgresException inner } ? inner : error,
+                requestPath) =>
                 new ExceptionResponse(
                     StatusCodes.Status503ServiceUnavailable,
                     "Title_RecurringAllowanceUnavailable",
@@ -291,26 +294,47 @@ public sealed class GlobalExceptionHandler(
         };
     }
 
-    private static bool IsRecurringAllowanceSchemaFailure(PostgresException error, string requestPath)
+    private static bool IsRecurringAllowanceSchemaFailure(Exception exception, string requestPath)
     {
         // Schema-repair messages are limited to the scheduling endpoints.
         // Other SQL errors must retain their original diagnostics and generic 500.
-        if (!requestPath.Contains("/personal-money/schedules", StringComparison.OrdinalIgnoreCase))
+        var segments = requestPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (exception is not PostgresException error
+            || segments.Length < 6 || segments.Length > 8
+            || !string.Equals(segments[0], "api", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(segments[1], "v1", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(segments[2], "households", StringComparison.OrdinalIgnoreCase)
+            || !Guid.TryParse(segments[3], out _)
+            || !string.Equals(segments[4], "personal-money", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(segments[5], "schedules", StringComparison.OrdinalIgnoreCase)
+            || (segments.Length >= 7 && !Guid.TryParse(segments[6], out _))
+            || (segments.Length == 8 && !string.Equals(segments[7], "history", StringComparison.OrdinalIgnoreCase)))
             return false;
 
         if (error.SqlState == PostgresErrorCodes.UndefinedTable)
             return string.Equals(error.TableName, "recurring_allowance_rules", StringComparison.Ordinal)
-                || error.MessageText.Contains("\"recurring_allowance_rules\"", StringComparison.Ordinal);
+                || (error.TableName is null
+                    && error.MessageText == "relation \"recurring_allowance_rules\" does not exist");
 
         if (error.SqlState != PostgresErrorCodes.UndefinedColumn)
             return false;
 
         // PostgreSQL 42703 commonly reports the missing column only in MessageText,
         // not ColumnName (for example "column r.creation_amount does not exist").
-        return string.Equals(error.ColumnName, "creation_amount", StringComparison.Ordinal)
-            || string.Equals(error.ColumnName, "creation_ends_on", StringComparison.Ordinal)
-            || error.MessageText.Contains("r.creation_amount", StringComparison.Ordinal)
-            || error.MessageText.Contains("r.creation_ends_on", StringComparison.Ordinal);
+        if (error.TableName is not null && error.TableName != "recurring_allowance_rules")
+            return false;
+
+        if (error.TableName == "recurring_allowance_rules"
+            && error.ColumnName is "creation_amount" or "creation_ends_on")
+            return true;
+
+        // Match complete known diagnostics, never prefixes of unrelated column names.
+        // SELECT uses EF's r alias; INSERT names the relation explicitly.
+        return error.MessageText is
+            "column r.creation_amount does not exist"
+            or "column r.creation_ends_on does not exist"
+            or "column \"creation_amount\" of relation \"recurring_allowance_rules\" does not exist"
+            or "column \"creation_ends_on\" of relation \"recurring_allowance_rules\" does not exist";
     }
 
     private string Localize(AverioException exception)
