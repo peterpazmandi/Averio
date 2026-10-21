@@ -38,6 +38,7 @@ try {
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(language => localStorage.setItem('i18nextLng', language), language);
         let role = 'owner', failFirstCreate = true;
+        let migrationNotReady = language === 'en' && mobile;
         let schedule;
         const creationAttempts = [], updates = [];
         let historyRequests = 0;
@@ -68,8 +69,11 @@ try {
                     isPaused: false, isStopped: false, isBlocked: false, version: 'version1' };
                 return json(schedule);
             }
-            if (pathname.endsWith('/personal-money/schedules') && request.method() === 'GET')
+            if (pathname.endsWith('/personal-money/schedules') && request.method() === 'GET') {
+                if (migrationNotReady) return route.fulfill({ status: 503, contentType: 'application/problem+json',
+                    body: JSON.stringify({ code: 'recurring_allowance_database_update_required' }) });
                 return json(schedule ? [schedule] : []);
+            }
             if (pathname.includes('/personal-money/schedules/scheduled-1/history')) {
                 historyRequests++;
                 return json([
@@ -98,8 +102,17 @@ try {
             await page.locator('a[href="#household-personal-money"]').click();
             await page.getByRole('button', { name: copy.tabs.owner, exact: true }).click();
         }
-        const form = page.locator('form').filter({ has: page.getByRole('heading',
-            { name: copy.recurring.create, exact: true }) });
+        // The new compact UI hides the creation form until the owner asks for it.
+        const form = page.getByRole('form', { name: copy.recurring.create, exact: true });
+        assert.equal(await form.count(), 0, 'Schedule form should be collapsed by default.');
+        if (migrationNotReady) {
+            await page.getByText(copy.recurring.schemaUnavailable, { exact: true }).waitFor();
+            assert.equal(await page.getByRole('button', { name: copy.recurring.create, exact: true }).isDisabled(), true);
+            migrationNotReady = false;
+            await page.getByRole('button', { name: copy.recurring.retry, exact: true }).click();
+            await page.getByText(copy.recurring.none, { exact: true }).waitFor();
+        }
+        await page.getByRole('button', { name: copy.recurring.create, exact: true }).click();
         await form.waitFor({ timeout: 8000 }).catch(async () => {
             const visible = (await page.locator('body').innerText()).slice(0, 3000);
             await page.screenshot({ path: path.join(artifactDir, 'failure-' + language + '-' + width + '.png'), fullPage: true });
@@ -117,24 +130,29 @@ try {
         const create = form.getByRole('button', { name: copy.recurring.create, exact: true });
         await Promise.all([page.waitForResponse(response =>
             response.url().endsWith('/personal-money/schedules') && response.status() === 503), create.click()]);
+        await page.getByText(copy.recurring.createError, { exact: true }).waitFor();
         await Promise.all([page.waitForResponse(response =>
             response.url().endsWith('/personal-money/schedules') && response.status() === 200
             && response.request().method() === 'POST'), create.click()]);
         await page.getByText(copy.recurring.created, { exact: true }).waitFor();
+        assert.equal(await form.count(), 0, 'Form should collapse after successful creation.');
         assert.equal(creationAttempts.length, 2);
         assert.deepEqual(creationAttempts[0], creationAttempts[1], 'Create retries must reuse the same operation ID.');
         assert.equal(historyRequests, 0, 'Collapsed grant histories must not trigger API requests.');
         await page.getByText(copy.recurring.history, { exact: true }).click();
         await page.waitForFunction(() => document.body.textContent.includes('2026-10-01'));
         assert.equal(historyRequests, 1, 'Expanding one grant history should request only that schedule.');
+        await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.pause, exact: true }).click();
         await page.getByText(copy.recurring.status.paused, { exact: true }).waitFor();
         assert.equal(updates[0].isPaused, true);
+        await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.resume, exact: true }).click();
         await page.getByText(copy.recurring.status.active, { exact: true }).waitFor();
         assert.equal(updates[1].isPaused, false);
         await page.screenshot({ path: path.join(artifactDir, language + '-' + width + '.png'), fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.stop, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.confirmStop, exact: true }).click();
         await page.getByText(copy.recurring.status.stopped, { exact: true }).waitFor();
