@@ -51,6 +51,48 @@ npm run lint
 
 Use a disposable PostgreSQL database via `AVERIO_TEST_CONNECTION_STRING` for the persistence suite. CI must also validate the generated OpenAPI client and browser flows.
 
+## Troubleshooting: scheduled allowances return HTTP 500 or 503
+
+The PR 3 API **does not run EF migrations when it starts**. Running a newer API
+against an older PR 2 database can fail for both `GET .../personal-money/schedules`
+and `POST .../personal-money/schedules`, because the
+`recurring_allowance_rules` table and the new ledger columns do not yet exist.
+
+If PostgreSQL reports `42P01: relation "recurring_allowance_rules" does not exist`,
+the API now returns RFC 7807 **503** with
+`code: recurring_allowance_database_update_required` rather than a generic
+500. The frontend shows the localized database-readiness message and disables
+creating new schedules until the list endpoint is healthy. This targeted error
+mapping is not a substitute for applying the actual migration.
+
+For a **local development database**, from the repository root in PowerShell:
+
+```powershell
+# Use the exact PostgreSQL connection used by your locally running Averio API.
+# Do not commit or paste a real connection string or password into chat/logs.
+$env:AVERIO_MIGRATION_CONNECTION_STRING = $env:ConnectionStrings__AverioDatabase
+if ([string]::IsNullOrWhiteSpace($env:AVERIO_MIGRATION_CONNECTION_STRING)) {
+    throw 'Set AVERIO_MIGRATION_CONNECTION_STRING to your local API PostgreSQL connection string first.'
+}
+dotnet tool install --global dotnet-ef --version 10.0.11
+dotnet ef migrations list --project src/Averio.Infrastructure --startup-project apps/Averio.Api
+dotnet ef database update --project src/Averio.Infrastructure --startup-project apps/Averio.Api
+```
+
+Check that `20261020154408_AddRecurringPersonalMoney` is in the applied list
+(its exact identifier is shown by `dotnet ef migrations list`). Restart the
+API and worker as necessary, and use the Retry action on the monthly allowances
+card. The initial `GET schedules` should then return HTTP 200 and an array
+(possibly empty); `POST schedules` should subsequently succeed with a
+valid Owner and active recipient.
+
+**Production / shared database:** back up and review pending migrations, then
+apply through the deployment's controlled migration process **before deploying
+the new API/worker**. Do not turn on automatic startup migrations in production.
+If the API continues returning 500 **after verifying the schema**, inspect the
+server logs using the problem response's `traceId`: an HTTP 500 can have other
+causes and is not necessarily a migration problem.
+
 ## Manual QA
 
 Set a rule for the owner and a partner; verify active Owner-only controls and the partner's read-only upcoming grant. Check a rule starting tomorrow, then a due occurrence and a catch-up after the worker is temporarily stopped. Change the amount after the first grant: previous history stays unchanged, future grants use the new amount. Pause/resume and stop; confirm no additional grants while paused/stopped. Repeat POST with same OperationId; verify one rule. Confirm accounts, transfers, transactions and categorized statistics are unchanged.
