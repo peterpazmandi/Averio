@@ -106,7 +106,13 @@ try {
         const form = page.getByRole('form', { name: copy.recurring.create, exact: true });
         assert.equal(await form.count(), 0, 'Schedule form should be collapsed by default.');
         if (migrationNotReady) {
-            await page.getByText(copy.recurring.schemaUnavailable, { exact: true }).waitFor();
+            await page.getByText(copy.recurring.schemaUnavailable, { exact: true })
+                .waitFor({ timeout: 8000 }).catch(async cause => {
+                    const text = (await page.locator('body').innerText()).slice(-4500);
+                    await page.screenshot({ path: path.join(artifactDir, 'schema-failure-' + language + '-' + width + '.png'), fullPage: true });
+                    throw new Error('Missing schema-ready message. Rendered body: ' + text +
+                        '; browser errors: ' + errors.join(' | '), { cause });
+                });
             assert.equal(await page.getByRole('button', { name: copy.recurring.create, exact: true }).isDisabled(), true);
             migrationNotReady = false;
             await page.getByRole('button', { name: copy.recurring.retry, exact: true }).click();
