@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using Npgsql;
 
 namespace Averio.Api.ErrorHandling;
 
@@ -268,6 +269,18 @@ public sealed class GlobalExceptionHandler(
                     "Title_Forbidden",
                     error.Code,
                     Localize(error)),
+
+            // A development or deployment database may not have had the new
+            // Personal Money recurring migration applied yet. Report that specific
+            // condition without exposing SQL statements or connection details.
+            PostgresException pg when pg.SqlState == PostgresErrorCodes.UndefinedTable
+                && (string.Equals(pg.TableName, "recurring_allowance_rules", StringComparison.Ordinal)
+                    || pg.MessageText.Contains("\"recurring_allowance_rules\"", StringComparison.Ordinal)) =>
+                new ExceptionResponse(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "Title_RecurringAllowanceUnavailable",
+                    "recurring_allowance_database_update_required",
+                    localizer["Error_RecurringAllowanceDatabaseUpdateRequired"]),
 
             _ =>
                 new ExceptionResponse(
