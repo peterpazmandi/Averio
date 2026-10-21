@@ -39,7 +39,7 @@ function useSchedules(userId: string, householdId: string) {
                 return await personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet(
                     { householdId }, { signal });
             } catch (failure) {
-                throw new Error(await recurringErrorCode(failure) ?? 'recurring_allowance_load_failed');
+                throw new Error(await recurringErrorCode(failure) ?? 'recurring_allowance_load_failed', { cause: failure });
             }
         },
     });
