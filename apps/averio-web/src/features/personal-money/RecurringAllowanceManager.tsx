@@ -248,10 +248,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
                         onChange={e => { setEndsOn(e.target.value); setOperationId(crypto.randomUUID()); }} />
                 </AverioField>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="min-w-0 flex-1 text-xs text-slate-600 dark:text-slate-300">
-                    {t('personalMoney.recurring.noBankTransfer')}
-                </p>
+            <div className="flex justify-end">
                 <AverioButton type="submit" variant="primary" disabled={create.isPending || !valid}>
                     {t('personalMoney.recurring.create')}
                 </AverioButton>
