@@ -9,6 +9,19 @@ import { personalMoneyApi, personalMoneyKeys, recurringAllowanceKeys } from './p
 
 const amountPattern = /^[0-9]+([.,][0-9]{1,4})?$/;
 const normalized = (v: string) => v.trim().replace(',', '.');
+
+// Preserve a machine-readable API reason without leaking server details to users.
+// Only a dedicated migration error is shown as schema-related; all other failures
+// retain a generic actionable message, rather than pretending we know their cause.
+async function recurringErrorCode(failure: unknown): Promise<string | null> {
+    const response = (failure as { response?: Response } | null)?.response;
+    if (!response) return null;
+    try {
+        const problem = await response.clone().json() as { code?: unknown };
+        return typeof problem.code === 'string' ? problem.code : null;
+    } catch { return null; }
+}
+const migrationNotReady = 'recurring_allowance_database_update_required';
 // The API posts due occurrences on UTC calendar dates, not the browser's time zone.
 const utcToday = () => new Date().toISOString().slice(0, 10);
 const nextMonth = () => {
@@ -20,8 +33,15 @@ const nextMonth = () => {
 function useSchedules(userId: string, householdId: string) {
     return useQuery({
         queryKey: recurringAllowanceKeys.list(userId, householdId),
-        queryFn: ({ signal }) => personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet(
-            { householdId }, { signal }),
+        retry: false,
+        queryFn: async ({ signal }) => {
+            try {
+                return await personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet(
+                    { householdId }, { signal });
+            } catch (failure) {
+                throw new Error(await recurringErrorCode(failure) ?? 'recurring_allowance_load_failed');
+            }
+        },
     });
 }
 
@@ -36,6 +56,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
     const [confirmStop, setConfirmStop] = useState(false);
     const [error, setError] = useState('');
     const [historyExpanded, setHistoryExpanded] = useState(false);
+    const [manageOpen, setManageOpen] = useState(false);
     const history = useQuery({
         queryKey: recurringAllowanceKeys.history(userId, householdId, schedule.id),
         enabled: historyExpanded,
@@ -55,7 +76,7 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                 },
             }),
         onSuccess: async () => {
-            setError(''); setConfirmStop(false);
+            setError(''); setConfirmStop(false); setManageOpen(false);
             await client.invalidateQueries({ queryKey: recurringAllowanceKeys.history(userId, householdId, schedule.id) });
             await onChanged();
         },
@@ -69,48 +90,59 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
     const valid = amountPattern.test(amount) && Number(normalized(amount)) > 0
         && (!endsOn || endsOn >= schedule.startsOn)
         && (!endsOn || !schedule.nextDueOn || endsOn >= schedule.nextDueOn);
-    return <div className="min-w-0 space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+    const status = schedule.isStopped ? 'stopped' : schedule.isBlocked ? 'blocked'
+        : schedule.isPaused ? 'paused' : schedule.nextDueOn ? 'active' : 'completed';
+    const manageable = !schedule.isStopped && schedule.nextDueOn !== null;
+    return <div className="min-w-0 space-y-2 py-3 first:pt-0 last:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-                <p className="break-words font-semibold">{money} · {t('personalMoney.recurring.monthly')}</p>
+            <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-semibold">{money} <span className="font-normal text-slate-600 dark:text-slate-300">· {t('personalMoney.recurring.monthly')}</span></p>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
                     {t('personalMoney.recurring.nextDue')}: {schedule.nextDueOn ?? '—'}
                 </p>
             </div>
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                {t('personalMoney.recurring.status.' + (schedule.isStopped ? 'stopped' :
-                    schedule.isBlocked ? 'blocked' : schedule.isPaused ? 'paused' :
-                    schedule.nextDueOn ? 'active' : 'completed'))}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                    {t('personalMoney.recurring.status.' + status)}
+                </span>
+                {manageable && <AverioButton type="button" aria-expanded={manageOpen}
+                    aria-controls={`recurring-edit-${schedule.id}`} onClick={() => setManageOpen(!manageOpen)}>
+                    {t('personalMoney.recurring.' + (manageOpen ? 'hide' : 'manage'))}
+                </AverioButton>}
+            </div>
         </div>
-        {!schedule.isStopped && schedule.nextDueOn !== null && <div className="grid gap-3 sm:grid-cols-2">
-            <AverioField>{t('personalMoney.amount')}
-                <AverioInput inputMode="decimal" disabled={mutate.isPending} value={amount}
-                    onChange={e => setAmount(e.target.value)} />
-            </AverioField>
-            <AverioField>{t('personalMoney.recurring.end')}
-                <AverioInput type="date" disabled={mutate.isPending} value={endsOn}
-                    onChange={e => setEndsOn(e.target.value)} />
-            </AverioField>
-        </div>}
-        {!schedule.isStopped && schedule.nextDueOn !== null && <div className="flex flex-wrap gap-2">
-            <AverioButton type="button" disabled={!valid || mutate.isPending ||
-                (normalized(amount) === schedule.amount && endsOn === (schedule.endsOn ?? ''))}
-                onClick={() => mutate.mutate('save')}>{t('personalMoney.recurring.save')}</AverioButton>
-            <AverioButton type="button" disabled={mutate.isPending}
-                onClick={() => mutate.mutate('toggle')}>
-                {t('personalMoney.recurring.' + (schedule.isPaused ? 'resume' : 'pause'))}
-            </AverioButton>
-            {!confirmStop ? <AverioButton type="button" disabled={mutate.isPending}
-                onClick={() => setConfirmStop(true)}>{t('personalMoney.recurring.stop')}</AverioButton>
-                : <AverioButton type="button" disabled={mutate.isPending}
-                    onClick={() => mutate.mutate('stop')}>{t('personalMoney.recurring.confirmStop')}</AverioButton>}
-            {confirmStop && <AverioButton type="button"
-                onClick={() => setConfirmStop(false)}>{t('common.actions.cancel')}</AverioButton>}
+        {manageable && manageOpen && <div id={`recurring-edit-${schedule.id}`} className="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+            <div className="grid gap-3 sm:grid-cols-2">
+                <AverioField>{t('personalMoney.amount')}
+                    <AverioInput inputMode="decimal" disabled={mutate.isPending} value={amount}
+                        onChange={e => setAmount(e.target.value)} />
+                </AverioField>
+                <AverioField>{t('personalMoney.recurring.end')}
+                    <AverioInput type="date" disabled={mutate.isPending} value={endsOn}
+                        onChange={e => setEndsOn(e.target.value)} />
+                </AverioField>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <AverioButton type="button" disabled={!valid || mutate.isPending ||
+                    (normalized(amount) === schedule.amount && endsOn === (schedule.endsOn ?? ''))}
+                    onClick={() => mutate.mutate('save')}>{t('personalMoney.recurring.save')}</AverioButton>
+                <AverioButton type="button" disabled={mutate.isPending}
+                    onClick={() => mutate.mutate('toggle')}>
+                    {t('personalMoney.recurring.' + (schedule.isPaused ? 'resume' : 'pause'))}
+                </AverioButton>
+                {!confirmStop ? <AverioButton type="button" disabled={mutate.isPending}
+                    onClick={() => setConfirmStop(true)}>{t('personalMoney.recurring.stop')}</AverioButton>
+                    : <AverioButton type="button" disabled={mutate.isPending} variant="danger"
+                        onClick={() => mutate.mutate('stop')}>{t('personalMoney.recurring.confirmStop')}</AverioButton>}
+                {confirmStop && <AverioButton type="button" onClick={() => setConfirmStop(false)}>
+                    {t('common.actions.cancel')}</AverioButton>}
+            </div>
         </div>}
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
         <details className="text-sm" onToggle={event => setHistoryExpanded(event.currentTarget.open)}>
-            <summary className="cursor-pointer font-semibold">{t('personalMoney.recurring.history')}</summary>
+            <summary className="w-fit cursor-pointer py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                {t('personalMoney.recurring.history')}
+            </summary>
             {history.isLoading && <p role="status">{t('common.status.loading')}</p>}
             {history.isError && <p role="alert">{t('personalMoney.recurring.historyError')}</p>}
             {history.data && (history.data.length === 0 ? <p className="mt-2 text-slate-600 dark:text-slate-300">
