@@ -1,0 +1,34 @@
+name: Temporary Recurring UI Debug
+on:
+  push:
+    branches: [feat/personal-money-recurring-allowances]
+    paths:
+      - .github/workflows/temporary-recurring-ui-debug.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/personal-money-recurring-allowances
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+      - run: npm ci
+        working-directory: apps/averio-web
+      - name: Verify recurring UI only
+        working-directory: apps/averio-web
+        run: node tests/recurring-allowance.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recurring-ui-debug
+          path: test-results/recurring-allowance
+          if-no-files-found: ignore
+          retention-days: 2
