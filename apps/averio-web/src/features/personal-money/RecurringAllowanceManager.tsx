@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HouseholdResponse, RecurringAllowanceResponse } from '../../shared/api/generated';
+import { ApiError } from '../../shared/api/ApiError';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
@@ -14,6 +15,9 @@ const normalized = (v: string) => v.trim().replace(',', '.');
 // Only a dedicated migration error is shown as schema-related; all other failures
 // retain a generic actionable message, rather than pretending we know their cause.
 async function recurringErrorCode(failure: unknown): Promise<string | null> {
+    // apiFetchResponse converts RFC 7807 payloads into the Averio-specific
+    // ApiError (including its code), before the generated client sees them.
+    if (failure instanceof ApiError) return failure.code ?? null;
     const response = (failure as { response?: Response } | null)?.response;
     if (!response) return null;
     try {
