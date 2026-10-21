@@ -345,6 +345,8 @@
   <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Wähle eine gebuchte Erstattung auf demselben Konto und in derselben Währung wie der zugeordnete Kauf. Erstattungen dürfen die Budgetbelastung nicht übersteigen.</value></data>
   <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Du kannst nur ungenutztes, positives persönliches Budget zurückgeben.</value></data>
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Ungültiger monatlicher Personal-Money-Zeitplan. Prüfe Betrag, Zeitraum und Haushaltsmitglied.</value></data>
+  <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>Monatliche Zuteilungen derzeit nicht verfügbar</value></data>
+  <data name="Error_RecurringAllowanceDatabaseUpdateRequired" xml:space="preserve"><value>Für geplante Zuteilungen muss die Datenbank aktualisiert werden. Bitte die aktuellen EF-Migrationen anwenden lassen und erneut versuchen.</value></data>
 </root>
 
 
