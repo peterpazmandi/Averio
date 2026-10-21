@@ -171,6 +171,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
     const [operationId, setOperationId] = useState(() => crypto.randomUUID());
     const [feedback, setFeedback] = useState('');
     const [error, setError] = useState('');
+    const [showCreate, setShowCreate] = useState(false);
     const refresh = async () => {
         await client.invalidateQueries({ queryKey: recurringAllowanceKeys.list(userId, householdId) });
         await client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) });
@@ -184,25 +185,46 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
         }),
         onSuccess: async () => {
             await refresh(); setAmount(''); setOperationId(crypto.randomUUID());
-            setError(''); setFeedback(t('personalMoney.recurring.created'));
+            setError(''); setFeedback(t('personalMoney.recurring.created')); setShowCreate(false);
         },
-        onError: (failure: Error) => { setError(failure.message); setFeedback(''); },
+        onError: async (failure: Error) => {
+            const code = await recurringErrorCode(failure);
+            setError(t('personalMoney.recurring.' + (code === migrationNotReady ? 'schemaUnavailable' : 'createError')));
+            setFeedback('');
+        },
     });
     const valid = !!recipient && amountPattern.test(amount) && Number(normalized(amount)) > 0
         && startsOn >= utcToday() && (!endsOn || endsOn >= startsOn);
     const names = new Map(household.members.map(x => [x.id, x.displayName || t('householdSettings.unnamedMember')]));
     if (household.role !== 'owner') return null;
-    return <AverioCard className="space-y-4 p-5 sm:p-6">
-        <header className="space-y-1">
-            <h4 className="text-xl font-semibold">{t('personalMoney.recurring.title')}</h4>
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.recurring.description')}</p>
+    return <AverioCard className="space-y-3 !p-4 sm:!p-5">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
+                <h4 className="text-base font-semibold">{t('personalMoney.recurring.title')}</h4>
+                <p className="max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    {t('personalMoney.recurring.description')}
+                </p>
+            </div>
+            <AverioButton type="button" variant={showCreate ? 'secondary' : 'primary'}
+                disabled={schedules.isError || schedules.isLoading} aria-expanded={showCreate}
+                aria-controls="recurring-allowance-form" onClick={() => setShowCreate(!showCreate)}>
+                {t('personalMoney.recurring.' + (showCreate ? 'cancelCreate' : 'create'))}
+            </AverioButton>
         </header>
         {feedback && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{feedback}</p>}
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        <form className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
+        {schedules.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+            <p className="min-w-0 flex-1">{t('personalMoney.recurring.' +
+                (schedules.error?.message === migrationNotReady ? 'schemaUnavailable' : 'loadError'))}</p>
+            <AverioButton type="button" disabled={schedules.isFetching}
+                onClick={() => { void schedules.refetch(); }}>
+                {t('personalMoney.recurring.retry')}
+            </AverioButton>
+        </div>}
+        {showCreate && !schedules.isError && <form id="recurring-allowance-form" className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-700"
+            aria-label={t('personalMoney.recurring.create')}
             onSubmit={e => { e.preventDefault(); if (valid && !create.isPending) create.mutate(); }}>
-            <h5 className="font-semibold">{t('personalMoney.recurring.create')}</h5>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <AverioField>{t('personalMoney.recipient')}
                     <AverioSelect value={recipient} required onChange={e => { setRecipient(e.target.value); setOperationId(crypto.randomUUID()); }}>
                         {household.members.map(m => <option key={m.id} value={m.id}>{names.get(m.id)}</option>)}
@@ -226,20 +248,33 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
                         onChange={e => { setEndsOn(e.target.value); setOperationId(crypto.randomUUID()); }} />
                 </AverioField>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.recurring.noBankTransfer')}</p>
-            <div><AverioButton type="submit" variant="primary" disabled={create.isPending || !valid}>
-                {t('personalMoney.recurring.create')}</AverioButton></div>
-        </form>
-        <div className="space-y-3">
-            <h5 className="font-semibold">{t('personalMoney.recurring.existing')}</h5>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="min-w-0 flex-1 text-xs text-slate-600 dark:text-slate-300">
+                    {t('personalMoney.recurring.noBankTransfer')}
+                </p>
+                <AverioButton type="submit" variant="primary" disabled={create.isPending || !valid}>
+                    {t('personalMoney.recurring.create')}
+                </AverioButton>
+            </div>
+        </form>}
+        <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <h5 className="text-sm font-semibold">{t('personalMoney.recurring.existing')}
+                {schedules.data && <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    ({schedules.data.length})
+                </span>}
+            </h5>
             {schedules.isLoading && <p role="status">{t('common.status.loading')}</p>}
-            {schedules.isError && <p role="alert">{t('personalMoney.recurring.loadError')}</p>}
             {schedules.data && (schedules.data.length === 0
-                ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.recurring.none')}</p>
-                : schedules.data.map(item => <div key={item.id} className="space-y-2">
-                    <p className="text-sm font-semibold">{names.get(item.recipientMemberId) ?? t('householdSettings.unnamedMember')}</p>
-                    <ScheduleRow key={item.version} schedule={item} householdId={householdId} userId={userId} onChanged={refresh} />
-                </div>))}
+                ? <p className="py-2 text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.recurring.none')}</p>
+                : <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                    {schedules.data.map(item => <div key={item.id} className="min-w-0">
+                        <p className="pt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            {names.get(item.recipientMemberId) ?? t('householdSettings.unnamedMember')}
+                        </p>
+                        <ScheduleRow key={item.version} schedule={item} householdId={householdId}
+                            userId={userId} onChanged={refresh} />
+                    </div>)}
+                </div>)}
         </div>
     </AverioCard>;
 }
