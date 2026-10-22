@@ -1,4 +1,11 @@
 export const transactionManagementEN = {
+    includeArchived: "Include archived transactions",
+    archive: "Archive transaction",
+    restore: "Restore transaction",
+    archiveConfirm: "Archive this shared transaction? It remains in all financial calculations and is only hidden from the normal overview.",
+    restoreConfirm: "Restore this transaction to the normal overview?",
+    archivedNotice: "Transaction archived. No balances or allowances changed.",
+    restoredNotice: "Transaction restored.",
     title: 'Transactions',
     description: 'Follow the household money flow chronologically. Income stays on the left, expenses on the right, and private details remain inside their visibility boundary.',
     add: 'Add transaction',
@@ -96,6 +103,13 @@ export const transactionManagementEN = {
 };
 
 export const transactionManagementDE = {
+    includeArchived: "Archivierte Buchungen anzeigen",
+    archive: "Buchung archivieren",
+    restore: "Buchung wiederherstellen",
+    archiveConfirm: "Diese Buchung archivieren? Alle Finanzwerte bleiben unverändert.",
+    restoreConfirm: "Diese Buchung wiederherstellen?",
+    archivedNotice: "Buchung archiviert. Salden und Budgets bleiben unverändert.",
+    restoredNotice: "Buchung wiederhergestellt.",
     title: 'Transaktionen',
     description: 'Verfolge den Geldfluss des Haushalts chronologisch. Einnahmen stehen links, Ausgaben rechts und private Details bleiben innerhalb ihrer Sichtbarkeitsgrenze.',
     add: 'Transaktion hinzufügen',
@@ -193,6 +207,13 @@ export const transactionManagementDE = {
 };
 
 export const transactionManagementHU = {
+    includeArchived: "Archivált tranzakciók megjelenítése",
+    archive: "Tranzakció archiválása",
+    restore: "Tranzakció visszaállítása",
+    archiveConfirm: "Archiválod ezt a tranzakciót? Az elszámolás és a keretek nem változnak.",
+    restoreConfirm: "Visszaállítod ezt a tranzakciót?",
+    archivedNotice: "A tranzakció archiválva. Az egyenleg és a keret nem változott.",
+    restoredNotice: "A tranzakció visszaállítva.",
     title: 'Tranzakciók',
     description: 'Kövesd időrendben a háztartás pénzmozgásait. A bevételek balra, a kiadások jobbra kerülnek, a privát részletek pedig a saját láthatósági határukon belül maradnak.',
     add: 'Tranzakció hozzáadása',
