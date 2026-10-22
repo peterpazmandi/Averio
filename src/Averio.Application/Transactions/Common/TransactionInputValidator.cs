@@ -6,7 +6,7 @@ namespace Averio.Application.Transactions.Common;
 public sealed record TransactionItemInput(
     string Description,
     Guid CategoryId,
-    decimal Amount, Guid? ExistingItemId = null);
+    decimal Amount, Guid? ExistingItemId = null, decimal? PersonalMoneyAmount = null);
 
 public sealed record TransactionInput(
     Guid AccountId,
@@ -64,6 +64,11 @@ public sealed class TransactionInputValidator : AbstractValidator<TransactionInp
                 item.RuleFor(x => x.CategoryId)
                     .NotEmpty()
                     .WithErrorCode("Validation_TransactionCategoryRequired");
+
+                item.RuleFor(x => x.PersonalMoneyAmount)
+                    .Must((item, amount) => amount is null || amount >= 0m && amount <= item.Amount
+                        && decimal.Round(amount.Value, 4) == amount.Value)
+                    .WithErrorCode("Validation_TransactionAmountInvalid");
 
                 item.RuleFor(x => x.Amount)
                     .GreaterThan(0)
