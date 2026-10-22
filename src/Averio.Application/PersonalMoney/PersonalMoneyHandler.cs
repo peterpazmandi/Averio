@@ -494,7 +494,8 @@ public sealed class PersonalMoneyHandler(
     // Removed items are reversed; reductions that would confiscate another member's allowance
     // are rejected with the same generic stale-transaction conflict as other concurrent edits.
     internal async Task ReconcileItemSourceChangesAsync(Guid householdId, Transaction transaction,
-        IReadOnlyList<TransactionItemDraft> proposed, Guid targetAccountId,
+        IReadOnlyList<TransactionItemDraft> proposed, IReadOnlyList<TransactionItemInput> inputs,
+        Guid targetAccountId,
         TransactionKind targetKind, TransactionVisibility targetVisibility,
         DateOnly targetDate, CancellationToken ct)
     {
@@ -510,6 +511,10 @@ public sealed class PersonalMoneyHandler(
 
         var retained = proposed.Where(x => x.ExistingItemId is not null)
             .ToDictionary(x => x.ExistingItemId!.Value);
+        var newInputs = inputs.Where(x => x.ExistingItemId is not null)
+            .ToDictionary(x => x.ExistingItemId!.Value);
+        var actor = await MemberAsync(householdId, ct);
+        var ownWallet = await repository.GetWalletAsync(householdId, actor.Id, ct);
         foreach (var item in transaction.Items)
         {
             var linked = active.Where(x => x.Key.TransactionItemId == item.Id).ToArray();
@@ -521,8 +526,16 @@ public sealed class PersonalMoneyHandler(
                         entry.Key.Kind, -entry.Net, entry.Key.OccurredOn, clock.GetUtcNow(),
                         transactionId: transaction.Id, transactionItemId: item.Id));
             }
-            else if (-linked.Sum(x => x.Net) > proposedItem.Amount)
-                throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+            else
+            {
+                var own = -linked.Where(x => ownWallet is not null && x.Key.WalletId == ownWallet.Id)
+                    .Sum(x => x.Net);
+                var other = -linked.Where(x => ownWallet is null || x.Key.WalletId != ownWallet.Id)
+                    .Sum(x => x.Net);
+                var requested = newInputs[item.Id].PersonalMoneyAmount ?? own;
+                if (other + requested > proposedItem.Amount)
+                    throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+            }
         }
         // Historical whole-transaction charges are retained only if the monetary source did not change.
         var legacy = active.Where(x => x.Key.TransactionItemId is null).ToArray();
