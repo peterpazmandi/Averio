@@ -67,6 +67,7 @@ export interface TransactionFilters {
     accountId?: string;
     kind?: TransactionKind;
     search?: string;
+    includeArchived?: boolean;
     pageSize?: number;
     cursorDate?: string;
     cursorCreatedAt?: string;
@@ -114,6 +115,16 @@ export const updateTransaction = (
     householdId,
     transactionId,
     updateTransactionRequest: request,
+});
+
+export const archiveTransaction = (
+    householdId: string,
+    transactionId: string,
+    archived: boolean,
+    expectedUpdatedAt: string,
+) => transactions.apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut({
+    householdId, transactionId,
+    changeTransactionArchiveRequest: { archived, expectedUpdatedAt },
 });
 
 export const voidTransaction = (
