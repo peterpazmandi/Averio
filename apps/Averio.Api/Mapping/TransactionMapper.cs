@@ -119,7 +119,8 @@ internal static class TransactionMapper
         => items.Select(item => new TransactionItemInput(
             item.Description,
             item.CategoryId,
-            DecimalAmountMapper.ParseTransactionAmount(item.Amount), item.ExistingItemId))
+            DecimalAmountMapper.ParseTransactionAmount(item.Amount), item.ExistingItemId,
+            item.PersonalMoneyAmount is null ? null : DecimalAmountMapper.ParseTransactionAmount(item.PersonalMoneyAmount)))
             .ToArray();
 }
 
