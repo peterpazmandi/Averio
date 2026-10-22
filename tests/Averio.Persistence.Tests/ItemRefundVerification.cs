@@ -39,6 +39,11 @@ internal static class ItemRefundVerification
             { PersonalMoneyAmount = i == 0 ? 5m : 10m }).ToArray());
         await ExpectBalanceAsync(baseline - 3m, "refund cap uses receipt total, not one item");
 
+        // Replacing an item while retaining total own allocation must assess the
+        // final state, not temporarily reverse a refund between the two stages.
+        await EditAsync(purchase, items => [items[0] with { ExistingItemId = null, PersonalMoneyAmount = 5m }, items[1]]);
+        await ExpectBalanceAsync(baseline - 3m, "replacement item retains final refund coverage");
+
         // Removing an unrelated, unallocated item must not retract a valid refund.
         await EditAsync(purchase, items => items.Append(new TransactionItemInput(
             "Unallocated", items[0].CategoryId, 5m)).ToArray());
@@ -70,6 +75,17 @@ internal static class ItemRefundVerification
         }
         user.UserId = f.OwnerUserId;
         await ExpectBalanceAsync(baseline, "void after refund correction does not double restore");
+
+        var corrected = await CreateAsync(TransactionKind.Expense, 20m, 10m);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
+                .RefundAsync(f.HouseholdId, refund, corrected, 6m, Guid.NewGuid(), Ct);
+        }
+        await EditAsync(corrected, items => items.Select(x => x with { PersonalMoneyAmount = 2m }).ToArray());
+        await ExpectBalanceAsync(baseline - 2m, "explicit reduction retracts excess refund");
+        await EditAsync(corrected, items => items.Select(x => x with { PersonalMoneyAmount = 0m }).ToArray());
+        await ExpectBalanceAsync(baseline, "explicit unlink restores only remaining charge");
 
         // Reversed history must not permanently prevent switching attribution modes.
         var legacy = await CreateAsync(TransactionKind.Expense, 20m);

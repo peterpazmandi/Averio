@@ -574,6 +574,10 @@ public sealed class PersonalMoneyHandler(
         var remaining = active.GroupBy(x => x.Key.WalletId).ToDictionary(g => g.Key,
             g => -g.Where(x => x.Key.TransactionItemId is null
                 || retained.ContainsKey(x.Key.TransactionItemId.Value)).Sum(x => x.Net));
+        // Explicit own allocations are applied after source persistence. Assess their
+        // final combined coverage there, including replacement/new receipt items.
+        if (ownWallet is not null && inputs.Any(x => x.PersonalMoneyAmount is not null))
+            remaining.Remove(ownWallet.Id);
         await ReconcilePurchaseRefundsAsync(householdId, transaction.Id, remaining, ct);
     }
 

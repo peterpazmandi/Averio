@@ -66,8 +66,11 @@ internal static class ItemPersonalMoneyVerification
             if (otherWallet?.Entries.Any(x => x.TransactionId == id) == true)
                 throw new Exception("Another member accessed the owner's private allowance attribution.");
             var archive = scope.ServiceProvider.GetRequiredService<ArchiveTransactionHandler>();
-            await archive.HandleAsync(fixture.HouseholdId, id, true, read.UpdatedAt, Ct);
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var aggregatesBefore = await AggregateFingerprintAsync(db);
+            await archive.HandleAsync(fixture.HouseholdId, id, true, read.UpdatedAt, Ct);
+            if (await AggregateFingerprintAsync(db) != aggregatesBefore)
+                throw new Exception("Archive changed financial aggregates.");
             var repository = scope.ServiceProvider.GetRequiredService<ITransactionRepository>();
             var normal = await repository.GetVisiblePageAsync(fixture.HouseholdId,
                 fixture.MemberId, new TransactionQuery(null,null,null,null,null,50,null,null,null), Ct);
@@ -80,6 +83,8 @@ internal static class ItemPersonalMoneyVerification
             var version = (await db.Transactions.AsNoTracking()
                 .SingleAsync(x => x.Id == id, Ct)).UpdatedAt;
             await archive.HandleAsync(fixture.HouseholdId, id, false, version, Ct);
+            if (await AggregateFingerprintAsync(db) != aggregatesBefore)
+                throw new Exception("Restore changed financial aggregates.");
             // Another household member may change shared merchant metadata; do not modify
             // the owner's private Personal Money item allocation.
             await UpdateAsync(scope.ServiceProvider, fixture, id, expenseCategory,
@@ -185,5 +190,12 @@ internal static class ItemPersonalMoneyVerification
         try { await task(); }
         catch (T) { return; }
         throw new Exception($"Expected {typeof(T).Name}.");
+    }
+
+    private static async Task<string> AggregateFingerprintAsync(AverioDbContext db)
+    {
+        var rows = await db.TransactionAggregates.AsNoTracking().ToListAsync(Ct);
+        return System.Text.Json.JsonSerializer.Serialize(rows.OrderBy(x =>
+            System.Text.Json.JsonSerializer.Serialize(x)));
     }
 }
