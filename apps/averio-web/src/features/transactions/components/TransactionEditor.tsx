@@ -40,6 +40,7 @@ interface Props {
     onSaveRecurring?: (request: SaveRecurringRuleRequest) => Promise<void>;
     onSave?: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
     onVoid?: (expectedUpdatedAt: string) => Promise<void>;
+    onArchive?: (archived: boolean, expectedUpdatedAt: string) => Promise<void>;
     busy: boolean;
 }
 
@@ -94,6 +95,7 @@ export function TransactionEditor({
     onCancel,
     onSave,
     onVoid,
+    onArchive,
     busy: parentBusy,
 }: Props) {
     // Keep the draft and all concurrency tokens from the same editing session.
@@ -351,6 +353,12 @@ export function TransactionEditor({
     return <AverioDialog open wide title={t(rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={onCancel}
         actions={<>
+            {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
+                onClick={() => {
+                    if (window.confirm(t(transaction.isArchived ? 'transactionManagement.restoreConfirm' : 'transactionManagement.archiveConfirm')))
+                        void onArchive(!transaction.isArchived, transaction.updatedAt).catch(reason =>
+                            setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
+                }}>{t(transaction.isArchived ? 'transactionManagement.restore' : 'transactionManagement.archive')}</AverioButton>}
             {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy} onClick={() => {
                 if (window.confirm(t('transactionManagement.voidConfirm'))) {
                     void onVoid(transaction.updatedAt).catch(reason => setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
