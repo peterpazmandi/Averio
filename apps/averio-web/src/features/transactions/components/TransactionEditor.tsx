@@ -445,7 +445,27 @@ export function TransactionEditor({
                         onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" /></AverioField>
                     <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
+                    {kind === 'Expense' && !recurring && <div className="col-span-2 min-w-0 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900 dark:bg-emerald-950/30 sm:col-span-4">
+                        <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+                            <input type="checkbox" className="size-4 accent-emerald-500"
+                                checked={canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n}
+                                disabled={!canChargePersonalMoney || busy}
+                                onChange={event => updateItem(item.key, { personalAmount: event.target.checked ? normalizeAmount(item.amount) : '0' })} />
+                            {t('personalMoney.itemCharge')}
+                        </label>
+                        {canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n &&
+                            <AverioField>{t('personalMoney.itemChargeAmount')} · {currency}
+                                <AverioInput inputMode="decimal" value={personalAmount(item)} disabled={busy}
+                                    onChange={event => updateItem(item.key, { personalAmount: event.target.value })} />
+                            </AverioField>}
+                    </div>}
                 </div>)}
+                {canChargePersonalMoney && <div className="space-y-1 rounded-xl border border-emerald-300/50 bg-emerald-50 p-3 text-sm dark:bg-emerald-950/30">
+                    <div className="flex flex-wrap justify-between gap-2"><span>{t('personalMoney.itemSplitHousehold')}</span>
+                        <strong>{formatDecimalAmount(scaledToAmount((amountToScaled(total) ?? 0n) - personalTotal), currency, language)}</strong></div>
+                    <div className="flex flex-wrap justify-between gap-2"><span>{t('personalMoney.itemSplitPersonal')}</span>
+                        <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></div>
+                </div>}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
                     <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(total, currency, language) : total}</strong>
