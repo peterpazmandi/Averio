@@ -95,7 +95,8 @@ public sealed record TransactionResult(
     bool CanModify,
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
-    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default)
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
+    bool IsArchived = false)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,
@@ -125,5 +126,6 @@ public sealed record TransactionResult(
             label.Id,
             label.Name,
             label.Scope)).ToArray(),
-        model.ActivityId, model.ActivityName, model.ActivityAssignmentVersion);
+        model.ActivityId, model.ActivityName, model.ActivityAssignmentVersion,
+        model.IsArchived);
 }
