@@ -75,4 +75,5 @@ public sealed record TransactionReadModel(
     bool CanModify,
     IReadOnlyList<TransactionItemReadModel> Items,
     IReadOnlyList<TransactionLabelReadModel> Labels,
-    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default);
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
+    bool IsArchived = false);
