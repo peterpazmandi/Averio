@@ -48,6 +48,7 @@ interface EditorItem {
     description: string;
     categoryId: string;
     amount: string;
+    personalAmount: string | null;
 }
 
 let nextItemKey = 1;
@@ -99,7 +100,6 @@ export function TransactionEditor({
     // The parent keys this component by transaction ID and unmounts it on close.
     const [transaction] = useState(initialTransaction);
     const [rule] = useState(initialRule);
-    const [chargePersonalMoney, setChargePersonalMoney] = useState(false);
     const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
     const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
     const [timing, setTiming] = useState({ frequency: initialRule?.frequency ?? 'Monthly', endsOn: initialRule?.endsOn ?? null as string | null, automatic: initialRule?.automatic ?? false });
@@ -132,7 +132,7 @@ export function TransactionEditor({
     const [activityId, setActivityId] = useState(rule?.activityId ?? transaction?.activityId ?? '');
     const [occurredOn, setOccurredOn] = useState(rule?.startsOn ?? transaction?.occurredOn ?? (initialRecurring ? new Date().toISOString().slice(0, 10) : todayIso()));
     const [items, setItems] = useState<EditorItem[]>(() =>
-        rule ? rule.items.map(item => ({ key: itemKey(), ...item })) : transaction?.items.length
+        rule ? rule.items.map(item => ({ key: itemKey(), ...item, personalAmount: null })) : transaction?.items.length
             ? [...transaction.items]
                 .sort((a, b) => a.position - b.position)
                 .map(item => ({
@@ -140,12 +140,14 @@ export function TransactionEditor({
                     description: item.description,
                     categoryId: item.categoryId,
                     amount: item.amount,
+                    personalAmount: null,
                 }))
             : [{
                 key: itemKey(),
                 description: '',
                 categoryId: '',
                 amount: '',
+                personalAmount: null,
             }],
     );
     const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
@@ -168,10 +170,29 @@ export function TransactionEditor({
     const currency = account?.currency ?? rule?.currency ?? transaction?.currency ?? '';
     const language = i18n.resolvedLanguage ?? i18n.language;
 
-    const wallet = useQuery({ ...personalMoneyQueries.mine(userId, householdId), enabled: !transaction && !rule });
-    const canChargePersonalMoney = !transaction && !recurring && kind === 'Expense'
-        && account?.scope === 'Personal' && account.visibility === 'Private'
-        && effectiveVisibility === 'Private' && wallet.data?.currency === currency;
+    const wallet = useQuery({ ...personalMoneyQueries.mine(userId, householdId),
+        enabled: !rule && kind === 'Expense' });
+    const canChargePersonalMoney = !recurring && kind === 'Expense'
+        && ((account?.scope === 'Household' && effectiveVisibility === 'Household')
+            || (account?.scope === 'Personal' && account.visibility === 'Private'
+                && effectiveVisibility === 'Private'))
+        && wallet.data?.currency === currency;
+
+    function personalAmount(item: EditorItem): string {
+        if (item.personalAmount !== null) return item.personalAmount;
+        if (!transaction) return '0';
+        const current = (wallet.data?.entries ?? []).filter(entry =>
+            (entry as typeof entry & { transactionItemId?: string | null }).transactionItemId === item.key
+            && entry.transactionId === transaction.id
+            && (entry.kind === 'PrivateCharge' || entry.kind === 'SharedCharge'))
+            .reduce((sum, entry) => sum + Number(entry.amount), 0);
+        return String(Math.max(0, -current));
+    }
+    function chargeAllItems() {
+        setItems(current => current.map(item => ({
+            ...item, personalAmount: canChargePersonalMoney ? normalizeAmount(item.amount) : '0',
+        })));
+    }
 
     const categories = useQuery(transactionQueries.categories(userId, householdId, kind));
     const labels = useQuery(transactionQueries.labels(
@@ -231,6 +252,9 @@ export function TransactionEditor({
         return scaledToAmount(sum);
     }, [resolvedItems]);
 
+    const personalTotal = resolvedItems.reduce((sum, item) =>
+        sum + (canChargePersonalMoney ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), 0n);
+
     function updateItem(key: string, patch: Partial<EditorItem>) {
         setItems(current => current.map(item =>
             item.key === key ? { ...item, ...patch } : item));
@@ -242,6 +266,7 @@ export function TransactionEditor({
             description: '',
             categoryId: uncategorizedId,
             amount: '',
+            personalAmount: null,
         }]);
     }
 
@@ -272,6 +297,8 @@ export function TransactionEditor({
             description: item.description.trim(),
             categoryId: item.categoryId,
             amount: normalizeAmount(item.amount),
+            personalMoneyAmount: canChargePersonalMoney ? item.personalAmount === null
+                ? null : normalizeAmount(item.personalAmount) : null,
         }));
 
         const invalidItem = mappedItems.some(item =>
@@ -280,7 +307,10 @@ export function TransactionEditor({
             || !/^\d+(?:\.\d{1,4})?$/.test(item.amount)
             || Number(item.amount) <= 0);
 
-        if (invalidItem || amountToScaled(total) === 0n) {
+        if (invalidItem || amountToScaled(total) === 0n ||
+            mappedItems.some(item => item.personalMoneyAmount !== null &&
+                (amountToScaled(item.personalMoneyAmount) === null ||
+                (amountToScaled(item.personalMoneyAmount) ?? 0n) > (amountToScaled(item.amount) ?? 0n)))) {
             setError(t('transactionManagement.itemsInvalid'));
             return;
         }
@@ -307,7 +337,7 @@ export function TransactionEditor({
                 occurredOn,
                 items: mappedItems,
                 labelIds: resolvedLabelIds,
-                chargePersonalMoney: canChargePersonalMoney && chargePersonalMoney,
+                chargePersonalMoney: false,
                 activityAssignment: activityId !== (transaction?.activityId ?? '')
                     ? { activityId: activityId || null, expectedVersion: transaction?.activityAssignmentVersion ?? emptyAssignmentVersion }
                     : null,
@@ -345,12 +375,12 @@ export function TransactionEditor({
                     <legend className="sr-only">{t('transactionManagement.type')}</legend>
                     {(['Income', 'Expense'] as const).map(value => <label key={value}
                         className={'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 font-semibold ' + (kind === value ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700')}>
-                        <input type="radio" name="kind" value={value} checked={kind === value} className="accent-emerald-500" onChange={() => { setKind(value); setChargePersonalMoney(false); }} />
+                        <input type="radio" name="kind" value={value} checked={kind === value} className="accent-emerald-500" onChange={() => { setKind(value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }} />
                         {t(value === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}
                     </label>)}
                 </fieldset>
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => { setAccountId(e.target.value); setChargePersonalMoney(false); }}>
+                    <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => { setAccountId(e.target.value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
                         <option value="" disabled>{t('transactionManagement.account')}</option>
                         {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
                     </AverioSelect></AverioField>
@@ -359,13 +389,9 @@ export function TransactionEditor({
                 </div>
                 <AverioField>{t('transactionManagement.merchant')}<AverioInput value={merchant} maxLength={160} disabled={busy}
                     placeholder={t('transactionManagement.merchantPlaceholder')} onChange={e => setMerchant(e.target.value)} /></AverioField>
-                {!transaction && !recurring && kind === 'Expense' && <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
-                    <label className="flex min-h-11 items-center gap-3 font-semibold">
-                        <input type="checkbox" className="size-4 accent-emerald-500" checked={canChargePersonalMoney && chargePersonalMoney}
-                            disabled={busy || !canChargePersonalMoney} onChange={e => setChargePersonalMoney(e.target.checked)} />
-                        {t('personalMoney.chargeOnCreate')}
-                    </label>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{t(canChargePersonalMoney ? 'personalMoney.chargeOnCreateHelp' : 'personalMoney.chargeOnCreateEligibility')}</p>
+                {!recurring && kind === 'Expense' && <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                    <p className="text-sm font-semibold">{t('personalMoney.itemAllocationTitle')}</p>
+                    <p className="mt-1 text-xs">{t('personalMoney.itemAllocationHelp')}</p>
                     {wallet.isError && <p role="alert" className="text-xs">{t('personalMoney.loadError')}</p>}
                 </div>}
             </AverioCard>
@@ -402,7 +428,10 @@ export function TransactionEditor({
             <AverioCard className="grid gap-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div><h3 className="font-bold">{t('transactionManagement.items')}</h3><p className="mt-1 text-xs">{t('transactionManagement.itemsHelp')}</p></div>
-                    <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
+                    <div className="flex flex-wrap gap-2">
+                        {canChargePersonalMoney && <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>}
+                        <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
+                    </div>
                 </div>
                 {resolvedItems.map((item, index) => <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-4 dark:border-slate-700 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
                     <AverioField className="col-span-2 sm:col-span-1">{t('transactionManagement.itemDescription')}<AverioInput required value={item.description} maxLength={160} disabled={busy}
@@ -425,7 +454,7 @@ export function TransactionEditor({
             {!transaction && onSaveRecurring && <AverioDisclosure title={t('recurring.makeRecurring')} defaultOpen={recurring} summary={recurring ? scheduleName || t('recurring.creationHelp') : undefined}>
                         {!rule && onSave && <label className="flex min-h-11 items-center gap-3 font-semibold">
                             <input type="checkbox" className="size-4 accent-emerald-500" checked={recurring} disabled={busy}
-                                onChange={e => { setRecurring(e.target.checked); setChargePersonalMoney(false); }} />{t('recurring.makeRecurring')}
+                                onChange={e => { setRecurring(e.target.checked); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }} />{t('recurring.makeRecurring')}
                         </label>}
                         {recurring && <>
                             <p className="text-sm">{t('recurring.creationHelp')}</p>
