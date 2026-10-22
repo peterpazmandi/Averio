@@ -67,6 +67,7 @@ public sealed class TransactionsController(
         [FromQuery] Guid? cursorId = null,
         [FromQuery] Guid? activityId = null,
         [FromQuery] Guid[]? labelIds = null,
+        [FromQuery] bool includeArchived = false,
         CancellationToken cancellationToken = default)
     {
         TransactionKind? parsedKind = string.IsNullOrWhiteSpace(kind)
@@ -87,7 +88,7 @@ public sealed class TransactionsController(
             cursorDate,
             cursorCreatedAt,
             cursorId,
-            cancellationToken, activityId, labelIds);
+            cancellationToken, activityId, labelIds, includeArchived);
 
         return Ok(new TransactionPageResponse(
             page.Items.Select(TransactionMapper.From).ToArray(),
