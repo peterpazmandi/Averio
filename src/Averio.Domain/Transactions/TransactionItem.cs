@@ -5,7 +5,7 @@ public sealed record TransactionItemDraft(
     Guid CategoryId,
     string CategoryName,
     string CategoryIcon,
-    decimal Amount);
+    decimal Amount, Guid? ExistingItemId = null);
 
 public sealed class TransactionItem
 {
@@ -20,6 +20,19 @@ public sealed class TransactionItem
     public string CategoryName { get; private set; } = null!;
     public string CategoryIcon { get; private set; } = null!;
     public decimal Amount { get; private set; }
+
+    internal void Retain(TransactionItemDraft draft, int position)
+    {
+        if (draft.ExistingItemId != Id)
+            throw new ArgumentException("Cannot update another transaction item.");
+        var checkedItem = Create(HouseholdId, TransactionId, position, draft);
+        Position = position;
+        Description = checkedItem.Description;
+        CategoryId = checkedItem.CategoryId;
+        CategoryName = checkedItem.CategoryName;
+        CategoryIcon = checkedItem.CategoryIcon;
+        Amount = checkedItem.Amount;
+    }
 
     internal static TransactionItem Create(
         Guid householdId,
@@ -48,7 +61,7 @@ public sealed class TransactionItem
 
         return new TransactionItem
         {
-            Id = Guid.NewGuid(),
+            Id = draft.ExistingItemId ?? Guid.NewGuid(),
             HouseholdId = householdId,
             TransactionId = transactionId,
             Position = position,
