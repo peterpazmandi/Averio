@@ -141,7 +141,7 @@ public sealed class UpdateTransactionHandler(
         try
         {
             await personalMoney.ReconcileItemSourceChangesAsync(household.Id, transaction,
-                items, command.AccountId, command.Kind, command.Visibility, command.OccurredOn,
+                items, command.Items, command.AccountId, command.Kind, command.Visibility, command.OccurredOn,
                 cancellationToken);
             await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
