@@ -120,7 +120,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
-                        owner.HouseholdMemberId == householdMemberId)))
+                        owner.HouseholdMemberId == householdMemberId),
+                item.Transaction.IsArchived))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > query.PageSize;
@@ -170,7 +171,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
-                        owner.HouseholdMemberId == householdMemberId)))
+                        owner.HouseholdMemberId == householdMemberId),
+                item.Transaction.IsArchived))
             .ToListAsync(cancellationToken);
 
         return await LoadDetailsAsync(rows, householdId, householdMemberId, cancellationToken);
@@ -263,7 +265,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 labelsByTransaction.GetValueOrDefault(row.Id, []),
                 assignments.GetValueOrDefault(row.Id)?.ActivityId,
                 assignments.GetValueOrDefault(row.Id)?.Name,
-                assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty))
+                assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty,
+                row.IsArchived))
             .ToArray();
     }
 
@@ -282,5 +285,6 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         TransactionStatus Status,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
-        bool CanModify);
+        bool CanModify,
+        bool IsArchived);
 }
