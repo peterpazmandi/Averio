@@ -47,7 +47,8 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
                 "(kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND " +
                 "(kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND " +
                 "(related_transaction_id IS NULL OR transaction_id IS NOT NULL) AND " +
-                "(recurring_allowance_rule_id IS NULL OR kind = 'Grant')");
+                "(recurring_allowance_rule_id IS NULL OR kind = 'Grant') AND " +
+                "(transaction_item_id IS NULL OR (transaction_id IS NOT NULL AND kind IN ('PrivateCharge','SharedCharge')))");
         });
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id");
@@ -58,6 +59,7 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.Property(x => x.OccurredOn).HasColumnName("occurred_on");
         b.Property(x => x.TransferId).HasColumnName("transfer_id");
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
+        b.Property(x => x.TransactionItemId).HasColumnName("transaction_item_id");
         b.Property(x => x.RelatedTransactionId).HasColumnName("related_transaction_id");
         b.Property(x => x.ReversesEntryId).HasColumnName("reverses_entry_id");
         b.Property(x => x.OperationId).HasColumnName("operation_id");
@@ -87,6 +89,7 @@ internal sealed class PersonalMoneyEntryConfiguration : IEntityTypeConfiguration
         b.HasIndex(x => new { x.WalletId, x.OccurredOn, x.RecordedAt });
         b.HasIndex(x => new { x.HouseholdId, x.TransferId });
         b.HasIndex(x => new { x.HouseholdId, x.TransactionId });
+        b.HasIndex(x => new { x.HouseholdId, x.TransactionId, x.TransactionItemId });
         b.HasIndex(x => new { x.HouseholdId, x.RelatedTransactionId });
         b.HasIndex(x => x.ReversesEntryId).IsUnique();
         b.HasIndex(x => new { x.WalletId, x.OperationId }).IsUnique();
