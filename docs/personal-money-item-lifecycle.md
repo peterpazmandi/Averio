@@ -10,9 +10,10 @@ Only authorized active members may charge their own wallet in the original curre
 ## Editing and lifecycle
 - Existing item IDs survive metadata/category edits. Changing only merchant, note or labels preserves all private allocation entries.
 - Changes that would shrink an item below active wallet allocations are rejected with a generic conflict that does not identify another member.
-- Removing a linked item creates signed reversals in the same transaction. Removal with a linked refund is blocked until the refund is reconciled; this prevents silent excess refund restoration.
+- Removing a linked item creates signed reversals in the same transaction. Purchase-level refunds remain valid while the affected holder's remaining receipt allocation covers them; otherwise that holder's refund attributions are reversed atomically. The real bank income is preserved. Financial edits to a refund source retract its wallet credit; metadata-only edits preserve it.
 - A source account, kind, date or visibility change on an actively linked transaction is rejected rather than reassigning money silently. Unlink/reconcile first.
 - Historical transaction-level charges are not falsely attached to arbitrary items; source monetary edits retain the previous reversal rule.
+- After all active charges of one attribution mode are unlinked, reversed history does not prevent linking through the other mode. Active legacy and item charges cannot be mixed on a receipt.
 - **Archive** is a reversible visibility change stored on the transaction. It hides a transaction from normal list and dashboard recents, but not from account balances, cash-flow/category statistics or allowance history. Use IncludeArchived to see archived rows and restore them. This is intentionally distinct from **Void**, which atomically reverses the transaction's aggregate impact, every linked charge and dependent refund.
 - Transactions archived by any account-authorized household member remain visible through explicit retrieval and history. The actor does not see hidden Personal Money attribution of another member.
 

@@ -140,7 +140,8 @@ public sealed class PersonalMoneyHandler(
         var sourceEntries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
         // Whole-transaction linking remains for historical purchases, but must not
         // be mixed with per-item attribution (which has its own correction rules).
-        if (sourceEntries.Any(x => IsCharge(x) && x.TransactionItemId is not null))
+        if (sourceEntries.Where(x => IsCharge(x) && x.TransactionItemId is not null)
+            .GroupBy(x => new { x.WalletId, x.TransactionItemId }).Any(g => g.Sum(x => x.Amount) != 0m))
             throw new ConflictException("personal_money_already_charged", "Error_PersonalMoneyAlreadyCharged");
         var alreadyCharged = -sourceEntries.Where(IsCharge).Sum(x => x.Amount);
         var ownCharge = -sourceEntries.Where(x => x.WalletId == wallet.Id && IsCharge(x)).Sum(x => x.Amount);
@@ -167,7 +168,8 @@ public sealed class PersonalMoneyHandler(
             ?? throw new NotFoundException("charge", transactionId);
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
         var own = entries.Where(x => x.WalletId == wallet.Id && IsCharge(x)).ToArray();
-        if (own.Any(x => x.TransactionItemId is not null))
+        if (own.Where(x => x.TransactionItemId is not null).GroupBy(x => x.TransactionItemId)
+            .Any(g => g.Sum(x => x.Amount) != 0m))
             throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         if (own.Length == 0) throw new NotFoundException("charge", transactionId);
         var record = await transactions.GetVisibleByIdAsync(householdId, me.Id, transactionId, ct)
@@ -464,9 +466,11 @@ public sealed class PersonalMoneyHandler(
         // A legacy whole-receipt charge cannot be silently overlaid with item-level
         // allocations. The holder must unlink the legacy attribution first.
         if (targets.Any(x => x.Amount > 0)
-            && entries.Any(x => IsCharge(x) && x.TransactionItemId is null))
+            && entries.Where(x => IsCharge(x) && x.TransactionItemId is null)
+                .GroupBy(x => x.WalletId).Any(g => g.Sum(x => x.Amount) != 0m))
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
         var projectedTotal = -entries.Where(IsCharge).Sum(x => x.Amount);
+        var projectedOwnTotal = -entries.Where(x => IsCharge(x) && x.WalletId == wallet.Id).Sum(x => x.Amount);
         foreach (var target in targets)
         {
             var amount = target.Amount!.Value;
@@ -483,21 +487,18 @@ public sealed class PersonalMoneyHandler(
             var difference = current - amount;
             if (difference != 0)
             {
-                if (amount < current)
-                {
-                    var refunds = await repository.GetRefundsOfPurchaseAsync(householdId, transactionId, ct);
-                    if (refunds.Where(x => x.WalletId == wallet.Id && IsRefund(x)).Sum(x => x.Amount) > amount)
-                        throw new ConflictException("transaction_changed", "Error_TransactionChanged");
-                }
                 repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
                     ChargeKind(account, record)!.Value, difference, record.OccurredOn, clock.GetUtcNow(),
                     transactionId: transactionId, operationId: Guid.NewGuid(),
                     transactionItemId: target.Item.Id));
             }
             projectedTotal += amount - current;
+            projectedOwnTotal += amount - current;
         }
         if (projectedTotal > record.Amount)
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+        await ReconcilePurchaseRefundsAsync(householdId, transactionId,
+            new Dictionary<Guid, decimal> { [wallet.Id] = projectedOwnTotal }, ct);
         await unitOfWork.SaveChangesAsync(ct);
     }
 
@@ -515,7 +516,6 @@ public sealed class PersonalMoneyHandler(
             { x.WalletId, x.Kind, x.OccurredOn, x.TransactionItemId })
             .Select(g => new { g.Key, Net = g.Sum(x => x.Amount) })
             .Where(x => x.Net != 0).ToArray();
-        if (active.Length == 0) return;
         var changedSource = transaction.AccountId != targetAccountId
             || transaction.Kind != targetKind || transaction.Visibility != targetVisibility
             || transaction.OccurredOn != targetDate;
@@ -524,6 +524,11 @@ public sealed class PersonalMoneyHandler(
         var changedItems = transaction.Items.Count != proposed.Count
             || transaction.Items.Any(item => !retained.TryGetValue(item.Id, out var p)
                 || item.Amount != p.Amount);
+        // A refund income has no charge entries of its own. Financial edits must
+        // still retract its wallet credit; metadata-only edits preserve it.
+        if (entries.Any(IsRefund) && (changedSource || changedItems))
+            await ReverseTransactionChargeAsync(householdId, transaction.Id, ct);
+        if (active.Length == 0) return;
         var hasItemLinks = active.Any(x => x.Key.TransactionItemId is not null);
         if (hasItemLinks && changedSource)
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
@@ -566,12 +571,34 @@ public sealed class PersonalMoneyHandler(
         var legacy = active.Where(x => x.Key.TransactionItemId is null).ToArray();
         if (legacy.Length > 0 && changedItems)
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
-        // Dependent refunds are adjusted by the existing correction/void path; disallow
-        // deletion with applied refunds until explicit refund reconciliation is completed.
-        var refunds = await repository.GetRefundsOfPurchaseAsync(householdId, transaction.Id, ct);
-        if (refunds.Where(IsRefund).Sum(x => x.Amount) > 0
-            && transaction.Items.Any(item => !retained.ContainsKey(item.Id)))
-            throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+        var remaining = active.GroupBy(x => x.Key.WalletId).ToDictionary(g => g.Key,
+            g => -g.Where(x => x.Key.TransactionItemId is null
+                || retained.ContainsKey(x.Key.TransactionItemId.Value)).Sum(x => x.Net));
+        await ReconcilePurchaseRefundsAsync(householdId, transaction.Id, remaining, ct);
+    }
+
+    // Refunds are purchase-level credits. Keep them while the holder's remaining
+    // allocation covers them; otherwise retract that holder's refund attribution,
+    // retaining the real bank income and immutable audit history.
+    private async Task ReconcilePurchaseRefundsAsync(Guid householdId, Guid purchaseId,
+        IReadOnlyDictionary<Guid, decimal> remainingCharges, CancellationToken ct)
+    {
+        var refunds = await repository.GetRefundsOfPurchaseAsync(householdId, purchaseId, ct);
+        foreach (var wallet in refunds.Where(IsRefund).GroupBy(x => x.WalletId))
+        {
+            if (!remainingCharges.TryGetValue(wallet.Key, out var remaining)
+                || wallet.Sum(x => x.Amount) <= remaining) continue;
+            foreach (var group in wallet.GroupBy(x => new
+                { x.Kind, x.TransactionId, x.RelatedTransactionId, x.OccurredOn }))
+            {
+                var net = group.Sum(x => x.Amount);
+                if (net == 0m) continue;
+                repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Key,
+                    group.Key.Kind, -net, group.Key.OccurredOn, clock.GetUtcNow(),
+                    transactionId: group.Key.TransactionId,
+                    relatedTransactionId: group.Key.RelatedTransactionId));
+            }
+        }
     }
 
     // Source mutations retract an explicitly linked charge atomically; the user can relink the updated expense.
