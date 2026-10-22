@@ -45,6 +45,9 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     ]);
     // Consumption occurs only after explicit selection; never infer it from an account.
     const existingCharges = mine.data?.charges ?? [];
+    const itemLinkedTransactions = new Set((mine.data?.entries ?? [])
+        .filter(entry => entry.transactionItemId !== null && entry.transactionItemId !== undefined)
+        .map(entry => entry.transactionId));
     const chargedIds = new Set(existingCharges.map(c => c.transactionId));
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
         transaction.status === 'Posted' && eligibleIds.has(transaction.accountId)
@@ -216,7 +219,12 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <h4 className="font-semibold">{t('personalMoney.existingCharges')}</h4>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.correctionHelp')}</p>
             {existingCharges.length === 0 ? <p className="text-sm">{t('personalMoney.noCharges')}</p>
-                : existingCharges.map(item => <ChargeEditor key={item.transactionId + ':' + item.version}
+                : existingCharges.map(item => itemLinkedTransactions.has(item.transactionId)
+                    ? <div key={item.transactionId} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+                        <p className="font-semibold">{transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}</p>
+                        <p className="mt-1">{t('personalMoney.itemChargeManagedInTransaction')}</p>
+                    </div>
+                    : <ChargeEditor key={item.transactionId + ':' + item.version}
                     item={item} householdId={householdId} refresh={refresh} onError={setError}
                     label={transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}
                     formattedAmount={money(item.amount, mine.data!.currency)} />)}
