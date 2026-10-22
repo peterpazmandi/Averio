@@ -205,6 +205,7 @@ static async Task RunVerificationAsync(string connectionString)
     await TransferVerification.RunAsync(provider, currentUser, fixture, clock);
     await PersonalMoneyVerification.RunAsync(provider, currentUser, fixture, clock);
     await PersonalMoneyReconciliationVerification.RunAsync(provider, currentUser, fixture, clock);
+    await ItemPersonalMoneyVerification.RunAsync(provider, currentUser, fixture);
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
