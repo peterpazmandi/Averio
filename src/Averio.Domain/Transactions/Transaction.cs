@@ -25,6 +25,7 @@ public sealed class Transaction
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? VoidedAt { get; private set; }
+    public bool IsArchived { get; private set; }
     public IReadOnlyCollection<TransactionItem> Items => _items;
     public IReadOnlyCollection<TransactionLabel> Labels => _labels;
 
@@ -118,6 +119,15 @@ public sealed class Transaction
         ReplaceItems(items);
         ReplaceLabels(labelIds);
         Description = BuildDescription(Merchant, _items);
+        UpdatedAt = NextVersion(now);
+    }
+
+    public void SetArchived(bool archived, DateTimeOffset now)
+    {
+        if (Status != TransactionStatus.Posted)
+            throw new InvalidOperationException("Only posted transactions can be archived.");
+        if (IsArchived == archived) return;
+        IsArchived = archived;
         UpdatedAt = NextVersion(now);
     }
 
