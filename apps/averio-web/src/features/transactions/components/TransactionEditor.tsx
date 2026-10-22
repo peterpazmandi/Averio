@@ -12,7 +12,7 @@ import { AverioCard } from '../../../shared/components/ui/AverioCard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
-import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
+import { formatDecimalAmount, subtractDecimalAmounts, sumDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
@@ -184,12 +184,12 @@ export function TransactionEditor({
     function personalAmount(item: EditorItem): string {
         if (item.personalAmount !== null) return item.personalAmount;
         if (!transaction) return '0';
-        const current = (wallet.data?.entries ?? []).filter(entry =>
-            (entry as typeof entry & { transactionItemId?: string | null }).transactionItemId === item.key
+        const current = sumDecimalAmounts((wallet.data?.entries ?? []).filter(entry =>
+            entry.transactionItemId === item.key
             && entry.transactionId === transaction.id
             && (entry.kind === 'PrivateCharge' || entry.kind === 'SharedCharge'))
-            .reduce((sum, entry) => sum + Number(entry.amount), 0);
-        return String(Math.max(0, -current));
+            .map(entry => entry.amount));
+        return current.startsWith('-') ? subtractDecimalAmounts('0', current) : '0';
     }
     function chargeAllItems() {
         setItems(current => current.map(item => ({

@@ -17,10 +17,11 @@ let browser;
 try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(url)).ok) break; } catch {} await pause(100); }
     browser = await chromium.launch({ channel: 'chrome', headless: true });
-    for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) {
+    for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [320, 375, 1440]) {
         const copy = context.exports['personalMoney' + language.toUpperCase()];
-        const page = await browser.newPage({ viewport: { width: dark ? 375 : 1440, height: 900 } });
+        const page = await browser.newPage({ viewport: { width, height: 900 } });
         const errors = [];
+        let editing = false;
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -33,7 +34,9 @@ try {
             if (pathname.endsWith('/accounts')) return json([
                 { id: 'private', name: 'Private', currency: 'EUR', scope: 'Personal', visibility: 'Private', includeInHouseholdReports: false, status: 'Active', owners: [{ householdMemberId: 'member' }] },
                 { id: 'shared', name: 'Shared', currency: 'EUR', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] }]);
-            if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: '100', entries: [], charges: [] });
+            if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: '100',
+                entries: editing ? ['-0.3', '0.1'].map((amount, i) => ({ id: 'entry-' + i, amount,
+                    kind: 'SharedCharge', transactionId: 'receipt', transactionItemId: 'stable-item' })) : [], charges: [] });
             if (pathname.endsWith('/categories')) return json([{ id: 'category', name: 'Other', systemKey: 'uncategorized', kind: 'Expense', isArchived: false, children: [] }]);
             return json([]);
         });
@@ -70,12 +73,34 @@ try {
         await page.locator('textarea').fill('Keep my note');
         await disclosures.nth(2).click();
         assert.ok((await disclosures.nth(2).textContent()).includes('Keep my note'));
-        await page.screenshot({ path: path.join(artifacts, 'editor-compact-' + language + '-' + dark + '.png'), fullPage: true });
+        await page.screenshot({ path: path.join(artifacts, 'editor-compact-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await disclosures.nth(0).click();
         await page.locator('input[type="checkbox"]:visible').last().check();
-        assert.equal(await checkbox.count(), 1);
+        assert.equal(await checkbox.count(), 0, 'Recurring templates must not offer posted-item wallet charges.');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
-        await page.screenshot({ path: path.join(artifacts, 'editor-' + language + '-' + dark + '.png'), fullPage: true });
+        await page.screenshot({ path: path.join(artifacts, 'editor-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
+        editing = true;
+        await page.addInitScript(() => {
+            window.editorFixture = { id: 'receipt', accountId: 'shared', accountName: 'Shared', currency: 'EUR',
+                kind: 'Expense', visibility: 'Household', amount: '12.50', description: 'Receipt', merchant: 'Shop',
+                note: null, occurredOn: '2026-10-20', status: 'Posted', createdAt: '2026-10-20T12:00:00Z',
+                updatedAt: '2026-10-20T12:00:00Z', canModify: true, labels: [], activityId: null,
+                activityName: null, activityAssignmentVersion: '00000000-0000-0000-0000-000000000000',
+                items: [{ id: 'stable-item', position: 0, description: 'Existing item', categoryId: 'category',
+                    categoryName: 'Other', categoryIcon: 'receipt', amount: '12.50' }] };
+        });
+        await page.reload();
+        await page.waitForFunction(() => [...document.querySelectorAll('input[inputmode="decimal"]')].some(i => i.value === '0.2'));
+        assert.equal(await checkbox.isChecked(), true, 'Only the current member ledger supplies the existing allocation.');
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.waitForFunction(() => !!document.body.dataset.saved);
+        const retained = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
+        assert.equal(retained.items[0].existingItemId, 'stable-item');
+        assert.equal(retained.items[0].personalMoneyAmount, null, 'Untouched allocations must remain server-owned.');
+        await checkbox.uncheck();
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.deepEqual(errors, []);
         await page.close();
     }

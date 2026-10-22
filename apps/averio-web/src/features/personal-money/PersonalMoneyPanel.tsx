@@ -1,4 +1,5 @@
 import { PersonalMoneyHistory } from './PersonalMoneyHistory';
+import { sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { Activity, useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,9 +46,17 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     ]);
     // Consumption occurs only after explicit selection; never infer it from an account.
     const existingCharges = mine.data?.charges ?? [];
-    const itemLinkedTransactions = new Set((mine.data?.entries ?? [])
-        .filter(entry => entry.transactionItemId !== null && entry.transactionItemId !== undefined)
-        .map(entry => entry.transactionId));
+    const itemCharges = new Map<string, string[]>();
+    for (const entry of mine.data?.entries ?? []) {
+        if (!entry.transactionId || !entry.transactionItemId
+            || (entry.kind !== 'PrivateCharge' && entry.kind !== 'SharedCharge')) continue;
+        const amounts = itemCharges.get(entry.transactionId) ?? [];
+        amounts.push(entry.amount);
+        itemCharges.set(entry.transactionId, amounts);
+    }
+    const itemLinkedTransactions = new Set([...itemCharges]
+        .filter(([, amounts]) => sumDecimalAmounts(amounts).startsWith('-'))
+        .map(([id]) => id));
     const chargedIds = new Set(existingCharges.map(c => c.transactionId));
     const purchases = (transactions.data?.items ?? []).filter(transaction =>
         transaction.status === 'Posted' && eligibleIds.has(transaction.accountId)
@@ -223,6 +232,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
                     ? <div key={item.transactionId} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
                         <p className="font-semibold">{transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}</p>
                         <p className="mt-1">{t('personalMoney.itemChargeManagedInTransaction')}</p>
+                        <a className="mt-2 inline-block font-semibold text-emerald-700 underline dark:text-emerald-300"
+                            href={'/app/transactions?transaction=' + encodeURIComponent(item.transactionId)}>{t('transactionLinks.details')}</a>
                     </div>
                     : <ChargeEditor key={item.transactionId + ':' + item.version}
                     item={item} householdId={householdId} refresh={refresh} onError={setError}
