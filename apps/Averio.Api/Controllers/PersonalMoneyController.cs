@@ -77,7 +77,7 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler,
             result.Entries.Select(x => new PersonalMoneyEventResponse(x.Id, x.Kind,
                 DecimalAmountMapper.Format(x.Amount), x.OccurredOn,
                 x.TransactionId, x.TransferId, x.RelatedTransactionId,
-                x.RecurringAllowanceRuleId, x.TransactionName)).ToArray(),
+                x.RecurringAllowanceRuleId, x.TransactionName, x.TransactionItemId)).ToArray(),
             result.Charges.Select(x => new PersonalMoneyChargeResponse(x.TransactionId,
                 DecimalAmountMapper.Format(x.Amount), x.Version)).ToArray()));
     }
