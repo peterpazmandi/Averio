@@ -138,6 +138,10 @@ public sealed class PersonalMoneyHandler(
         if (wallet.Currency != record.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
         var sourceEntries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
+        // Whole-transaction linking remains for historical purchases, but must not
+        // be mixed with per-item attribution (which has its own correction rules).
+        if (sourceEntries.Any(x => IsCharge(x) && x.TransactionItemId is not null))
+            throw new ConflictException("personal_money_already_charged", "Error_PersonalMoneyAlreadyCharged");
         var alreadyCharged = -sourceEntries.Where(IsCharge).Sum(x => x.Amount);
         var ownCharge = -sourceEntries.Where(x => x.WalletId == wallet.Id && IsCharge(x)).Sum(x => x.Amount);
         if (ownCharge > 0 || alreadyCharged + amount > record.Amount)
@@ -457,6 +461,11 @@ public sealed class PersonalMoneyHandler(
         if (wallet.Currency != record.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
 
+        // A legacy whole-receipt charge cannot be silently overlaid with item-level
+        // allocations. The holder must unlink the legacy attribution first.
+        if (targets.Any(x => x.Amount > 0)
+            && entries.Any(x => IsCharge(x) && x.TransactionItemId is null))
+            throw new ConflictException("transaction_changed", "Error_TransactionChanged");
         var projectedTotal = -entries.Where(IsCharge).Sum(x => x.Amount);
         foreach (var target in targets)
         {
@@ -467,7 +476,9 @@ public sealed class PersonalMoneyHandler(
             var own = onItem.Where(x => x.WalletId == wallet.Id).ToArray();
             var current = -own.Sum(x => x.Amount);
             var others = -onItem.Where(x => x.WalletId != wallet.Id).Sum(x => x.Amount);
-            if (amount + others > target.Item.Amount)
+            // Allocating the *same* receipt item to multiple members requires a
+            // separate mutual-authorization policy, deferred by ADR-032.
+            if (others > 0m && amount > 0m || amount + others > target.Item.Amount)
                 throw new ConflictException("transaction_changed", "Error_TransactionChanged");
             var difference = current - amount;
             if (difference != 0)
