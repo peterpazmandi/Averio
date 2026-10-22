@@ -23,7 +23,7 @@ public sealed record PersonalMoneyCharge(Guid TransactionId, decimal Amount, int
 
 public sealed record PersonalMoneyEvent(Guid Id, string Kind, decimal Amount, DateOnly OccurredOn,
     Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
-    Guid? RecurringAllowanceRuleId);
+    Guid? RecurringAllowanceRuleId, string? TransactionName);
 
 public sealed class PersonalMoneyHandler(
     ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
@@ -46,13 +46,18 @@ public sealed class PersonalMoneyHandler(
         var wallet = await repository.GetWalletAsync(householdId, me.Id, ct);
         if (wallet is null) return null;
         var entries = await repository.GetEntriesAsync(wallet.Id, ct);
+        var transactionIds = entries.Select(x => x.TransactionId ?? x.RelatedTransactionId)
+            .OfType<Guid>().Distinct().ToArray();
+        var transactionNames = await repository.GetTransactionNamesAsync(householdId, me.Id, transactionIds, ct);
         var balance = PersonalMoneyBalance.FromEntries(entries);
         return new PersonalMoneySnapshot(wallet.Id, wallet.Currency.Value, balance.Entitlement,
             balance.AttributedPrivateFunding, balance.FundingDifference,
             entries.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.RecordedAt)
                 .Select(x => new PersonalMoneyEvent(x.Id, x.Kind.ToString(), x.Amount, x.OccurredOn,
                     x.TransactionId, x.TransferId, x.RelatedTransactionId,
-                    x.RecurringAllowanceRuleId)).ToArray(),
+                    x.RecurringAllowanceRuleId,
+                    (x.TransactionId ?? x.RelatedTransactionId) is Guid transactionId
+                        ? transactionNames.GetValueOrDefault(transactionId) : null)).ToArray(),
             entries.Where(x => x.Kind is PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge)
                 .GroupBy(x => x.TransactionId!.Value).Where(g => g.Sum(x => x.Amount) < 0)
                 .Select(g => new PersonalMoneyCharge(g.Key, -g.Sum(x => x.Amount), g.Count())).ToArray());

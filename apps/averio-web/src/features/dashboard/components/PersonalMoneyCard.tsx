@@ -1,3 +1,4 @@
+import { PersonalMoneyHistory } from '../../personal-money/PersonalMoneyHistory';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +13,7 @@ export function PersonalMoneyCard({ userId, householdId }: {
     householdId: string;
 }) {
     const { t, i18n } = useTranslation();
-    const query = useQuery(personalMoneyQueries.summary(userId, householdId));
+    const query = useQuery(personalMoneyQueries.mine(userId, householdId));
     const wallet = query.data;
     const language = i18n.resolvedLanguage ?? i18n.language;
 
@@ -38,20 +39,15 @@ export function PersonalMoneyCard({ userId, householdId }: {
                     </AverioButton>
                 </div>
             ) : wallet ? (
-                <dl className="space-y-4">
-                    <div>
-                        <dt className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.available')}</dt>
-                        <dd className="break-words text-3xl font-bold tracking-tight">
+                <>
+                    <dl className="rounded-xl border border-emerald-500/20 bg-emerald-50 p-4 dark:bg-emerald-950/20">
+                        <dt className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.available')}</dt>
+                        <dd className="mt-2 break-words text-2xl font-bold">
                             {formatDecimalAmount(wallet.available, wallet.currency, language)}
                         </dd>
-                    </div>
-                    <div className="border-t border-slate-200 pt-3 dark:border-slate-700">
-                        <dt className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.funded')}</dt>
-                        <dd className="break-words font-semibold">
-                            {formatDecimalAmount(wallet.attributedPrivateFunding, wallet.currency, language)}
-                        </dd>
-                    </div>
-                </dl>
+                    </dl>
+                    <PersonalMoneyHistory entries={wallet.entries} currency={wallet.currency} />
+                </>
             ) : (
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t('personalMoney.empty')}</p>
             )}

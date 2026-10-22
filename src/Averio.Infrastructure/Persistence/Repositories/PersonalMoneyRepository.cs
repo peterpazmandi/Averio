@@ -10,7 +10,18 @@ internal sealed class PersonalMoneyRepository(AverioDbContext db) : IPersonalMon
         => db.Set<PersonalMoneyWallet>().SingleOrDefaultAsync(x =>
             x.HouseholdId == householdId && x.HouseholdMemberId == memberId, ct);
 
-    // Aggregate in PostgreSQL: dashboard reads return one row regardless of ledger size.
+    public async Task<IReadOnlyDictionary<Guid, string>> GetTransactionNamesAsync(
+        Guid householdId, Guid memberId, Guid[] transactionIds, CancellationToken ct)
+    {
+        if (transactionIds.Length == 0) return new Dictionary<Guid, string>();
+        // Ledger access must not reveal a now-private purchase name.
+        return await db.VisibleTransactions(householdId, memberId).AsNoTracking()
+            .Where(x => transactionIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.Description })
+            .ToDictionaryAsync(x => x.Id, x => x.Description, ct);
+    }
+
+    // Aggregate in PostgreSQL: summary reads return one row regardless of ledger size.
     public async Task<PersonalMoneyBalance> GetBalanceAsync(Guid walletId, CancellationToken ct)
     {
         var balance = await db.Set<PersonalMoneyEntry>().AsNoTracking()

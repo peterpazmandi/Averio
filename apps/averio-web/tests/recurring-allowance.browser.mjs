@@ -42,7 +42,7 @@ try {
         let schedule;
         const creationAttempts = [], updates = [];
         let historyRequests = 0, dashboardLedgerRequests = 0, summaryRequests = 0;
-        let dashboard = false, summaryAvailable = '250', summaryEmpty = true;
+        let dashboard = false, walletAvailable = '250', walletEmpty = true;
         await page.route('**/api/v1/**', async route => {
             const request = route.request();
             const pathname = new URL(request.url()).pathname;
@@ -56,11 +56,24 @@ try {
                         { id: 'member1', displayName: 'Partner', isCurrentUser: false, role: 'member', joinedAtUtc: '2026-01-01T00:00:00Z' }] });
             if (pathname.endsWith('/personal-money/me/summary')) {
                 summaryRequests++;
-                if (summaryEmpty) return route.fulfill({ status: 204 });
-                return json({ walletId: 'wallet', currency: 'EUR', available: summaryAvailable,
+                if (walletEmpty) return route.fulfill({ status: 204 });
+                return json({ walletId: 'wallet', currency: 'EUR', available: walletAvailable,
                     attributedPrivateFunding: '50', fundingDifference: '200' });
             }
-            if (dashboard && pathname.endsWith('/personal-money/me')) dashboardLedgerRequests++;
+            if (dashboard && pathname.endsWith('/personal-money/me')) {
+                dashboardLedgerRequests++;
+                if (walletEmpty) return route.fulfill({ status: 204 });
+                return json({ walletId: 'wallet', currency: 'EUR', available: walletAvailable,
+                    attributedPrivateFunding: '50', fundingDifference: '200', charges: [],
+                    entries: Array.from({ length: 25 }, (_, index) => ({
+                        id: 'entry-' + index, kind: index === 0 ? 'Grant' : 'PrivateCharge',
+                        amount: index === 0 ? '300' : '-3.1234', occurredOn: '2026-10-01',
+                        transactionId: index === 0 ? null : 'purchase-' + index,
+                        transactionName: index === 0 ? null : 'Purchase ' + index,
+                        transferId: null, relatedTransactionId: null, recurringAllowanceRuleId: null,
+                    })),
+                });
+            }
             if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR',
                 available: '250', attributedPrivateFunding: '50', fundingDifference: '200',
                 entries: [], charges: [] });
@@ -216,16 +229,29 @@ try {
         await page.goto(url + '?dashboard=1');
         await page.getByText(copy.empty, { exact: true }).waitFor();
         const invalidate = page.getByRole('button', { name: 'Simulate wallet mutation', exact: true });
-        summaryEmpty = false;
+        walletEmpty = false;
         await invalidate.click();
         await page.locator('dd').first().waitFor();
         const initialBalance = await page.locator('dd').first().innerText();
-        summaryAvailable = '220.1234';
+        walletAvailable = '220.1234';
         await invalidate.click();
         await page.waitForFunction(previous => document.querySelector('dd')?.textContent !== previous, initialBalance);
         assert.match(await page.locator('dd').first().innerText(), /220[.,]1234/);
-        assert.equal(summaryRequests, 3, 'Wallet mutation invalidation must refresh the dashboard summary.');
-        assert.equal(dashboardLedgerRequests, 0, 'Dashboard must never load the detailed ledger.');
+        assert.equal(summaryRequests, 0, 'Full-history dashboard needs no redundant summary request.');
+        assert.equal(dashboardLedgerRequests, 3, 'Wallet mutations must refresh balance and history together.');
+        const history = page.getByRole('region', { name: copy.history, exact: true });
+        assert.equal(await history.getByRole('listitem').count(), 25, 'Show the complete history beyond 20 entries.');
+        await history.getByText('Purchase 24', { exact: true }).waitFor();
+        assert.equal(await page.getByText(copy.funded, { exact: true }).count(), 0);
+        await page.getByText(copy.available, { exact: true }).waitFor();
+        const credit = history.locator('strong').first();
+        assert.match(await credit.innerText(), /^\+/);
+        assert.match(await credit.getAttribute('class'), /text-emerald-700/);
+        const debit = history.locator('strong').nth(1);
+        assert.match(await debit.innerText(), /-/);
+        assert.match(await debit.getAttribute('class'), /text-red-700/);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        await page.screenshot({ path: path.join(artifactDir, 'dashboard-' + language + '-' + width + '.png'), fullPage: true });
         assert.equal(await page.getByRole('link', { name: copy.dashboardManage }).getAttribute('href'),
             '/app/household#household-personal-money');
         assert.deepEqual(errors, []);

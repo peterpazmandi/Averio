@@ -11,6 +11,8 @@ public interface IPersonalMoneyRepository
     Task<IReadOnlyList<PersonalMoneyEntry>> GetTransactionEntriesAsync(Guid householdId, Guid transactionId, CancellationToken ct);
     Task<IReadOnlyList<PersonalMoneyEntry>> GetRefundsOfPurchaseAsync(Guid householdId, Guid purchaseId, CancellationToken ct);
     Task<PersonalMoneyEntry?> GetByOperationAsync(Guid walletId, Guid operationId, CancellationToken ct);
+    Task<IReadOnlyDictionary<Guid, string>> GetTransactionNamesAsync(
+        Guid householdId, Guid memberId, Guid[] transactionIds, CancellationToken ct);
     void Add(PersonalMoneyWallet wallet);
     void Add(PersonalMoneyEntry entry);
 }

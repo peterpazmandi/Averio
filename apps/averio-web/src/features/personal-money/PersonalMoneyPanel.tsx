@@ -1,3 +1,4 @@
+import { PersonalMoneyHistory } from './PersonalMoneyHistory';
 import { Activity, useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -227,17 +228,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         </Activity>
         {tab === 'mine' && <MyRecurringAllowances userId={userId}
             householdId={householdId} memberId={household.members.find(x => x.isCurrentUser)?.id ?? ''} />}
-        {tab === 'mine' && mine.data && <div className="space-y-2">
-            <h4 className="font-semibold">{t('personalMoney.history')}</h4>
-            {mine.data.entries.length === 0
-                ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.noEntries')}</p>
-                : <ul className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {mine.data.entries.slice(0, 20).map(entry => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                        <span>{entry.occurredOn} · {t('personalMoney.kind.' + (entry.recurringAllowanceRuleId ? 'RecurringGrant' : entry.kind))}</span>
-                        <strong>{money(entry.amount, mine.data!.currency)}</strong>
-                    </li>)}
-                </ul>}
-        </div>}
+        {tab === 'mine' && mine.data && <PersonalMoneyHistory
+            entries={mine.data.entries} currency={mine.data.currency} />}
     </AverioCard>
     </Activity>
     {tab === 'boundary' && <HouseholdBoundaryFlowPanel userId={userId} householdId={householdId} />}

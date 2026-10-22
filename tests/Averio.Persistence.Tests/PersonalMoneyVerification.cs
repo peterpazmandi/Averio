@@ -141,6 +141,12 @@ internal static class PersonalMoneyVerification
             if ((await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == privateExpense, Ct)).Amount != 25m)
                 throw new Exception("Allowance correction must not change bank spending.");
             var snapshot = await handler.GetMineAsync(fixture.HouseholdId, Ct);
+            var description = (await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == privateExpense, Ct)).Description;
+            if (snapshot!.Entries.Where(x => x.TransactionId == privateExpense).Any(x => x.TransactionName != description))
+                throw new Exception("Personal Money history must include the linked transaction name.");
+            var names = await scope.ServiceProvider.GetRequiredService<IPersonalMoneyRepository>()
+                .GetTransactionNamesAsync(fixture.HouseholdId, fixture.MemberId, [privateExpense], Ct);
+            if (names.Count != 0) throw new Exception("History names must respect transaction visibility.");
             if (snapshot!.Charges.Single().Amount != 10m || snapshot.Charges.Single().Version != 2)
                 throw new Exception("Active charge must expose net amount and source version.");
         }

@@ -51,6 +51,10 @@ export interface PersonalMoneyEventResponse {
      * 
      */
     recurringAllowanceRuleId: string | null;
+    /**
+     * 
+     */
+    transactionName: string | null;
 }
 
 /**
@@ -65,6 +69,7 @@ export function instanceOfPersonalMoneyEventResponse(value: object): value is Pe
     if (!('transferId' in value) || value['transferId'] === undefined) return false;
     if (!('relatedTransactionId' in value) || value['relatedTransactionId'] === undefined) return false;
     if (!('recurringAllowanceRuleId' in value) || value['recurringAllowanceRuleId'] === undefined) return false;
+    if (!('transactionName' in value) || value['transactionName'] === undefined) return false;
     return true;
 }
 
@@ -86,6 +91,7 @@ export function PersonalMoneyEventResponseFromJSONTyped(json: any, ignoreDiscrim
         'transferId': json['transferId'],
         'relatedTransactionId': json['relatedTransactionId'],
         'recurringAllowanceRuleId': json['recurringAllowanceRuleId'],
+        'transactionName': json['transactionName'],
     };
 }
 
@@ -108,6 +114,7 @@ export function PersonalMoneyEventResponseToJSONTyped(value?: PersonalMoneyEvent
         'transferId': value['transferId'],
         'relatedTransactionId': value['relatedTransactionId'],
         'recurringAllowanceRuleId': value['recurringAllowanceRuleId'],
+        'transactionName': value['transactionName'],
     };
 }
 
