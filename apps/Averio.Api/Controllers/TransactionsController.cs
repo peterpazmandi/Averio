@@ -4,6 +4,7 @@ using Averio.Application.Transactions.GetTransaction;
 using Averio.Application.Transactions.GetTransactions;
 using Averio.Application.Transactions.UpdateTransaction;
 using Averio.Application.Transactions.VoidTransaction;
+using Averio.Application.Transactions.ArchiveTransaction;
 using Averio.Contracts.Transactions;
 using Averio.Domain.Transactions;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ public sealed class TransactionsController(
     CreateTransactionHandler createHandler,
     UpdateTransactionHandler updateHandler,
     VoidTransactionHandler voidHandler,
+    ArchiveTransactionHandler archiveHandler,
     GetTransactionHandler getHandler,
     GetTransactionsHandler listHandler)
     : ControllerBase
@@ -107,6 +109,16 @@ public sealed class TransactionsController(
             TransactionMapper.ToCommand(householdId, transactionId, request),
             cancellationToken);
 
+        return NoContent();
+    }
+
+    [HttpPut("{transactionId:guid}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Archive(Guid householdId, Guid transactionId,
+        ChangeTransactionArchiveRequest request, CancellationToken cancellationToken)
+    {
+        await archiveHandler.HandleAsync(householdId, transactionId, request.Archived,
+            request.ExpectedUpdatedAt, cancellationToken);
         return NoContent();
     }
 
