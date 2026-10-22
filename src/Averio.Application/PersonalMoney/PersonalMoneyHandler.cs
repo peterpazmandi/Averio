@@ -505,12 +505,25 @@ public sealed class PersonalMoneyHandler(
             .Select(g => new { g.Key, Net = g.Sum(x => x.Amount) })
             .Where(x => x.Net != 0).ToArray();
         if (active.Length == 0) return;
-        if (transaction.AccountId != targetAccountId || transaction.Kind != targetKind
-            || transaction.Visibility != targetVisibility || transaction.OccurredOn != targetDate)
-            throw new ConflictException("transaction_changed", "Error_TransactionChanged");
-
+        var changedSource = transaction.AccountId != targetAccountId
+            || transaction.Kind != targetKind || transaction.Visibility != targetVisibility
+            || transaction.OccurredOn != targetDate;
         var retained = proposed.Where(x => x.ExistingItemId is not null)
             .ToDictionary(x => x.ExistingItemId!.Value);
+        var changedItems = transaction.Items.Count != proposed.Count
+            || transaction.Items.Any(item => !retained.TryGetValue(item.Id, out var p)
+                || item.Amount != p.Amount);
+        var hasItemLinks = active.Any(x => x.Key.TransactionItemId is not null);
+        if (hasItemLinks && changedSource)
+            throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+        // Legacy whole-receipt charges are not item-linked; financial source edits
+        // keep the old behavior of reversing the charge and dependent refunds.
+        if (!hasItemLinks && (changedSource || changedItems))
+        {
+            await ReverseTransactionChargeAsync(householdId, transaction.Id, ct);
+            return;
+        }
+
         var newInputs = inputs.Where(x => x.ExistingItemId is not null)
             .ToDictionary(x => x.ExistingItemId!.Value);
         var actor = await MemberAsync(householdId, ct);
@@ -537,14 +550,11 @@ public sealed class PersonalMoneyHandler(
                     throw new ConflictException("transaction_changed", "Error_TransactionChanged");
             }
         }
-        // Historical whole-transaction charges are retained only if the monetary source did not change.
+        // Mixed legacy and item-level links share the source. If the monetary
+        // amount changes, the legacy charge cannot silently retain old coverage.
         var legacy = active.Where(x => x.Key.TransactionItemId is null).ToArray();
-        if (legacy.Length > 0 && (transaction.Items.Count != proposed.Count
-            || transaction.Items.Any(item => !retained.TryGetValue(item.Id, out var p) || item.Amount != p.Amount)))
-            foreach (var entry in legacy)
-                repository.Add(PersonalMoneyEntry.Create(householdId, entry.Key.WalletId,
-                    entry.Key.Kind, -entry.Net, entry.Key.OccurredOn, clock.GetUtcNow(),
-                    transactionId: transaction.Id));
+        if (legacy.Length > 0 && changedItems)
+            throw new ConflictException("transaction_changed", "Error_TransactionChanged");
         // Dependent refunds are adjusted by the existing correction/void path; disallow
         // deletion with applied refunds until explicit refund reconciliation is completed.
         var refunds = await repository.GetRefundsOfPurchaseAsync(householdId, transaction.Id, ct);
