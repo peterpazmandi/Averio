@@ -22,7 +22,8 @@ public sealed class GetTransactionsHandler(
         DateTimeOffset? cursorCreatedAt,
         Guid? cursorId,
         CancellationToken cancellationToken,
-        Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null)
+        Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null,
+        bool includeArchived = false)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -49,7 +50,7 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId, activityId, labelIds?.Distinct().ToArray()),
+                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived),
             cancellationToken);
 
         return new TransactionPageResult(
