@@ -9,7 +9,7 @@ import { HouseholdPage } from '../../src/features/household/HouseholdPage';
 import { PersonalMoneyCard } from '../../src/features/dashboard/components/PersonalMoneyCard';
 import { personalMoneyKeys } from '../../src/features/personal-money/personalMoneyQueries';
 
-function DashboardFixture() {
+export function DashboardFixture() {
     const client = useQueryClient();
     return <>
         <PersonalMoneyCard userId="user" householdId="home" />
