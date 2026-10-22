@@ -10,6 +10,15 @@ export const personalMoneyKeys = {
 };
 
 export const personalMoneyQueries = {
+    summary: (userId: string, householdId: string) => queryOptions({
+        // A descendant of mine so existing wallet mutation invalidations refresh both views.
+        queryKey: [...personalMoneyKeys.mine(userId, householdId), 'summary'],
+        queryFn: async ({ signal }) => {
+            const result = await personalMoneyApi.apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRaw(
+                { householdId }, { signal });
+            return result.raw.status === 204 ? null : result.value();
+        },
+    }),
     mine: (userId: string, householdId: string) => queryOptions({
         queryKey: personalMoneyKeys.mine(userId, householdId),
         queryFn: async ({ signal }) => {

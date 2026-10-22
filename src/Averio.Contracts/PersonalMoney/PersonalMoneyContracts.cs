@@ -9,6 +9,9 @@ public sealed record PersonalMoneyEventResponse(Guid Id, string Kind, string Amo
     Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
     Guid? RecurringAllowanceRuleId);
 
+public sealed record PersonalMoneySummaryResponse(Guid WalletId, string Currency,
+    string Available, string AttributedPrivateFunding, string FundingDifference);
+
 public sealed record PersonalMoneySnapshotResponse(Guid WalletId, string Currency,
     string Available, string AttributedPrivateFunding, string FundingDifference,
     IReadOnlyList<PersonalMoneyEventResponse> Entries, IReadOnlyList<PersonalMoneyChargeResponse> Charges);

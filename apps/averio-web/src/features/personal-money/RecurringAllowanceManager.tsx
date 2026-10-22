@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HouseholdResponse, RecurringAllowanceResponse } from '../../shared/api/generated';
+import { formatDecimalAmount } from '../../shared/money/decimalAmount';
 import { ApiError } from '../../shared/api/ApiError';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
@@ -49,16 +50,16 @@ function useSchedules(userId: string, householdId: string) {
     });
 }
 
-function ScheduleRow({ schedule, userId, householdId, onChanged }: {
+function ScheduleRow({ schedule, userId, householdId, onChanged, onError }: {
     schedule: RecurringAllowanceResponse; userId: string; householdId: string;
     onChanged: () => Promise<void>;
+    onError: (message: string) => void;
 }) {
     const { t, i18n } = useTranslation();
     const client = useQueryClient();
     const [amount, setAmount] = useState(schedule.amount);
     const [endsOn, setEndsOn] = useState(schedule.endsOn ?? '');
     const [confirmStop, setConfirmStop] = useState(false);
-    const [error, setError] = useState('');
     const [historyExpanded, setHistoryExpanded] = useState(false);
     const [manageOpen, setManageOpen] = useState(false);
     const history = useQuery({
@@ -80,17 +81,17 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                 },
             }),
         onSuccess: async () => {
-            setError(''); setConfirmStop(false); setManageOpen(false);
+            onError(''); setConfirmStop(false); setManageOpen(false);
             await client.invalidateQueries({ queryKey: recurringAllowanceKeys.history(userId, householdId, schedule.id) });
             await onChanged();
         },
         onError: async (failure: Error) => {
-            setError(failure.message);
+            onError(failure.message);
             await onChanged(); // Refresh stale concurrency tokens after a conflict.
         },
     });
-    const money = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language,
-        { style: 'currency', currency: schedule.currency }).format(Number(schedule.amount));
+    const money = formatDecimalAmount(schedule.amount, schedule.currency,
+        i18n.resolvedLanguage ?? i18n.language);
     const valid = amountPattern.test(amount) && Number(normalized(amount)) > 0
         && (!endsOn || endsOn >= schedule.startsOn)
         && (!endsOn || !schedule.nextDueOn || endsOn >= schedule.nextDueOn);
@@ -142,7 +143,6 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                     {t('common.actions.cancel')}</AverioButton>}
             </div>
         </div>}
-        {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
         <details className="text-sm" onToggle={event => setHistoryExpanded(event.currentTarget.open)}>
             <summary className="w-fit cursor-pointer py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {t('personalMoney.recurring.history')}
@@ -153,8 +153,8 @@ function ScheduleRow({ schedule, userId, householdId, onChanged }: {
                 {t('personalMoney.recurring.noHistory')}</p> : <ul className="mt-2 space-y-1">
                 {history.data.map(e => <li key={e.dueOn} className="flex justify-between gap-2">
                     <span>{e.dueOn}</span>
-                    <strong>{new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language,
-                        { style: 'currency', currency: schedule.currency }).format(Number(e.amount))}</strong>
+                    <strong>{formatDecimalAmount(e.amount, schedule.currency,
+                        i18n.resolvedLanguage ?? i18n.language)}</strong>
                 </li>)}
             </ul>)}
         </details>
@@ -174,6 +174,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
     const [endsOn, setEndsOn] = useState('');
     const [operationId, setOperationId] = useState(() => crypto.randomUUID());
     const [feedback, setFeedback] = useState('');
+    const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
     const [error, setError] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const refresh = async () => {
@@ -273,7 +274,11 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
                             {names.get(item.recipientMemberId) ?? t('householdSettings.unnamedMember')}
                         </p>
                         <ScheduleRow key={item.version} schedule={item} householdId={householdId}
-                            userId={userId} onChanged={refresh} />
+                            userId={userId} onChanged={refresh}
+                            onError={message => setRowErrors(previous => ({ ...previous, [item.id]: message }))} />
+                        {rowErrors[item.id] && <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+                            {rowErrors[item.id]}
+                        </p>}
                     </div>)}
                 </div>)}
         </div>
@@ -288,10 +293,18 @@ export function MyRecurringAllowances({ userId, householdId, memberId }: {
     const mine = (schedules.data ?? []).filter(x => x.recipientMemberId === memberId && !x.isStopped);
     const upcoming = mine.filter(x => x.nextDueOn !== null && !x.isPaused && !x.isBlocked);
     const inactive = mine.filter(x => x.nextDueOn === null || x.isPaused || x.isBlocked);
-    if (schedules.isLoading || schedules.isError || mine.length === 0) return null;
+    if (schedules.isLoading) return <p role="status">{t('common.status.loading')}</p>;
+    if (schedules.isError) return <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+        <h4 className="font-semibold">{t('personalMoney.recurring.myUpcoming')}</h4>
+        <p role="alert">{t('personalMoney.recurring.' +
+            (schedules.error?.message === migrationNotReady ? 'schemaUnavailable' : 'loadError'))}</p>
+        <AverioButton type="button" disabled={schedules.isFetching} onClick={() => { void schedules.refetch(); }}>
+            {t('personalMoney.recurring.retry')}
+        </AverioButton>
+    </section>;
+    if (mine.length === 0) return null;
     const money = (item: RecurringAllowanceResponse) =>
-        new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language,
-            { style: 'currency', currency: item.currency }).format(Number(item.amount));
+        formatDecimalAmount(item.amount, item.currency, i18n.resolvedLanguage ?? i18n.language);
     return <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
         <h4 className="font-semibold">{t('personalMoney.recurring.myUpcoming')}</h4>
         {upcoming.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-300">

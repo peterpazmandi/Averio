@@ -10,6 +10,25 @@ internal sealed class PersonalMoneyRepository(AverioDbContext db) : IPersonalMon
         => db.Set<PersonalMoneyWallet>().SingleOrDefaultAsync(x =>
             x.HouseholdId == householdId && x.HouseholdMemberId == memberId, ct);
 
+    // Aggregate in PostgreSQL: dashboard reads return one row regardless of ledger size.
+    public async Task<PersonalMoneyBalance> GetBalanceAsync(Guid walletId, CancellationToken ct)
+    {
+        var balance = await db.Set<PersonalMoneyEntry>().AsNoTracking()
+            .Where(x => x.WalletId == walletId).GroupBy(x => x.WalletId)
+            .Select(g => new PersonalMoneyBalance(
+                g.Sum(x => x.Kind == PersonalMoneyEntryKind.Grant
+                    || x.Kind == PersonalMoneyEntryKind.PrivateCharge
+                    || x.Kind == PersonalMoneyEntryKind.PrivateRefund
+                    || x.Kind == PersonalMoneyEntryKind.SharedCharge
+                    || x.Kind == PersonalMoneyEntryKind.SharedRefund
+                    || x.Kind == PersonalMoneyEntryKind.Surrender ? x.Amount : 0m),
+                g.Sum(x => x.Kind == PersonalMoneyEntryKind.Funding
+                    || x.Kind == PersonalMoneyEntryKind.PrivateCharge
+                    || x.Kind == PersonalMoneyEntryKind.PrivateRefund ? x.Amount : 0m)))
+            .SingleOrDefaultAsync(ct);
+        return balance ?? new PersonalMoneyBalance(0m, 0m);
+    }
+
     public async Task<IReadOnlyList<PersonalMoneyEntry>> GetEntriesAsync(Guid walletId, CancellationToken ct)
         => await db.Set<PersonalMoneyEntry>().AsNoTracking().Where(x => x.WalletId == walletId)
             .OrderBy(x => x.OccurredOn).ThenBy(x => x.RecordedAt).ToListAsync(ct);

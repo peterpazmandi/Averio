@@ -12,6 +12,9 @@ namespace Averio.Application.PersonalMoney;
 
 public enum PersonalTransferPurpose { Ordinary = 0, CreateAndFundGrant = 1, FundExistingGrant = 2, ReturnFunding = 3 }
 
+public sealed record PersonalMoneySummary(Guid WalletId, string Currency, decimal Available,
+    decimal AttributedPrivateFunding, decimal FundingDifference);
+
 public sealed record PersonalMoneySnapshot(Guid WalletId, string Currency, decimal Available,
     decimal AttributedPrivateFunding, decimal FundingDifference,
     IReadOnlyList<PersonalMoneyEvent> Entries, IReadOnlyList<PersonalMoneyCharge> Charges);
@@ -27,6 +30,16 @@ public sealed class PersonalMoneyHandler(
     ITransactionRepository transactions, IPersonalMoneyRepository repository,
     IUnitOfWork unitOfWork, TimeProvider clock)
 {
+    public async Task<PersonalMoneySummary?> GetMySummaryAsync(Guid householdId, CancellationToken ct)
+    {
+        var me = await MemberAsync(householdId, ct);
+        var wallet = await repository.GetWalletAsync(householdId, me.Id, ct);
+        if (wallet is null) return null;
+        var balance = await repository.GetBalanceAsync(wallet.Id, ct);
+        return new PersonalMoneySummary(wallet.Id, wallet.Currency.Value, balance.Entitlement,
+            balance.AttributedPrivateFunding, balance.FundingDifference);
+    }
+
     public async Task<PersonalMoneySnapshot?> GetMineAsync(Guid householdId, CancellationToken ct)
     {
         var me = await MemberAsync(householdId, ct);

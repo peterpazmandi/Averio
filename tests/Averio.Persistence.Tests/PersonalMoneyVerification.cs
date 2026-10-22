@@ -249,6 +249,8 @@ internal static class PersonalMoneyVerification
         await using (var scope = provider.CreateAsyncScope())
         {
             var personal = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            if (await personal.GetMySummaryAsync(fixture.HouseholdId, Ct) is not null)
+                throw new Exception("Another member must not see the private summary.");
             if (await personal.GetMineAsync(fixture.HouseholdId, Ct) is not null)
                 throw new Exception("Another member must not see the private wallet.");
             await FailureAsync<ForbiddenException>(() => personal.GrantAsync(
@@ -367,6 +369,13 @@ internal static class PersonalMoneyVerification
     {
         var result = await handler.GetMineAsync(householdId, Ct)
             ?? throw new Exception("Missing wallet.");
+        var summary = await handler.GetMySummaryAsync(householdId, Ct)
+            ?? throw new Exception("Missing summary.");
+        if (summary.WalletId != result.WalletId || summary.Currency != result.Currency
+            || summary.Available != result.Available
+            || summary.AttributedPrivateFunding != result.AttributedPrivateFunding
+            || summary.FundingDifference != result.FundingDifference)
+            throw new Exception("Database summary must match the private ledger projection.");
         if (result.Available != available || result.AttributedPrivateFunding != funding)
             throw new Exception($"Wrong personal balances {result.Available}/{result.AttributedPrivateFunding}; expected {available}/{funding}.");
     }

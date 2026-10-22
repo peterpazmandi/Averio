@@ -74,6 +74,7 @@ export * from './PendingInvitation';
 export * from './PersonalMoneyChargeResponse';
 export * from './PersonalMoneyEventResponse';
 export * from './PersonalMoneySnapshotResponse';
+export * from './PersonalMoneySummaryResponse';
 export * from './RecurringAllowanceHistoryResponse';
 export * from './RecurringAllowanceResponse';
 export * from './RecurringItemRequest';

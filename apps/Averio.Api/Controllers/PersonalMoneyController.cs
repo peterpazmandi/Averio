@@ -52,6 +52,18 @@ public sealed class PersonalMoneyController(PersonalMoneyHandler handler,
         return NoContent();
     }
 
+    [HttpGet("me/summary")]
+    public async Task<ActionResult<PersonalMoneySummaryResponse>> MySummary(
+        Guid householdId, CancellationToken ct)
+    {
+        var result = await handler.GetMySummaryAsync(householdId, ct);
+        if (result is null) return NoContent();
+        return Ok(new PersonalMoneySummaryResponse(result.WalletId, result.Currency,
+            DecimalAmountMapper.Format(result.Available),
+            DecimalAmountMapper.Format(result.AttributedPrivateFunding),
+            DecimalAmountMapper.Format(result.FundingDifference)));
+    }
+
     [HttpGet("me")]
     public async Task<ActionResult<PersonalMoneySnapshotResponse>> Mine(
         Guid householdId, CancellationToken ct)

@@ -37,11 +37,12 @@ try {
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(language => localStorage.setItem('i18nextLng', language), language);
-        let role = 'owner', failFirstCreate = true;
+        let role = 'owner', failFirstCreate = true, conflictNextUpdate = false, failScheduleLoad = false;
         let migrationNotReady = language === 'en' && mobile;
         let schedule;
         const creationAttempts = [], updates = [];
-        let historyRequests = 0;
+        let historyRequests = 0, dashboardLedgerRequests = 0, summaryRequests = 0;
+        let dashboard = false, summaryAvailable = '250', summaryEmpty = true;
         await page.route('**/api/v1/**', async route => {
             const request = route.request();
             const pathname = new URL(request.url()).pathname;
@@ -53,6 +54,13 @@ try {
                     role, onboardingCompleted: true, version: '1',
                     members: [{ id: 'member0', displayName: 'Owner', isCurrentUser: true, role, joinedAtUtc: '2026-01-01T00:00:00Z' },
                         { id: 'member1', displayName: 'Partner', isCurrentUser: false, role: 'member', joinedAtUtc: '2026-01-01T00:00:00Z' }] });
+            if (pathname.endsWith('/personal-money/me/summary')) {
+                summaryRequests++;
+                if (summaryEmpty) return route.fulfill({ status: 204 });
+                return json({ walletId: 'wallet', currency: 'EUR', available: summaryAvailable,
+                    attributedPrivateFunding: '50', fundingDifference: '200' });
+            }
+            if (dashboard && pathname.endsWith('/personal-money/me')) dashboardLedgerRequests++;
             if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR',
                 available: '250', attributedPrivateFunding: '50', fundingDifference: '200',
                 entries: [], charges: [] });
@@ -72,17 +80,25 @@ try {
             if (pathname.endsWith('/personal-money/schedules') && request.method() === 'GET') {
                 if (migrationNotReady) return route.fulfill({ status: 503, contentType: 'application/problem+json',
                     body: JSON.stringify({ code: 'recurring_allowance_database_update_required' }) });
+                if (failScheduleLoad) return route.fulfill({ status: 500, contentType: 'application/problem+json', body: '{}' });
                 return json(schedule ? [schedule] : []);
             }
             if (pathname.includes('/personal-money/schedules/scheduled-1/history')) {
                 historyRequests++;
                 return json([
-                { dueOn: '2026-10-01', amount: '220.0000' },
+                { dueOn: '2026-10-01', amount: '100000000000000.01' },
                 ]);
             }
             if (pathname.endsWith('/personal-money/schedules/scheduled-1') && request.method() === 'PUT') {
                 const data = request.postDataJSON(); updates.push(data);
                 assert.equal(data.expectedVersion, schedule.version);
+                if (conflictNextUpdate) {
+                    conflictNextUpdate = false;
+                    schedule = { ...schedule, amount: '999999999999999.9999', version: 'concurrent-version' };
+                    return route.fulfill({ status: 409, contentType: 'application/problem+json',
+                        body: JSON.stringify({ title: 'Schedule changed. Review the latest values.',
+                            code: 'recurring_allowance_conflict' }) });
+                }
                 schedule = { ...schedule, amount: data.amount, endsOn: data.endsOn ?? null,
                     isPaused: data.isPaused, isStopped: data.isStopped,
                     nextDueOn: data.isStopped ? null : schedule.nextDueOn,
@@ -148,6 +164,9 @@ try {
         await page.getByText(copy.recurring.history, { exact: true }).click();
         await page.waitForFunction(() => document.body.textContent.includes('2026-10-01'));
         assert.equal(historyRequests, 1, 'Expanding one grant history should request only that schedule.');
+        const historyAmount = language === 'en' ? '€100,000,000,000,000.01'
+            : language === 'de' ? '100.000.000.000.000,01 €' : '100 000 000 000 000,01 EUR';
+        await page.getByText(historyAmount, { exact: true }).waitFor();
         await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.pause, exact: true }).click();
         await page.getByText(copy.recurring.status.paused, { exact: true }).waitFor();
@@ -156,12 +175,59 @@ try {
         await page.getByRole('button', { name: copy.recurring.resume, exact: true }).click();
         await page.getByText(copy.recurring.status.active, { exact: true }).waitFor();
         assert.equal(updates[1].isPaused, false);
+        // A competing tab wins. Refetch must reset the stale editor but retain the explanation.
+        conflictNextUpdate = true;
+        await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
+        await page.locator('#recurring-edit-scheduled-1 input[inputmode="decimal"]').fill('123.4567');
+        await page.getByRole('button', { name: copy.recurring.save, exact: true }).click();
+        const exactAmount = language === 'en' ? '€999,999,999,999,999.9999'
+            : language === 'de' ? '999.999.999.999.999,9999 €' : '999 999 999 999 999,9999 EUR';
+        await page.getByText(exactAmount, { exact: false }).waitFor();
+        await page.getByRole('alert').filter({ hasText: 'Schedule changed. Review the latest values.' }).waitFor();
+        assert.equal(schedule.amount, '999999999999999.9999', 'Rejected draft must not be saved.');
+        await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
+        assert.equal(await page.locator('#recurring-edit-scheduled-1 input[inputmode="decimal"]').inputValue(), schedule.amount);
+        await page.getByRole('button', { name: copy.recurring.hide, exact: true }).click();
         await page.screenshot({ path: path.join(artifactDir, language + '-' + width + '.png'), fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.getByRole('button', { name: copy.recurring.manage, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.stop, exact: true }).click();
         await page.getByRole('button', { name: copy.recurring.confirmStop, exact: true }).click();
         await page.getByText(copy.recurring.status.stopped, { exact: true }).waitFor();
+        // Recipients have no owner panel to recover a failed schedule request.
+        role = 'member';
+        schedule = { ...schedule, recipientMemberId: 'member0', isStopped: false, nextDueOn: due };
+        for (const schemaFailure of [true, false]) {
+            migrationNotReady = schemaFailure;
+            failScheduleLoad = !schemaFailure;
+            await page.goto(url);
+            if (mobile) await page.getByRole('combobox').first().selectOption('personalMoney');
+            else await page.locator('a[href="#household-personal-money"]').click();
+            await page.getByText(schemaFailure ? copy.recurring.schemaUnavailable : copy.recurring.loadError,
+                { exact: true }).waitFor();
+            migrationNotReady = false; failScheduleLoad = false;
+            await page.getByRole('button', { name: copy.recurring.retry, exact: true }).click();
+            await page.getByText(exactAmount, { exact: false }).waitFor();
+            assert.equal(await page.getByRole('alert').count(), 0);
+            // Exercise both the upcoming and paused recipient rendering paths.
+            schedule = { ...schedule, isPaused: true };
+        }
+        dashboard = true;
+        await page.goto(url + '?dashboard=1');
+        await page.getByText(copy.empty, { exact: true }).waitFor();
+        const invalidate = page.getByRole('button', { name: 'Simulate wallet mutation', exact: true });
+        summaryEmpty = false;
+        await invalidate.click();
+        await page.locator('dd').first().waitFor();
+        const initialBalance = await page.locator('dd').first().innerText();
+        summaryAvailable = '220.1234';
+        await invalidate.click();
+        await page.waitForFunction(previous => document.querySelector('dd')?.textContent !== previous, initialBalance);
+        assert.match(await page.locator('dd').first().innerText(), /220[.,]1234/);
+        assert.equal(summaryRequests, 3, 'Wallet mutation invalidation must refresh the dashboard summary.');
+        assert.equal(dashboardLedgerRequests, 0, 'Dashboard must never load the detailed ledger.');
+        assert.equal(await page.getByRole('link', { name: copy.dashboardManage }).getAttribute('href'),
+            '/app/household#household-personal-money');
         assert.deepEqual(errors, []);
         await page.close();
     }

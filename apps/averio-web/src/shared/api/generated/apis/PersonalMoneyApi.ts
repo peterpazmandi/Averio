@@ -39,6 +39,11 @@ import {
     PersonalMoneySnapshotResponseToJSON,
 } from '../models/PersonalMoneySnapshotResponse';
 import {
+    type PersonalMoneySummaryResponse,
+    PersonalMoneySummaryResponseFromJSON,
+    PersonalMoneySummaryResponseToJSON,
+} from '../models/PersonalMoneySummaryResponse';
+import {
     type RecurringAllowanceHistoryResponse,
     RecurringAllowanceHistoryResponseFromJSON,
     RecurringAllowanceHistoryResponseToJSON,
@@ -117,6 +122,13 @@ export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest {
      * 
      */
     refundPersonalMoneyRequest: RefundPersonalMoneyRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
 }
 
 export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest {
@@ -436,6 +448,49 @@ export class PersonalMoneyApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/me/summary`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PersonalMoneySummaryResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PersonalMoneySummaryResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PersonalMoneySummaryResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

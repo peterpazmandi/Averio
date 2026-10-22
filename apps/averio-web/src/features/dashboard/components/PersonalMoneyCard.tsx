@@ -12,7 +12,7 @@ export function PersonalMoneyCard({ userId, householdId }: {
     householdId: string;
 }) {
     const { t, i18n } = useTranslation();
-    const query = useQuery(personalMoneyQueries.mine(userId, householdId));
+    const query = useQuery(personalMoneyQueries.summary(userId, householdId));
     const wallet = query.data;
     const language = i18n.resolvedLanguage ?? i18n.language;
 
