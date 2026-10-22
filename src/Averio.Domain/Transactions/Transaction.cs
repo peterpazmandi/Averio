@@ -133,17 +133,29 @@ public sealed class Transaction
 
     private void ReplaceItems(IReadOnlyCollection<TransactionItemDraft> drafts)
     {
-        _items.Clear();
-
+        // Retain existing tracked item entities (and their stable IDs) across ordinary edits.
+        // Removed items are detached from the transaction, while private immutable wallet
+        // ledger history can still reference their former IDs without disclosing ownership.
+        var old = _items.ToDictionary(x => x.Id);
+        var replacement = new List<TransactionItem>(drafts.Count);
+        var used = new HashSet<Guid>();
         var position = 0;
         foreach (var draft in drafts)
         {
-            _items.Add(TransactionItem.Create(
-                HouseholdId,
-                Id,
-                position++,
-                draft));
+            if (draft.ExistingItemId is Guid id)
+            {
+                if (!used.Add(id) || !old.TryGetValue(id, out var retained))
+                    throw new ArgumentException("Invalid existing transaction item.");
+                retained.Retain(draft, position++);
+                replacement.Add(retained);
+            }
+            else
+            {
+                replacement.Add(TransactionItem.Create(HouseholdId, Id, position++, draft));
+            }
         }
+        _items.Clear();
+        _items.AddRange(replacement);
 
         Amount = _items.Sum(item => item.Amount);
 
