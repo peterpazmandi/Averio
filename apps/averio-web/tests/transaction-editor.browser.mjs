@@ -59,12 +59,13 @@ try {
         assert.equal(saved.visibility, 'Household');
         await account.selectOption('private');
         assert.equal(await checkbox.isDisabled(), false, 'Private account purchases must support the same item controls.');
-        await checkbox.uncheck();
+        await checkbox.check();
+        await page.locator('input[inputmode="decimal"]').nth(1).fill('2.00');
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
-        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');
-        const unlinked = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
-        assert.equal(unlinked.items[0].personalMoneyAmount, '0');
-        assert.equal(unlinked.visibility, 'Private');
+        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '2.00');
+        const privateCharge = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
+        assert.equal(privateCharge.items[0].personalMoneyAmount, '2.00');
+        assert.equal(privateCharge.visibility, 'Private');
         await disclosures.nth(2).click();
         await page.locator('textarea').fill('Keep my note');
         await disclosures.nth(2).click();
