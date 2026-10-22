@@ -140,7 +140,9 @@ public sealed class UpdateTransactionHandler(
 
         try
         {
-            await personalMoney.ReverseTransactionChargeAsync(household.Id, transaction.Id, cancellationToken);
+            await personalMoney.ReconcileItemSourceChangesAsync(household.Id, transaction,
+                items, command.AccountId, command.Kind, command.Visibility, command.OccurredOn,
+                cancellationToken);
             await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
 
@@ -157,6 +159,8 @@ public sealed class UpdateTransactionHandler(
                 timeProvider.GetUtcNow());
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await personalMoney.ApplyItemChargesWithinTransactionAsync(household.Id, transaction.Id,
+                command.Items, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
             await databaseTransaction.CommitAsync(cancellationToken);
         }
