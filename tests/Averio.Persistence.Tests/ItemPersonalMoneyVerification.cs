@@ -124,7 +124,39 @@ internal static class ItemPersonalMoneyVerification
             if ((await pm.GetMineAsync(fixture.HouseholdId, Ct))!.Available != before)
                 throw new Exception("Voiding a corrected source double-restored entitlement.");
         }
-        Console.WriteLine("PASS item-level allowance: mixed receipt, privacy, stable item IDs, archive, edit, deletion and void");
+        // A different household member may also void an A-linked shared purchase,
+        // without first learning whose private allowance it affects.
+        user.UserId = fixture.OwnerUserId;
+        Guid partnerVoidId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            partnerVoidId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
+                .HandleAsync(new CreateTransactionCommand(fixture.HouseholdId,
+                    fixture.HouseholdAccountId, TransactionKind.Expense,
+                    TransactionVisibility.Household, "Partner correction", null, On,
+                    [new TransactionItemInput("Personal component", expenseCategory, 15m,
+                        PersonalMoneyAmount: 9m)], []), Ct);
+            var mine = (await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
+                .GetMineAsync(fixture.HouseholdId, Ct))!;
+            if (mine.Available != before - 9m)
+                throw new Exception("Item charge missing before partner void.");
+        }
+        user.UserId = fixture.MemberUserId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var transaction = await scope.ServiceProvider.GetRequiredService<GetTransactionHandler>()
+                .HandleAsync(fixture.HouseholdId, partnerVoidId, Ct);
+            await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>()
+                .HandleAsync(fixture.HouseholdId, partnerVoidId, transaction.UpdatedAt, Ct);
+        }
+        user.UserId = fixture.OwnerUserId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            if ((await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
+                .GetMineAsync(fixture.HouseholdId, Ct))!.Available != before)
+                throw new Exception("Another member's shared transaction void did not restore allowance.");
+        }
+        Console.WriteLine("PASS item-level allowance: mixed receipt, privacy, stable item IDs, archive, cross-member edit/void and reversal");
     }
 
     private static async Task UpdateAsync(IServiceProvider services, Fixture fixture, Guid id,
