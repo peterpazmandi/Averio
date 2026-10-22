@@ -175,9 +175,10 @@ export function TransactionEditor({
     const wallet = useQuery({ ...personalMoneyQueries.mine(userId, householdId),
         enabled: !rule && kind === 'Expense' });
     const canChargePersonalMoney = !recurring && kind === 'Expense'
-        && ((account?.scope === 'Household' && effectiveVisibility === 'Household')
+        && ((account?.scope === 'Household' && account.visibility === 'Household'
+            && account.includeInHouseholdReports && effectiveVisibility === 'Household')
             || (account?.scope === 'Personal' && account.visibility === 'Private'
-                && effectiveVisibility === 'Private'))
+                && !account.includeInHouseholdReports && effectiveVisibility === 'Private'))
         && wallet.data?.currency === currency;
 
     function personalAmount(item: EditorItem): string {
