@@ -68,7 +68,8 @@ public sealed record TransactionResponse(
     bool CanModify,
     IReadOnlyList<TransactionItemResponse> Items,
     IReadOnlyList<TransactionLabelResponse> Labels,
-    Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion);
+    Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion,
+    bool IsArchived = false);
 
 public sealed record TransactionPageResponse(
     IReadOnlyList<TransactionResponse> Items,
