@@ -19,7 +19,7 @@ try {
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) {
         const copy = context.exports['personalMoney' + language.toUpperCase()];
-        const page = await browser.newPage({ viewport: { width: dark ? 390 : 1440, height: 900 } });
+        const page = await browser.newPage({ viewport: { width: dark ? 375 : 1440, height: 900 } });
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(({ language, dark }) => {
