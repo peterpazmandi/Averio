@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { accountsQueries } from '../../accounts/api/accountsQueries';
 import { formatDecimalAmount } from '../../../shared/money/decimalAmount';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
-import { getTransactions } from '../api/transactionApi';
+import { getTransactions, archiveTransaction } from '../api/transactionApi';
 import type {
     TransactionDto,
     TransactionFilters,
@@ -58,6 +58,7 @@ export function TransactionsPage({
 
     const [search, setSearch] = useState('');
     const [personalMoneyOnly, setPersonalMoneyOnly] = useState(false);
+    const [showArchived, setShowArchived] = useState(false);
     const router = useRouter();
     const openedFromList = useRef<string | null>(null);
     const activityId = urlState.activity ?? '';
@@ -107,7 +108,7 @@ export function TransactionsPage({
         ? accounts.data?.find(account => account.id === accountId)?.name
         : undefined;
 
-    const filterCount = Number(personalMoneyOnly)
+    const filterCount = Number(showArchived) + Number(personalMoneyOnly)
         + Number(accountId !== '')
         + Number(kind !== '')
         + Number(period !== 'this-month') + Number(activityId !== '') + labelIds.length;
@@ -121,11 +122,12 @@ export function TransactionsPage({
             kind: kind || undefined,
             search: search.trim() || undefined,
             pageSize: 40,
+            includeArchived: showArchived,
             from, to, labelIds,
         };
 
         return result;
-    }, [accountId, kind, from, to, search, activityId, labelIds]);
+    }, [accountId, kind, from, to, search, activityId, labelIds, showArchived]);
 
     const transactions = useInfiniteQuery({
         enabled: !invalidRange,
@@ -174,6 +176,7 @@ export function TransactionsPage({
     function resetFilters() {
         setSearch('');
         setPersonalMoneyOnly(false);
+        setShowArchived(false);
         setSelected({});
         onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: undefined, labels: undefined });
         searchInput.current?.focus();
@@ -205,6 +208,14 @@ export function TransactionsPage({
             setNotice(t('transactionManagement.edited'));
         }
 
+        closeEditor();
+    }
+
+    async function archiveCurrent(archived: boolean, expectedUpdatedAt: string) {
+        if (!activeEditor || activeEditor === 'new') return;
+        await archiveTransaction(householdId, activeEditor.id, archived, expectedUpdatedAt);
+        await queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) });
+        setNotice(t(archived ? 'transactionManagement.archivedNotice' : 'transactionManagement.restoredNotice'));
         closeEditor();
     }
 
@@ -242,6 +253,11 @@ export function TransactionsPage({
                 </div>
             </header>
 
+            <label className="mb-3 flex min-h-11 w-fit items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-[#0D1726]">
+                <input type="checkbox" className="size-4 accent-emerald-500" checked={showArchived}
+                    onChange={event => { setShowArchived(event.target.checked); setSelected({}); }} />
+                {t('transactionManagement.includeArchived')}
+            </label>
             <div
                 className="av-tx-search-shell"
                 role="search"
@@ -636,6 +652,7 @@ export function TransactionsPage({
                         closeEditor();
                         setNotice(t('recurring.saved'));
                     }}
+                    onArchive={activeEditor === 'new' ? undefined : archiveCurrent}
                     onVoid={activeEditor === 'new'
                         ? undefined
                         : voidCurrent}
