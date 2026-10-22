@@ -25,6 +25,7 @@ public sealed class PersonalMoneyEntry
     public DateOnly OccurredOn { get; private set; }
     public Guid? TransferId { get; private set; }
     public Guid? TransactionId { get; private set; }
+    public Guid? TransactionItemId { get; private set; }
     public Guid? RelatedTransactionId { get; private set; }
     public Guid? ReversesEntryId { get; private set; }
     public Guid? OperationId { get; private set; }
@@ -38,7 +39,8 @@ public sealed class PersonalMoneyEntry
         DateTimeOffset now, Guid? transferId = null, Guid? transactionId = null,
         Guid? reversesEntryId = null, Guid? operationId = null,
         decimal? correctionExpectedAmount = null, int? correctionExpectedVersion = null,
-        Guid? relatedTransactionId = null, Guid? recurringAllowanceRuleId = null)
+        Guid? relatedTransactionId = null, Guid? recurringAllowanceRuleId = null,
+        Guid? transactionItemId = null)
     {
         if (householdId == Guid.Empty || walletId == Guid.Empty || !Enum.IsDefined(kind)
             || occurredOn == default || signedAmount == 0
@@ -51,14 +53,16 @@ public sealed class PersonalMoneyEntry
             || kind is PersonalMoneyEntryKind.PrivateRefund or PersonalMoneyEntryKind.SharedRefund && relatedTransactionId is null
             || relatedTransactionId is not null && (transactionId is null || relatedTransactionId == transactionId)
             || transferId is not null && transactionId is not null
-            || recurringAllowanceRuleId is not null && kind != PersonalMoneyEntryKind.Grant)
+            || recurringAllowanceRuleId is not null && kind != PersonalMoneyEntryKind.Grant
+            || transactionItemId is not null && (transactionId is null || kind is not
+                (PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge)))
             throw new ArgumentException("Invalid ledger source.");
         return new PersonalMoneyEntry
         {
             Id = Guid.NewGuid(), HouseholdId = householdId, WalletId = walletId,
             Kind = kind, Amount = signedAmount, OccurredOn = occurredOn,
             RecordedAt = now, TransferId = transferId, TransactionId = transactionId,
-            RelatedTransactionId = relatedTransactionId,
+            RelatedTransactionId = relatedTransactionId, TransactionItemId = transactionItemId,
             ReversesEntryId = reversesEntryId, OperationId = operationId,
             RecurringAllowanceRuleId = recurringAllowanceRuleId,
             CorrectionExpectedAmount = correctionExpectedAmount, CorrectionExpectedVersion = correctionExpectedVersion
