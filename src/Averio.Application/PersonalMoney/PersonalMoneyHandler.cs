@@ -455,9 +455,7 @@ public sealed class PersonalMoneyHandler(
         if (wallet.Currency != record.Currency)
             throw new BusinessRuleException("personal_money_currency_mismatch", "Error_PersonalMoneyCurrencyMismatch");
 
-        var previousTotal = -entries.Where(IsCharge).Sum(x => x.Amount);
-        var legacyTotal = -entries.Where(x => x.TransactionItemId is null && IsCharge(x)).Sum(x => x.Amount);
-        var targetTotal = 0m;
+        var projectedTotal = -entries.Where(IsCharge).Sum(x => x.Amount);
         foreach (var target in targets)
         {
             var amount = target.Amount!.Value;
@@ -483,16 +481,9 @@ public sealed class PersonalMoneyHandler(
                     transactionId: transactionId, operationId: Guid.NewGuid(),
                     transactionItemId: target.Item.Id));
             }
-            targetTotal += amount;
+            projectedTotal += amount - current;
         }
-        if (previousTotal - targets.Sum(x => -entries.Where(e =>
-                e.WalletId == wallet.Id && e.TransactionItemId == x.Item.Id && IsCharge(e))
-                .Sum(e => e.Amount)) + targetTotal > record.Amount
-            || legacyTotal + entries.Where(x => x.TransactionItemId is not null && IsCharge(x)
-                && !targets.Any(t => t.Item.Id == x.TransactionItemId)).Sum(x => -x.Amount)
-                + targets.Sum(t => t.Amount!.Value
-                    - entries.Where(x => x.TransactionItemId == t.Item.Id && x.WalletId != wallet.Id && IsCharge(x))
-                        .Sum(x => -x.Amount)) > record.Amount)
+        if (projectedTotal > record.Amount)
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
         await unitOfWork.SaveChangesAsync(ct);
     }
