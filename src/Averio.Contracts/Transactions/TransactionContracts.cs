@@ -34,6 +34,8 @@ public sealed record UpdateTransactionRequest(
 
 public sealed record CreateTransactionResponse(Guid Id);
 
+public sealed record ChangeTransactionArchiveRequest(bool Archived, DateTimeOffset ExpectedUpdatedAt);
+
 public sealed record TransactionItemResponse(
     Guid Id,
     int Position,
