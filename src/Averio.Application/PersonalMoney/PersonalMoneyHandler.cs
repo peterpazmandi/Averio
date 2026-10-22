@@ -163,6 +163,8 @@ public sealed class PersonalMoneyHandler(
             ?? throw new NotFoundException("charge", transactionId);
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
         var own = entries.Where(x => x.WalletId == wallet.Id && IsCharge(x)).ToArray();
+        if (own.Any(x => x.TransactionItemId is not null))
+            throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         if (own.Length == 0) throw new NotFoundException("charge", transactionId);
         var record = await transactions.GetVisibleByIdAsync(householdId, me.Id, transactionId, ct)
             ?? throw new NotFoundException("transaction", transactionId);
