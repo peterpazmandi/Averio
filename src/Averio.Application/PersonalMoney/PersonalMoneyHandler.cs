@@ -12,6 +12,9 @@ namespace Averio.Application.PersonalMoney;
 
 public enum PersonalTransferPurpose { Ordinary = 0, CreateAndFundGrant = 1, FundExistingGrant = 2, ReturnFunding = 3 }
 
+public sealed record PersonalMoneySummary(Guid WalletId, string Currency, decimal Available,
+    decimal AttributedPrivateFunding, decimal FundingDifference);
+
 public sealed record PersonalMoneySnapshot(Guid WalletId, string Currency, decimal Available,
     decimal AttributedPrivateFunding, decimal FundingDifference,
     IReadOnlyList<PersonalMoneyEvent> Entries, IReadOnlyList<PersonalMoneyCharge> Charges);
@@ -19,25 +22,42 @@ public sealed record PersonalMoneySnapshot(Guid WalletId, string Currency, decim
 public sealed record PersonalMoneyCharge(Guid TransactionId, decimal Amount, int Version);
 
 public sealed record PersonalMoneyEvent(Guid Id, string Kind, decimal Amount, DateOnly OccurredOn,
-    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId);
+    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
+    Guid? RecurringAllowanceRuleId, string? TransactionName);
 
 public sealed class PersonalMoneyHandler(
     ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
     ITransactionRepository transactions, IPersonalMoneyRepository repository,
     IUnitOfWork unitOfWork, TimeProvider clock)
 {
+    public async Task<PersonalMoneySummary?> GetMySummaryAsync(Guid householdId, CancellationToken ct)
+    {
+        var me = await MemberAsync(householdId, ct);
+        var wallet = await repository.GetWalletAsync(householdId, me.Id, ct);
+        if (wallet is null) return null;
+        var balance = await repository.GetBalanceAsync(wallet.Id, ct);
+        return new PersonalMoneySummary(wallet.Id, wallet.Currency.Value, balance.Entitlement,
+            balance.AttributedPrivateFunding, balance.FundingDifference);
+    }
+
     public async Task<PersonalMoneySnapshot?> GetMineAsync(Guid householdId, CancellationToken ct)
     {
         var me = await MemberAsync(householdId, ct);
         var wallet = await repository.GetWalletAsync(householdId, me.Id, ct);
         if (wallet is null) return null;
         var entries = await repository.GetEntriesAsync(wallet.Id, ct);
+        var transactionIds = entries.Select(x => x.TransactionId ?? x.RelatedTransactionId)
+            .OfType<Guid>().Distinct().ToArray();
+        var transactionNames = await repository.GetTransactionNamesAsync(householdId, me.Id, transactionIds, ct);
         var balance = PersonalMoneyBalance.FromEntries(entries);
         return new PersonalMoneySnapshot(wallet.Id, wallet.Currency.Value, balance.Entitlement,
             balance.AttributedPrivateFunding, balance.FundingDifference,
             entries.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.RecordedAt)
                 .Select(x => new PersonalMoneyEvent(x.Id, x.Kind.ToString(), x.Amount, x.OccurredOn,
-                    x.TransactionId, x.TransferId, x.RelatedTransactionId)).ToArray(),
+                    x.TransactionId, x.TransferId, x.RelatedTransactionId,
+                    x.RecurringAllowanceRuleId,
+                    (x.TransactionId ?? x.RelatedTransactionId) is Guid transactionId
+                        ? transactionNames.GetValueOrDefault(transactionId) : null)).ToArray(),
             entries.Where(x => x.Kind is PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge)
                 .GroupBy(x => x.TransactionId!.Value).Where(g => g.Sum(x => x.Amount) < 0)
                 .Select(g => new PersonalMoneyCharge(g.Key, -g.Sum(x => x.Amount), g.Count())).ToArray());

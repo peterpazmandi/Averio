@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PersonalMoneyCard } from './PersonalMoneyCard';
 import { CategorySpendingCard } from './CategorySpendingCard';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -109,7 +110,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
     const currentMonth = dashboard.cashFlow.filter(period => period.periodStart === monthKey);
 
     function emptyCard(
-        name: 'goals' | 'personal',
+        name: 'goals',
         icon: ConceptIconName,
     ) {
         return (
@@ -415,7 +416,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     )}
                 </AverioCard>
 
-                {emptyCard('personal', 'profile')}
+                <PersonalMoneyCard key={`${userId}:${householdId}`} userId={userId} householdId={householdId} />
 
                 <AverioCard className="av-span-12" aria-labelledby="dashboard-accounts-title">
                     <div className="av-card-head">

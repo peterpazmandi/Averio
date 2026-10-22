@@ -28,6 +28,7 @@ public sealed class PersonalMoneyEntry
     public Guid? RelatedTransactionId { get; private set; }
     public Guid? ReversesEntryId { get; private set; }
     public Guid? OperationId { get; private set; }
+    public Guid? RecurringAllowanceRuleId { get; private set; }
     public decimal? CorrectionExpectedAmount { get; private set; }
     public int? CorrectionExpectedVersion { get; private set; }
     public DateTimeOffset RecordedAt { get; private set; }
@@ -37,7 +38,7 @@ public sealed class PersonalMoneyEntry
         DateTimeOffset now, Guid? transferId = null, Guid? transactionId = null,
         Guid? reversesEntryId = null, Guid? operationId = null,
         decimal? correctionExpectedAmount = null, int? correctionExpectedVersion = null,
-        Guid? relatedTransactionId = null)
+        Guid? relatedTransactionId = null, Guid? recurringAllowanceRuleId = null)
     {
         if (householdId == Guid.Empty || walletId == Guid.Empty || !Enum.IsDefined(kind)
             || occurredOn == default || signedAmount == 0
@@ -49,7 +50,8 @@ public sealed class PersonalMoneyEntry
                 or PersonalMoneyEntryKind.PrivateRefund or PersonalMoneyEntryKind.SharedRefund && transactionId is null
             || kind is PersonalMoneyEntryKind.PrivateRefund or PersonalMoneyEntryKind.SharedRefund && relatedTransactionId is null
             || relatedTransactionId is not null && (transactionId is null || relatedTransactionId == transactionId)
-            || transferId is not null && transactionId is not null)
+            || transferId is not null && transactionId is not null
+            || recurringAllowanceRuleId is not null && kind != PersonalMoneyEntryKind.Grant)
             throw new ArgumentException("Invalid ledger source.");
         return new PersonalMoneyEntry
         {
@@ -58,6 +60,7 @@ public sealed class PersonalMoneyEntry
             RecordedAt = now, TransferId = transferId, TransactionId = transactionId,
             RelatedTransactionId = relatedTransactionId,
             ReversesEntryId = reversesEntryId, OperationId = operationId,
+            RecurringAllowanceRuleId = recurringAllowanceRuleId,
             CorrectionExpectedAmount = correctionExpectedAmount, CorrectionExpectedVersion = correctionExpectedVersion
         };
     }

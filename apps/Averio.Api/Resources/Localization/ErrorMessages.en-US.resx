@@ -344,6 +344,9 @@
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Select a valid personal-money transfer purpose.</value></data>
   <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Choose a posted refund in the same account and currency as your linked purchase. Refunds may not exceed the amount charged to Personal Money.</value></data>
   <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>You can surrender only unused positive Personal Money entitlement.</value></data>
+  <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Monthly Personal Money schedule is invalid. Check the amount, date range and selected member.</value></data>
+  <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>Recurring allowances temporarily unavailable</value></data>
+  <data name="Error_RecurringAllowanceDatabaseUpdateRequired" xml:space="preserve"><value>Scheduled allowances need a database update. Ask the administrator to apply the current EF migrations, then retry.</value></data>
 </root>
 
 

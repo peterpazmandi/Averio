@@ -24,6 +24,11 @@ import {
     CorrectPersonalMoneyChargeRequestToJSON,
 } from '../models/CorrectPersonalMoneyChargeRequest';
 import {
+    type CreateRecurringAllowanceRequest,
+    CreateRecurringAllowanceRequestFromJSON,
+    CreateRecurringAllowanceRequestToJSON,
+} from '../models/CreateRecurringAllowanceRequest';
+import {
     type GrantPersonalMoneyRequest,
     GrantPersonalMoneyRequestFromJSON,
     GrantPersonalMoneyRequestToJSON,
@@ -34,6 +39,21 @@ import {
     PersonalMoneySnapshotResponseToJSON,
 } from '../models/PersonalMoneySnapshotResponse';
 import {
+    type PersonalMoneySummaryResponse,
+    PersonalMoneySummaryResponseFromJSON,
+    PersonalMoneySummaryResponseToJSON,
+} from '../models/PersonalMoneySummaryResponse';
+import {
+    type RecurringAllowanceHistoryResponse,
+    RecurringAllowanceHistoryResponseFromJSON,
+    RecurringAllowanceHistoryResponseToJSON,
+} from '../models/RecurringAllowanceHistoryResponse';
+import {
+    type RecurringAllowanceResponse,
+    RecurringAllowanceResponseFromJSON,
+    RecurringAllowanceResponseToJSON,
+} from '../models/RecurringAllowanceResponse';
+import {
     type RefundPersonalMoneyRequest,
     RefundPersonalMoneyRequestFromJSON,
     RefundPersonalMoneyRequestToJSON,
@@ -43,6 +63,11 @@ import {
     SurrenderPersonalMoneyRequestFromJSON,
     SurrenderPersonalMoneyRequestToJSON,
 } from '../models/SurrenderPersonalMoneyRequest';
+import {
+    type UpdateRecurringAllowanceRequest,
+    UpdateRecurringAllowanceRequestFromJSON,
+    UpdateRecurringAllowanceRequestToJSON,
+} from '../models/UpdateRecurringAllowanceRequest';
 
 export interface ApiV1HouseholdsHouseholdIdPersonalMoneyGrantsPostRequest {
     /**
@@ -99,6 +124,13 @@ export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeRefundsPostRequest {
     refundPersonalMoneyRequest: RefundPersonalMoneyRequest;
 }
 
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
+
 export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest {
     /**
      * 
@@ -108,6 +140,50 @@ export interface ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest 
      * 
      */
     surrenderPersonalMoneyRequest: SurrenderPersonalMoneyRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    createRecurringAllowanceRequest: CreateRecurringAllowanceRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    scheduleId: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    scheduleId: string;
+    /**
+     * 
+     */
+    updateRecurringAllowanceRequest: UpdateRecurringAllowanceRequest;
 }
 
 /**
@@ -375,6 +451,49 @@ export class PersonalMoneyApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/me/summary`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PersonalMoneySummaryResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PersonalMoneySummaryResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGet(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PersonalMoneySummaryResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSummaryGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost without sending the request
      */
     async apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest): Promise<runtime.RequestOpts> {
@@ -424,6 +543,213 @@ export class PersonalMoneyApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdPersonalMoneyMeSurrendersPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/schedules`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RecurringAllowanceResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RecurringAllowanceResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGet(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RecurringAllowanceResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPost().'
+            );
+        }
+
+        if (requestParameters['createRecurringAllowanceRequest'] == null) {
+            throw new runtime.RequiredError(
+                'createRecurringAllowanceRequest',
+                'Required parameter "createRecurringAllowanceRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/schedules`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CreateRecurringAllowanceRequestToJSON(requestParameters['createRecurringAllowanceRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecurringAllowanceResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecurringAllowanceResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPost(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecurringAllowanceResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGet().'
+            );
+        }
+
+        if (requestParameters['scheduleId'] == null) {
+            throw new runtime.RequiredError(
+                'scheduleId',
+                'Required parameter "scheduleId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/schedules/{scheduleId}/history`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{scheduleId}', encodeURIComponent(String(requestParameters['scheduleId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RecurringAllowanceHistoryResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RecurringAllowanceHistoryResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGet(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RecurringAllowanceHistoryResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdHistoryGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPut().'
+            );
+        }
+
+        if (requestParameters['scheduleId'] == null) {
+            throw new runtime.RequiredError(
+                'scheduleId',
+                'Required parameter "scheduleId" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPut().'
+            );
+        }
+
+        if (requestParameters['updateRecurringAllowanceRequest'] == null) {
+            throw new runtime.RequiredError(
+                'updateRecurringAllowanceRequest',
+                'Required parameter "updateRecurringAllowanceRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/personal-money/schedules/{scheduleId}`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{scheduleId}', encodeURIComponent(String(requestParameters['scheduleId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UpdateRecurringAllowanceRequestToJSON(requestParameters['updateRecurringAllowanceRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPut(requestParameters: ApiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdPersonalMoneySchedulesScheduleIdPutRaw(requestParameters, initOverrides);
     }
 
 }

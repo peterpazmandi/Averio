@@ -6,7 +6,11 @@ public sealed record GrantPersonalMoneyRequest(Guid RecipientMemberId, string Cu
 public sealed record ChargePersonalMoneyRequest(Guid TransactionId, string Amount, Guid OperationId);
 
 public sealed record PersonalMoneyEventResponse(Guid Id, string Kind, string Amount, DateOnly OccurredOn,
-    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId);
+    Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
+    Guid? RecurringAllowanceRuleId, string? TransactionName);
+
+public sealed record PersonalMoneySummaryResponse(Guid WalletId, string Currency,
+    string Available, string AttributedPrivateFunding, string FundingDifference);
 
 public sealed record PersonalMoneySnapshotResponse(Guid WalletId, string Currency,
     string Available, string AttributedPrivateFunding, string FundingDifference,

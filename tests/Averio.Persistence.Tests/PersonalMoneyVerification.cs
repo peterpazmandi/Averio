@@ -141,6 +141,12 @@ internal static class PersonalMoneyVerification
             if ((await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == privateExpense, Ct)).Amount != 25m)
                 throw new Exception("Allowance correction must not change bank spending.");
             var snapshot = await handler.GetMineAsync(fixture.HouseholdId, Ct);
+            var description = (await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == privateExpense, Ct)).Description;
+            if (snapshot!.Entries.Where(x => x.TransactionId == privateExpense).Any(x => x.TransactionName != description))
+                throw new Exception("Personal Money history must include the linked transaction name.");
+            var names = await scope.ServiceProvider.GetRequiredService<IPersonalMoneyRepository>()
+                .GetTransactionNamesAsync(fixture.HouseholdId, fixture.MemberId, [privateExpense], Ct);
+            if (names.Count != 0) throw new Exception("History names must respect transaction visibility.");
             if (snapshot!.Charges.Single().Amount != 10m || snapshot.Charges.Single().Version != 2)
                 throw new Exception("Active charge must expose net amount and source version.");
         }
@@ -249,6 +255,8 @@ internal static class PersonalMoneyVerification
         await using (var scope = provider.CreateAsyncScope())
         {
             var personal = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            if (await personal.GetMySummaryAsync(fixture.HouseholdId, Ct) is not null)
+                throw new Exception("Another member must not see the private summary.");
             if (await personal.GetMineAsync(fixture.HouseholdId, Ct) is not null)
                 throw new Exception("Another member must not see the private wallet.");
             await FailureAsync<ForbiddenException>(() => personal.GrantAsync(
@@ -367,6 +375,13 @@ internal static class PersonalMoneyVerification
     {
         var result = await handler.GetMineAsync(householdId, Ct)
             ?? throw new Exception("Missing wallet.");
+        var summary = await handler.GetMySummaryAsync(householdId, Ct)
+            ?? throw new Exception("Missing summary.");
+        if (summary.WalletId != result.WalletId || summary.Currency != result.Currency
+            || summary.Available != result.Available
+            || summary.AttributedPrivateFunding != result.AttributedPrivateFunding
+            || summary.FundingDifference != result.FundingDifference)
+            throw new Exception("Database summary must match the private ledger projection.");
         if (result.Available != available || result.AttributedPrivateFunding != funding)
             throw new Exception($"Wrong personal balances {result.Available}/{result.AttributedPrivateFunding}; expected {available}/{funding}.");
     }

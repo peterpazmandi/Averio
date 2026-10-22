@@ -1,3 +1,4 @@
+import { PersonalMoneyHistory } from './PersonalMoneyHistory';
 import { Activity, useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import { AverioSectionSelect } from '../../shared/components/ui/AverioSectionSel
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { personalMoneyApi, personalMoneyQueries, personalMoneyKeys } from './personalMoneyQueries';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
+import { RecurringAllowanceManager, MyRecurringAllowances } from './RecurringAllowanceManager';
 import { PersonalMoneyReconciliationPanel, HouseholdBoundaryFlowPanel } from './PersonalMoneyReconciliationPanel';
 
 const transactionsApi = new TransactionsApi(generatedApiConfiguration);
@@ -155,6 +157,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.grantHelp')}</p>
             <div><AverioButton type="submit" variant="primary" disabled={grant.isPending || !validGrant}>{t(grant.isPending ? 'common.actions.saving' : 'personalMoney.grant')}</AverioButton></div>
         </form></AverioCard>}
+        {canGrant && tab === 'owner' && <RecurringAllowanceManager
+            userId={userId} householdId={householdId} household={household} />}
         <Activity mode={tab !== 'boundary' && tab !== 'owner' ? 'visible' : 'hidden'}>
         <AverioCard className="@container space-y-5 p-5 sm:p-6">
         {tab !== 'mine' && mine.isPending && <p role="status">{t('common.status.loading')}</p>}
@@ -222,17 +226,10 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
         {mine.data && <PersonalMoneyReconciliationPanel userId={userId}
             householdId={householdId} wallet={mine.data} />}
         </Activity>
-        {tab === 'mine' && mine.data && <div className="space-y-2">
-            <h4 className="font-semibold">{t('personalMoney.history')}</h4>
-            {mine.data.entries.length === 0
-                ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.noEntries')}</p>
-                : <ul className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {mine.data.entries.slice(0, 20).map(entry => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                        <span>{entry.occurredOn} · {t('personalMoney.kind.' + entry.kind)}</span>
-                        <strong>{money(entry.amount, mine.data!.currency)}</strong>
-                    </li>)}
-                </ul>}
-        </div>}
+        {tab === 'mine' && <MyRecurringAllowances userId={userId}
+            householdId={householdId} memberId={household.members.find(x => x.isCurrentUser)?.id ?? ''} />}
+        {tab === 'mine' && mine.data && <PersonalMoneyHistory
+            entries={mine.data.entries} currency={mine.data.currency} />}
     </AverioCard>
     </Activity>
     {tab === 'boundary' && <HouseholdBoundaryFlowPanel userId={userId} householdId={householdId} />}

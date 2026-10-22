@@ -2,6 +2,7 @@ using Averio.Application;
 using Averio.Application.Accounts.GetAccounts;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
+using Averio.Application.PersonalMoney;
 using Averio.Application.Statistics.GetCashFlow;
 using Averio.Application.Statistics.GetCategoryCashFlow;
 using Averio.Application.Transactions.Common;
@@ -212,6 +213,11 @@ static async Task RunVerificationAsync(string connectionString)
     await InvitationVerification.RunAsync(provider, fixture, clock);
     await DepartureVerification.RunAsync(provider, fixture, clock);
     await InvitationReviewVerification.RunAsync(provider, clock);
+    await RecurringAllowanceVerification.RunAsync(provider, currentUser, fixture, clock);
+
+    await CheckAsync(
+        "previously applied allowance migration repairs live records",
+        () => VerifyLegacyRecurringAllowanceUpgradeAsync(provider, currentUser, fixture, clock));
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -257,6 +263,95 @@ static async Task VerifyMigrationsAndSeedsAsync(IServiceProvider provider)
             category.IsBase
             && category.SystemKey != null
             && category.Name == null));
+}
+
+// Reproduce a deployed database that recorded PR3's earlier migration ID
+// without its later-added immutable create-request columns. This runs only
+// against the disposable PostgreSQL database created by this test executable.
+static async Task VerifyLegacyRecurringAllowanceUpgradeAsync(
+    IServiceProvider provider, MutableCurrentUser user, Fixture fixture, MutableTimeProvider clock)
+{
+    user.UserId = fixture.OwnerUserId;
+    await using var scope = provider.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+    var handler = scope.ServiceProvider.GetRequiredService<RecurringAllowanceHandler>();
+    var starts = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddDays(1);
+    var input = new RecurringAllowanceInput(fixture.OwnerMemberId, "EUR", 375m,
+        starts, null, Guid.NewGuid());
+    var preservedId = await handler.CreateAsync(fixture.HouseholdId, input, CancellationToken.None);
+    var preserved = await context.RecurringAllowanceRules.SingleAsync(x => x.Id == preservedId);
+    preserved.Update(425m, starts.AddMonths(3), false, clock.GetUtcNow());
+    await context.SaveChangesAsync();
+    context.ChangeTracker.Clear();
+
+    // Replaying both repairs against a current schema must preserve a legitimate
+    // original NULL end date, even though the edited rule now has an end date.
+    await context.Database.ExecuteSqlRawAsync("""
+        DELETE FROM "__EFMigrationsHistory"
+        WHERE "MigrationId" IN (
+            '20261021125815_RepairRecurringAllowanceCreationColumns',
+            '20261021150000_RepairRecurringAllowanceCreationColumns');
+        """);
+    await context.Database.MigrateAsync();
+    var unchanged = await context.RecurringAllowanceRules.AsNoTracking().SingleAsync(x => x.Id == preservedId);
+    if (unchanged.CreationAmount != 375m || unchanged.CreationEndsOn != null
+        || unchanged.Amount != 425m || unchanged.EndsOn != starts.AddMonths(3))
+        throw new Exception("Repair overwrote an existing creation fingerprint.");
+    if (await handler.CreateAsync(fixture.HouseholdId, input, CancellationToken.None) != preservedId)
+        throw new Exception("Repair broke original request replay after editing.");
+    context.ChangeTracker.Clear();
+
+    var rulesBefore = await context.RecurringAllowanceRules.CountAsync();
+    var receiptsBefore = await context.PersonalMoneyEntries.CountAsync(x => x.RecurringAllowanceRuleId != null);
+    var original = await context.RecurringAllowanceRules.AsNoTracking()
+        .SingleAsync(x => x.HouseholdId == fixture.HouseholdId && x.Amount == 110m);
+
+    // Test the actual old schema with the original migration recorded, both
+    // without any repair recorded and with the earlier repair ID recorded.
+    foreach (var earlierRepairApplied in new[] { false, true })
+    {
+        await context.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE recurring_allowance_rules DROP COLUMN creation_amount;
+            ALTER TABLE recurring_allowance_rules DROP COLUMN creation_ends_on;
+            DELETE FROM "__EFMigrationsHistory"
+            WHERE "MigrationId" = '20261021150000_RepairRecurringAllowanceCreationColumns';
+            """);
+        if (!earlierRepairApplied)
+            await context.Database.ExecuteSqlRawAsync("""
+                DELETE FROM "__EFMigrationsHistory"
+                WHERE "MigrationId" = '20261021125815_RepairRecurringAllowanceCreationColumns';
+                """);
+
+        if (!(await context.Database.GetAppliedMigrationsAsync())
+            .Contains("20261020154408_AddRecurringPersonalMoney"))
+            throw new Exception("Legacy fixture must retain the already-applied feature migration.");
+
+        await context.Database.MigrateAsync();
+        var recovered = await context.RecurringAllowanceRules.AsNoTracking().SingleAsync(x => x.Id == original.Id);
+        if (recovered.CreationAmount != original.Amount || recovered.CreationEndsOn != original.EndsOn)
+            throw new Exception("Repair did not backfill legacy creation metadata.");
+        if (await context.RecurringAllowanceRules.CountAsync() != rulesBefore
+            || await context.PersonalMoneyEntries.CountAsync(x => x.RecurringAllowanceRuleId != null) != receiptsBefore)
+            throw new Exception("Repair must retain schedules and grant receipts.");
+        var listed = await handler.ListAsync(fixture.HouseholdId, CancellationToken.None);
+        if (!listed.Any(x => x.Id == original.Id))
+            throw new Exception("Repaired schedules cannot be listed.");
+        var replay = await handler.CreateAsync(fixture.HouseholdId,
+            new RecurringAllowanceInput(original.RecipientMemberId, original.Currency.Value,
+                original.Amount, original.StartsOn, original.EndsOn, original.CreationOperationId),
+            CancellationToken.None);
+        if (replay != original.Id)
+            throw new Exception("Post-repair replay duplicated a schedule.");
+        context.ChangeTracker.Clear();
+    }
+
+    var newInput = input with { OperationId = Guid.NewGuid(), Amount = 500m };
+    var newId = await handler.CreateAsync(fixture.HouseholdId, newInput, CancellationToken.None);
+    if (await handler.CreateAsync(fixture.HouseholdId, newInput, CancellationToken.None) != newId
+        || await context.RecurringAllowanceRules.CountAsync() != rulesBefore + 1)
+        throw new Exception("Post-upgrade create/retry is not idempotent.");
+    if ((await context.Database.GetPendingMigrationsAsync()).Any())
+        throw new Exception("Repair remains pending after upgrade.");
 }
 
 static async Task<Fixture> SeedFixtureAsync(

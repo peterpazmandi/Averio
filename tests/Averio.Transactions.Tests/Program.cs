@@ -10,12 +10,15 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
+    ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
+    ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
     ("recurring calendar anchors", RecurringChecks.Calendar),
     ("recurring lifecycle", RecurringChecks.Lifecycle),
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),
     ("transfer domain invariants and lifecycle", TransferChecks.Invariants),
     ("personal money ledger and rollover", PersonalMoneyChecks.Ledger),
     ("personal money shared, refunds and reconciliation", PersonalMoneyChecks.SharedAndReconciliation),
+    ("personal money monthly recurring entitlements", PersonalMoneyChecks.MonthlyRecurring),
     ("transfer EF constraints and migration snapshot", TransferChecks.PersistenceModel),
     ("itemized income derives total", ItemizedIncomeDerivesTotal),
     ("reject invalid item amount", RejectInvalidItemAmount),

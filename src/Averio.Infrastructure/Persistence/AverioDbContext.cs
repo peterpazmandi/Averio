@@ -28,6 +28,7 @@ public sealed class AverioDbContext(
     public DbSet<Averio.Domain.Transfers.Transfer> Transfers => Set<Averio.Domain.Transfers.Transfer>();
     public DbSet<PersonalMoneyWallet> PersonalMoneyWallets => Set<PersonalMoneyWallet>();
     public DbSet<PersonalMoneyEntry> PersonalMoneyEntries => Set<PersonalMoneyEntry>();
+    public DbSet<RecurringAllowanceRule> RecurringAllowanceRules => Set<RecurringAllowanceRule>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<TransactionItem> TransactionItems => Set<TransactionItem>();
     public DbSet<TransactionLabel> TransactionLabels => Set<TransactionLabel>();

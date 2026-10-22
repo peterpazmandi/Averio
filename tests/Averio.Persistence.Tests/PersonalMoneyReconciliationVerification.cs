@@ -175,8 +175,16 @@ internal static class PersonalMoneyReconciliationVerification
         IServiceProvider provider, Fixture f)
     {
         await using var scope = provider.CreateAsyncScope();
-        return (await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
-            .GetMineAsync(f.HouseholdId, Ct)) ?? throw new Exception("Missing wallet.");
+        var handler = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+        var snapshot = await handler.GetMineAsync(f.HouseholdId, Ct)
+            ?? throw new Exception("Missing wallet.");
+        var summary = await handler.GetMySummaryAsync(f.HouseholdId, Ct)
+            ?? throw new Exception("Missing summary.");
+        if (summary.Available != snapshot.Available
+            || summary.AttributedPrivateFunding != snapshot.AttributedPrivateFunding
+            || summary.FundingDifference != snapshot.FundingDifference)
+            throw new Exception("Summary must match reconciled entitlement and funding.");
+        return snapshot;
     }
 
     private static async Task<string> AggregateFingerprintAsync(AverioDbContext db)
