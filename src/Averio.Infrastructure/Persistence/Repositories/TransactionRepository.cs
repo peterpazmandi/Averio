@@ -45,6 +45,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     Account = account
                 });
 
+        if (!query.IncludeArchived)
+            filtered = filtered.Where(item => !item.Transaction.IsArchived);
+
         if (query.ActivityId is Guid activityId)
             filtered = filtered.Where(item => dbContext.Set<Averio.Domain.Activities.ActivityAssignment>().Any(link =>
                 link.HouseholdId == householdId && link.HouseholdMemberId == householdMemberId
@@ -137,7 +140,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
     {
         var rows = await dbContext.VisibleTransactions(householdId, householdMemberId)
             .AsNoTracking()
-            .Where(transaction => transaction.Status == TransactionStatus.Posted)
+            .Where(transaction => transaction.Status == TransactionStatus.Posted && !transaction.IsArchived)
             .Join(
                 dbContext.Accounts.AsNoTracking(),
                 transaction => new { transaction.HouseholdId, transaction.AccountId },
