@@ -34,7 +34,7 @@ public sealed class TransactionReferenceResolver(ICategoryRepository categoryRep
                 throw new BusinessRuleException("transaction_category_kind_invalid", "Validation_TransactionCategoryKindInvalid");
             return new TransactionItemDraft(item.Description, category.Id,
                 retained ? original!.CategoryName : category.NameReference,
-                retained ? original!.CategoryIcon : category.Icon, item.Amount);
+                retained ? original!.CategoryIcon : category.Icon, item.Amount, item.ExistingItemId);
         }).ToArray();
     }
 
