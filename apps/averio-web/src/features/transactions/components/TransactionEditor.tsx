@@ -398,11 +398,6 @@ export function TransactionEditor({
                 </div>
                 <AverioField>{t('transactionManagement.merchant')}<AverioInput value={merchant} maxLength={160} disabled={busy}
                     placeholder={t('transactionManagement.merchantPlaceholder')} onChange={e => setMerchant(e.target.value)} /></AverioField>
-                {!recurring && kind === 'Expense' && <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
-                    <p className="text-sm font-semibold">{t('personalMoney.itemAllocationTitle')}</p>
-                    <p className="mt-1 text-xs">{t('personalMoney.itemAllocationHelp')}</p>
-                    {wallet.isError && <p role="alert" className="text-xs">{t('personalMoney.loadError')}</p>}
-                </div>}
             </AverioCard>
             <AverioCard className="grid gap-3">
                 <div><h3 className="font-bold">{t('transactionManagement.labels')}</h3><p className="mt-1 text-xs">{t('transactionManagement.labelsHelp')}</p></div>
@@ -438,7 +433,6 @@ export function TransactionEditor({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div><h3 className="font-bold">{t('transactionManagement.items')}</h3><p className="mt-1 text-xs">{t('transactionManagement.itemsHelp')}</p></div>
                     <div className="flex flex-wrap gap-2">
-                        {canChargePersonalMoney && <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>}
                         <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
                     </div>
                 </div>
@@ -454,8 +448,8 @@ export function TransactionEditor({
                         onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" /></AverioField>
                     <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
-                    {kind === 'Expense' && !recurring && <div className="col-span-2 min-w-0 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900 dark:bg-emerald-950/30 sm:col-span-4">
-                        <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+                    {canChargePersonalMoney && <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 sm:col-span-4">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
                             <input type="checkbox" className="size-4 accent-emerald-500"
                                 checked={canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n}
                                 disabled={!canChargePersonalMoney || busy}
@@ -463,18 +457,26 @@ export function TransactionEditor({
                             {t('personalMoney.itemCharge')}
                         </label>
                         {canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n &&
-                            <AverioField>{t('personalMoney.itemChargeAmount')} · {currency}
-                                <AverioInput inputMode="decimal" value={personalAmount(item)} disabled={busy}
+                            <label className="flex min-w-0 items-center gap-2 text-xs">
+                                <span className="sr-only">{t('personalMoney.itemChargeAmount')}</span>
+                                <AverioInput className="w-32" inputMode="decimal" value={personalAmount(item)} disabled={busy}
                                     onChange={event => updateItem(item.key, { personalAmount: event.target.value })} />
-                            </AverioField>}
+                                <span>{currency}</span>
+                            </label>}
                     </div>}
                 </div>)}
-                {canChargePersonalMoney && <div className="space-y-1 rounded-xl border border-emerald-300/50 bg-emerald-50 p-3 text-sm dark:bg-emerald-950/30">
-                    <div className="flex flex-wrap justify-between gap-2"><span>{t('personalMoney.itemSplitHousehold')}</span>
+                {canChargePersonalMoney && personalTotal > 0n && <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+                    <div className="flex flex-wrap gap-2"><span>{t('personalMoney.itemSplitHousehold')}</span>
                         <strong>{formatDecimalAmount(scaledToAmount((amountToScaled(total) ?? 0n) - personalTotal), currency, language)}</strong></div>
-                    <div className="flex flex-wrap justify-between gap-2"><span>{t('personalMoney.itemSplitPersonal')}</span>
+                    <div className="flex flex-wrap gap-2"><span>{t('personalMoney.itemSplitPersonal')}</span>
                         <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></div>
                 </div>}
+                {canChargePersonalMoney && <details className="text-xs text-slate-600 dark:text-slate-300">
+                    <summary className="w-fit cursor-pointer py-2 font-medium focus-visible:outline-2 focus-visible:outline-primary-500">{t('personalMoney.itemAllocationTitle')}</summary>
+                    <p className="mt-1 max-w-prose leading-relaxed">{t('personalMoney.itemAllocationHelp')}</p>
+                    <AverioButton className="mt-2" disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>
+                </details>}
+                {!recurring && kind === 'Expense' && wallet.isError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
                     <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(total, currency, language) : total}</strong>
