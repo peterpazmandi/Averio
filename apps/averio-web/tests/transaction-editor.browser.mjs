@@ -13,12 +13,14 @@ fs.mkdirSync(artifacts, { recursive: true });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const context = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/personalMoney.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/transactionManagement.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
 let browser;
 try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(url)).ok) break; } catch {} await pause(100); }
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [320, 375, 1440]) {
         const copy = context.exports['personalMoney' + language.toUpperCase()];
+        const transactionCopy = context.exports['transactionManagement' + language.toUpperCase()];
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         const errors = [];
         let editing = false;
@@ -123,6 +125,29 @@ try {
         await page.keyboard.press('Escape');
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
         await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        ineligible = false;
+        await page.reload();
+        const allocationTotal = page.getByLabel(copy.totalMyAllocations, { exact: true });
+        const money = amount => new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(amount);
+        await allocationTotal.waitFor();
+        assert.equal(await allocationTotal.textContent(), money(0.2));
+        await page.getByRole('button', { name: '+ ' + transactionCopy.addItem, exact: true }).click();
+        await page.locator('input[required][maxlength="160"]').nth(1).fill('Second item');
+        await page.locator('input[inputmode="decimal"]').nth(1).fill('0.3');
+        await page.getByRole('button', { name: copy.itemCharge + ' · Second item', exact: true }).click();
+        await checkbox.check();
+        await page.keyboard.press('Escape');
+        assert.equal(await allocationTotal.textContent(), money(0.5), 'Total includes existing and newly edited allocations exactly.');
+        const labels = page.locator('label[for$="-description"]');
+        for (const label of await labels.all()) {
+            const box = await label.boundingBox();
+            assert.equal(box.width > 1, width < 640, 'Desktop uses shared headings; mobile keeps readable field labels.');
+        }
+        await allocationTotal.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(artifacts, 'item-totals-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
+        await page.getByRole('button', { name: transactionCopy.removeItem + ' 2', exact: true }).click();
+        assert.equal(await allocationTotal.textContent(), money(0.2), 'Removing an item updates the allocation total.');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.deepEqual(errors, []);
         await page.close();
