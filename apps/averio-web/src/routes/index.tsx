@@ -1,55 +1,25 @@
-import {
-    createFileRoute,
-    redirect,
-} from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-import {
-    ApiError,
-} from '../shared/api/ApiError';
+import { authQueries } from '../features/authentication/api/authQueries';
+import { LandingPage } from '../features/landing/LandingPage';
 
-import {
-    authQueries,
-} from '../features/authentication/api/authQueries';
+export const Route = createFileRoute('/')({
+    beforeLoad: async ({ context }) => {
+        // The marketing homepage is public even when the API is unavailable.
+        // The authenticated routes still enforce their own authorization.
+        let user;
+        try {
+            user = await context.queryClient.ensureQueryData(
+                authQueries.currentUser(),
+            );
+        } catch {
+            return;
+        }
 
-export const Route =
-    createFileRoute('/')({
-        beforeLoad:
-            async ({
-                context,
-            }) => {
-                try {
-                    const user =
-                        await context
-                            .queryClient
-                            .ensureQueryData(
-                                authQueries
-                                    .currentUser(),
-                            );
-
-                    throw redirect({
-                        to:
-                            user.onboardingRequired
-                                ? '/onboarding'
-                                : '/app',
-                        search: {
-                            redirect: undefined,
-                        },
-                    });
-                }
-                catch (error) {
-                    if (
-                        error instanceof ApiError
-                        && error.status === 401
-                    ) {
-                        throw redirect({
-                            to: '/login',
-                            search: {
-                                redirect: undefined,
-                            },
-                        });
-                    }
-
-                    throw error;
-                }
-            },
-    });
+        throw redirect({
+            to: user.onboardingRequired ? '/onboarding' : '/app',
+            search: { redirect: undefined },
+        });
+    },
+    component: LandingPage,
+});
