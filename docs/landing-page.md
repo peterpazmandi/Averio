@@ -1,7 +1,7 @@
 # Public landing page
 
-**Status:** Implemented on \`feat/public-landing-page\` for review  
-**Design source:** the approved Averio landing-page HTML concept and \`docs/ui/averio-ui-concept.html\`
+**Status:** Implemented on `feat/public-landing-page` for review  
+**Design source:** the approved Averio landing-page HTML concept and `docs/ui/averio-ui-concept.html`
 
 ## Goal and positioning
 
@@ -17,13 +17,13 @@ unannounced subscription pricing.
 
 ## Routing and behavior
 
-- \`/\`: anonymous visitors see the landing page.
-- \`/\`: already authenticated visitors are redirected to \`/onboarding\` or \`/app\`
+- `/`: anonymous visitors see the landing page.
+- `/`: already authenticated visitors are redirected to `/onboarding` or `/app`
   according to current-user state, as before.
 - The landing page remains public when a current-user check fails, including during
   an API outage. Authorization is *still* performed independently by protected routes.
-- Primary calls to action link to the existing \`/register\` flow.
-- Returning-user links go to \`/login\`.
+- Primary calls to action link to the existing `/register` flow.
+- Returning-user links go to `/login`.
 - The features/how-it-works/FAQ links are page anchors, not fake application routes.
 - The visual dashboard is **illustrative data**, not a live, publicly accessible
   household or customer account. Its household/personal switch changes local
@@ -31,14 +31,14 @@ unannounced subscription pricing.
 
 ## Implementation
 
-- \`apps/averio-web/src/features/landing/LandingPage.tsx\`: responsive Tailwind
+- `apps/averio-web/src/features/landing/LandingPage.tsx`: responsive Tailwind
   layout, product preview, navigation, FAQ, CTA, theme and language controls.
-- \`apps/averio-web/src/routes/index.tsx\`: homepage guard and public rendering.
-- \`apps/averio-web/src/i18n/locales/landing.ts\` and \`src/i18n/index.ts\`:
+- `apps/averio-web/src/routes/index.tsx`: homepage guard and public rendering.
+- `apps/averio-web/src/i18n/locales/landing.ts` and `src/i18n/index.ts`:
   complete EN/DE/HU marketing translations.
-- \`apps/averio-web/index.html\`: descriptive browser title and meta description.
+- `apps/averio-web/index.html`: descriptive browser title and meta description.
 
-Uses the existing \`AverioBrand\` and \`ThemeProvider\`. No backend endpoint, billing,
+Uses the existing `AverioBrand` and `ThemeProvider`. No backend endpoint, billing,
 database migration, client generation or major dependency is required.
 
 ## Feature claims and launch boundaries
@@ -55,9 +55,9 @@ review before launch.
 
 ## Manual verification checklist
 
-1. Open \`/\` without a session: landing page is visible and links work.
-2. Open \`/\` with a valid session: navigate to dashboard or onboarding.
-3. Make the API unavailable and open \`/\`: anonymous marketing page is still
+1. Open `/` without a session: landing page is visible and links work.
+2. Open `/` with a valid session: navigate to dashboard or onboarding.
+3. Make the API unavailable and open `/`: anonymous marketing page is still
    accessible; protected routes stay protected.
 4. Test 320px mobile, tablet and wide desktop: no horizontal overflow;
    mobile navigation opens and closes; keyboard focus is visible.
@@ -65,7 +65,7 @@ review before launch.
 6. Switch demo household/personal views; confirm the figures remain labeled
    illustrative and never require a backend request.
 7. Follow all registration/login CTAs; confirm existing flows still work.
-8. Run \`npm run build\` and \`npm run lint\` in \`apps/averio-web\`.
+8. Run `npm run build` and `npm run lint` in `apps/averio-web`.
 9. Verify SPA fallback routing after deploying to Cloudflare.
 
 ## Conversion measurement (follow-up)
