@@ -159,6 +159,7 @@ export function TransactionEditor({
     const [newLabelScope, setNewLabelScope] = useState<LabelScope>('Household');
     const [newLabelOpen, setNewLabelOpen] = useState(false);
     const [error, setError] = useState('');
+    const [allowanceItemKey, setAllowanceItemKey] = useState<string | null>(null);
 
     const resolvedAccountId = accountId || writableAccounts[0]?.id || '';
     const account = writableAccounts.find(item => item.id === resolvedAccountId);
@@ -257,6 +258,7 @@ export function TransactionEditor({
 
     const personalTotal = resolvedItems.reduce((sum, item) =>
         sum + (canChargePersonalMoney ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), 0n);
+    const allowanceItem = resolvedItems.find(item => item.key === allowanceItemKey);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
         setItems(current => current.map(item =>
@@ -351,7 +353,7 @@ export function TransactionEditor({
     }
 
 
-    return <AverioDialog open wide title={t(rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
+    return <><AverioDialog open wide title={t(rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={onCancel}
         actions={<>
             {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
@@ -444,38 +446,23 @@ export function TransactionEditor({
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
                     </div>
-                    <AverioField>{t('transactionManagement.amount')} · {currency}<AverioInput required inputMode="decimal" value={item.amount} disabled={busy}
-                        onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" /></AverioField>
+                    <div className="min-w-0">
+                        <label htmlFor={item.key + '-amount'} className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.amount')} · {currency}</label>
+                        <div className="flex min-w-0 gap-1">
+                            <AverioInput id={item.key + '-amount'} className="min-w-0" required inputMode="decimal" value={item.amount} disabled={busy}
+                                onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" />
+                            {canChargePersonalMoney && <AverioButton size="icon" disabled={busy} aria-haspopup="dialog"
+                                aria-label={t('personalMoney.itemCharge') + ' · ' + (item.description || index + 1)}
+                                title={t('personalMoney.itemCharge') + ' · ' + formatDecimalAmount(scaledToAmount(amountToScaled(personalAmount(item)) ?? 0n), currency, language)}
+                                className={(amountToScaled(personalAmount(item)) ?? 0n) > 0n
+                                    ? 'shrink-0 border-emerald-500! bg-emerald-100! text-emerald-800! dark:bg-emerald-950! dark:text-emerald-200!'
+                                    : 'shrink-0'}
+                                onClick={() => setAllowanceItemKey(item.key)}><ConceptIcon name="savings" /></AverioButton>}
+                        </div>
+                    </div>
                     <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
-                    {canChargePersonalMoney && <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 sm:col-span-4">
-                        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
-                            <input type="checkbox" className="size-4 accent-emerald-500"
-                                checked={canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n}
-                                disabled={!canChargePersonalMoney || busy}
-                                onChange={event => updateItem(item.key, { personalAmount: event.target.checked ? normalizeAmount(item.amount) : '0' })} />
-                            {t('personalMoney.itemCharge')}
-                        </label>
-                        {canChargePersonalMoney && (amountToScaled(personalAmount(item)) ?? 0n) > 0n &&
-                            <label className="flex min-w-0 items-center gap-2 text-xs">
-                                <span className="sr-only">{t('personalMoney.itemChargeAmount')}</span>
-                                <AverioInput className="w-32" inputMode="decimal" value={personalAmount(item)} disabled={busy}
-                                    onChange={event => updateItem(item.key, { personalAmount: event.target.value })} />
-                                <span>{currency}</span>
-                            </label>}
-                    </div>}
                 </div>)}
-                {canChargePersonalMoney && personalTotal > 0n && <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
-                    <div className="flex flex-wrap gap-2"><span>{t('personalMoney.itemSplitHousehold')}</span>
-                        <strong>{formatDecimalAmount(scaledToAmount((amountToScaled(total) ?? 0n) - personalTotal), currency, language)}</strong></div>
-                    <div className="flex flex-wrap gap-2"><span>{t('personalMoney.itemSplitPersonal')}</span>
-                        <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></div>
-                </div>}
-                {canChargePersonalMoney && <details className="text-xs text-slate-600 dark:text-slate-300">
-                    <summary className="w-fit cursor-pointer py-2 font-medium focus-visible:outline-2 focus-visible:outline-primary-500">{t('personalMoney.itemAllocationTitle')}</summary>
-                    <p className="mt-1 max-w-prose leading-relaxed">{t('personalMoney.itemAllocationHelp')}</p>
-                    <AverioButton className="mt-2" disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>
-                </details>}
                 {!recurring && kind === 'Expense' && wallet.isError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
@@ -517,5 +504,28 @@ export function TransactionEditor({
             </AverioDisclosure>
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
-    </AverioDialog>;
+    </AverioDialog>
+    {canChargePersonalMoney && allowanceItem && <AverioDialog open title={t('personalMoney.itemAllocationTitle')}
+        closeLabel={t('common.actions.close')} onDismiss={() => setAllowanceItemKey(null)} busy={busy}
+        actions={<AverioButton variant="primary" onClick={() => setAllowanceItemKey(null)}>{t('common.actions.close')}</AverioButton>}>
+        <div className="grid gap-3">
+            <p className="font-semibold">{allowanceItem.description || t('transactionManagement.itemDescription')}</p>
+            <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                <input type="checkbox" className="size-4 accent-emerald-500" disabled={busy}
+                    checked={(amountToScaled(personalAmount(allowanceItem)) ?? 0n) > 0n}
+                    onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.checked ? normalizeAmount(allowanceItem.amount) : '0' })} />
+                {t('personalMoney.itemCharge')}
+            </label>
+            <AverioField>{t('personalMoney.itemChargeAmount')} · {currency}
+                <AverioInput inputMode="decimal" value={personalAmount(allowanceItem)} disabled={busy}
+                    onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.value })} />
+            </AverioField>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <span>{t('personalMoney.itemSplitHousehold')} <strong>{formatDecimalAmount(subtractDecimalAmounts(total, scaledToAmount(personalTotal)), currency, language)}</strong></span>
+                <span>{t('personalMoney.itemSplitPersonal')} <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></span>
+            </div>
+            <p className="text-xs leading-relaxed">{t('personalMoney.itemAllocationHelp')}</p>
+            <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>
+        </div>
+    </AverioDialog>}</>;
 }
