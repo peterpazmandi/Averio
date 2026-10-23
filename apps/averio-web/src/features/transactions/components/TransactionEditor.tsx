@@ -182,8 +182,7 @@ export function TransactionEditor({
                 && !account.includeInHouseholdReports && effectiveVisibility === 'Private'))
         && wallet.data?.currency === currency;
 
-    function personalAmount(item: EditorItem): string {
-        if (item.personalAmount !== null) return item.personalAmount;
+    function storedPersonalAmount(item: EditorItem): string {
         if (!transaction) return '0';
         const current = sumDecimalAmounts((wallet.data?.entries ?? []).filter(entry =>
             entry.transactionItemId === item.key
@@ -191,6 +190,13 @@ export function TransactionEditor({
             && (entry.kind === 'PrivateCharge' || entry.kind === 'SharedCharge'))
             .map(entry => entry.amount));
         return current.startsWith('-') ? subtractDecimalAmounts('0', current) : '0';
+    }
+    function personalAmount(item: EditorItem): string {
+        return item.personalAmount ?? storedPersonalAmount(item);
+    }
+    function canManagePersonalMoney(item: EditorItem): boolean {
+        return canChargePersonalMoney || (!recurring && kind === 'Expense'
+            && (amountToScaled(storedPersonalAmount(item)) ?? 0n) > 0n);
     }
     function chargeAllItems() {
         setItems(current => current.map(item => ({
@@ -257,7 +263,7 @@ export function TransactionEditor({
     }, [resolvedItems]);
 
     const personalTotal = resolvedItems.reduce((sum, item) =>
-        sum + (canChargePersonalMoney ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), 0n);
+        sum + (canManagePersonalMoney(item) ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), 0n);
     const allowanceItem = resolvedItems.find(item => item.key === allowanceItemKey);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
@@ -302,7 +308,7 @@ export function TransactionEditor({
             description: item.description.trim(),
             categoryId: item.categoryId,
             amount: normalizeAmount(item.amount),
-            personalMoneyAmount: canChargePersonalMoney ? item.personalAmount === null
+            personalMoneyAmount: canManagePersonalMoney(item) ? item.personalAmount === null
                 ? null : normalizeAmount(item.personalAmount) : null,
         }));
 
@@ -451,7 +457,7 @@ export function TransactionEditor({
                         <div className="flex min-w-0 gap-1">
                             <AverioInput id={item.key + '-amount'} className="min-w-0" required inputMode="decimal" value={item.amount} disabled={busy}
                                 onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" />
-                            {canChargePersonalMoney && <AverioButton size="icon" disabled={busy} aria-haspopup="dialog"
+                            {canManagePersonalMoney(item) && <AverioButton size="icon" disabled={busy} aria-haspopup="dialog"
                                 aria-label={t('personalMoney.itemCharge') + ' · ' + (item.description || index + 1)}
                                 title={t('personalMoney.itemCharge') + ' · ' + formatDecimalAmount(scaledToAmount(amountToScaled(personalAmount(item)) ?? 0n), currency, language)}
                                 className={(amountToScaled(personalAmount(item)) ?? 0n) > 0n
@@ -505,12 +511,14 @@ export function TransactionEditor({
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
     </AverioDialog>
-    {canChargePersonalMoney && allowanceItem && <AverioDialog open title={t('personalMoney.itemAllocationTitle')}
+    {allowanceItem && canManagePersonalMoney(allowanceItem) && <AverioDialog open title={t('personalMoney.itemAllocationTitle')}
         closeLabel={t('common.actions.close')} onDismiss={() => setAllowanceItemKey(null)} busy={busy}
         actions={<AverioButton variant="primary" onClick={() => setAllowanceItemKey(null)}>{t('common.actions.close')}</AverioButton>}>
         <div className="grid gap-3">
             <p className="font-semibold">{allowanceItem.description || t('transactionManagement.itemDescription')}</p>
-            <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+            {!canChargePersonalMoney ? <AverioButton disabled={busy} onClick={() => updateItem(allowanceItem.key, { personalAmount: '0' })}>
+                {t('personalMoney.removeCharge')}
+            </AverioButton> : <><label className="flex min-h-11 items-center gap-2 text-sm font-medium">
                 <input type="checkbox" className="size-4 accent-emerald-500" disabled={busy}
                     checked={(amountToScaled(personalAmount(allowanceItem)) ?? 0n) > 0n}
                     onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.checked ? normalizeAmount(allowanceItem.amount) : '0' })} />
@@ -519,13 +527,13 @@ export function TransactionEditor({
             <AverioField>{t('personalMoney.itemChargeAmount')} · {currency}
                 <AverioInput inputMode="decimal" value={personalAmount(allowanceItem)} disabled={busy}
                     onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.value })} />
-            </AverioField>
+            </AverioField></>}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>{t('personalMoney.itemSplitHousehold')} <strong>{formatDecimalAmount(subtractDecimalAmounts(total, scaledToAmount(personalTotal)), currency, language)}</strong></span>
                 <span>{t('personalMoney.itemSplitPersonal')} <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></span>
             </div>
             <p className="text-xs leading-relaxed">{t('personalMoney.itemAllocationHelp')}</p>
-            <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>
+            {canChargePersonalMoney && <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>}
         </div>
     </AverioDialog>}</>;
 }

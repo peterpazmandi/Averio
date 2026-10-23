@@ -56,8 +56,10 @@ try {
             if (reconciliation && pathname.endsWith('/transactions')) {
                 const params = new URL(request.url()).searchParams;
                 const kind = params.get('kind');
+                // These eligible records are archived: normal overview requests cannot see them.
+                if (params.get('includeArchived') !== 'true') return json({ items: [], hasMore: false });
                 if (kind === 'Income' && failIncome) { failIncome = false; return route.fulfill({ status: 503 }); }
-                const record = (id, accountId = 'private') => ({ id, accountId, visibility: 'Private', status: 'Posted', kind, amount: '60', currency: 'EUR', occurredOn: '2026-10-01', createdAt: '2026-10-01T00:00:00Z', merchant: id, items: [], labels: [] });
+                const record = (id, accountId = 'private') => ({ id, accountId, isArchived: true, visibility: 'Private', status: 'Posted', kind, amount: '60', currency: 'EUR', occurredOn: '2026-10-01', createdAt: '2026-10-01T00:00:00Z', merchant: id, items: [], labels: [] });
                 if (!params.has('cursorId')) return json({ items: Array.from({length:100}, (_, i) => record('newer-' + i, 'other')), hasMore: true });
                 assert.equal(params.get('cursorId'), 'newer-99');
                 assert.equal(params.get('cursorCreatedAt'), '2026-10-01T00:00:00Z');

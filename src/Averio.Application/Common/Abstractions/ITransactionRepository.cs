@@ -7,6 +7,9 @@ public interface ITransactionRepository
 {
     void Add(Transaction transaction);
 
+    // Called inside the household-locked write transaction before reordering retained items.
+    Task StageItemPositionsAsync(Transaction transaction, int finalItemCount, CancellationToken cancellationToken);
+
     Task<Transaction?> GetVisibleByIdAsync(
         Guid householdId,
         Guid householdMemberId,

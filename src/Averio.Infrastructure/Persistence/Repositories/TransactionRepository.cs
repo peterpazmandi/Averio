@@ -9,6 +9,16 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class TransactionRepository(AverioDbContext dbContext)
     : ITransactionRepository
 {
+    public async Task StageItemPositionsAsync(Transaction transaction, int finalItemCount, CancellationToken cancellationToken)
+    {
+        // Free all final positions in a separate save, avoiding unique-index cycles.
+        // The enclosing transaction makes these temporary positions invisible to readers.
+        var position = Math.Max(transaction.Items.Max(x => x.Position), finalItemCount) + 1;
+        foreach (var item in transaction.Items)
+            dbContext.Entry(item).Property(x => x.Position).CurrentValue = position++;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public void Add(Transaction transaction)
         => dbContext.Transactions.Add(transaction);
 

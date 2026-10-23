@@ -442,7 +442,9 @@ public sealed class PersonalMoneyHandler(
             ?? throw new NotFoundException("transaction", transactionId);
         var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, record.AccountId, ct)
             ?? throw new NotFoundException("account", record.AccountId);
-        if (!AccountAccess.CanModify(account, member) || ChargeKind(account, record) is null
+        var chargeKind = ChargeKind(account, record);
+        if (!AccountAccess.CanModify(account, member)
+            || (chargeKind is null && inputs.Any(x => x.PersonalMoneyAmount > 0))
             || record.Kind != TransactionKind.Expense || record.Status != TransactionStatus.Posted)
             throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
@@ -487,10 +489,23 @@ public sealed class PersonalMoneyHandler(
             var difference = current - amount;
             if (difference != 0)
             {
-                repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
-                    ChargeKind(account, record)!.Value, difference, record.OccurredOn, clock.GetUtcNow(),
-                    transactionId: transactionId, operationId: Guid.NewGuid(),
-                    transactionItemId: target.Item.Id));
+                if (amount == 0)
+                {
+                    // Unlink against the original classification even after account settings change.
+                    foreach (var group in own.GroupBy(x => new { x.Kind, x.OccurredOn }))
+                    {
+                        var net = group.Sum(x => x.Amount);
+                        if (net != 0)
+                            repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
+                                group.Key.Kind, -net, group.Key.OccurredOn, clock.GetUtcNow(),
+                                transactionId: transactionId, transactionItemId: target.Item.Id));
+                    }
+                }
+                else
+                    repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
+                        chargeKind!.Value, difference, record.OccurredOn, clock.GetUtcNow(),
+                        transactionId: transactionId, operationId: Guid.NewGuid(),
+                        transactionItemId: target.Item.Id));
             }
             projectedTotal += amount - current;
             projectedOwnTotal += amount - current;

@@ -1,4 +1,8 @@
 using Averio.Application.PersonalMoney;
+using Averio.Application.Accounts.UpdateAccount;
+using Averio.Application.Transactions.ArchiveTransaction;
+using Averio.Application.Common.Exceptions;
+using Averio.Domain.Accounts;
 using Averio.Application.Transactions.Common;
 using Averio.Application.Transactions.CreateTransaction;
 using Averio.Application.Transactions.UpdateTransaction;
@@ -20,6 +24,24 @@ internal static class ItemRefundVerification
         var baseline = await BalanceAsync();
         var purchase = await CreateAsync(TransactionKind.Expense, 20m, 10m, second: true);
         var refund = await CreateAsync(TransactionKind.Income, 15m);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var originalIds = await db.TransactionItems.Where(x => x.TransactionId == purchase)
+                .OrderBy(x => x.Position).Select(x => x.Id).ToArrayAsync();
+            await EditAsync(purchase, items => items.Reverse().ToArray());
+            var reorderedIds = await db.TransactionItems.AsNoTracking().Where(x => x.TransactionId == purchase)
+                .OrderBy(x => x.Position).Select(x => x.Id).ToArrayAsync();
+            if (!originalIds.Reverse().SequenceEqual(reorderedIds))
+                throw new Exception("Reordering must preserve item IDs and persist the requested order.");
+            await EditAsync(purchase, items => items.Reverse().ToArray());
+            foreach (var id in new[] { purchase, refund })
+            {
+                var tx = await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == id);
+                await scope.ServiceProvider.GetRequiredService<ArchiveTransactionHandler>()
+                    .HandleAsync(f.HouseholdId, id, true, tx.UpdatedAt, Ct);
+            }
+        }
         await LinkRefundAsync();
         await ExpectBalanceAsync(baseline - 5m, "two item charges and one purchase refund");
 
@@ -109,7 +131,40 @@ internal static class ItemRefundVerification
                 charge.Version, Guid.NewGuid(), Ct);
         }
         await ExpectBalanceAsync(baseline, "unlinked item history permits legacy correction");
+
+        var privatePurchase = await CreateAsync(TransactionKind.Expense, 20m, 10m, personal: true);
+        await ChangePrivateAccountVisibilityAsync(AccountVisibility.Household);
+        try
+        {
+            try
+            {
+                await EditAsync(privatePurchase, items => items.Select(x => x with { PersonalMoneyAmount = 5m }).ToArray());
+                throw new Exception("An ineligible account accepted a positive allocation.");
+            }
+            catch (BusinessRuleException) { }
+            await ExpectBalanceAsync(baseline - 10m, "rejected allocation leaves balance unchanged");
+            await EditAsync(privatePurchase, items => items.Select(x => x with { PersonalMoneyAmount = 0m }).ToArray());
+            await ExpectBalanceAsync(baseline, "unlink after account sharing change");
+            await using var scope = provider.CreateAsyncScope();
+            var entries = (await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
+                .GetMineAsync(f.HouseholdId, Ct))!.Entries.Where(x => x.TransactionId == privatePurchase).ToArray();
+            if (entries.Length != 2 || entries.Any(x => x.Kind.ToString() != "PrivateCharge")
+                || entries.Sum(x => x.Amount) != 0)
+                throw new Exception("Unlink must reverse the original private charge classification.");
+        }
+        finally { await ChangePrivateAccountVisibilityAsync(AccountVisibility.Private); }
         Console.WriteLine("PASS item refund lifecycle: source edits, receipt-wide caps, partner deletion/void, and legacy transitions");
+
+        async Task ChangePrivateAccountVisibilityAsync(AccountVisibility visibility)
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var account = await scope.ServiceProvider.GetRequiredService<AverioDbContext>()
+                .Accounts.AsNoTracking().Include(x => x.Owners).SingleAsync(x => x.Id == f.PrivateAccountId);
+            await scope.ServiceProvider.GetRequiredService<UpdateAccountHandler>().HandleAsync(
+                new UpdateAccountCommand(f.HouseholdId, account.Id, account.Name, account.Type,
+                    account.Owners.Select(x => x.HouseholdMemberId).ToArray(), visibility,
+                    false, account.UpdatedAt), Ct);
+        }
 
         async Task<decimal> BalanceAsync()
         {
@@ -122,7 +177,7 @@ internal static class ItemRefundVerification
             var actual = await BalanceAsync();
             if (actual != expected) throw new Exception($"{scenario}: expected {expected}, got {actual}.");
         }
-        async Task<Guid> CreateAsync(TransactionKind kind, decimal amount, decimal? charge = null, bool second = false)
+        async Task<Guid> CreateAsync(TransactionKind kind, decimal amount, decimal? charge = null, bool second = false, bool personal = false)
         {
             await using var scope = provider.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
@@ -132,8 +187,8 @@ internal static class ItemRefundVerification
             var items = new List<TransactionItemInput> { new("First", category, amount, PersonalMoneyAmount: charge) };
             if (second) items.Add(new("Second", category, amount, PersonalMoneyAmount: charge));
             return await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>()
-                .HandleAsync(new CreateTransactionCommand(f.HouseholdId, f.HouseholdAccountId,
-                    kind, TransactionVisibility.Household, "Refund lifecycle", null, On, items, []), Ct);
+                .HandleAsync(new CreateTransactionCommand(f.HouseholdId, personal ? f.PrivateAccountId : f.HouseholdAccountId,
+                    kind, personal ? TransactionVisibility.Private : TransactionVisibility.Household, "Refund lifecycle", null, On, items, []), Ct);
         }
         async Task LinkRefundAsync(decimal amount = 15m)
         {

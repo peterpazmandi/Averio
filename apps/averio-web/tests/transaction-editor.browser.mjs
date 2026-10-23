@@ -22,6 +22,7 @@ try {
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         const errors = [];
         let editing = false;
+        let ineligible = false;
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -33,7 +34,7 @@ try {
             if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
             if (pathname.endsWith('/accounts')) return json([
                 { id: 'private', name: 'Private', currency: 'EUR', scope: 'Personal', visibility: 'Private', includeInHouseholdReports: false, status: 'Active', owners: [{ householdMemberId: 'member' }] },
-                { id: 'shared', name: 'Shared', currency: 'EUR', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] }]);
+                { id: 'shared', name: 'Shared', currency: 'EUR', scope: ineligible ? 'Personal' : 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [{ householdMemberId: 'member' }] }]);
             if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: '100',
                 entries: editing ? ['-0.3', '0.1'].map((amount, i) => ({ id: 'entry-' + i, amount,
                     kind: 'SharedCharge', transactionId: 'receipt', transactionItemId: 'stable-item' })) : [], charges: [] });
@@ -111,6 +112,14 @@ try {
         assert.equal(retained.items[0].personalMoneyAmount, null, 'Untouched allocations must remain server-owned.');
         await existingAllowanceButton.click();
         await checkbox.uncheck();
+        await page.keyboard.press('Escape');
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');
+        ineligible = true;
+        await page.reload();
+        await existingAllowanceButton.click();
+        assert.equal(await checkbox.count(), 0, 'Ineligible accounts cannot create new allocations.');
+        await page.getByRole('button', { name: copy.removeCharge, exact: true }).click();
         await page.keyboard.press('Escape');
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
         await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');

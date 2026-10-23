@@ -146,6 +146,11 @@ public sealed class UpdateTransactionHandler(
             await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
 
+            if (items.Select((item, position) => (item, position)).Any(x =>
+                x.item.ExistingItemId is Guid id
+                && transaction.Items.Any(old => old.Id == id && old.Position != x.position)))
+                await transactionRepository.StageItemPositionsAsync(transaction, items.Count, cancellationToken);
+
             transaction.Update(
                 targetAccount.Id,
                 command.Kind,
