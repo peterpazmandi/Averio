@@ -18,6 +18,7 @@ export async function verifyLanding({ page, development }) {
     }
 
     const failAuth = route => route.fulfill({ status: 503, contentType: 'application/problem+json',
+        headers: { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-credentials': 'true' },
         body: JSON.stringify({ title: 'Test API outage', status: 503 }) });
     await page.route('**/api/v1/auth/me', failAuth);
     try {
