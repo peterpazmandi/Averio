@@ -1,6 +1,6 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
-    itemChargeManagedInTransaction: "Change item-level Personal Money amounts in the transaction editor, not in the whole-transaction correction form.",
+    itemChargeManagedInTransaction: "Change individual amounts in the transaction editor, or remove all your allocations for this receipt here. Removal also works when the payment account is archived.",
     itemAllocationTitle: "Personal Money per item",
     itemAllocationHelp: "Select individual purchases or partial amounts to charge to your own allowance. Shared receipts remain shared, but your allowance attribution stays private.",
     chargeAllItems: "Charge entire receipt",
@@ -88,7 +88,7 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" , RecurringGrant: "Monthly allowance granted" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
-    itemChargeManagedInTransaction: "Beträge je Artikel können im Buchungseditor statt in der Korrektur für ganze Buchungen geändert werden.",
+    itemChargeManagedInTransaction: "Ändere einzelne Beträge im Buchungseditor oder entferne hier alle deine Budgetzuordnungen für diesen Beleg. Das Entfernen ist auch bei archiviertem Zahlungskonto möglich.",
     itemAllocationTitle: "Persönliches Budget je Artikel",
     itemAllocationHelp: "Ordne einzelne Artikel oder Teilbeträge deinem eigenen Budget zu. Gemeinsame Belege bleiben sichtbar, deine Budgetzuordnung privat.",
     chargeAllItems: "Gesamten Beleg zuordnen",
@@ -176,7 +176,7 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" , RecurringGrant: "Monatliches Budget zugeteilt" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
-    itemChargeManagedInTransaction: "A tételenkénti személyes keret elszámolása a tranzakció szerkesztőjében módosítható, nem a teljes tranzakció korrekciójánál.",
+    itemChargeManagedInTransaction: "Az egyes összegeket a tranzakció szerkesztőjében módosíthatod, vagy itt eltávolíthatod a bizonylathoz tartozó összes saját keretelszámolásodat. Ez archivált fizetési számlánál is működik.",
     itemAllocationTitle: "Személyes keret tételenként",
     itemAllocationHelp: "Válaszd ki a saját keretedből elszámolandó tételeket vagy részösszegeket. A közös bizonylat látható marad, a keret-hozzárendelésed privát.",
     chargeAllItems: "Teljes vásárlás elszámolása",

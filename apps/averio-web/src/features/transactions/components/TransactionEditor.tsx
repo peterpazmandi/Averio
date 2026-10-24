@@ -262,8 +262,12 @@ export function TransactionEditor({
         return scaledToAmount(sum);
     }, [resolvedItems]);
 
+    const legacyPersonalTotal = transaction ? (amountToScaled(subtractDecimalAmounts('0', sumDecimalAmounts((wallet.data?.entries ?? [])
+        .filter(entry => entry.transactionId === transaction.id && !entry.transactionItemId
+            && (entry.kind === 'PrivateCharge' || entry.kind === 'SharedCharge'))
+        .map(entry => entry.amount)))) ?? 0n) : 0n;
     const personalTotal = resolvedItems.reduce((sum, item) =>
-        sum + (canManagePersonalMoney(item) ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), 0n);
+        sum + (canManagePersonalMoney(item) ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), legacyPersonalTotal);
     const allowanceItem = resolvedItems.find(item => item.key === allowanceItemKey);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
@@ -479,7 +483,7 @@ export function TransactionEditor({
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
                     <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(total, currency, language) : total}</strong>
                 </div>
-                {!recurring && kind === 'Expense' && (canChargePersonalMoney || resolvedItems.some(canManagePersonalMoney)) &&
+                {!recurring && kind === 'Expense' && (legacyPersonalTotal > 0n || canChargePersonalMoney || resolvedItems.some(canManagePersonalMoney)) &&
                     <div className="flex flex-wrap justify-between gap-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         <span>{t('personalMoney.totalMyAllocations')}</span>
                         <output aria-label={t('personalMoney.totalMyAllocations')} aria-live="polite">{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</output>

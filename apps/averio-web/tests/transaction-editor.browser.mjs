@@ -25,6 +25,7 @@ try {
         const errors = [];
         let editing = false;
         let ineligible = false;
+        let legacy = false;
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -39,7 +40,7 @@ try {
                 { id: 'shared', name: 'Shared', currency: 'EUR', scope: ineligible ? 'Personal' : 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [{ householdMemberId: 'member' }] }]);
             if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: '100',
                 entries: editing ? ['-0.3', '0.1'].map((amount, i) => ({ id: 'entry-' + i, amount,
-                    kind: 'SharedCharge', transactionId: 'receipt', transactionItemId: 'stable-item' })) : [], charges: [] });
+                    kind: 'SharedCharge', transactionId: 'receipt', transactionItemId: legacy ? null : 'stable-item' })) : [], charges: [] });
             if (pathname.endsWith('/categories')) return json([{ id: 'category', name: 'Other', systemKey: 'uncategorized', kind: 'Expense', isArchived: false, children: [] }]);
             return json([]);
         });
@@ -148,6 +149,10 @@ try {
         await page.screenshot({ path: path.join(artifacts, 'item-totals-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await page.getByRole('button', { name: transactionCopy.removeItem + ' 2', exact: true }).click();
         assert.equal(await allocationTotal.textContent(), money(0.2), 'Removing an item updates the allocation total.');
+        legacy = true;
+        await page.reload();
+        await allocationTotal.waitFor();
+        assert.equal(await allocationTotal.textContent(), money(0.2), 'Whole-receipt charges and reversals are included without assigning them to an item.');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.deepEqual(errors, []);
         await page.close();

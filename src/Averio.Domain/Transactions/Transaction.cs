@@ -122,6 +122,12 @@ public sealed class Transaction
         UpdatedAt = NextVersion(now);
     }
 
+    public void MarkAllocationChanged(DateTimeOffset now)
+    {
+        // Invalidate editors opened before a holder-only allocation correction.
+        UpdatedAt = NextVersion(now);
+    }
+
     public void SetArchived(bool archived, DateTimeOffset now)
     {
         if (Status != TransactionStatus.Posted)

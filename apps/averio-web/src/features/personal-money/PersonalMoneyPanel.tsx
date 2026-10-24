@@ -8,6 +8,7 @@ import type { HouseholdResponse, PersonalMoneyChargeResponse } from '../../share
 import { TransactionsApi } from '../../shared/api/generated';
 import { generatedApiConfiguration } from '../../shared/api/generatedApiConfiguration';
 import { accountsQueries } from '../accounts/api/accountsQueries';
+import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioSectionSelect } from '../../shared/components/ui/AverioSectionSelect';
@@ -88,6 +89,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     };
     const refresh = async () => {
         await client.invalidateQueries({ queryKey: personalMoneyKeys.mine(userId, householdId) });
+        await client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) });
         await client.invalidateQueries({ queryKey: ['personal-money', userId, householdId, 'eligible-expenses'] });
     };
     const grant = useMutation({
@@ -228,14 +230,8 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
             <h4 className="font-semibold">{t('personalMoney.existingCharges')}</h4>
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.correctionHelp')}</p>
             {existingCharges.length === 0 ? <p className="text-sm">{t('personalMoney.noCharges')}</p>
-                : existingCharges.map(item => itemLinkedTransactions.has(item.transactionId)
-                    ? <div key={item.transactionId} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
-                        <p className="font-semibold">{transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}</p>
-                        <p className="mt-1">{t('personalMoney.itemChargeManagedInTransaction')}</p>
-                        <a className="mt-2 inline-block font-semibold text-emerald-700 underline dark:text-emerald-300"
-                            href={'/app/transactions?transaction=' + encodeURIComponent(item.transactionId)}>{t('transactionLinks.details')}</a>
-                    </div>
-                    : <ChargeEditor key={item.transactionId + ':' + item.version}
+                : existingCharges.map(item => <ChargeEditor key={item.transactionId + ':' + item.version}
+                    unlinkOnly={itemLinkedTransactions.has(item.transactionId)}
                     item={item} householdId={householdId} refresh={refresh} onError={setError}
                     label={transactions.data?.items.find(p => p.id === item.transactionId)?.merchant || t('personalMoney.purchase')}
                     formattedAmount={money(item.amount, mine.data!.currency)} />)}
@@ -255,9 +251,9 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
     </section>;
 }
 
-function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onError }: {
+function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onError, unlinkOnly = false }: {
     item: PersonalMoneyChargeResponse; householdId: string; refresh: () => Promise<void>;
-    label: string; formattedAmount: string; onError: (message: string) => void;
+    label: string; formattedAmount: string; onError: (message: string) => void; unlinkOnly?: boolean;
 }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(item.amount);
@@ -273,19 +269,19 @@ function ChargeEditor({ item, householdId, refresh, label, formattedAmount, onEr
         // Refresh stale versions after a conflict while retaining retry IDs on network failures.
         onError: async (failure: Error) => { onError(failure.message); await refresh(); },
     });
-    const valid = decimalPattern.test(amount) && Number(normalized(amount)) > 0
+    const valid = !unlinkOnly && decimalPattern.test(amount) && Number(normalized(amount)) > 0
         && normalized(amount) !== item.amount;
     return <form className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
         onSubmit={event => { event.preventDefault(); if (valid && !correction.isPending) correction.mutate(normalized(amount)); }}>
         <p className="text-sm font-semibold">{label} · {formattedAmount}</p>
         <a className="inline-block text-sm font-semibold text-emerald-700 underline focus-visible:outline-2 dark:text-emerald-300"
             href={'/app/transactions?transaction=' + encodeURIComponent(item.transactionId)}>{t('transactionLinks.details')}</a>
-        <AverioField>{t('personalMoney.changedAmount')}
+        {unlinkOnly ? <p className="text-sm">{t('personalMoney.itemChargeManagedInTransaction')}</p> : <AverioField>{t('personalMoney.changedAmount')}
             <AverioInput inputMode="decimal" value={amount} disabled={correction.isPending}
                 onChange={e => { setAmount(e.target.value); setIntent('save'); setOperationId(crypto.randomUUID()); }} />
-        </AverioField>
+        </AverioField>}
         <div className="flex flex-wrap gap-2">
-            <AverioButton type="submit" disabled={!valid || correction.isPending || intent === 'remove'}>{t('personalMoney.saveCharge')}</AverioButton>
+            {!unlinkOnly && <AverioButton type="submit" disabled={!valid || correction.isPending || intent === 'remove'}>{t('personalMoney.saveCharge')}</AverioButton>}
             <AverioButton type="button" disabled={correction.isPending} onClick={() => {
                 // A fresh intent gets a fresh ID; repeated remove retries reuse it.
                 if (intent !== 'remove') { setIntent('remove'); setOperationId(crypto.randomUUID()); }

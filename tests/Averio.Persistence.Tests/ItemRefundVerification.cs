@@ -1,5 +1,7 @@
 using Averio.Application.PersonalMoney;
 using Averio.Application.Accounts.UpdateAccount;
+using Averio.Application.Accounts.ArchiveAccount;
+using Averio.Application.Accounts.RestoreAccount;
 using Averio.Application.Transactions.ArchiveTransaction;
 using Averio.Application.Common.Exceptions;
 using Averio.Domain.Accounts;
@@ -153,6 +155,58 @@ internal static class ItemRefundVerification
                 throw new Exception("Unlink must reverse the original private charge classification.");
         }
         finally { await ChangePrivateAccountVisibilityAsync(AccountVisibility.Private); }
+        var archivedPurchase = await CreateAsync(TransactionKind.Expense, 20m, 10m, second: true, personal: true);
+        var archivedRefund = await CreateAsync(TransactionKind.Income, 5m, personal: true);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>()
+                .RefundAsync(f.HouseholdId, archivedRefund, archivedPurchase, 5m, Guid.NewGuid(), Ct);
+            await scope.ServiceProvider.GetRequiredService<ArchiveAccountHandler>()
+                .HandleAsync(f.HouseholdId, f.PrivateAccountId, Ct);
+        }
+        try
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var before = await db.Transactions.AsNoTracking().Include(x => x.Items).SingleAsync(x => x.Id == archivedPurchase);
+            async Task<string> AggregatesAsync() => string.Join("\n", (await db.TransactionAggregates.AsNoTracking().ToArrayAsync())
+                .Select(x => System.Text.Json.JsonSerializer.Serialize(x)).Order());
+            var aggregates = await AggregatesAsync();
+            var pm = scope.ServiceProvider.GetRequiredService<PersonalMoneyHandler>();
+            var charge = (await pm.GetMineAsync(f.HouseholdId, Ct))!.Charges.Single(x => x.TransactionId == archivedPurchase);
+            var operation = Guid.NewGuid();
+            try
+            {
+                await pm.CorrectChargeAsync(f.HouseholdId, archivedPurchase, 1m, charge.Amount, charge.Version, Guid.NewGuid(), Ct);
+                throw new Exception("Whole-receipt correction accepted a positive item allocation.");
+            }
+            catch (BusinessRuleException) { }
+            user.UserId = f.MemberUserId;
+            try
+            {
+                await pm.CorrectChargeAsync(f.HouseholdId, archivedPurchase, 0m, charge.Amount, charge.Version, Guid.NewGuid(), Ct);
+                throw new Exception("Another member removed a private item allocation.");
+            }
+            catch (NotFoundException) { }
+            finally { user.UserId = f.OwnerUserId; }
+            await pm.CorrectChargeAsync(f.HouseholdId, archivedPurchase, 0m, charge.Amount, charge.Version, operation, Ct);
+            await pm.CorrectChargeAsync(f.HouseholdId, archivedPurchase, 0m, charge.Amount, charge.Version, operation, Ct);
+            await ExpectBalanceAsync(baseline, "archived account item unlink and retry restore allowance exactly once");
+            var after = await db.Transactions.AsNoTracking().Include(x => x.Items).SingleAsync(x => x.Id == archivedPurchase);
+            if (after.Amount != before.Amount || after.Status != before.Status || after.UpdatedAt == before.UpdatedAt
+                || !after.Items.Select(x => x.Id).Order().SequenceEqual(before.Items.Select(x => x.Id).Order())
+                || aggregates != await AggregatesAsync()
+                || (await db.Accounts.AsNoTracking().SingleAsync(x => x.Id == f.PrivateAccountId)).Status != AccountStatus.Archived)
+                throw new Exception("Unlink changed source finances, item identity, or account archive status.");
+            var entries = (await pm.GetMineAsync(f.HouseholdId, Ct))!.Entries.Where(x => x.TransactionId == archivedPurchase);
+            if (entries.GroupBy(x => x.TransactionItemId).Any(g => g.Sum(x => x.Amount) != 0))
+                throw new Exception("Unlink left an item allocation active.");
+        }
+        finally
+        {
+            await using var scope = provider.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<RestoreAccountHandler>().HandleAsync(f.HouseholdId, f.PrivateAccountId, Ct);
+        }
         Console.WriteLine("PASS item refund lifecycle: source edits, receipt-wide caps, partner deletion/void, and legacy transitions");
 
         async Task ChangePrivateAccountVisibilityAsync(AccountVisibility visibility)

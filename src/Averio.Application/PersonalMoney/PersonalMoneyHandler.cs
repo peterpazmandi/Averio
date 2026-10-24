@@ -168,8 +168,9 @@ public sealed class PersonalMoneyHandler(
             ?? throw new NotFoundException("charge", transactionId);
         var entries = await repository.GetTransactionEntriesAsync(householdId, transactionId, ct);
         var own = entries.Where(x => x.WalletId == wallet.Id && IsCharge(x)).ToArray();
-        if (own.Where(x => x.TransactionItemId is not null).GroupBy(x => x.TransactionItemId)
-            .Any(g => g.Sum(x => x.Amount) != 0m))
+        var hasItemCharges = own.Where(x => x.TransactionItemId is not null).GroupBy(x => x.TransactionItemId)
+            .Any(g => g.Sum(x => x.Amount) != 0m);
+        if (hasItemCharges && amount != 0)
             throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         if (own.Length == 0) throw new NotFoundException("charge", transactionId);
         var record = await transactions.GetVisibleByIdAsync(householdId, me.Id, transactionId, ct)
@@ -182,7 +183,8 @@ public sealed class PersonalMoneyHandler(
         if (previous is not null)
         {
             if (!IsCharge(previous) || previous.TransactionId != transactionId
-                || previous.Amount != correction || previous.CorrectionExpectedAmount != expectedAmount
+                || (previous.TransactionItemId is not null ? amount != 0 : previous.Amount != correction)
+                || previous.CorrectionExpectedAmount != expectedAmount
                 || previous.CorrectionExpectedVersion != expectedVersion)
                 throw new ConflictException("personal_money_charge_changed", "Error_TransactionChanged");
             await tx.CommitAsync(ct);
@@ -218,7 +220,24 @@ public sealed class PersonalMoneyHandler(
                     relatedTransactionId: refundGroup.Key.RelatedTransactionId));
             }
         }
-        if (correction != 0)
+        if (hasItemCharges)
+        {
+            var first = true;
+            foreach (var group in own.GroupBy(x => new { x.Kind, x.OccurredOn, x.TransactionItemId }))
+            {
+                var net = group.Sum(x => x.Amount);
+                if (net == 0) continue;
+                repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
+                    group.Key.Kind, -net, group.Key.OccurredOn, clock.GetUtcNow(),
+                    transactionId: transactionId, transactionItemId: group.Key.TransactionItemId,
+                    operationId: first ? operationId : null,
+                    correctionExpectedAmount: first ? expectedAmount : null,
+                    correctionExpectedVersion: first ? expectedVersion : null));
+                first = false;
+            }
+            record.MarkAllocationChanged(clock.GetUtcNow());
+        }
+        else if (correction != 0)
             repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Id,
                 kind, correction, record.OccurredOn, clock.GetUtcNow(),
                 transactionId: transactionId, operationId: operationId,
