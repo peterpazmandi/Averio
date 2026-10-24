@@ -2,40 +2,53 @@ import assert from 'node:assert/strict';
 
 export async function verifyLanding({ page, development }) {
     const home = 'http://localhost:5173/';
+    const browserErrors = [];
+    // Isolate network-failure scenarios: an aborted fetch must not affect the
+    // next case's interception when Chromium reloads the development page.
+    const pendingPage = await page.context().newPage();
+    pendingPage.setDefaultTimeout(15_000);
+    pendingPage.on('pageerror', error => browserErrors.push(error.message));
     let releaseAuth;
     const held = new Promise(resolve => { releaseAuth = resolve; });
-    let authMode = 'pending';
-    // Keep interception enabled across both loads. Replacing interceptors while
-    // a dev reload finishes can let a real session response bypass the outage.
-    await page.route('**/api/v1/auth/me', async route => {
-        if (authMode === 'pending') {
-            await held;
-            await route.abort('timedout');
-            return;
-        }
-        await route.fulfill({ status: 503, contentType: 'application/problem+json',
-            headers: { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-credentials': 'true' },
-            body: JSON.stringify({ title: 'Test API outage', status: 503 }) });
+    await pendingPage.route('**/api/v1/auth/me', async route => {
+        await held;
+        await route.abort('timedout');
     });
     try {
-        const requested = page.waitForRequest('**/api/v1/auth/me');
-        await page.goto(home);
+        const requested = pendingPage.waitForRequest('**/api/v1/auth/me');
+        await pendingPage.goto(home);
         await requested;
-        await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor({ timeout: 5_000 });
-        assert.equal(new URL(page.url()).pathname, '/', 'A pending session cannot block public content');
-        authMode = 'outage';
-        releaseAuth();
-        const failed = page.waitForResponse(response =>
-            response.url().endsWith('/api/v1/auth/me') && response.status() === 503);
-        await page.goto(home);
-        assert.equal((await failed).status(), 503);
-        await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
-        assert.equal(new URL(page.url()).pathname, '/');
+        await pendingPage.getByRole('heading', { level: 1, name: /Your money/ }).waitFor({ timeout: 5_000 });
+        assert.equal(new URL(pendingPage.url()).pathname, '/', 'A pending session cannot block public content');
     } finally {
         releaseAuth();
-        await page.unrouteAll({ behavior: 'wait' });
+        await pendingPage.unrouteAll({ behavior: 'wait' });
+        await pendingPage.close();
     }
 
+    const outagePage = await page.context().newPage();
+    outagePage.setDefaultTimeout(15_000);
+    outagePage.on('pageerror', error => browserErrors.push(error.message));
+    await outagePage.route('**/api/v1/auth/me', route => route.fulfill({
+        status: 503, contentType: 'application/problem+json',
+        headers: { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-credentials': 'true' },
+        body: JSON.stringify({ title: 'Test API outage', status: 503 }),
+    }));
+    try {
+        const failed = outagePage.waitForResponse(response =>
+            response.url().endsWith('/api/v1/auth/me') && response.status() === 503);
+        await outagePage.goto(home);
+        assert.equal((await failed).status(), 503);
+        await outagePage.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
+        assert.equal(new URL(outagePage.url()).pathname, '/');
+    } finally {
+        await outagePage.unrouteAll({ behavior: 'wait' });
+        await outagePage.close();
+    }
+    assert.deepEqual(browserErrors, []);
+
+    await page.goto(home);
+    await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
     for (const width of [320, 1440]) for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
         await page.setViewportSize({ width, height: 900 });
         await page.locator('header select').selectOption(language);
