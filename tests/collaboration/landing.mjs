@@ -4,26 +4,27 @@ export async function verifyLanding({ page, development }) {
     const home = 'http://localhost:5173/';
     let releaseAuth;
     const held = new Promise(resolve => { releaseAuth = resolve; });
-    const holdAuth = async route => { await held; await route.abort('timedout'); };
-    await page.route('**/api/v1/auth/me', holdAuth);
+    let authMode = 'pending';
+    // Keep interception enabled across both loads. Replacing interceptors while
+    // a dev reload finishes can let a real session response bypass the outage.
+    await page.route('**/api/v1/auth/me', async route => {
+        if (authMode === 'pending') {
+            await held;
+            await route.abort('timedout');
+            return;
+        }
+        await route.fulfill({ status: 503, contentType: 'application/problem+json',
+            headers: { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-credentials': 'true' },
+            body: JSON.stringify({ title: 'Test API outage', status: 503 }) });
+    });
     try {
         const requested = page.waitForRequest('**/api/v1/auth/me');
         await page.goto(home);
         await requested;
         await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor({ timeout: 5_000 });
         assert.equal(new URL(page.url()).pathname, '/', 'A pending session cannot block public content');
-    } finally {
+        authMode = 'outage';
         releaseAuth();
-        await page.unrouteAll({ behavior: 'wait' });
-    }
-
-    const failAuth = route => route.fulfill({ status: 503, contentType: 'application/problem+json',
-        headers: { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-credentials': 'true' },
-        body: JSON.stringify({ title: 'Test API outage', status: 503 }) });
-    await page.route('**/api/v1/auth/me', failAuth);
-    try {
-        // StrictMode can finish a previous document's real 401 while the next
-        // document starts. Match the simulated outage, not that late response.
         const failed = page.waitForResponse(response =>
             response.url().endsWith('/api/v1/auth/me') && response.status() === 503);
         await page.goto(home);
@@ -31,7 +32,8 @@ export async function verifyLanding({ page, development }) {
         await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
         assert.equal(new URL(page.url()).pathname, '/');
     } finally {
-        await page.unroute('**/api/v1/auth/me', failAuth);
+        releaseAuth();
+        await page.unrouteAll({ behavior: 'wait' });
     }
 
     for (const width of [320, 1440]) for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
