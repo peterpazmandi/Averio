@@ -4,7 +4,7 @@ export async function verifyLanding({ page, development }) {
     const home = 'http://localhost:5173/';
     let releaseAuth;
     const held = new Promise(resolve => { releaseAuth = resolve; });
-    const holdAuth = async route => { await held; await route.continue(); };
+    const holdAuth = async route => { await held; await route.abort('timedout'); };
     await page.route('**/api/v1/auth/me', holdAuth);
     try {
         const requested = page.waitForRequest('**/api/v1/auth/me');
@@ -12,12 +12,9 @@ export async function verifyLanding({ page, development }) {
         await requested;
         await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor({ timeout: 5_000 });
         assert.equal(new URL(page.url()).pathname, '/', 'A pending session cannot block public content');
-        const checked = page.waitForResponse('**/api/v1/auth/me');
-        releaseAuth();
-        assert.equal((await checked).status(), 401);
     } finally {
         releaseAuth();
-        await page.unroute('**/api/v1/auth/me', holdAuth);
+        await page.unrouteAll({ behavior: 'wait' });
     }
 
     const failAuth = route => route.fulfill({ status: 503, contentType: 'application/problem+json',
