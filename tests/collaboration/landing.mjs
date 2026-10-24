@@ -85,7 +85,7 @@ export async function verifyLanding({ page, development }) {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.locator('button[aria-controls="landing-mobile-nav"]').click();
-    await page.locator('#landing-mobile-nav a[href="#features"]').click();
+    await page.locator('#landing-mobile-nav a[href="/#features"]').click();
     await page.locator('#landing-mobile-nav').waitFor({ state: 'hidden' });
     await page.waitForFunction(() => {
         const top = document.getElementById('features').getBoundingClientRect().top;

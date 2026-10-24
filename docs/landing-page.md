@@ -97,3 +97,89 @@ The static HTML includes basic metadata, but full social-preview metadata,
 canonical URLs, crawlable prerendering/SSR, sitemap and localized SEO metadata
 can be added as part of a separate production launch pass.
 
+
+## PR #20 review updates (2026-10-24)
+
+### Shared preferences
+
+The application, authentication and onboarding screens use `ConceptPreferences`.
+The older `LanguageSwitcher` and `ThemeToggle` exports are not the active application controls.
+The public header now uses `ConceptPreferences` too. Its wrapper and controls were migrated
+from legacy CSS/inline styles to Tailwind, retaining the original 66px language selector,
+38px theme button, 11px corners, existing SVG icon, accessible labels, i18next language
+selection and ThemeProvider persistence. The select reuses `AverioSelect`. No unrelated
+application styling was migrated and no package versions changed.
+
+### Responsive hierarchy and preview
+
+The hero scales from 32px to a maximum of 56px instead of 51–82px. Its final two phrases
+flow together with balanced text rather than forced line breaks. The EN/DE/HU wording
+retains the original hierarchy. The sample sidebar now reserves 144px; each icon/label
+uses flex, a fixed icon slot, an explicit gap and no wrapping. Below 640px the sidebar
+stays hidden to keep the useful preview readable. The public navigation collapses below
+1280px so longer translated links and preferences fit; below 380px the official logo
+remains visible while the header wordmark is hidden.
+
+### Inclusive positioning
+
+EN/DE/HU benefit copy, onboarding introduction and privacy question now address individuals,
+couples, families and larger households. Invitations remain described as household membership,
+without promises about unlimited seats, child accounts, permissions or an unannounced plan.
+This broadens the audience without inventing features or pricing.
+
+### Contact and navigation
+
+`/contact` is a public TanStack route, including direct visits and reloads. It shares the
+landing header/footer and supports all three languages and themes. Desktop/mobile navigation,
+FAQ and footer link to it. The page provides a visible, copyable `support@averioapp.com`
+mailto address, helpful support-request guidance, privacy guidance and return/FAQ links.
+There is no form, submission API, fabricated support availability or response-time promise.
+Email delivery and the actual support mailbox must be verified operationally before launch.
+
+### Changed files and purposes
+
+- `src/shared/components/concept/ConceptPreferences.tsx`: replace styling in the shared
+  component; preserve behavior for every existing consumer.
+- `src/features/landing/PublicLayout.tsx`: new shared public header/footer; prevents public
+  pages from drifting apart and keeps mobile navigation consistent.
+- `src/features/landing/LandingPage.tsx`: replace custom preferences/header/footer; adjust
+  hero and preview layout; route the FAQ contact action to the contact page.
+- `src/features/landing/ContactPage.tsx`: new localized support page using `AverioCard`.
+- `src/routes/contact.tsx` and `src/routeTree.gen.ts`: register the public route.
+- `src/i18n/locales/landing.ts`: update audience copy and add complete contact translations;
+  remove obsolete landing-only preference labels.
+- `tests/landing-review.browser.mjs`: production browser matrix and navigation/persistence
+  regression coverage with screenshots. Run from `apps/averio-web` after `npm run build`;
+  it starts its own preview. Set `LANDING_URL` to test an already running dev server.
+- `tests/collaboration/landing.mjs` (repository root): update the public features anchor selector.
+- `.github/workflows/verify.yml`: run the new browser suite and upload its screenshots.
+
+All `src/` and standalone browser-test paths above are relative to `apps/averio-web`.
+Complete resulting sources are committed to the existing PR branch; no separate PR is created.
+
+### Visual references
+
+The four original conversation attachments were retrieved and visually inspected:
+`image(20261024-200737).png` (English hero/preferences),
+`image(20261024-201045).png` (Hungarian oversized hero/sidebar),
+`image(20261024-201135).png` (couple-only pillar), and
+`image(20261024-201436).png` (FAQ contact action).
+They are before-state references, not pixel-identical golden files: the requested fixes
+intentionally change their geometry and copy. New screenshots are saved under
+`test-results/landing-review/` and uploaded by CI.
+
+### Verification results for this update
+
+- Production build and ESLint passed. All 62 existing frontend regression tests passed.
+- Development StrictMode and production Chromium runs each passed 36 combinations:
+  320, 390, 768, 1024, 1440 and 1920px × EN/DE/HU × light/dark, on both public routes.
+- Checked content bounds (not just document overflow), hero font cap, unwrapped sidebar
+  rows, interactive preview, contact navigation, mailto target and absence of a form.
+- Verified language/theme persistence after reload; production checks also covered
+  navigation/FAQ/footer contact entry points, FAQ expansion, return to FAQ, login and
+  registration routes, and equal shared-control dimensions between login and contact.
+- Inspected new desktop Hungarian hero/contact and mobile screenshots against the
+  supplied references. The Hungarian hero now fits three balanced lines at 1440px.
+- Local browser tests mock anonymous/API-failure responses. They do not certify a live
+  backend, actual email delivery, deployed SPA fallback or non-Chromium browsers. The
+  full backend/integration pipeline remains the responsibility of the PR Verify workflow.

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { AverioBrand } from '../../shared/components/branding/AverioBrand';
-import { useTheme } from '../../shared/theme/ThemeProvider';
+import { PublicHeader, PublicFooter } from './PublicLayout';
 
 const featureCards = [
     { icon: '⌂', title: 'householdTitle', description: 'householdDescription', detail: 'householdDetail' },
@@ -42,13 +41,13 @@ function LandingPreview() {
                     <span className="truncate text-[10px] font-semibold text-slate-400">app.averio · {t('landing.previewLabel')}</span>
                     <span className="size-6 rounded-full bg-primary-100 text-center text-xs font-bold leading-6 text-primary-700 dark:bg-primary-500/20 dark:text-primary-200">A</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)]">
+                <div className="grid grid-cols-1 sm:grid-cols-[144px_minmax(0,1fr)]">
                     <aside aria-hidden="true" className="hidden min-h-[400px] flex-col gap-3 bg-[#0b1c2a] p-4 text-[10px] text-slate-400 sm:flex">
                         <div className="mb-4 text-sm font-black tracking-tight text-white">averio<span className="text-primary-400">.</span></div>
-                        <div className="rounded-lg bg-primary-500/15 px-2 py-2 font-bold text-emerald-300">▦ &nbsp; {t('landing.previewOverview')}</div>
-                        <div className="px-2 py-1.5">▤ &nbsp; {t('landing.previewAccounts')}</div>
-                        <div className="px-2 py-1.5">⇄ &nbsp; {t('landing.previewActivity')}</div>
-                        <div className="px-2 py-1.5">▥ &nbsp; {t('landing.previewReports')}</div>
+                        <div className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-primary-500/15 px-2 py-2 font-bold text-emerald-300"><span className="w-3 shrink-0">▦</span><span>{t('landing.previewOverview')}</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap px-2 py-1.5"><span className="w-3 shrink-0">▤</span><span>{t('landing.previewAccounts')}</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap px-2 py-1.5"><span className="w-3 shrink-0">⇄</span><span>{t('landing.previewActivity')}</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap px-2 py-1.5"><span className="w-3 shrink-0">▥</span><span>{t('landing.previewReports')}</span></div>
                     </aside>
                     <div className="min-w-0 p-4 sm:p-5">
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -99,8 +98,6 @@ function LandingPreview() {
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
-    const { theme, toggleTheme } = useTheme();
-    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const previousTitle = document.title;
@@ -108,41 +105,10 @@ export function LandingPage() {
         return () => { document.title = previousTitle; };
     }, [t, i18n.resolvedLanguage]);
 
-    function closeMenu() { setMenuOpen(false); }
-
     return (
         <div className="min-h-screen overflow-x-clip bg-[#f7faf8] text-[#152e3a] dark:bg-[#07101f] dark:text-[#f1f6f4]">
             <a href="#main-content" className="sr-only rounded-lg bg-white p-3 text-primary-700 focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100]">{t('landing.skipContent')}</a>
-            <header className="sticky top-0 z-50 border-b border-[#e3ebe7]/90 bg-[#f7faf8]/95 backdrop-blur-xl dark:border-white/10 dark:bg-[#07101f]/95">
-                <div className="mx-auto flex min-h-[76px] max-w-[1250px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
-                    <a href="#top" className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-primary-500" onClick={closeMenu} aria-label={t('landing.homeLabel')}><AverioBrand /></a>
-                    <nav className="hidden items-center gap-8 text-[13px] font-semibold text-slate-600 dark:text-slate-300 lg:flex" aria-label={t('landing.mainNavigation')}>
-                        <a className="hover:text-primary-600" href="#why-averio">{t('landing.whyNav')}</a>
-                        <a className="hover:text-primary-600" href="#features">{t('landing.featuresNav')}</a>
-                        <a className="hover:text-primary-600" href="#how-it-works">{t('landing.howNav')}</a>
-                        <a className="hover:text-primary-600" href="#faq">{t('landing.faqNav')}</a>
-                    </nav>
-                    <div className="ml-auto flex items-center gap-2">
-                        <select className="h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-[#132434] dark:text-white" aria-label={t('landing.languageLabel')} value={(i18n.resolvedLanguage ?? i18n.language).split('-')[0]} onChange={(event) => { void i18n.changeLanguage(event.target.value); }}>
-                            <option value="en">EN</option><option value="de">DE</option><option value="hu">HU</option>
-                        </select>
-                        <button type="button" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'landing.lightMode' : 'landing.darkMode')} title={t(theme === 'dark' ? 'landing.lightMode' : 'landing.darkMode')} className="grid size-10 place-items-center rounded-lg border border-slate-200 bg-white text-lg focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-[#132434]">{theme === 'dark' ? '☀' : '☾'}</button>
-                        <Link to="/login" search={{ redirect: undefined }} className="hidden px-3 text-[13px] font-bold hover:text-primary-600 sm:block">{t('landing.signIn')}</Link>
-                        <Link to="/register" className="hidden min-h-10 items-center rounded-xl bg-primary-700 px-4 text-[13px] font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-primary-500 sm:inline-flex">{t('landing.getStarted')}</Link>
-                        <button type="button" className="grid size-10 place-items-center rounded-lg border border-slate-200 bg-white text-lg focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-[#132434] lg:hidden" aria-label={t('landing.menuLabel')} aria-expanded={menuOpen} aria-controls="landing-mobile-nav" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? '✕' : '☰'}</button>
-                    </div>
-                </div>
-                {menuOpen && (
-                    <nav id="landing-mobile-nav" className="grid gap-1 border-t border-slate-200 bg-white px-5 py-4 text-sm font-semibold dark:border-white/10 dark:bg-[#102332] lg:hidden" aria-label={t('landing.mobileNavigation')}>
-                        <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#why-averio" onClick={closeMenu}>{t('landing.whyNav')}</a>
-                        <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#features" onClick={closeMenu}>{t('landing.featuresNav')}</a>
-                        <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#how-it-works" onClick={closeMenu}>{t('landing.howNav')}</a>
-                        <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#faq" onClick={closeMenu}>{t('landing.faqNav')}</a>
-                        <Link to="/login" search={{ redirect: undefined }} onClick={closeMenu} className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10">{t('landing.signIn')}</Link>
-                        <Link to="/register" onClick={closeMenu} className="mt-1 rounded-xl bg-primary-700 px-4 py-3 text-center text-white">{t('landing.getStarted')}</Link>
-                    </nav>
-                )}
-            </header>
+            <PublicHeader />
 
             <main id="main-content">
                 <section id="top" className="relative isolate scroll-mt-24 overflow-hidden py-16 sm:py-20 lg:py-28">
@@ -150,7 +116,7 @@ export function LandingPage() {
                     <div className="relative mx-auto grid max-w-[1250px] items-center gap-14 px-5 sm:px-8 lg:grid-cols-[1fr_1.05fr] lg:gap-10 lg:px-10">
                         <div className="max-w-[620px]">
                             <span className="inline-flex rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-700 dark:border-primary-500/25 dark:bg-primary-500/10 dark:text-primary-300">{t('landing.heroEyebrow')}</span>
-                            <h1 className="mt-7 text-[clamp(3.2rem,5.1vw,5.1rem)] font-extrabold leading-[1.06] tracking-[-0.065em] text-[#142b38] dark:text-white">{t('landing.heroLineOne')}<br /><span className="text-primary-600 dark:text-primary-400">{t('landing.heroLineTwo')}</span><br />{t('landing.heroLineThree')}</h1>
+                            <h1 className="mt-7 text-[clamp(2rem,4vw,3.5rem)] text-balance font-extrabold leading-[1.12] tracking-[-0.04em] text-[#142b38] dark:text-white">{t('landing.heroLineOne')}<br /><span className="text-primary-600 dark:text-primary-400">{t('landing.heroLineTwo')}</span>{' '}{t('landing.heroLineThree')}</h1>
                             <p className="mt-7 max-w-[510px] text-[16px] leading-8 text-slate-600 dark:text-slate-300 sm:text-[18px]">{t('landing.heroDescription')}</p>
                             <div className="mt-9 flex flex-wrap gap-3"><Link to="/register" className={primaryLink}>{t('landing.startFree')} <span aria-hidden="true">↗</span></Link><a href="#features" className={secondaryLink}>{t('landing.exploreFeatures')} <span aria-hidden="true">↓</span></a></div>
                             <div className="mt-8 flex flex-wrap gap-5 text-[12px] font-semibold text-slate-500 dark:text-slate-400"><span>✓ {t('landing.soloFriendly')}</span><span>✓ {t('landing.privacyBuiltIn')}</span><span>✓ {t('landing.mobileReady')}</span></div>
@@ -194,12 +160,12 @@ export function LandingPage() {
 
                 <section id="how-it-works" className="scroll-mt-24 bg-[#eaf5ee] py-24 dark:bg-[#102632]"><div className="mx-auto max-w-[1250px] px-5 sm:px-8 lg:px-10"><div className="mx-auto max-w-[730px] text-center"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">{t('landing.stepsEyebrow')}</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,3.4rem)] font-extrabold leading-tight tracking-tight">{t('landing.stepsTitle')}</h2><p className={'mt-5 text-base leading-8 ' + bodyText}>{t('landing.stepsIntro')}</p></div><div className="mt-12 grid gap-5 md:grid-cols-3">{steps.map((step, i) => <article key={step} className={surface + ' p-7'}><span className="flex size-13 items-center justify-center rounded-2xl bg-primary-100 text-lg font-extrabold text-primary-700 dark:bg-primary-500/20 dark:text-primary-200">0{i + 1}</span><h3 className="mt-6 text-xl font-bold">{t('landing.' + step + 'Title')}</h3><p className={'mt-3 text-sm leading-7 ' + bodyText}>{t('landing.' + step + 'Description')}</p></article>)}</div><div className="mt-10 text-center"><Link to="/register" className={primaryLink}>{t('landing.createAccount')} →</Link></div></div></section>
 
-                <section id="faq" className="scroll-mt-24 py-24 sm:py-28"><div className="mx-auto grid max-w-[1130px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">{t('landing.faqEyebrow')}</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,3.3rem)] font-extrabold leading-tight tracking-tight">{t('landing.faqTitle')}</h2><p className={'mt-5 text-sm leading-7 ' + bodyText}>{t('landing.faqIntro')}</p><a href="mailto:support@averioapp.com" className="mt-6 inline-block text-sm font-bold text-primary-700 hover:underline dark:text-primary-300">{t('landing.contactSupport')} ↗</a></div><div className="space-y-3">{questions.map(question => <details key={question} className={surface + ' group p-5'}><summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold focus-visible:outline-2 focus-visible:outline-primary-500 [&::-webkit-details-marker]:hidden">{t('landing.faq_' + question + '_q')}<span aria-hidden="true" className="shrink-0 text-xl text-primary-600 group-open:rotate-45">+</span></summary><p className={'mt-3 text-sm leading-7 ' + bodyText}>{t('landing.faq_' + question + '_a')}</p></details>)}</div></div></section>
+                <section id="faq" className="scroll-mt-24 py-24 sm:py-28"><div className="mx-auto grid max-w-[1130px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">{t('landing.faqEyebrow')}</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,3.3rem)] font-extrabold leading-tight tracking-tight">{t('landing.faqTitle')}</h2><p className={'mt-5 text-sm leading-7 ' + bodyText}>{t('landing.faqIntro')}</p><Link to="/contact" className="mt-6 inline-block text-sm font-bold text-primary-700 hover:underline dark:text-primary-300">{t('landing.contactSupport')} ↗</Link></div><div className="space-y-3">{questions.map(question => <details key={question} className={surface + ' group p-5'}><summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold focus-visible:outline-2 focus-visible:outline-primary-500 [&::-webkit-details-marker]:hidden">{t('landing.faq_' + question + '_q')}<span aria-hidden="true" className="shrink-0 text-xl text-primary-600 group-open:rotate-45">+</span></summary><p className={'mt-3 text-sm leading-7 ' + bodyText}>{t('landing.faq_' + question + '_a')}</p></details>)}</div></div></section>
 
                 <section className="px-5 pb-16 sm:px-8 lg:px-10"><div className="relative mx-auto max-w-[1170px] overflow-hidden rounded-[32px] bg-[#0b2530] px-6 py-20 text-center text-white sm:px-12 sm:py-24"><div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 size-[400px] rounded-full bg-primary-500/20 blur-[100px]" /><div className="relative"><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-300">{t('landing.bottomEyebrow')}</p><h2 className="mx-auto mt-6 max-w-[770px] text-[clamp(2.5rem,5vw,4.5rem)] font-extrabold leading-[1.12] tracking-[-0.06em]">{t('landing.bottomTitle')}</h2><p className="mx-auto mt-6 max-w-[600px] text-base leading-8 text-slate-300">{t('landing.bottomDescription')}</p><div className="mt-9 flex flex-wrap justify-center gap-3"><Link to="/register" className={primaryLink}>{t('landing.getStarted')} ↗</Link><Link to="/login" search={{ redirect: undefined }} className="inline-flex min-h-12 items-center rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">{t('landing.signIn')}</Link></div></div></div></section>
             </main>
 
-            <footer className="mx-auto flex max-w-[1250px] flex-col items-start justify-between gap-6 px-5 pb-10 sm:px-8 md:flex-row md:items-center lg:px-10"><AverioBrand /><div className="flex flex-wrap gap-6 text-xs font-semibold text-slate-500 dark:text-slate-400"><a href="#features" className="hover:text-primary-600">{t('landing.featuresNav')}</a><a href="#faq" className="hover:text-primary-600">{t('landing.faqNav')}</a><a href="mailto:support@averioapp.com" className="hover:text-primary-600">{t('landing.contact')}</a><span>© {new Date().getFullYear()} Averio</span></div></footer>
+            <PublicFooter />
         </div>
     );
 }
