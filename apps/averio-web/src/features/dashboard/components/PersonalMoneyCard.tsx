@@ -46,7 +46,7 @@ export function PersonalMoneyCard({ userId, householdId }: {
                             {formatDecimalAmount(wallet.available, wallet.currency, language)}
                         </dd>
                     </dl>
-                    <PersonalMoneyHistory entries={wallet.entries} currency={wallet.currency} />
+                    <PersonalMoneyHistory entries={wallet.entries.slice(0, 5)} currency={wallet.currency} />
                 </>
             ) : (
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t('personalMoney.empty')}</p>

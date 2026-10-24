@@ -114,6 +114,10 @@ export interface TransactionResponse {
      * 
      */
     activityAssignmentVersion: string;
+    /**
+     * 
+     */
+    isArchived?: boolean;
 }
 
 /**
@@ -173,6 +177,7 @@ export function TransactionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'activityId': json['activityId'],
         'activityName': json['activityName'],
         'activityAssignmentVersion': json['activityAssignmentVersion'],
+        'isArchived': json['isArchived'] == null ? undefined : json['isArchived'],
     };
 }
 
@@ -207,6 +212,7 @@ export function TransactionResponseToJSONTyped(value?: TransactionResponse | nul
         'activityId': value['activityId'],
         'activityName': value['activityName'],
         'activityAssignmentVersion': value['activityAssignmentVersion'],
+        'isArchived': value['isArchived'],
     };
 }
 

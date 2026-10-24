@@ -240,8 +240,8 @@ try {
         assert.equal(summaryRequests, 0, 'Full-history dashboard needs no redundant summary request.');
         assert.equal(dashboardLedgerRequests, 3, 'Wallet mutations must refresh balance and history together.');
         const history = page.getByRole('region', { name: copy.history, exact: true });
-        assert.equal(await history.getByRole('listitem').count(), 25, 'Show the complete history beyond 20 entries.');
-        await history.getByText('Purchase 24', { exact: true }).waitFor();
+        assert.equal(await history.getByRole('listitem').count(), 5, 'Dashboard previews only the five latest allowance entries.');
+        assert.equal(await history.getByText('Purchase 24', { exact: true }).count(), 0);
         assert.equal(await page.getByText(copy.funded, { exact: true }).count(), 0);
         await page.getByText(copy.available, { exact: true }).waitFor();
         const credit = history.locator('strong').first();

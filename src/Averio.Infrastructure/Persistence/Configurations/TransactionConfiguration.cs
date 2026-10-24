@@ -40,6 +40,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").IsConcurrencyToken();
+        builder.Property(x => x.IsArchived).HasColumnName("is_archived").HasDefaultValue(false);
         builder.Property(x => x.VoidedAt).HasColumnName("voided_at");
 
         builder.HasOne<Account>().WithMany()

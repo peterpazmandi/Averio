@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type ChangeTransactionArchiveRequest,
+    ChangeTransactionArchiveRequestFromJSON,
+    ChangeTransactionArchiveRequestToJSON,
+} from '../models/ChangeTransactionArchiveRequest';
+import {
     type CreateTransactionRequest,
     CreateTransactionRequestFromJSON,
     CreateTransactionRequestToJSON,
@@ -88,6 +93,10 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
      * 
      */
     labelIds?: Array<string>;
+    /**
+     * 
+     */
+    includeArchived?: boolean;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
@@ -99,6 +108,21 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
      * 
      */
     createTransactionRequest: CreateTransactionRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    transactionId: string;
+    /**
+     * 
+     */
+    changeTransactionArchiveRequest: ChangeTransactionArchiveRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsTransactionIdDeleteRequest {
@@ -204,6 +228,10 @@ export class TransactionsApi extends runtime.BaseAPI {
             queryParameters['labelIds'] = requestParameters['labelIds'];
         }
 
+        if (requestParameters['includeArchived'] != null) {
+            queryParameters['includeArchived'] = requestParameters['includeArchived'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
 
@@ -285,6 +313,66 @@ export class TransactionsApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdTransactionsPost(requestParameters: ApiV1HouseholdsHouseholdIdTransactionsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateTransactionResponse> {
         const response = await this.apiV1HouseholdsHouseholdIdTransactionsPostRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut().'
+            );
+        }
+
+        if (requestParameters['transactionId'] == null) {
+            throw new runtime.RequiredError(
+                'transactionId',
+                'Required parameter "transactionId" was null or undefined when calling apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut().'
+            );
+        }
+
+        if (requestParameters['changeTransactionArchiveRequest'] == null) {
+            throw new runtime.RequiredError(
+                'changeTransactionArchiveRequest',
+                'Required parameter "changeTransactionArchiveRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/transactions/{transactionId}/archive`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{transactionId}', encodeURIComponent(String(requestParameters['transactionId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChangeTransactionArchiveRequestToJSON(requestParameters['changeTransactionArchiveRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRaw(requestParameters: ApiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePut(requestParameters: ApiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdTransactionsTransactionIdArchivePutRaw(requestParameters, initOverrides);
     }
 
     /**

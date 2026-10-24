@@ -89,7 +89,8 @@ public sealed class GetTransactionHandler(
                     label.Id,
                     label.Name,
                     label.Scope))
-                .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty);
+                .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty,
+            transaction.IsArchived);
     }
 }
 
@@ -111,4 +112,5 @@ public sealed record TransactionDetailResult(
     bool CanModify,
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
-    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default);
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
+    bool IsArchived = false);

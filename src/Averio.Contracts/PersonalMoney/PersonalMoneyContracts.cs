@@ -7,7 +7,7 @@ public sealed record ChargePersonalMoneyRequest(Guid TransactionId, string Amoun
 
 public sealed record PersonalMoneyEventResponse(Guid Id, string Kind, string Amount, DateOnly OccurredOn,
     Guid? TransactionId, Guid? TransferId, Guid? RelatedTransactionId,
-    Guid? RecurringAllowanceRuleId, string? TransactionName);
+    Guid? RecurringAllowanceRuleId, string? TransactionName, Guid? TransactionItemId);
 
 public sealed record PersonalMoneySummaryResponse(Guid WalletId, string Currency,
     string Available, string AttributedPrivateFunding, string FundingDifference);

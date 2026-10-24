@@ -117,9 +117,13 @@ Important first-slice limitations: no shared-account charges, no dedicated bound
 
 This new PR adds ADR-030, shared-account spending attribution, manual refund linkage, private funding returns and entitlement surrender, plus a distinct monthly financial-boundary projection that does not mutate existing categorized income/expense aggregates. UI includes shared purchases, refund/surrender and funding return selection. The complete source and integration checks must pass before merge. Cross-currency matching, automation and scheduled grants remain deferred.
 
-## Monthly Recurring Personal Money — PR 3 (draft)
+## Monthly Recurring Personal Money — PR 3 (merged)
 
-PR 3 builds on merged manual Personal Money and PR 2 reconciliation. It introduces recurring monthly **entitlement** rules, owner-only lifecycle controls, anchored month-end dates, member-only upcoming grant visibility, an append-only occurrence receipt with database uniqueness, worker catch-up, EN/DE/HU UI and explicit non-transfer semantics. See ADR-031 and docs/personal-money-recurring.md. The feature remains unmerged until migration, PostgreSQL, OpenAPI client, mobile/desktop browser and collaboration checks pass.
+PR 3 builds on merged manual Personal Money and PR 2 reconciliation. It introduces recurring monthly **entitlement** rules, owner-only lifecycle controls, anchored month-end dates, member-only upcoming grant visibility, an append-only occurrence receipt with database uniqueness, worker catch-up, EN/DE/HU UI and explicit non-transfer semantics. See ADR-031 and docs/personal-money-recurring.md. The feature was merged in PR #18 after migration, PostgreSQL, OpenAPI, browser and collaboration checks.
+
+## Item-Level Personal Money and Transaction Lifecycle — PR 4 (draft)
+
+[PR #19](https://github.com/peterpazmandi/Averio/pull/19) builds on merged PR 3 and ADR-032. This draft introduces optional private per-item partial/full wallet charges on eligible shared/private receipts, stable IDs across transaction edits, privacy-preserving source correction and reversals, an append-only item reference in the member-private ledger, responsive item-level Tailwind controls with EN/DE/HU translations, and authorized archive/restore distinct from financial void. Migration, OpenAPI TypeScript client, PostgreSQL and browser regression checks are part of the PR. The PR must not merge before all checks pass. Dedicated holder-private notification/outbox delivery and member-only hide preferences remain explicitly deferred.
 
 ## Verification and CI — implemented
 

@@ -7,6 +7,9 @@ public interface ITransactionRepository
 {
     void Add(Transaction transaction);
 
+    // Called inside the household-locked write transaction before reordering retained items.
+    Task StageItemPositionsAsync(Transaction transaction, int finalItemCount, CancellationToken cancellationToken);
+
     Task<Transaction?> GetVisibleByIdAsync(
         Guid householdId,
         Guid householdMemberId,
@@ -36,7 +39,8 @@ public sealed record TransactionQuery(
     DateOnly? CursorDate,
     DateTimeOffset? CursorCreatedAt,
     Guid? CursorId,
-    Guid? ActivityId = null, IReadOnlyList<Guid>? LabelIds = null);
+    Guid? ActivityId = null, IReadOnlyList<Guid>? LabelIds = null,
+    bool IncludeArchived = false);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,
@@ -74,4 +78,5 @@ public sealed record TransactionReadModel(
     bool CanModify,
     IReadOnlyList<TransactionItemReadModel> Items,
     IReadOnlyList<TransactionLabelReadModel> Labels,
-    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default);
+    Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
+    bool IsArchived = false);

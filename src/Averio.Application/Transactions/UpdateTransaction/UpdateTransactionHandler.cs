@@ -140,9 +140,16 @@ public sealed class UpdateTransactionHandler(
 
         try
         {
-            await personalMoney.ReverseTransactionChargeAsync(household.Id, transaction.Id, cancellationToken);
+            await personalMoney.ReconcileItemSourceChangesAsync(household.Id, transaction,
+                items, command.Items, command.AccountId, command.Kind, command.Visibility, command.OccurredOn,
+                cancellationToken);
             await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, -1, cancellationToken);
+
+            if (items.Select((item, position) => (item, position)).Any(x =>
+                x.item.ExistingItemId is Guid id
+                && transaction.Items.Any(old => old.Id == id && old.Position != x.position)))
+                await transactionRepository.StageItemPositionsAsync(transaction, items.Count, cancellationToken);
 
             transaction.Update(
                 targetAccount.Id,
@@ -157,6 +164,8 @@ public sealed class UpdateTransactionHandler(
                 timeProvider.GetUtcNow());
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await personalMoney.ApplyItemChargesWithinTransactionAsync(household.Id, transaction.Id,
+                command.Items, cancellationToken);
             await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
             await databaseTransaction.CommitAsync(cancellationToken);
         }
