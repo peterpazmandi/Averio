@@ -54,8 +54,8 @@ function LandingPreview() {
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                             <div><p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{t('landing.previewEyebrow')}</p><h3 className="text-lg font-extrabold tracking-tight text-[#142b37] dark:text-white">{t('landing.previewWelcome')}</h3></div>
                             <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/5" role="group" aria-label={t('landing.previewSwitchLabel')}>
-                                <button type="button" aria-pressed={!personal} onClick={() => setView('household')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (!personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.householdTab')}</button>
-                                <button type="button" aria-pressed={personal} onClick={() => setView('personal')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.personalTab')}</button>
+                                <button type="button" aria-pressed={!personal} onClick={() => setView('household')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold focus-visible:outline-2 focus-visible:outline-primary-500 ' + (!personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.householdTab')}</button>
+                                <button type="button" aria-pressed={personal} onClick={() => setView('personal')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold focus-visible:outline-2 focus-visible:outline-primary-500 ' + (personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.personalTab')}</button>
                             </div>
                         </div>
                         <div className="rounded-2xl bg-[#112b37] p-5 text-white">
