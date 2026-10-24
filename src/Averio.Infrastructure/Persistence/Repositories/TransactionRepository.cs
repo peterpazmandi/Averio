@@ -9,6 +9,16 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class TransactionRepository(AverioDbContext dbContext)
     : ITransactionRepository
 {
+    public async Task StageItemPositionsAsync(Transaction transaction, int finalItemCount, CancellationToken cancellationToken)
+    {
+        // Free all final positions in a separate save, avoiding unique-index cycles.
+        // The enclosing transaction makes these temporary positions invisible to readers.
+        var position = Math.Max(transaction.Items.Max(x => x.Position), finalItemCount) + 1;
+        foreach (var item in transaction.Items)
+            dbContext.Entry(item).Property(x => x.Position).CurrentValue = position++;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public void Add(Transaction transaction)
         => dbContext.Transactions.Add(transaction);
 
@@ -44,6 +54,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     Transaction = transaction,
                     Account = account
                 });
+
+        if (!query.IncludeArchived)
+            filtered = filtered.Where(item => !item.Transaction.IsArchived);
 
         if (query.ActivityId is Guid activityId)
             filtered = filtered.Where(item => dbContext.Set<Averio.Domain.Activities.ActivityAssignment>().Any(link =>
@@ -117,7 +130,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
-                        owner.HouseholdMemberId == householdMemberId)))
+                        owner.HouseholdMemberId == householdMemberId),
+                item.Transaction.IsArchived))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > query.PageSize;
@@ -137,7 +151,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
     {
         var rows = await dbContext.VisibleTransactions(householdId, householdMemberId)
             .AsNoTracking()
-            .Where(transaction => transaction.Status == TransactionStatus.Posted)
+            .Where(transaction => transaction.Status == TransactionStatus.Posted && !transaction.IsArchived)
             .Join(
                 dbContext.Accounts.AsNoTracking(),
                 transaction => new { transaction.HouseholdId, transaction.AccountId },
@@ -167,7 +181,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Transaction.UpdatedAt,
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
-                        owner.HouseholdMemberId == householdMemberId)))
+                        owner.HouseholdMemberId == householdMemberId),
+                item.Transaction.IsArchived))
             .ToListAsync(cancellationToken);
 
         return await LoadDetailsAsync(rows, householdId, householdMemberId, cancellationToken);
@@ -260,7 +275,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 labelsByTransaction.GetValueOrDefault(row.Id, []),
                 assignments.GetValueOrDefault(row.Id)?.ActivityId,
                 assignments.GetValueOrDefault(row.Id)?.Name,
-                assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty))
+                assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty,
+                row.IsArchived))
             .ToArray();
     }
 
@@ -279,5 +295,6 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         TransactionStatus Status,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
-        bool CanModify);
+        bool CanModify,
+        bool IsArchived);
 }

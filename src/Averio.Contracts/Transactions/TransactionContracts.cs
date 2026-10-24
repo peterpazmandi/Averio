@@ -5,7 +5,8 @@ namespace Averio.Contracts.Transactions;
 public sealed record TransactionItemRequest(
     string Description,
     Guid CategoryId,
-    [property: JsonRequired] string Amount, Guid? ExistingItemId = null);
+    [property: JsonRequired] string Amount, Guid? ExistingItemId = null,
+    string? PersonalMoneyAmount = null);
 
 public sealed record CreateTransactionRequest(
     Guid AccountId,
@@ -32,6 +33,8 @@ public sealed record UpdateTransactionRequest(
     Averio.Contracts.Activities.ActivityAssignmentRequest? ActivityAssignment = null);
 
 public sealed record CreateTransactionResponse(Guid Id);
+
+public sealed record ChangeTransactionArchiveRequest(bool Archived, DateTimeOffset ExpectedUpdatedAt);
 
 public sealed record TransactionItemResponse(
     Guid Id,
@@ -65,7 +68,8 @@ public sealed record TransactionResponse(
     bool CanModify,
     IReadOnlyList<TransactionItemResponse> Items,
     IReadOnlyList<TransactionLabelResponse> Labels,
-    Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion);
+    Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion,
+    bool IsArchived = false);
 
 public sealed record TransactionPageResponse(
     IReadOnlyList<TransactionResponse> Items,

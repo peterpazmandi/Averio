@@ -23,6 +23,7 @@ export * from './CategoryCreatedResponse';
 export * from './CategoryPinOrderRequest';
 export * from './CategoryPinRequest';
 export * from './CategoryResponse';
+export * from './ChangeTransactionArchiveRequest';
 export * from './ChargePersonalMoneyRequest';
 export * from './CompleteOnboardingRequest';
 export * from './CorrectPersonalMoneyChargeRequest';

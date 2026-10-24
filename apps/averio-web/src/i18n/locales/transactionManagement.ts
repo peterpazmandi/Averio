@@ -1,4 +1,11 @@
 export const transactionManagementEN = {
+    includeArchived: "Include archived transactions",
+    archive: "Archive transaction",
+    restore: "Restore transaction",
+    archiveConfirm: "Archive this transaction? It remains in all financial calculations and is only hidden from the normal overview.",
+    restoreConfirm: "Restore this transaction to the normal overview?",
+    archivedNotice: "Transaction archived. No balances or allowances changed.",
+    restoredNotice: "Transaction restored.",
     title: 'Transactions',
     description: 'Follow the household money flow chronologically. Income stays on the left, expenses on the right, and private details remain inside their visibility boundary.',
     add: 'Add transaction',
@@ -6,7 +13,7 @@ export const transactionManagementEN = {
     save: 'Save transaction',
     saving: 'Saving...',
     void: 'Void transaction',
-    voidConfirm: 'Void this transaction? It will stay in history for auditability but will no longer affect cash flow.',
+    voidConfirm: 'Void this transaction? It will stay in history for auditability but will no longer affect cash flow. Linked budgets and refund allocations may also be adjusted.',
     income: 'Income',
     expense: 'Expense',
     all: 'All',
@@ -96,6 +103,13 @@ export const transactionManagementEN = {
 };
 
 export const transactionManagementDE = {
+    includeArchived: "Archivierte Buchungen anzeigen",
+    archive: "Buchung archivieren",
+    restore: "Buchung wiederherstellen",
+    archiveConfirm: "Diese Buchung archivieren? Alle Finanzwerte bleiben unverändert.",
+    restoreConfirm: "Diese Buchung wiederherstellen?",
+    archivedNotice: "Buchung archiviert. Salden und Budgets bleiben unverändert.",
+    restoredNotice: "Buchung wiederhergestellt.",
     title: 'Transaktionen',
     description: 'Verfolge den Geldfluss des Haushalts chronologisch. Einnahmen stehen links, Ausgaben rechts und private Details bleiben innerhalb ihrer Sichtbarkeitsgrenze.',
     add: 'Transaktion hinzufügen',
@@ -103,7 +117,7 @@ export const transactionManagementDE = {
     save: 'Transaktion speichern',
     saving: 'Speichern...',
     void: 'Transaktion stornieren',
-    voidConfirm: 'Diese Transaktion stornieren? Sie bleibt für die Nachvollziehbarkeit im Verlauf, beeinflusst den Cashflow aber nicht mehr.',
+    voidConfirm: 'Diese Transaktion stornieren? Sie bleibt für die Nachvollziehbarkeit im Verlauf, beeinflusst den Cashflow aber nicht mehr. Verknüpfte Budgets und Erstattungszuordnungen können ebenfalls angepasst werden.',
     income: 'Einnahme',
     expense: 'Ausgabe',
     all: 'Alle',
@@ -193,6 +207,13 @@ export const transactionManagementDE = {
 };
 
 export const transactionManagementHU = {
+    includeArchived: "Archivált tranzakciók megjelenítése",
+    archive: "Tranzakció archiválása",
+    restore: "Tranzakció visszaállítása",
+    archiveConfirm: "Archiválod ezt a tranzakciót? Az elszámolás és a keretek nem változnak.",
+    restoreConfirm: "Visszaállítod ezt a tranzakciót?",
+    archivedNotice: "A tranzakció archiválva. Az egyenleg és a keret nem változott.",
+    restoredNotice: "A tranzakció visszaállítva.",
     title: 'Tranzakciók',
     description: 'Kövesd időrendben a háztartás pénzmozgásait. A bevételek balra, a kiadások jobbra kerülnek, a privát részletek pedig a saját láthatósági határukon belül maradnak.',
     add: 'Tranzakció hozzáadása',
@@ -200,7 +221,7 @@ export const transactionManagementHU = {
     save: 'Tranzakció mentése',
     saving: 'Mentés...',
     void: 'Tranzakció sztornózása',
-    voidConfirm: 'Sztornózod ezt a tranzakciót? Az előzményekben megmarad, de a cash-flow értékeket többé nem módosítja.',
+    voidConfirm: 'Sztornózod ezt a tranzakciót? Az előzményekben megmarad, de a cash-flow értékeket többé nem módosítja. A kapcsolódó keretek és visszatérítési hozzárendelések is módosulhatnak.',
     income: 'Bevétel',
     expense: 'Kiadás',
     all: 'Összes',

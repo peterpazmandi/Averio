@@ -123,9 +123,13 @@ public sealed class CreateTransactionHandler(
         await activities.AssignWithinTransactionAsync(household.Id, membership.Id, transaction.Id, command.ActivityAssignment, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await aggregateWriter.ApplyAsync(transaction, 1, cancellationToken);
+        if (command.ChargePersonalMoney && command.Items.Any(i => i.PersonalMoneyAmount is > 0))
+            throw new BusinessRuleException("personal_money_charge_not_allowed", "Error_PersonalMoneyChargeNotAllowed");
         if (command.ChargePersonalMoney)
             await personalMoney.ChargeWithinTransactionAsync(household.Id, transaction.Id,
                 transaction.Amount, transaction.Id, cancellationToken);
+        await personalMoney.ApplyItemChargesWithinTransactionAsync(household.Id, transaction.Id,
+            command.Items, cancellationToken);
         return transaction.Id;
     }
 }

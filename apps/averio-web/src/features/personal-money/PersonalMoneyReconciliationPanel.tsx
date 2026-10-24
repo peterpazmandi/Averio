@@ -39,14 +39,14 @@ export function PersonalMoneyReconciliationPanel({ userId, householdId, wallet }
         queryKey: ['personal-money', userId, householdId, 'refundable-purchases'],
         initialPageParam: undefined as RefundCursor | undefined,
         queryFn: ({ pageParam, signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
-            { householdId, kind: 'Expense', pageSize: 100, ...pageParam }, { signal }),
+            { householdId, kind: 'Expense', includeArchived: true, pageSize: 100, ...pageParam }, { signal }),
         getNextPageParam: nextRefundPage,
     });
     const incomes = useInfiniteQuery({
         queryKey: ['personal-money', userId, householdId, 'refund-incomes'],
         initialPageParam: undefined as RefundCursor | undefined,
         queryFn: ({ pageParam, signal }) => transactionsApi.apiV1HouseholdsHouseholdIdTransactionsGet(
-            { householdId, kind: 'Income', pageSize: 100, ...pageParam }, { signal }),
+            { householdId, kind: 'Income', includeArchived: true, pageSize: 100, ...pageParam }, { signal }),
         getNextPageParam: nextRefundPage,
     });
     const eligibility = refundEligibility(wallet);

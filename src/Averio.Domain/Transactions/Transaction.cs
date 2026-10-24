@@ -25,6 +25,7 @@ public sealed class Transaction
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? VoidedAt { get; private set; }
+    public bool IsArchived { get; private set; }
     public IReadOnlyCollection<TransactionItem> Items => _items;
     public IReadOnlyCollection<TransactionLabel> Labels => _labels;
 
@@ -121,6 +122,21 @@ public sealed class Transaction
         UpdatedAt = NextVersion(now);
     }
 
+    public void MarkAllocationChanged(DateTimeOffset now)
+    {
+        // Invalidate editors opened before a holder-only allocation correction.
+        UpdatedAt = NextVersion(now);
+    }
+
+    public void SetArchived(bool archived, DateTimeOffset now)
+    {
+        if (Status != TransactionStatus.Posted)
+            throw new InvalidOperationException("Only posted transactions can be archived.");
+        if (IsArchived == archived) return;
+        IsArchived = archived;
+        UpdatedAt = NextVersion(now);
+    }
+
     public void Void(DateTimeOffset now)
     {
         if (Status == TransactionStatus.Voided)
@@ -133,17 +149,29 @@ public sealed class Transaction
 
     private void ReplaceItems(IReadOnlyCollection<TransactionItemDraft> drafts)
     {
-        _items.Clear();
-
+        // Retain existing tracked item entities (and their stable IDs) across ordinary edits.
+        // Removed items are detached from the transaction, while private immutable wallet
+        // ledger history can still reference their former IDs without disclosing ownership.
+        var old = _items.ToDictionary(x => x.Id);
+        var replacement = new List<TransactionItem>(drafts.Count);
+        var used = new HashSet<Guid>();
         var position = 0;
         foreach (var draft in drafts)
         {
-            _items.Add(TransactionItem.Create(
-                HouseholdId,
-                Id,
-                position++,
-                draft));
+            if (draft.ExistingItemId is Guid id)
+            {
+                if (!used.Add(id) || !old.TryGetValue(id, out var retained))
+                    throw new ArgumentException("Invalid existing transaction item.");
+                retained.Retain(draft, position++);
+                replacement.Add(retained);
+            }
+            else
+            {
+                replacement.Add(TransactionItem.Create(HouseholdId, Id, position++, draft));
+            }
         }
+        _items.Clear();
+        _items.AddRange(replacement);
 
         Amount = _items.Sum(item => item.Amount);
 

@@ -35,6 +35,10 @@ export interface TransactionItemRequest {
      * 
      */
     existingItemId?: string | null;
+    /**
+     * 
+     */
+    personalMoneyAmount?: string | null;
 }
 
 /**
@@ -61,6 +65,7 @@ export function TransactionItemRequestFromJSONTyped(json: any, ignoreDiscriminat
         'categoryId': json['categoryId'],
         'amount': json['amount'],
         'existingItemId': json['existingItemId'] === undefined ? undefined : json['existingItemId'] === null ? null : json['existingItemId'],
+        'personalMoneyAmount': json['personalMoneyAmount'] === undefined ? undefined : json['personalMoneyAmount'] === null ? null : json['personalMoneyAmount'],
     };
 }
 
@@ -79,6 +84,7 @@ export function TransactionItemRequestToJSONTyped(value?: TransactionItemRequest
         'categoryId': value['categoryId'],
         'amount': value['amount'],
         'existingItemId': value['existingItemId'],
+        'personalMoneyAmount': value['personalMoneyAmount'],
     };
 }
 

@@ -204,7 +204,7 @@ Track:
 - amount remaining
 - rolled-over amount
 
-Unused amount rolls over by default. Personal money is a budget sub-ledger, not merely an expense category. The initial manual foundation uses immutable member-wallet events, explicit grant/fund transfer purposes, private expense charges and idempotent grants. Shared-account charge splits, linked refunds, funding returns, entitlement surrender and household cash-flow boundary reporting are included in PR 2; monthly scheduled Personal Money entitlement allowances are introduced in PR 3, with no automatic transfers; never double-count a private purchase after personal money leaves a household-controlled account.
+Unused amount rolls over by default. Personal money is a budget sub-ledger, not merely an expense category. The initial manual foundation uses immutable member-wallet events, explicit grant/fund transfer purposes, private expense charges and idempotent grants. Shared-account charge splits, linked refunds, funding returns, entitlement surrender and household cash-flow boundary reporting are included in PR 2; monthly scheduled Personal Money entitlement allowances are introduced in PR 3, with no automatic transfers; never double-count a private purchase after personal money leaves a household-controlled account. ADR-032/PR 4 extends discretionary spending to full or partial **individual receipt items** paid on shared or private accounts. Allowance associations remain member-private even when the original receipt is visible to the household. Archiving a transaction is a non-financial visibility action; voiding reverses its effects atomically.
 
 ### Historical import
 

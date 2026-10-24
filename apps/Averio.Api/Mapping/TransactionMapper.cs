@@ -79,7 +79,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived);
 
     public static TransactionResponse From(TransactionDetailResult result) => new(
         result.Id,
@@ -109,7 +109,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived);
 
     private static Averio.Application.Activities.ActivityAssignmentInput? MapAssignment(Averio.Contracts.Activities.ActivityAssignmentRequest? input)
         => input is null ? null : new(input.ActivityId, input.ExpectedVersion);
@@ -119,7 +119,8 @@ internal static class TransactionMapper
         => items.Select(item => new TransactionItemInput(
             item.Description,
             item.CategoryId,
-            DecimalAmountMapper.ParseTransactionAmount(item.Amount), item.ExistingItemId))
+            DecimalAmountMapper.ParseTransactionAmount(item.Amount), item.ExistingItemId,
+            item.PersonalMoneyAmount is null ? null : DecimalAmountMapper.ParseTransactionAmount(item.PersonalMoneyAmount)))
             .ToArray();
 }
 

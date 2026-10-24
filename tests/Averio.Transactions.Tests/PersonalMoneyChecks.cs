@@ -145,6 +145,35 @@ internal static class PersonalMoneyChecks
             recurringAllowanceRuleId: rule.Id));
     }
 
+    public static void ItemLifecycle()
+    {
+        var householdId = Guid.NewGuid();
+        var wallet = PersonalMoneyWallet.Create(householdId, Guid.NewGuid(), CurrencyCode.Huf,
+            DateTimeOffset.UtcNow);
+        var purchase = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var timestamp = DateTimeOffset.UtcNow;
+        var date = new DateOnly(2026, 10, 21);
+        var grant = PersonalMoneyEntry.Create(householdId, wallet.Id,
+            PersonalMoneyEntryKind.Grant, 300m, date, timestamp);
+        var charge = PersonalMoneyEntry.Create(householdId, wallet.Id,
+            PersonalMoneyEntryKind.SharedCharge, -50m, date, timestamp,
+            transactionId: purchase, transactionItemId: itemId);
+        if (charge.TransactionItemId != itemId)
+            throw new Exception("Private item attribution must preserve source item identity.");
+        AssertBalance([grant, charge], 250m, 0m);
+        var reversal = PersonalMoneyEntry.Create(householdId, wallet.Id,
+            PersonalMoneyEntryKind.SharedCharge, 50m, date, timestamp,
+            transactionId: purchase, transactionItemId: itemId);
+        AssertBalance([grant, charge, reversal], 300m, 0m);
+        Reject(() => PersonalMoneyEntry.Create(householdId, wallet.Id,
+            PersonalMoneyEntryKind.SharedCharge, -1m, date, timestamp,
+            transactionItemId: itemId));
+        Reject(() => PersonalMoneyEntry.Create(householdId, wallet.Id,
+            PersonalMoneyEntryKind.Funding, 1m, date, timestamp,
+            transactionItemId: itemId, transferId: Guid.NewGuid()));
+    }
+
     private static void AssertBalance(IEnumerable<PersonalMoneyEntry> entries,
         decimal entitlement, decimal funding)
     {

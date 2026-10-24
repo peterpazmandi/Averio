@@ -1,5 +1,14 @@
 // Keep Personal Money terminology separate from bank-account labels.
 export const personalMoneyEN = {
+    itemChargeManagedInTransaction: "Change individual amounts in the transaction editor, or remove all your allocations for this receipt here. Removal also works when the payment account is archived.",
+    itemAllocationTitle: "Personal Money per item",
+    itemAllocationHelp: "Select individual purchases or partial amounts to charge to your own allowance. Shared receipts remain shared, but your allowance attribution stays private.",
+    chargeAllItems: "Charge entire receipt",
+    itemCharge: "Use my allowance",
+    itemChargeAmount: "Amount charged to allowance",
+    itemSplitHousehold: "Household portion",
+    itemSplitPersonal: "Personal Money portion",
+    totalMyAllocations: "My Personal Money total",
     dashboardManage: 'Manage Personal Money',
     recurring: {"title":"Monthly Personal Money","create":"Create monthly allowance","existing":"Scheduled allowances","monthly":"Monthly","start":"First grant date","end":"End date (optional)","nextDue":"Next grant","save":"Save changes","pause":"Pause","resume":"Resume","stop":"Stop schedule","confirmStop":"Confirm stop","history":"Grant history","noHistory":"No grants issued yet","none":"No recurring allowances yet.","created":"Monthly allowance scheduled.","myUpcoming":"My scheduled allowances","noUpcoming":"No active monthly grants are scheduled.","notUpcoming":"Paused or completed schedules","description":"Each month adds spending entitlement, never a bank transfer. Unused amounts carry over.","noBankTransfer":"Each month adds spending entitlement, never a bank transfer. Unused amounts carry over.","loadError":"Could not load recurring allowances.","historyError":"Could not load grant history.","status":{"active":"Active","paused":"Paused","blocked":"Needs review","stopped":"Stopped","completed":"Completed"},"cancelCreate":"Cancel","manage":"Manage","hide":"Close","retry":"Retry","schemaUnavailable":"Scheduled allowances are unavailable until the latest database migration is applied. Contact the administrator, then retry.","createError":"Could not create this schedule. Please retry; if it persists, check the API logs."},
     surrenderDate: "Surrender date",
@@ -79,6 +88,15 @@ export const personalMoneyEN = {
     kind: { Grant: 'Allowance granted', Funding: 'Private funding', PrivateCharge: 'Private purchase', SharedCharge: "Shared-account purchase", PrivateRefund: "Private purchase refund", SharedRefund: "Shared purchase refund", Surrender: "Entitlement surrendered" , RecurringGrant: "Monthly allowance granted" },
 };
 export const personalMoneyDE: typeof personalMoneyEN = {
+    itemChargeManagedInTransaction: "Ändere einzelne Beträge im Buchungseditor oder entferne hier alle deine Budgetzuordnungen für diesen Beleg. Das Entfernen ist auch bei archiviertem Zahlungskonto möglich.",
+    itemAllocationTitle: "Persönliches Budget je Artikel",
+    itemAllocationHelp: "Ordne einzelne Artikel oder Teilbeträge deinem eigenen Budget zu. Gemeinsame Belege bleiben sichtbar, deine Budgetzuordnung privat.",
+    chargeAllItems: "Gesamten Beleg zuordnen",
+    itemCharge: "Mein Budget nutzen",
+    itemChargeAmount: "Betrag aus persönlichem Budget",
+    itemSplitHousehold: "Haushaltsanteil",
+    itemSplitPersonal: "Persönlicher Budgetanteil",
+    totalMyAllocations: "Mein persönliches Budget insgesamt",
     dashboardManage: 'Persönliches Geld verwalten',
     recurring: {"title":"Monatliches persönliches Budget","create":"Monatliche Zuteilung einrichten","existing":"Geplante Zuteilungen","monthly":"Monatlich","start":"Erste Zuteilung","end":"Enddatum (optional)","nextDue":"Nächste Zuteilung","save":"Änderungen speichern","pause":"Pausieren","resume":"Fortsetzen","stop":"Zeitplan beenden","confirmStop":"Beenden bestätigen","history":"Zuteilungsverlauf","noHistory":"Noch keine Zuteilungen.","none":"Noch keine Zeitpläne.","created":"Monatliche Zuteilung eingerichtet.","myUpcoming":"Meine geplanten Zuteilungen","noUpcoming":"Keine aktiven monatlichen Zuteilungen geplant.","notUpcoming":"Pausierte oder abgeschlossene Zeitpläne","description":"Die Zuteilung erhöht nur das Budget und überweist kein Geld. Restbeträge bleiben erhalten.","noBankTransfer":"Die Zuteilung erhöht nur das Budget und überweist kein Geld. Restbeträge bleiben erhalten.","loadError":"Zeitpläne konnten nicht geladen werden.","historyError":"Verlauf konnte nicht geladen werden.","status":{"active":"Aktiv","paused":"Pausiert","blocked":"Prüfung erforderlich","stopped":"Beendet","completed":"Abgeschlossen"},"cancelCreate":"Abbrechen","manage":"Verwalten","hide":"Schließen","retry":"Erneut versuchen","schemaUnavailable":"Monatliche Zuteilungen sind erst nach der erforderlichen Datenbankaktualisierung verfügbar. Bitte den Administrator kontaktieren und anschließend erneut versuchen.","createError":"Der Zeitplan konnte nicht erstellt werden. Bitte erneut versuchen und bei anhaltendem Fehler die API-Protokolle prüfen."},
     surrenderDate: "Datum der Budgetrückgabe",
@@ -158,6 +176,15 @@ export const personalMoneyDE: typeof personalMoneyEN = {
     kind: { Grant: 'Budget zugeteilt', Funding: 'Privat finanziert', PrivateCharge: 'Private Ausgabe', SharedCharge: "Gemeinsamer Kauf", PrivateRefund: "Private Erstattung", SharedRefund: "Gemeinsame Erstattung", Surrender: "Budget abgegeben" , RecurringGrant: "Monatliches Budget zugeteilt" },
 };
 export const personalMoneyHU: typeof personalMoneyEN = {
+    itemChargeManagedInTransaction: "Az egyes összegeket a tranzakció szerkesztőjében módosíthatod, vagy itt eltávolíthatod a bizonylathoz tartozó összes saját keretelszámolásodat. Ez archivált fizetési számlánál is működik.",
+    itemAllocationTitle: "Személyes keret tételenként",
+    itemAllocationHelp: "Válaszd ki a saját keretedből elszámolandó tételeket vagy részösszegeket. A közös bizonylat látható marad, a keret-hozzárendelésed privát.",
+    chargeAllItems: "Teljes vásárlás elszámolása",
+    itemCharge: "Saját keretből",
+    itemChargeAmount: "Keretből elszámolandó összeg",
+    itemSplitHousehold: "Háztartási rész",
+    itemSplitPersonal: "Személyes keretből",
+    totalMyAllocations: "Személyes keretemből összesen",
     dashboardManage: 'Személyes keret kezelése',
     recurring: {"title":"Havi személyes pénzkeret","create":"Havi keret létrehozása","existing":"Ütemezett juttatások","monthly":"Havonta","start":"Első juttatás dátuma","end":"Befejezés dátuma (opcionális)","nextDue":"Következő juttatás","save":"Mentés","pause":"Szüneteltetés","resume":"Folytatás","stop":"Ütemezés leállítása","confirmStop":"Leállítás megerősítése","history":"Juttatási előzmények","noHistory":"Még nem történt juttatás.","none":"Még nincs ütemezés.","created":"Havi keret beütemezve.","myUpcoming":"Várható havi juttatásaim","noUpcoming":"Nincs aktív, ütemezett havi juttatás.","notUpcoming":"Szünetelő vagy befejezett ütemezések","description":"Ez csak költési jogosultságot ad, nem mozgat pénzt. A maradék keret továbbvihető.","noBankTransfer":"Ez csak költési jogosultságot ad, nem mozgat pénzt. A maradék keret továbbvihető.","loadError":"Nem sikerült betölteni az ütemezéseket.","historyError":"Nem sikerült betölteni az előzményeket.","status":{"active":"Aktív","paused":"Szünetel","blocked":"Ellenőrzést igényel","stopped":"Leállítva","completed":"Befejeződött"},"cancelCreate":"Mégse","manage":"Kezelés","hide":"Bezárás","retry":"Újrapróbálás","schemaUnavailable":"A havi juttatások a szükséges adatbázis-migráció alkalmazásáig nem érhetők el. Kérd az üzemeltető segítségét, majd próbáld újra.","createError":"Nem sikerült létrehozni az ütemezést. Próbáld újra, tartós hiba esetén ellenőrizd az API-naplókat."},
     surrenderDate: "Keretleadás dátuma",

@@ -28,6 +28,7 @@ try {
         }, { language, dark });
         let amount = '25', version = 1, role = 'owner';
         let reconciliation = false, failIncome = true, refunded = false;
+        let itemLinked = false;
         const refundWrites = [];
         const writes = [], creations = [];
         await page.route('**/api/v1/**', async route => {
@@ -56,19 +57,21 @@ try {
             if (reconciliation && pathname.endsWith('/transactions')) {
                 const params = new URL(request.url()).searchParams;
                 const kind = params.get('kind');
+                // These eligible records are archived: normal overview requests cannot see them.
+                if (params.get('includeArchived') !== 'true') return json({ items: [], hasMore: false });
                 if (kind === 'Income' && failIncome) { failIncome = false; return route.fulfill({ status: 503 }); }
-                const record = (id, accountId = 'private') => ({ id, accountId, visibility: 'Private', status: 'Posted', kind, amount: '60', currency: 'EUR', occurredOn: '2026-10-01', createdAt: '2026-10-01T00:00:00Z', merchant: id, items: [], labels: [] });
+                const record = (id, accountId = 'private') => ({ id, accountId, isArchived: true, visibility: 'Private', status: 'Posted', kind, amount: '60', currency: 'EUR', occurredOn: '2026-10-01', createdAt: '2026-10-01T00:00:00Z', merchant: id, items: [], labels: [] });
                 if (!params.has('cursorId')) return json({ items: Array.from({length:100}, (_, i) => record('newer-' + i, 'other')), hasMore: true });
                 assert.equal(params.get('cursorId'), 'newer-99');
                 assert.equal(params.get('cursorCreatedAt'), '2026-10-01T00:00:00Z');
                 return json({ items: kind === 'Expense' ? [record('purchase')] : [record('used-income'), record('free-income')], hasMore: false });
             }
-            if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: String(100 - Number(amount)), attributedPrivateFunding: '0', fundingDifference: '100', entries: [], charges: amount === '0' ? [] : [{ transactionId: 'purchase', amount, version }] });
+            if (pathname.endsWith('/personal-money/me')) return json({ walletId: 'wallet', currency: 'EUR', available: String(100 - Number(amount)), attributedPrivateFunding: '0', fundingDifference: '100', entries: itemLinked && amount !== '0' ? [{id:'item-charge',kind:'PrivateCharge',amount:'-' + amount,transactionId:'purchase',transactionItemId:'item'}] : [], charges: amount === '0' ? [] : [{ transactionId: 'purchase', amount, version }] });
             if (pathname.endsWith('/households/home')) {
                 await pause(150); // Direct hashes must wait until the target is mounted.
                 return json({ id: 'home', name: 'Test household', countryCode: 'HU', preferredCurrency: 'EUR', onboardingCompleted: true, role, version: '1', members: Array.from({ length: 6 }, (_, i) => ({ id: 'member' + i, displayName: 'Member ' + i, isCurrentUser: i === 0, role: i === 0 ? 'owner' : 'member', joinedAtUtc: '2026-01-01T00:00:00Z' })) });
             }
-            if (pathname.endsWith('/accounts')) return json([{ id: 'private', scope: 'Personal', visibility: 'Private', owners: [{ householdMemberId: 'member0' }] }]);
+            if (pathname.endsWith('/accounts')) return json([{ id: 'private', status: itemLinked ? 'Archived' : 'Active', scope: 'Personal', visibility: 'Private', owners: [{ householdMemberId: 'member0' }] }]);
             if (pathname.endsWith('/transactions')) return json({ items: [{ id: 'new-purchase', accountId: 'private', visibility: 'Private', status: 'Posted', kind: 'Expense', amount: '20', currency: 'EUR', occurredOn: '2026-10-01', merchant: 'Retry purchase', items: [], labels: [] }], totalCount: 1, page: 1, pageSize: 50 });
             return json([]);
         });
@@ -123,6 +126,13 @@ try {
         await picker.locator('xpath=ancestor::form').locator('input').fill('15');
         await Promise.all([page.waitForResponse(r => r.url().endsWith('/personal-money/me/charges') && r.status() === 503), submit.click()]);
         assert.notEqual(creations[1].operationId, creations[2].operationId);
+        itemLinked = true; amount = '15'; await page.reload();
+        await openTab('charges');
+        assert.equal(await page.getByLabel(copy.changedAmount, { exact: true }).count(), 0);
+        await page.getByRole('button', { name: copy.removeCharge, exact: true }).click();
+        await page.getByRole('button', { name: copy.confirmUnlink, exact: true }).click();
+        await page.getByText(copy.noCharges, { exact: true }).waitFor();
+        assert.equal(writes.at(-1).amount, '0', 'Item allocations can be removed from Personal Money while the source account is archived.');
         reconciliation = true; await page.reload();
         await openTab('reconcile');
         const form = page.locator('form').filter({ has: page.getByRole('heading', { name: copy.refundTitle, exact: true }) });
