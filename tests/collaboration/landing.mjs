@@ -22,7 +22,10 @@ export async function verifyLanding({ page, development }) {
         body: JSON.stringify({ title: 'Test API outage', status: 503 }) });
     await page.route('**/api/v1/auth/me', failAuth);
     try {
-        const failed = page.waitForResponse('**/api/v1/auth/me');
+        // StrictMode can finish a previous document's real 401 while the next
+        // document starts. Match the simulated outage, not that late response.
+        const failed = page.waitForResponse(response =>
+            response.url().endsWith('/api/v1/auth/me') && response.status() === 503);
         await page.goto(home);
         assert.equal((await failed).status(), 503);
         await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
