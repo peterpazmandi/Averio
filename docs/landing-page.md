@@ -18,10 +18,11 @@ unannounced subscription pricing.
 ## Routing and behavior
 
 - `/`: anonymous visitors see the landing page.
-- `/`: already authenticated visitors are redirected to `/onboarding` or `/app`
-  according to current-user state, as before.
-- The landing page remains public when a current-user check fails, including during
-  an API outage. Authorization is *still* performed independently by protected routes.
+- `/`: authenticated visitors are redirected to `/onboarding` or `/app` as soon as
+  the shared auth provider confirms their session. The redirect replaces history.
+- Public content renders immediately while the session request is pending and
+  remains available when it fails, including during an API outage. Authorization
+  is still performed independently by protected routes.
 - Primary calls to action link to the existing `/register` flow.
 - Returning-user links go to `/login`.
 - The features/how-it-works/FAQ links are page anchors, not fake application routes.
@@ -33,13 +34,28 @@ unannounced subscription pricing.
 
 - `apps/averio-web/src/features/landing/LandingPage.tsx`: responsive Tailwind
   layout, product preview, navigation, FAQ, CTA, theme and language controls.
-- `apps/averio-web/src/routes/index.tsx`: homepage guard and public rendering.
+- `apps/averio-web/src/routes/index.tsx`: public rendering and reactive authenticated redirect.
 - `apps/averio-web/src/i18n/locales/landing.ts` and `src/i18n/index.ts`:
   complete EN/DE/HU marketing translations.
 - `apps/averio-web/index.html`: descriptive browser title and meta description.
 
 Uses the existing `AverioBrand` and `ThemeProvider`. No backend endpoint, billing,
 database migration, client generation or major dependency is required.
+
+The landing and document wrappers use horizontal clipping rather than a hidden
+overflow scroll container so the header remains sticky to the viewport. Primary
+CTAs and selected preview buttons use white text on `primary-700` (about 5.48:1
+contrast), with `primary-800` hover backgrounds for registration links.
+
+## Automated verification
+
+- `apps/averio-web/tests/landing-page.test.mjs` covers immediate public rendering,
+  auth state changes, onboarding redirects, history replacement and stale data.
+- `tests/collaboration/refresh.mjs` verifies signed-out `/app` redirects separately
+  from public `/`, retaining signed-in cold-load/reload checks.
+- `tests/collaboration/landing.mjs` runs in production and development StrictMode:
+  held/503 session responses, sticky navigation, 320px/desktop EN/DE/HU in both
+  themes, CTA contrast, preview switching, mobile anchors and FAQ expansion.
 
 ## Feature claims and launch boundaries
 
@@ -80,3 +96,4 @@ information to a marketing analytics service.
 The static HTML includes basic metadata, but full social-preview metadata,
 canonical URLs, crawlable prerendering/SSR, sitemap and localized SEO metadata
 can be added as part of a separate production launch pass.
+

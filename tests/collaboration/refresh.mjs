@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyLanding } from './landing.mjs';
 
 export async function verifyRefresh({ session, email, password, development }) {
     const page = await session(email, password);
@@ -20,12 +21,17 @@ export async function verifyRefresh({ session, email, password, development }) {
     assert.equal(await page.locator('script[src*="/src/main.tsx"]').count(), development ? 1 : 0);
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
     await page.waitForURL('**/login');
-    for (const route of ['/app', '/']) {
-        await page.goto('http://localhost:5173' + route);
-        await page.waitForURL(url => url.pathname === '/login');
-        await page.locator('input[type=email]').waitFor();
-        assert.equal(await page.getByText('CancelledError', { exact: true }).count(), 0);
-    }
+    await page.goto('http://localhost:5173/app');
+    await page.waitForURL(url => url.pathname === '/login');
+    await page.locator('input[type=email]').waitFor();
+    assert.equal(await page.getByText('CancelledError', { exact: true }).count(), 0);
+
+    await page.goto('http://localhost:5173/');
+    await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/');
+    assert.equal(await page.getByText('CancelledError', { exact: true }).count(), 0);
     await page.unroute('**/api/v1/auth/me');
-    console.log(`PASS refresh (${development ? 'development StrictMode' : 'production'}): signed-in cold loads/reloads, root redirect, signed-out redirect`);
+    await verifyLanding({ page, development });
+    console.log(`PASS refresh (${development ? 'development StrictMode' : 'production'}): signed-in cold loads/reloads, root redirect, protected signed-out redirect and public homepage`);
 }
+

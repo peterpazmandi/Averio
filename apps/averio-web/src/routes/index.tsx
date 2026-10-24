@@ -1,25 +1,27 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 
-import { authQueries } from '../features/authentication/api/authQueries';
+import { useAuth } from '../features/authentication/context/AuthProvider';
 import { LandingPage } from '../features/landing/LandingPage';
 
 export const Route = createFileRoute('/')({
-    beforeLoad: async ({ context }) => {
-        // The marketing homepage is public even when the API is unavailable.
-        // The authenticated routes still enforce their own authorization.
-        let user;
-        try {
-            user = await context.queryClient.ensureQueryData(
-                authQueries.currentUser(),
-            );
-        } catch {
-            return;
-        }
-
-        throw redirect({
-            to: user.onboardingRequired ? '/onboarding' : '/app',
-            search: { redirect: undefined },
-        });
-    },
-    component: LandingPage,
+    component: HomePage,
 });
+
+function HomePage() {
+    const { status, user } = useAuth();
+
+    // AuthProvider checks the session in the background. Public content must
+    // render immediately even if that request is slow or never settles.
+    if (status === 'authenticated' && user) {
+        return (
+            <Navigate
+                to={user.onboardingRequired ? '/onboarding' : '/app'}
+                search={{ redirect: undefined }}
+                replace
+            />
+        );
+    }
+
+    return <LandingPage />;
+}
+

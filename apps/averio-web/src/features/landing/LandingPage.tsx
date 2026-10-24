@@ -23,7 +23,7 @@ const capabilities = [
 const steps = ['stepOne', 'stepTwo', 'stepThree'] as const;
 const questions = ['solo', 'private', 'banks', 'currencies', 'pricing'] as const;
 
-const primaryLink = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 py-3 text-sm font-bold text-white shadow-[0_12px_30px_rgba(16,185,129,0.2)] transition hover:bg-primary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 motion-reduce:transition-none';
+const primaryLink = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-700 px-6 py-3 text-sm font-bold text-white shadow-[0_12px_30px_rgba(16,185,129,0.2)] transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 motion-reduce:transition-none';
 const secondaryLink = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-primary-300 hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:hover:bg-white/10';
 const surface = 'rounded-[24px] border border-[#e3ece7] bg-white shadow-[0_12px_40px_rgba(26,55,50,0.04)] dark:border-white/10 dark:bg-[#0d1b2a]';
 const bodyText = 'text-slate-600 dark:text-slate-300';
@@ -54,8 +54,8 @@ function LandingPreview() {
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                             <div><p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{t('landing.previewEyebrow')}</p><h3 className="text-lg font-extrabold tracking-tight text-[#142b37] dark:text-white">{t('landing.previewWelcome')}</h3></div>
                             <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/5" role="group" aria-label={t('landing.previewSwitchLabel')}>
-                                <button type="button" aria-pressed={!personal} onClick={() => setView('household')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (!personal ? 'bg-primary-500 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.householdTab')}</button>
-                                <button type="button" aria-pressed={personal} onClick={() => setView('personal')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (personal ? 'bg-primary-500 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.personalTab')}</button>
+                                <button type="button" aria-pressed={!personal} onClick={() => setView('household')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (!personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.householdTab')}</button>
+                                <button type="button" aria-pressed={personal} onClick={() => setView('personal')} className={'rounded-md px-2.5 py-1.5 text-[10px] font-bold transition focus-visible:outline-2 focus-visible:outline-primary-500 ' + (personal ? 'bg-primary-700 text-white' : 'text-slate-500 dark:text-slate-300')}>{t('landing.personalTab')}</button>
                             </div>
                         </div>
                         <div className="rounded-2xl bg-[#112b37] p-5 text-white">
@@ -111,7 +111,7 @@ export function LandingPage() {
     function closeMenu() { setMenuOpen(false); }
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-[#f7faf8] text-[#152e3a] dark:bg-[#07101f] dark:text-[#f1f6f4]">
+        <div className="min-h-screen overflow-x-clip bg-[#f7faf8] text-[#152e3a] dark:bg-[#07101f] dark:text-[#f1f6f4]">
             <a href="#main-content" className="sr-only rounded-lg bg-white p-3 text-primary-700 focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100]">{t('landing.skipContent')}</a>
             <header className="sticky top-0 z-50 border-b border-[#e3ebe7]/90 bg-[#f7faf8]/95 backdrop-blur-xl dark:border-white/10 dark:bg-[#07101f]/95">
                 <div className="mx-auto flex min-h-[76px] max-w-[1250px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
@@ -128,7 +128,7 @@ export function LandingPage() {
                         </select>
                         <button type="button" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'landing.lightMode' : 'landing.darkMode')} title={t(theme === 'dark' ? 'landing.lightMode' : 'landing.darkMode')} className="grid size-10 place-items-center rounded-lg border border-slate-200 bg-white text-lg focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-[#132434]">{theme === 'dark' ? '☀' : '☾'}</button>
                         <Link to="/login" search={{ redirect: undefined }} className="hidden px-3 text-[13px] font-bold hover:text-primary-600 sm:block">{t('landing.signIn')}</Link>
-                        <Link to="/register" className="hidden min-h-10 items-center rounded-xl bg-primary-500 px-4 text-[13px] font-bold text-white transition hover:bg-primary-600 focus-visible:outline-2 focus-visible:outline-primary-500 sm:inline-flex">{t('landing.getStarted')}</Link>
+                        <Link to="/register" className="hidden min-h-10 items-center rounded-xl bg-primary-700 px-4 text-[13px] font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-primary-500 sm:inline-flex">{t('landing.getStarted')}</Link>
                         <button type="button" className="grid size-10 place-items-center rounded-lg border border-slate-200 bg-white text-lg focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-white/20 dark:bg-[#132434] lg:hidden" aria-label={t('landing.menuLabel')} aria-expanded={menuOpen} aria-controls="landing-mobile-nav" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? '✕' : '☰'}</button>
                     </div>
                 </div>
@@ -139,7 +139,7 @@ export function LandingPage() {
                         <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#how-it-works" onClick={closeMenu}>{t('landing.howNav')}</a>
                         <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="#faq" onClick={closeMenu}>{t('landing.faqNav')}</a>
                         <Link to="/login" search={{ redirect: undefined }} onClick={closeMenu} className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10">{t('landing.signIn')}</Link>
-                        <Link to="/register" onClick={closeMenu} className="mt-1 rounded-xl bg-primary-500 px-4 py-3 text-center text-white">{t('landing.getStarted')}</Link>
+                        <Link to="/register" onClick={closeMenu} className="mt-1 rounded-xl bg-primary-700 px-4 py-3 text-center text-white">{t('landing.getStarted')}</Link>
                     </nav>
                 )}
             </header>
@@ -203,3 +203,4 @@ export function LandingPage() {
         </div>
     );
 }
+
