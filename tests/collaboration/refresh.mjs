@@ -30,7 +30,9 @@ export async function verifyRefresh({ session, email, password, development }) {
     await page.getByRole('heading', { level: 1, name: /Your money/ }).waitFor();
     assert.equal(new URL(page.url()).pathname, '/');
     assert.equal(await page.getByText('CancelledError', { exact: true }).count(), 0);
-    await page.unroute('**/api/v1/auth/me');
+    // Public rendering can finish before the delayed auth callback. Drain it
+    // before replacing interception so it cannot fulfill an already-handled route.
+    await page.unrouteAll({ behavior: 'wait' });
     await verifyLanding({ page, development });
     console.log(`PASS refresh (${development ? 'development StrictMode' : 'production'}): signed-in cold loads/reloads, root redirect, protected signed-out redirect and public homepage`);
 }
