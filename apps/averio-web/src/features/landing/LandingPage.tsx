@@ -33,7 +33,7 @@ function LandingPreview() {
     const personal = view === 'personal';
 
     return (
-        <div className="relative mx-auto w-full max-w-[600px]">
+        <div className="relative mx-auto w-full min-w-0 max-w-[600px]">
             <div aria-hidden="true" className="pointer-events-none absolute -inset-8 rounded-full bg-primary-400/10 blur-3xl" />
             <div className="relative overflow-hidden rounded-[23px] border border-slate-200/90 bg-[#f7fafb] shadow-[0_30px_90px_rgba(9,36,43,0.16)] dark:border-white/10 dark:bg-[#101d2c]">
                 <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#132434] sm:px-5">
@@ -113,8 +113,8 @@ export function LandingPage() {
             <main id="main-content">
                 <section id="top" className="relative isolate scroll-mt-24 overflow-hidden py-16 sm:py-20 lg:py-28">
                     <div aria-hidden="true" className="pointer-events-none absolute -right-48 top-0 size-[620px] rounded-full bg-primary-500/[0.08] blur-[110px]" />
-                    <div className="relative mx-auto grid max-w-[1250px] items-center gap-14 px-5 sm:px-8 lg:grid-cols-[1fr_1.05fr] lg:gap-10 lg:px-10">
-                        <div className="max-w-[620px]">
+                    <div className="relative mx-auto grid grid-cols-1 max-w-[1250px] items-center gap-14 px-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10 lg:px-10">
+                        <div className="min-w-0 max-w-[620px]">
                             <span className="inline-flex rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-700 dark:border-primary-500/25 dark:bg-primary-500/10 dark:text-primary-300">{t('landing.heroEyebrow')}</span>
                             <h1 className="mt-7 text-[clamp(2rem,4vw,3.5rem)] text-balance font-extrabold leading-[1.12] tracking-[-0.04em] text-[#142b38] dark:text-white">{t('landing.heroLineOne')}<br /><span className="text-primary-700 dark:text-primary-400">{t('landing.heroLineTwo')}</span>{' '}{t('landing.heroLineThree')}</h1>
                             <p className="mt-7 max-w-[510px] text-[16px] leading-8 text-slate-600 dark:text-slate-300 sm:text-[18px]">{t('landing.heroDescription')}</p>

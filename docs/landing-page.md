@@ -231,3 +231,24 @@ of seven auth routes, 320px/1440px widths, EN/DE/HU and light/dark themes, check
 logo clicks, keyboard text-link activation and preference preservation. Invitation
 context preservation was verified, and that regression is retained in the existing
 `landing-review-fixes.mjs` CI suite. Login screenshots are in `test-results/auth-home`.
+
+## CI mobile grid fix (2026-10-25)
+
+Verify run 40172686315 passed the auth navigation and targeted review-fix checks,
+then failed the strict landing overflow assertion at 320px in English/light mode.
+The hero used an implicit `auto` grid track, so its intrinsic minimum could grow
+beyond the available 280px. Reproduced locally with wider font metrics: Verdana
+expanded the track to about 309px; the same page fit with Arial.
+
+The hero now declares a single `minmax(0, 1fr)` track below desktop and explicit
+zero-minimum fractional tracks on desktop. Both direct grid children have `min-w-0`.
+This fixes the layout rather than hiding overflow or relaxing the viewport assertion.
+The browser matrix additionally checks the 320px hero with Verdana/fallback and
+monospace metrics in every language/theme, and captures a screenshot before reporting
+any standard viewport-overflow failure. No application fonts or dependencies changed.
+
+Validation: production build and ESLint passed. The complete production browser
+suite passed all 36 viewport/language/theme combinations across landing/contact,
+including 320px font-metric regressions, auth links, invitation preservation,
+landscape navigation, public anchors, contrast and saved preferences. Screenshots
+were refreshed in test-results/landing-review. GitHub Verify must validate the new commit separately.

@@ -27,7 +27,27 @@ try {
    assert.equal(await page.locator('header select').inputValue(),language);
    assert.equal(await page.locator('html').evaluate(e=>e.classList.contains('dark')),theme==='dark');
    const overflow = await page.evaluate(()=> [...document.querySelectorAll('main *, header *')].filter(e=>{const r=e.getBoundingClientRect();const st=getComputedStyle(e);return r.width>0 && st.position!=='absolute' && !e.closest('[aria-hidden="true"]') && (r.right>innerWidth+1||r.left < -1);}).map(e=>e.tagName+':'+e.className));
+   if (overflow.length) await page.screenshot({path: `${artifacts}/overflow-${path==='/'?'landing':'contact'}-${width}-${language}-${theme}.png`, fullPage:true});
    assert.deepEqual(overflow,[],`${path} ${width} ${language} ${theme}`);
+   if (path==='/' && width===320) {
+    // Wider font metrics exposed the implicit-grid minimum in Linux CI.
+    // Keep the viewport check strict and stress the hero independently of OS fonts.
+    for (const font of ['Verdana, sans-serif', 'monospace']) {
+     const bounds = await page.evaluate(font => {
+      const hero = document.getElementById('top');
+      const previous = hero.style.fontFamily;
+      try {
+       hero.style.fontFamily = font;
+       return [...hero.querySelectorAll('*')].filter(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && getComputedStyle(el).position !== 'absolute'
+         && !el.closest('[aria-hidden="true"]') && (rect.right > innerWidth + 1 || rect.left < -1);
+       }).map(el => ({ element: el.tagName, className: el.className, right: el.getBoundingClientRect().right }));
+      } finally { hero.style.fontFamily = previous; }
+     }, font);
+     assert.deepEqual(bounds, [], `Hero font fallback: ${font}, ${language}, ${theme}`);
+    }
+   }
    if(path==='/') {
     assert.ok(await page.locator('h1').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))<=56);
     if(width>=640) assert.equal(await page.locator('aside > div').evaluateAll(es=>es.slice(1).every(e=>e.scrollWidth<=e.clientWidth)),true);
