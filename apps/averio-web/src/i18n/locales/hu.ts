@@ -83,6 +83,7 @@ export const hu = {
     },
 
     authShell: {
+        backToHome: 'Vissza az Averióhoz',
         eyebrow:
             'Átláthatóbb háztartási pénzügyek',
 

@@ -82,6 +82,7 @@ export const en = {
         },
     },
     authShell: {
+        backToHome: 'Back to Averio',
         eyebrow: 'Household finances made clearer',
         title: 'One place for the money you manage together.',
         description:

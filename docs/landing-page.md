@@ -210,3 +210,24 @@ regressions pass. The production browser suite passes all 36 width/language/them
 combinations plus the new landscape, authenticated navigation and contrast checks.
 Landscape screenshots were visually inspected. Live backend and deployed hosting
 validation remain covered by the PR workflow and launch checks described above.
+
+## Returning from authentication (2026-10-25)
+
+The shared `AuthShell` now wraps its desktop and mobile official logos in links to
+`/#top` and adds a secondary, visible Back to Averio link above the form. Its label
+is translated under `authShell.backToHome` in EN/DE/HU. Links have keyboard focus
+indicators; the text link has a 44px minimum target height and remains visible at 320px.
+All seven guest routes inherit this once, including invitation pages without the
+standard auth card. No form submission or authentication behavior is changed.
+
+These TanStack links use document navigation deliberately: the invitation page's
+existing hash listener can otherwise consume `#top` during a client-side transition.
+A fresh document leaves that listener behind while retaining saved language/theme
+preferences and pending invitation context. Plain-root authenticated redirects remain
+unchanged; `/#top` explicitly opens the public landing page.
+
+Validation: production build and ESLint pass. Browser checks passed 84 combinations
+of seven auth routes, 320px/1440px widths, EN/DE/HU and light/dark themes, checking
+logo clicks, keyboard text-link activation and preference preservation. Invitation
+context preservation was verified, and that regression is retained in the existing
+`landing-review-fixes.mjs` CI suite. Login screenshots are in `test-results/auth-home`.

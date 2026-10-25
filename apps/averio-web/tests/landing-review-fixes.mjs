@@ -84,6 +84,19 @@ export async function verifyLandingReviewFixes(browser, url, artifacts) {
     });
     assert.equal(ratios.length, 4, 'All reviewed informational text samples must be checked');
     for (const { text, ratio } of ratios) assert.ok(ratio >= 4.5, `${text}: ${ratio.toFixed(2)} must meet 4.5:1`);
+    // AuthShell's home links must not let the invitation hash listener consume #top.
+    const invitationToken = 'a'.repeat(64);
+    await page.goto(url + '/invitation#' + invitationToken);
+    const homeLink = page.locator('a[href="/#top"]').filter({ hasText: 'Back to Averio' });
+    await homeLink.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL('**/#top');
+    await page.locator('#top h1').waitFor();
+    assert.equal(await page.evaluate(() => JSON.parse(sessionStorage.getItem('averio.pendingInvitation')).token), invitationToken);
+    await page.goto(url + '/login');
+    await page.locator('a[href="/#top"]:visible').first().click();
+    await page.waitForURL('**/#top');
+    console.log('PASS auth home links: keyboard, logo and invitation context');
     console.log('PASS review fixes: landscape registration, authenticated FAQ/root redirects, text contrast', ratios);
     await page.close();
 }
