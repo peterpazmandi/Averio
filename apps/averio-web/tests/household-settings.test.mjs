@@ -114,6 +114,7 @@ test('household page blocks stale drafts until explicit reload succeeds, includi
         'react/jsx-runtime': jsxRuntime,
         'react-i18next': { useTranslation: () => ({ t: key => key, i18n: { resolvedLanguage: 'en' } }) },
         '@tanstack/react-query': { useQuery: () => query },
+        '../../shared/components/ui/InfoPopover': { InfoPopover: 'info-popover' },
         '../../shared/components/ui/AverioCard': { AverioCard: 'section' },
         '../../shared/components/ui/AverioButton': { AverioButton: 'button' },
         '../../shared/components/ui/AverioSectionSelect': { AverioSectionSelect: 'section-select' },

@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { PersonalMoneyHistory } from './PersonalMoneyHistory';
 import { sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { Activity, useState } from 'react';
@@ -119,8 +120,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
 
     return <section id="household-personal-money" aria-labelledby="personal-money-heading" className="scroll-mt-24 space-y-5">
         <header className="space-y-1">
-            <h3 id="personal-money-heading" className="text-lg font-semibold">{t('personalMoney.title')}</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t('personalMoney.description')}</p>
+            <h3 id="personal-money-heading" className="text-lg font-semibold">{t('personalMoney.title')} <InfoPopover label={t('personalMoney.title')}>{t('personalMoney.description')}</InfoPopover></h3>
         </header>
         <nav aria-label={t('personalMoney.sections')}>
             <div className="lg:hidden">

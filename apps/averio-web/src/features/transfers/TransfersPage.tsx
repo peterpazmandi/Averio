@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { useMemo, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -79,8 +80,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         setEditorRevision(value => value + 1);
     }
     return <section className="grid min-w-0 gap-5" aria-labelledby="transfer-title">
-        <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight">{t('transfers.title')}</h2>
-            <p className="mt-1.5 max-w-[780px] text-xs leading-relaxed text-[#667085] dark:text-[#AAB4C4]">{t('transfers.description')}</p></div>
+        <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight">{t('transfers.title')} <InfoPopover label={t('transfers.title')}>{t('transfers.description')}</InfoPopover></h2></div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to) + Number(personalMoneyOnly)}
                     labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),

@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -48,7 +49,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
     const rows = (list.data ?? []).filter(r => status === 'all' || scheduleStatus(r) === status);
     const date = (value: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     return <section className="grid min-w-0 gap-5">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold">{t('recurring.title')}</h2><p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{t('recurring.intro')}</p></div>
+        <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold">{t('recurring.title')} <InfoPopover label={t('recurring.title')}>{t('recurring.intro')}</InfoPopover></h2></div>
             <AverioButton variant="primary" disabled={!canCreate} onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton></div>
         {notice && <p role="status">{notice}</p>}
         {mutation.isError && <p role="alert">{mutation.error.message}</p>}

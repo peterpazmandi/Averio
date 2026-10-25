@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -100,7 +101,7 @@ export function AccountCard({
 
             <div className="av-account-balance-block">
                 <span className="av-label">
-                    {t('accountManagement.currentBalance')}
+                    {t('accountManagement.currentBalance')} <InfoPopover label={t('accountManagement.currentBalance')}>{t('accountManagement.trackedBalanceHelp')}</InfoPopover>
                 </span>
                 <p className={
                     'av-kpi break-words'
@@ -114,8 +115,6 @@ export function AccountCard({
                     <time dateTime={account.balanceAnchorDate}>{date}</time>
                 </p>
             </div>
-
-            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t('accountManagement.trackedBalanceHelp')}</p>
 
             <AccountOwnershipSummary account={account} />
 

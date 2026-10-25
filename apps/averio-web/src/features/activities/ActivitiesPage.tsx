@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -26,8 +27,7 @@ export function ActivitiesPage({ userId, householdId }: { userId: string; househ
     const date = (value: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     return <section className="grid min-w-0 gap-5 text-[#152033] dark:text-[#F3F6FA]" aria-labelledby="activities-title">
         <header className="flex flex-wrap items-start justify-between gap-4">
-            <div><h2 id="activities-title" className="text-2xl font-bold">{t('activities.title')}</h2>
-                <p className="mt-1 text-sm text-[#667085] dark:text-[#AAB4C4]">{t('activities.description')}</p></div>
+            <div><h2 id="activities-title" className="text-2xl font-bold">{t('activities.title')} <InfoPopover label={t('activities.title')}><span className="block">{t('activities.description')}</span><span className="mt-2 block">{t('activities.totalsHelp')}</span></InfoPopover></h2></div>
             <AverioButton variant="primary" onClick={() => setEditor('new')}>{t('activities.create')}</AverioButton>
         </header>
         <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
@@ -36,7 +36,6 @@ export function ActivitiesPage({ userId, householdId }: { userId: string; househ
                 <option value="all">{t('activities.all')}</option><option value="open">{t('activities.open')}</option><option value="closed">{t('activities.closed')}</option>
             </AverioSelect></AverioField>
         </div>
-        <p className="text-xs text-[#667085] dark:text-[#AAB4C4]">{t('activities.totalsHelp')}</p>
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
         {query.isError && <div role="alert"><p>{query.error.message}</p><AverioButton onClick={() => void query.refetch()}>{t('common.actions.retry')}</AverioButton></div>}
         {query.isSuccess && rows.length === 0 && <AverioCard className="p-8 text-center">

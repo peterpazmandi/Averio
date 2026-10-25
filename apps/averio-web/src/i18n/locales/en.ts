@@ -1,5 +1,6 @@
 export const en = {
     common: {
+        infoAbout: "About {{subject}}",
         appName: 'Averio',
         requestFailed: 'Request failed',
         reference: 'Reference: {{reference}}',

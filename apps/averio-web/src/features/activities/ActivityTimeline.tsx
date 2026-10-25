@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +46,7 @@ export function ActivityTimeline({ userId, householdId, activity, onClose }: {
             <AverioField>{t('activities.chartCurrency')}<AverioSelect value={currency} onChange={e => setSelectedCurrency(e.target.value)}>
                 {currencies.map(code => <option key={code} value={code}>{code}</option>)}
             </AverioSelect></AverioField>
-            <p className="text-xs">{t('activities.chartHelp')}</p>
+            <div className="flex items-center text-sm font-semibold">{t('activities.chart')} <InfoPopover label={t('activities.chart')}>{t('activities.chartHelp')}</InfoPopover></div>
             <AverioCard className="min-w-0 p-3">
                 <div className="mb-3 flex flex-wrap gap-4 text-xs font-semibold">
                     <span className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-3 bg-emerald-600 dark:bg-emerald-400" />{t('activities.income')}</span>

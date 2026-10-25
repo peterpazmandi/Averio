@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { PersonalMoneyHistory } from '../../personal-money/PersonalMoneyHistory';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -25,8 +26,7 @@ export function PersonalMoneyCard({ userId, householdId }: {
                     <ConceptIcon name="savings" />
                 </span>
                 <div className="min-w-0 space-y-1">
-                    <h3 id="dashboard-personal-money-title" className="font-semibold">{t('personalMoney.myWallet')}</h3>
-                    <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t('personalMoney.description')}</p>
+                    <h3 id="dashboard-personal-money-title" className="font-semibold">{t('personalMoney.myWallet')} <InfoPopover label={t('personalMoney.myWallet')}>{t('personalMoney.description')}</InfoPopover></h3>
                 </div>
             </div>
             {query.isPending ? (

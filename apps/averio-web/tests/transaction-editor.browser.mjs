@@ -17,7 +17,7 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/transact
 let browser;
 try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(url)).ok) break; } catch {} await pause(100); }
-    browser = await chromium.launch({ channel: 'chrome', headless: true });
+    browser = await chromium.launch({ ...(process.argv[2] ? { executablePath: process.argv[2] } : { channel: 'chrome' }), headless: true });
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [320, 375, 1440]) {
         const copy = context.exports['personalMoney' + language.toUpperCase()];
         const transactionCopy = context.exports['transactionManagement' + language.toUpperCase()];
@@ -45,7 +45,7 @@ try {
             return json([]);
         });
         await page.goto(url);
-        const disclosures = page.locator('button[aria-controls][aria-expanded]');
+        const disclosures = page.locator('button[aria-controls][aria-expanded]:not([popovertarget])');
         assert.equal(await disclosures.count(), 3);
         for (const d of await disclosures.all()) assert.equal(await d.getAttribute('aria-expanded'), 'false');
         const account = page.locator('select').filter({ has: page.locator('option[value="shared"]') });
