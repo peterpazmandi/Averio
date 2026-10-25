@@ -27,7 +27,7 @@ export function ActivitiesPage({ userId, householdId }: { userId: string; househ
     const date = (value: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     return <section className="grid min-w-0 gap-5 text-[#152033] dark:text-[#F3F6FA]" aria-labelledby="activities-title">
         <header className="flex flex-wrap items-start justify-between gap-4">
-            <div><h2 id="activities-title" className="text-2xl font-bold">{t('activities.title')} <InfoPopover label={t('activities.title')}><span className="block">{t('activities.description')}</span><span className="mt-2 block">{t('activities.totalsHelp')}</span></InfoPopover></h2></div>
+            <div><h2 id="activities-title" className="text-2xl font-bold" aria-label={t('activities.title')}>{t('activities.title')} <InfoPopover label={t('activities.title')}><span className="block">{t('activities.description')}</span><span className="mt-2 block">{t('activities.totalsHelp')}</span></InfoPopover></h2></div>
             <AverioButton variant="primary" onClick={() => setEditor('new')}>{t('activities.create')}</AverioButton>
         </header>
         <div className="grid gap-3 sm:grid-cols-[1fr_180px]">

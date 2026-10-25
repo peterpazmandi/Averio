@@ -206,7 +206,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
     return <AverioCard className="space-y-3 !p-4 sm:!p-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
-                <h4 className="text-base font-semibold">{t('personalMoney.recurring.title')} <InfoPopover label={t('personalMoney.recurring.title')}>{t('personalMoney.recurring.description')}</InfoPopover></h4>
+                <h4 className="text-base font-semibold" aria-label={t('personalMoney.recurring.title')}>{t('personalMoney.recurring.title')} <InfoPopover label={t('personalMoney.recurring.title')}>{t('personalMoney.recurring.description')}</InfoPopover></h4>
             </div>
             <AverioButton type="button" variant={showCreate ? 'secondary' : 'primary'}
                 disabled={schedules.isError || schedules.isLoading} aria-expanded={showCreate}

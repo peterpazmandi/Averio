@@ -118,6 +118,12 @@ jobs:
         working-directory: apps/averio-web
         run: npm run lint
 
+      - name: Verify information popover browser flows
+        working-directory: apps/averio-web
+        run: |
+          node tests/info-popover.browser.mjs
+          node tests/helper-pages.browser.mjs
+
       - name: Verify Personal Money browser flows
         working-directory: apps/averio-web
         run: |

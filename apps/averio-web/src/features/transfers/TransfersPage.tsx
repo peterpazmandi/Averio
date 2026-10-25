@@ -80,7 +80,7 @@ export function TransfersPage({ userId, householdId }: { userId: string; househo
         setEditorRevision(value => value + 1);
     }
     return <section className="grid min-w-0 gap-5" aria-labelledby="transfer-title">
-        <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight">{t('transfers.title')} <InfoPopover label={t('transfers.title')}>{t('transfers.description')}</InfoPopover></h2></div>
+        <header className="flex flex-col items-start justify-between gap-4 min-[621px]:flex-row min-[621px]:items-end"><div><h2 id="transfer-title" className="m-0 text-[27px] font-bold tracking-tight" aria-label={t('transfers.title')}>{t('transfers.title')} <InfoPopover label={t('transfers.title')}>{t('transfers.description')}</InfoPopover></h2></div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <AverioFilterPanel count={Number(!!accountId) + Number(!!from) + Number(!!to) + Number(personalMoneyOnly)}
                     labels={{ filters: t('transactionManagement.filters'), showResults: t('transactionManagement.showResults'),

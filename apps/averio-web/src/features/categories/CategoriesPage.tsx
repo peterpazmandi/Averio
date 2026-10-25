@@ -132,7 +132,7 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
     return <section className="grid min-w-0 gap-5" aria-labelledby="categories-title">
         <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h2 id="categories-title" className="text-2xl font-bold text-[#152033] dark:text-[#F3F6FA]">{t('categoryManagement.title')} <InfoPopover label={t('categoryManagement.title')}>{t('categoryManagement.description')}</InfoPopover></h2>
+                <h2 id="categories-title" className="text-2xl font-bold text-[#152033] dark:text-[#F3F6FA]" aria-label={t('categoryManagement.title')}>{t('categoryManagement.title')} <InfoPopover label={t('categoryManagement.title')}>{t('categoryManagement.description')}</InfoPopover></h2>
             </div>
             <AverioButton variant="primary" disabled={!query.isSuccess || busy} onClick={() => setEditor({ category: null })}>
                 {t('categoryManagement.create')}
@@ -172,7 +172,7 @@ export function CategoriesPage({ userId, householdId }: { userId: string; househ
         {pinError && <p role="alert" className="text-red-700 dark:text-red-300">{pinError}</p>}
         {query.isSuccess && pinned.length > 0 && <AverioCard>
             <section aria-label={t('categoryManagement.pinned')}>
-                <h3 className="font-bold">{t('categoryManagement.pinned')} <InfoPopover label={t('categoryManagement.pinned')}>{t('categoryManagement.pinHelp')}</InfoPopover></h3>
+                <h3 className="font-bold" aria-label={t('categoryManagement.pinned')}>{t('categoryManagement.pinned')} <InfoPopover label={t('categoryManagement.pinned')}>{t('categoryManagement.pinHelp')}</InfoPopover></h3>
                 {pinned.map(c => row(c, false, true))}
             </section>
         </AverioCard>}

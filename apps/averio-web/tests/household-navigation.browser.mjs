@@ -27,7 +27,7 @@ try {
         try { if ((await fetch(url)).ok) break; } catch { /* Vite is starting. */ }
         await pause(100);
     }
-    browser = await chromium.launch({ channel: 'chrome', headless: true });
+    browser = await chromium.launch({ ...(process.argv[2] ? { executablePath: process.argv[2] } : { channel: 'chrome' }), headless: true });
     for (const width of [320, 375, 390, 768, 1024, 1440]) for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) {
         const h = householdCopy['householdSettings' + language.toUpperCase()];
         const m = moneyCopy['personalMoney' + language.toUpperCase()];

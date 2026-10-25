@@ -135,7 +135,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
         <div>
             <header className="av-page-head">
                 <div>
-                    <h2>{dashboard.displayName
+                    <h2 aria-label={dashboard.displayName ? t('dashboard.greeting', { name: dashboard.displayName }) : t('dashboard.title')}>{dashboard.displayName
                         ? t('dashboard.greeting', { name: dashboard.displayName })
                         : t('dashboard.title')} <InfoPopover label={t('dashboard.title')}>{t('concept.intro')}</InfoPopover></h2>
                 </div>
@@ -161,7 +161,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
 
             <div className="av-bento">
                 <AverioCard className="col-span-12 space-y-4 xl:col-span-4" aria-label={t('concept.balanceTitle')}>
-                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t('concept.balanceTitle')} <InfoPopover label={t('concept.balanceTitle')}>{t('concept.balanceHelp')}</InfoPopover></h3>
+                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300" aria-label={t('concept.balanceTitle')}>{t('concept.balanceTitle')} <InfoPopover label={t('concept.balanceTitle')}>{t('concept.balanceHelp')}</InfoPopover></h3>
                     {dashboard.householdBalances.length === 0 ? (
                         <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t('dashboard.noReportedAccounts')}</p>
                     ) : dashboard.householdBalances.map(balance => (
@@ -190,7 +190,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                 <AverioCard className="av-span-8">
                     <div className="av-card-head">
                         <div>
-                            <h3>{t('transactionManagement.dashboardCashFlow')} <InfoPopover label={t('transactionManagement.dashboardCashFlow')}>{t('transactionManagement.dashboardCashFlowHelp')}</InfoPopover></h3>
+                            <h3 aria-label={t('transactionManagement.dashboardCashFlow')}>{t('transactionManagement.dashboardCashFlow')} <InfoPopover label={t('transactionManagement.dashboardCashFlow')}>{t('transactionManagement.dashboardCashFlowHelp')}</InfoPopover></h3>
                         </div>
                         <Link className="av-btn" to="/app/statistics">{t('concept.viewReport')}</Link>
                     </div>
@@ -321,7 +321,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                 <AverioCard className="av-span-4" aria-label={t('transactionManagement.dashboardMonth')}>
                     <div className="av-card-head">
                         <div>
-                            <h3>{t('transactionManagement.dashboardMonth')} <InfoPopover label={t('transactionManagement.dashboardMonth')}>{t('concept.monthHelp')}</InfoPopover></h3>
+                            <h3 aria-label={t('transactionManagement.dashboardMonth')}>{t('transactionManagement.dashboardMonth')} <InfoPopover label={t('transactionManagement.dashboardMonth')}>{t('concept.monthHelp')}</InfoPopover></h3>
                         </div>
                     </div>
                     {currentMonth.length === 0 ? (
@@ -367,7 +367,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                 <AverioCard className="av-span-8">
                     <div className="av-card-head">
                         <div>
-                            <h3>{t('transactionManagement.latest')} <InfoPopover label={t('transactionManagement.latest')}>{t('concept.transactionsHelp')}</InfoPopover></h3>
+                            <h3 aria-label={t('transactionManagement.latest')}>{t('transactionManagement.latest')} <InfoPopover label={t('transactionManagement.latest')}>{t('concept.transactionsHelp')}</InfoPopover></h3>
                         </div>
                         <Link
                             className="av-btn"
@@ -417,7 +417,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                 <AverioCard className="av-span-12" aria-labelledby="dashboard-accounts-title">
                     <div className="av-card-head">
                         <div>
-                            <h3 id="dashboard-accounts-title">{t('dashboard.accountsTitle')} <InfoPopover label={t('dashboard.accountsTitle')}>{t('dashboard.recordedBalanceHelp')}</InfoPopover></h3>
+                            <h3 id="dashboard-accounts-title" aria-label={t('dashboard.accountsTitle')}>{t('dashboard.accountsTitle')} <InfoPopover label={t('dashboard.accountsTitle')}>{t('dashboard.recordedBalanceHelp')}</InfoPopover></h3>
                         </div>
                         <Link to="/app/accounts" className="av-btn">{t('dashboard.manageAccounts')}</Link>
                     </div>

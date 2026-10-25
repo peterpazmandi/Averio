@@ -18,10 +18,10 @@ function Fixture() {
             {['en', 'de', 'hu'].map(lang => <option key={lang}>{lang}</option>)}
         </select>
         <AverioCard>
-            <h2 className="text-xl font-semibold">{t('personalMoney.myWallet')}
+            <h2 className="text-xl font-semibold" aria-label={t('personalMoney.myWallet')}>{t('personalMoney.myWallet')}
                 <InfoPopover label={t('personalMoney.myWallet')}>{t('personalMoney.description')}</InfoPopover>
             </h2>
-            <h3>{t('categorySpending.title')}<CategoryReportHelp kind="Expense" /></h3>
+            <h3 aria-label={t('categorySpending.title')}>{t('categorySpending.title')}<CategoryReportHelp kind="Expense" /></h3>
             <button type="button" onClick={() => setDialog(true)}>Open editor</button>
         </AverioCard>
         <output>{submitted}</output>
@@ -31,7 +31,7 @@ function Fixture() {
         <AverioDialog open={dialog} title="Editor" closeLabel="Close editor" onDismiss={() => setDialog(false)}
             actions={<button type="submit" form="fixture-form">Save</button>}>
             <form id="fixture-form" onSubmit={e => { e.preventDefault(); setSubmitted(n => n + 1); }}>
-                <h3>{t('transactionManagement.items')}
+                <h3 aria-label={t('transactionManagement.items')}>{t('transactionManagement.items')}
                     <InfoPopover label={t('transactionManagement.items')}>{t('transactionManagement.itemsHelp')}</InfoPopover>
                 </h3>
                 <input aria-label="Name" />

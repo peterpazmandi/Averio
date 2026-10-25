@@ -48,7 +48,7 @@ export function CategorySpendingCard({ userId, householdId, reportingCurrency }:
         <AverioCard role="region" aria-labelledby="category-spending-title" className="col-span-12 space-y-4 xl:col-span-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                    <h3 id="category-spending-title" className="text-base font-semibold">{copy('title')} <CategoryReportHelp kind={kind} /></h3>
+                    <h3 id="category-spending-title" className="text-base font-semibold" aria-label={copy('title')}>{copy('title')} <CategoryReportHelp kind={kind} /></h3>
                     <p className="text-xs text-slate-600 dark:text-slate-300">{t('categorySpending.period')}</p>
                 </div>
                 <Link to="/app/statistics" search={reportSearch} className={linkStyle}>{t('categorySpending.report')}</Link>

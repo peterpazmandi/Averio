@@ -26,6 +26,9 @@ try {
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
         }, { language, dark });
         await page.goto(url);
+        const headingName = await page.locator('h2[aria-label]').getAttribute('aria-label');
+        assert.ok(headingName);
+        await page.getByRole('heading', { name: headingName, exact: true }).waitFor();
         const buttons = page.locator('main > div button[popovertarget]');
         const trigger = buttons.first();
         assert.match(await trigger.getAttribute('aria-label'), { en: /^About /, de: /^Informationen zu /, hu: /^Tudnivalók: / }[language]);
@@ -36,6 +39,7 @@ try {
         await popup.waitFor({ state: 'visible' });
         await page.waitForFunction(() => document.querySelector('button[popovertarget]')?.getAttribute('aria-expanded') === 'true');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+        await page.getByRole('heading', { name: headingName, exact: true }).waitFor();
         assert.equal(await popup.evaluate(el => el === document.activeElement), true);
         await page.keyboard.press('Escape');
         assert.equal(await popup.count(), 0);

@@ -43,7 +43,7 @@ export function CategoryReportPage({ userId, householdId, report }: {
     return <section aria-labelledby="category-report-title" className="space-y-4">
         <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 id="category-report-title" className="text-xl font-semibold">{title} <CategoryReportHelp kind={report.kind} /></h2>
+                <h2 id="category-report-title" className="text-xl font-semibold" aria-label={title}>{title} <CategoryReportHelp kind={report.kind} /></h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300">{date(report.from)} – {date(report.to)} · {report.currency}</p>
             </div>
             <Link to="/app/statistics" search={{}} className={linkStyle}>{t('categorySpending.allStatistics')}</Link>

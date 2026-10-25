@@ -34,7 +34,7 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
     return (
         <section className="space-y-6" aria-labelledby="accounts-title">
             <header className="av-page-head">
-                <div><h2 id="accounts-title">{t('app.accounts.title')} <InfoPopover label={t('app.accounts.title')}>{t('app.accounts.description')}</InfoPopover></h2></div>
+                <div><h2 id="accounts-title" aria-label={t('app.accounts.title')}>{t('app.accounts.title')} <InfoPopover label={t('app.accounts.title')}>{t('app.accounts.description')}</InfoPopover></h2></div>
                 <Link className="av-btn av-primary" to="/app/accounts/new">{t('accountManagement.create')}</Link>
             </header>
             {owners.isError && <div role="alert"><p className="av-error">{t('accountOwnership.loadRequired')}</p>

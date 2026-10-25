@@ -392,7 +392,7 @@ export function TransactionEditor({
             </div>}
 
             <AverioCard className="grid gap-4">
-                <div><h3 className="font-bold">{t('transactionManagement.basics')} <InfoPopover label={t('transactionManagement.basics')}>{t('transactionManagement.basicsHelp')}</InfoPopover></h3></div>
+                <div><h3 className="font-bold" aria-label={t('transactionManagement.basics')}>{t('transactionManagement.basics')} <InfoPopover label={t('transactionManagement.basics')}>{t('transactionManagement.basicsHelp')}</InfoPopover></h3></div>
                 <fieldset className="flex gap-3" disabled={busy || !!rule}>
                     <legend className="sr-only">{t('transactionManagement.type')}</legend>
                     {(['Income', 'Expense'] as const).map(value => <label key={value}
@@ -413,7 +413,7 @@ export function TransactionEditor({
                     placeholder={t('transactionManagement.merchantPlaceholder')} onChange={e => setMerchant(e.target.value)} /></AverioField>
             </AverioCard>
             <AverioCard className="grid gap-3">
-                <div><h3 className="font-bold">{t('transactionManagement.labels')} <InfoPopover label={t('transactionManagement.labels')}>{t('transactionManagement.labelsHelp')}</InfoPopover></h3></div>
+                <div><h3 className="font-bold" aria-label={t('transactionManagement.labels')}>{t('transactionManagement.labels')} <InfoPopover label={t('transactionManagement.labels')}>{t('transactionManagement.labelsHelp')}</InfoPopover></h3></div>
                 {labels.isPending && <p role="status">{t('common.status.loading')}</p>}
                 {labels.isError && <p role="alert">{labels.error.message}</p>}
                 {labels.isSuccess && !labels.data.length && <p className="text-xs">{t('transactionManagement.noLabelsYet')}</p>}
@@ -444,7 +444,7 @@ export function TransactionEditor({
             </AverioCard>
             <AverioCard className="grid gap-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div><h3 className="font-bold">{t('transactionManagement.items')} <InfoPopover label={t('transactionManagement.items')}>{t('transactionManagement.itemsHelp')}</InfoPopover></h3></div>
+                    <div><h3 className="font-bold" aria-label={t('transactionManagement.items')}>{t('transactionManagement.items')} <InfoPopover label={t('transactionManagement.items')}>{t('transactionManagement.itemsHelp')}</InfoPopover></h3></div>
                     <div className="flex flex-wrap gap-2">
                         <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
                     </div>

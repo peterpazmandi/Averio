@@ -120,7 +120,7 @@ export function PersonalMoneyPanel({ userId, householdId, household }: {
 
     return <section id="household-personal-money" aria-labelledby="personal-money-heading" className="scroll-mt-24 space-y-5">
         <header className="space-y-1">
-            <h3 id="personal-money-heading" className="text-lg font-semibold">{t('personalMoney.title')} <InfoPopover label={t('personalMoney.title')}>{t('personalMoney.description')}</InfoPopover></h3>
+            <h3 id="personal-money-heading" className="text-lg font-semibold" aria-label={t('personalMoney.title')}>{t('personalMoney.title')} <InfoPopover label={t('personalMoney.title')}>{t('personalMoney.description')}</InfoPopover></h3>
         </header>
         <nav aria-label={t('personalMoney.sections')}>
             <div className="lg:hidden">

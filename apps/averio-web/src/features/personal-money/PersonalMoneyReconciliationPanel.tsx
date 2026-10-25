@@ -184,7 +184,7 @@ export function HouseholdBoundaryFlowPanel({ userId, householdId }: { userId: st
         new Intl.NumberFormat(locale, { style: 'currency', currency }).format(Number(amount));
     return <AverioCard className="space-y-3 p-5 sm:p-6">
         <header className="space-y-1">
-            <h4 className="text-lg font-semibold">{t('personalMoney.boundaryTitle')} <InfoPopover label={t('personalMoney.boundaryTitle')}>{t('personalMoney.boundaryHelp')}</InfoPopover></h4>
+            <h4 className="text-lg font-semibold" aria-label={t('personalMoney.boundaryTitle')}>{t('personalMoney.boundaryTitle')} <InfoPopover label={t('personalMoney.boundaryTitle')}>{t('personalMoney.boundaryHelp')}</InfoPopover></h4>
         </header>
         {report.isPending && <p role="status">{t('common.status.loading')}</p>}
         {report.isError && <p role="alert">{t('personalMoney.boundaryError')}</p>}

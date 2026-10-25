@@ -26,7 +26,7 @@ export function PersonalMoneyCard({ userId, householdId }: {
                     <ConceptIcon name="savings" />
                 </span>
                 <div className="min-w-0 space-y-1">
-                    <h3 id="dashboard-personal-money-title" className="font-semibold">{t('personalMoney.myWallet')} <InfoPopover label={t('personalMoney.myWallet')}>{t('personalMoney.description')}</InfoPopover></h3>
+                    <h3 id="dashboard-personal-money-title" className="font-semibold" aria-label={t('personalMoney.myWallet')}>{t('personalMoney.myWallet')} <InfoPopover label={t('personalMoney.myWallet')}>{t('personalMoney.description')}</InfoPopover></h3>
                 </div>
             </div>
             {query.isPending ? (

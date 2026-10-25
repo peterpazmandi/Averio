@@ -13,7 +13,7 @@ export function LabelFilters({ userId, householdId, value, onChange }: {
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const options = query.data ?? [];
     return <fieldset className="min-w-0 space-y-2 text-sm">
-        <legend className="text-[13px] font-semibold">{t('savedViews.labels')} <InfoPopover label={t('savedViews.labels')}>{t('savedViews.labelsHelp')}</InfoPopover></legend>
+        <legend className="text-[13px] font-semibold" aria-label={t('savedViews.labels')}>{t('savedViews.labels')} <InfoPopover label={t('savedViews.labels')}>{t('savedViews.labelsHelp')}</InfoPopover></legend>
         {query.isPending && <p role="status">{t('common.status.loading')}</p>}
         {query.isError && <div role="alert">{t('savedViews.labelError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
         {query.isSuccess && !options.length && <p>{t('savedViews.noLabels')}</p>}
