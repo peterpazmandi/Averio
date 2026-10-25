@@ -183,3 +183,30 @@ intentionally change their geometry and copy. New screenshots are saved under
 - Local browser tests mock anonymous/API-failure responses. They do not certify a live
   backend, actual email delivery, deployed SPA fallback or non-Chromium browsers. The
   full backend/integration pipeline remains the responsibility of the PR Verify workflow.
+
+## Deep-review fixes (2026-10-24)
+
+- **Landscape menu:** constrain the expanded public navigation to the dynamic viewport
+  height minus the 77px header row/border, with vertical scrolling and contained
+  overscroll. Registration remains reachable at 568×320 on both public pages.
+- **Authenticated public sections:** the root route observes the current hash and keeps
+  explicit known public sections (including FAQ and the skip-link target) accessible
+  for signed-in visitors. Plain `/` and unknown hashes retain the app/onboarding
+  redirect; protected routes and authorization are unchanged.
+- **Text contrast:** darken light-mode preview labels, financial values and green
+  section labels. Preserve explicit dark-mode colors. Browser measurements for the
+  four regression samples are 4.76:1–5.42:1, above the 4.5:1 normal-text threshold.
+- **Regression coverage:** add `tests/landing-review-fixes.mjs`, called by the existing
+  CI browser suite. It checks landscape registration on landing/contact in EN/DE/HU,
+  authenticated FAQ navigation/reload and plain-root redirects for both onboarding
+  states, and actual rendered informational-text contrast with background alpha
+  compositing. Unit tests cover reactive known/unknown hashes and both auth states.
+
+Source changes are in `PublicLayout.tsx`, `LandingPage.tsx`, and `routes/index.tsx`;
+no new dependency, backend endpoint or translation is needed for these fixes.
+
+Validation for the review fixes: production build, ESLint and all 64 frontend unit
+regressions pass. The production browser suite passes all 36 width/language/theme
+combinations plus the new landscape, authenticated navigation and contrast checks.
+Landscape screenshots were visually inspected. Live backend and deployed hosting
+validation remain covered by the PR workflow and launch checks described above.

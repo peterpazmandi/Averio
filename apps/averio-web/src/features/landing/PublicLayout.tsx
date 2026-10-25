@@ -26,7 +26,7 @@ export function PublicHeader() {
                     </div>
                 </div>
                 {menuOpen && (
-                    <nav id="landing-mobile-nav" className="grid gap-1 border-t border-slate-200 bg-white px-5 py-4 text-sm font-semibold dark:border-white/10 dark:bg-[#102332] xl:hidden" aria-label={t('landing.mobileNavigation')}>
+                    <nav id="landing-mobile-nav" className="grid max-h-[calc(100dvh-77px)] overflow-y-auto overscroll-contain gap-1 border-t border-slate-200 bg-white px-5 py-4 text-sm font-semibold dark:border-white/10 dark:bg-[#102332] xl:hidden" aria-label={t('landing.mobileNavigation')}>
                         <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="/#why-averio" onClick={closeMenu}>{t('landing.whyNav')}</a>
                         <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="/#features" onClick={closeMenu}>{t('landing.featuresNav')}</a>
                         <a className="rounded-lg p-2 hover:bg-primary-50 dark:hover:bg-white/10" href="/#how-it-works" onClick={closeMenu}>{t('landing.howNav')}</a>

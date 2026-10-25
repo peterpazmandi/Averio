@@ -1,3 +1,4 @@
+import { verifyLandingReviewFixes } from './landing-review-fixes.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -15,6 +16,7 @@ fs.mkdirSync(artifacts, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 let cases = 0;
 try {
+ await verifyLandingReviewFixes(browser, url, artifacts);
  for (const width of [320, 390, 768, 1024, 1440, 1920]) for (const language of ['en','de','hu']) for (const theme of ['light','dark']) {
   const page = await browser.newPage({ viewport: { width, height: 945 } });
   const errors = [];page.on('pageerror',e=>errors.push(e.message));

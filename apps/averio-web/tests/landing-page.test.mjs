@@ -5,11 +5,11 @@ import test from 'node:test';
 import ts from 'typescript';
 import * as jsxRuntime from 'react/jsx-runtime';
 
-function loadHome(readAuth) {
+function loadHome(readAuth, readHash = () => '') {
     function LandingPage() {}
     function Navigate() {}
     const imports = {
-        '@tanstack/react-router': { createFileRoute: () => options => options, Navigate },
+        '@tanstack/react-router': { createFileRoute: () => options => options, Navigate, useLocation: ({ select }) => select({ hash: readHash() }) },
         '../features/authentication/context/AuthProvider': { useAuth: readAuth },
         '../features/landing/LandingPage': { LandingPage },
         'react/jsx-runtime': jsxRuntime,
@@ -56,5 +56,22 @@ for (const status of ['loading', 'anonymous', 'error']) {
             status, user: { onboardingRequired: false }, error: new Error('API unavailable'),
         }));
         assert.equal(Route.component().type, LandingPage);
+    });
+}
+
+for (const onboardingRequired of [false, true]) {
+    test('explicit public sections survive authenticated state and hash changes: onboarding=' + onboardingRequired, () => {
+        let hash = 'faq';
+        const { Route, LandingPage, Navigate } = loadHome(() => ({
+            status: 'authenticated', user: { onboardingRequired },
+        }), () => hash);
+        for (hash of ['main-content', 'top', 'why-averio', 'features', 'how-it-works', 'faq']) {
+            assert.equal(Route.component().type, LandingPage);
+        }
+        for (hash of ['', 'unknown']) {
+            const result = Route.component();
+            assert.equal(result.type, Navigate);
+            assert.equal(result.props.to, onboardingRequired ? '/onboarding' : '/app');
+        }
     });
 }
