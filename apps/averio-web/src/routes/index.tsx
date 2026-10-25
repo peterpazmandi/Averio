@@ -1,55 +1,30 @@
-import {
-    createFileRoute,
-    redirect,
-} from '@tanstack/react-router';
+import { createFileRoute, Navigate, useLocation } from '@tanstack/react-router';
 
-import {
-    ApiError,
-} from '../shared/api/ApiError';
+import { useAuth } from '../features/authentication/context/AuthProvider';
+import { LandingPage } from '../features/landing/LandingPage';
 
-import {
-    authQueries,
-} from '../features/authentication/api/authQueries';
+export const Route = createFileRoute('/')({
+    component: HomePage,
+});
 
-export const Route =
-    createFileRoute('/')({
-        beforeLoad:
-            async ({
-                context,
-            }) => {
-                try {
-                    const user =
-                        await context
-                            .queryClient
-                            .ensureQueryData(
-                                authQueries
-                                    .currentUser(),
-                            );
+function HomePage() {
+    const { status, user } = useAuth();
+    const hash = useLocation({ select: location => location.hash });
+    // Explicit public section links remain available even with an active session.
+    const publicSection = ['main-content', 'top', 'why-averio', 'features', 'how-it-works', 'faq'].includes(hash);
 
-                    throw redirect({
-                        to:
-                            user.onboardingRequired
-                                ? '/onboarding'
-                                : '/app',
-                        search: {
-                            redirect: undefined,
-                        },
-                    });
-                }
-                catch (error) {
-                    if (
-                        error instanceof ApiError
-                        && error.status === 401
-                    ) {
-                        throw redirect({
-                            to: '/login',
-                            search: {
-                                redirect: undefined,
-                            },
-                        });
-                    }
+    // AuthProvider checks the session in the background. Public content must
+    // render immediately even if that request is slow or never settles.
+    if (status === 'authenticated' && user && !publicSection) {
+        return (
+            <Navigate
+                to={user.onboardingRequired ? '/onboarding' : '/app'}
+                search={{ redirect: undefined }}
+                replace
+            />
+        );
+    }
 
-                    throw error;
-                }
-            },
-    });
+    return <LandingPage />;
+}
+

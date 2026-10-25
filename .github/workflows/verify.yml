@@ -125,6 +125,7 @@ jobs:
           node tests/recurring-allowance.browser.mjs
           node tests/transaction-editor.browser.mjs
           node tests/household-navigation.browser.mjs
+          node tests/landing-review.browser.mjs
 
       - name: Upload responsive navigation screenshots
         if: always()
@@ -194,3 +195,10 @@ jobs:
             exit 1
           fi
 
+
+      - name: Upload landing and contact screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-contact-screenshots
+          path: test-results/landing-review

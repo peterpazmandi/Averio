@@ -83,6 +83,7 @@ export const de = {
     },
 
     authShell: {
+        backToHome: 'Zurück zu Averio',
         eyebrow: 'Haushaltsfinanzen einfach im Blick',
 
         title:

@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import type {
     PropsWithChildren,
 } from 'react';
@@ -20,6 +21,8 @@ export function AuthShell({
         t,
     } = useTranslation();
 
+    // Leave auth flows with a document navigation so invitation hash listeners
+    // cannot interpret the public #top anchor as a new invitation token.
     return (
         <main
             className="
@@ -212,9 +215,10 @@ export function AuthShell({
                         Do not tie this wordmark color to the
                         application's theme.
                     */}
-                    <AverioBrand
-                        variant="on-dark"
-                    />
+                    <Link to="/" hash="top" reloadDocument aria-label={t('authShell.backToHome')}
+                        className="inline-flex rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-300">
+                        <AverioBrand variant="on-dark" />
+                    </Link>
 
                     <div
                         className="
@@ -415,11 +419,17 @@ export function AuthShell({
                 {/* ================================================== */}
 
                 <header className="relative z-20 flex w-full min-w-0 flex-wrap items-center justify-between gap-3 lg:justify-end">
-                    <div className="min-w-0 lg:hidden">
+                    <Link to="/" hash="top" reloadDocument aria-label={t('authShell.backToHome')}
+                        className="min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-500 lg:hidden">
                         <AverioBrand />
-                    </div>
+                    </Link>
                     <ConceptPreferences />
                 </header>
+                <Link to="/" hash="top" reloadDocument
+                    className="relative z-20 mt-3 inline-flex min-h-11 max-w-full items-center gap-2 self-start rounded-lg px-1 text-sm font-medium text-slate-600 hover:text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:text-slate-300 dark:hover:text-primary-300">
+                    <span aria-hidden="true">←</span>
+                    {t('authShell.backToHome')}
+                </Link>
 
                 {/* ================================================== */}
                 {/* Authentication content                            */}
