@@ -17,7 +17,7 @@ public sealed class ReceiptsController(ReceiptHandler handler) : ControllerBase
     [Consumes("multipart/form-data")]
     [ProducesResponseType<ReceiptScanResult>(StatusCodes.Status202Accepted)]
     public async Task<ActionResult<ReceiptScanResult>> Upload(Guid householdId,
-        [FromForm, BindRequired] Guid operationId, [FromForm, Required] IFormFile file, CancellationToken ct)
+        [FromForm, BindRequired] Guid operationId, [Required] IFormFile file, CancellationToken ct)
     {
         await using var input = file.OpenReadStream();
         var result = await handler.UploadAsync(householdId, operationId, input, ct);

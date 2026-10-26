@@ -192,6 +192,7 @@ jobs:
             exit 1
           fi
 
+          node tests/receipt-openapi.mjs
           npm run api:generate
 
           if [ -n "$(git status --porcelain -- src/shared/api/generated)" ]; then
@@ -208,3 +209,4 @@ jobs:
         with:
           name: landing-contact-screenshots
           path: test-results/landing-review
+

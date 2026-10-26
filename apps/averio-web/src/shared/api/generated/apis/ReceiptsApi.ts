@@ -79,27 +79,7 @@ export interface ApiV1HouseholdsHouseholdIdReceiptScansPostRequest {
     /**
      * 
      */
-    contentType?: string;
-    /**
-     * 
-     */
-    contentDisposition?: string;
-    /**
-     * 
-     */
-    headers?: { [key: string]: Array<string>; };
-    /**
-     * 
-     */
-    length?: number;
-    /**
-     * 
-     */
-    name?: string;
-    /**
-     * 
-     */
-    fileName?: string;
+    file: Blob;
 }
 
 /**
@@ -334,18 +314,27 @@ export class ReceiptsApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['file'] == null) {
+            throw new runtime.RequiredError(
+                'file',
+                'Required parameter "file" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansPost().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
         const consumes: runtime.Consume[] = [
-            { contentType: 'application/x-www-form-urlencoded' },
+            { contentType: 'multipart/form-data' },
         ];
         // @ts-ignore: canConsumeForm may be unused
         const canConsumeForm = runtime.canConsumeForm(consumes);
 
         let formParams: { append(param: string, value: any): any };
         let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
         if (useForm) {
             formParams = new FormData();
         } else {
@@ -356,28 +345,8 @@ export class ReceiptsApi extends runtime.BaseAPI {
             formParams.append('operationId', requestParameters['operationId'] as any);
         }
 
-        if (requestParameters['contentType'] != null) {
-            formParams.append('ContentType', requestParameters['contentType'] as any);
-        }
-
-        if (requestParameters['contentDisposition'] != null) {
-            formParams.append('ContentDisposition', requestParameters['contentDisposition'] as any);
-        }
-
-        if (requestParameters['headers'] != null) {
-            formParams.append('Headers', new Blob([JSON.stringify(requestParameters['headers'])], { type: "application/json", }));
-                    }
-
-        if (requestParameters['length'] != null) {
-            formParams.append('Length', requestParameters['length'] as any);
-        }
-
-        if (requestParameters['name'] != null) {
-            formParams.append('Name', requestParameters['name'] as any);
-        }
-
-        if (requestParameters['fileName'] != null) {
-            formParams.append('FileName', requestParameters['fileName'] as any);
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
         }
 
 
