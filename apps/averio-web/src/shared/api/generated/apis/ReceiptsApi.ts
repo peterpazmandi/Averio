@@ -283,17 +283,18 @@ export class ReceiptsApi extends runtime.BaseAPI {
 
     /**
      */
-    async apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
         const requestOptions = await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.BlobApiResponse(response);
     }
 
     /**
      */
-    async apiV1HouseholdsHouseholdIdReceiptScansIdImageGet(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRaw(requestParameters, initOverrides);
+    async apiV1HouseholdsHouseholdIdReceiptScansIdImageGet(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

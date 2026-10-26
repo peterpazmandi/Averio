@@ -18,3 +18,8 @@ assert.equal(resolve(properties.file).type, 'string');
 assert.equal(resolve(properties.file).format, 'binary');
 assert.ok(upload.responses['202']);
 console.log('PASS required binary receipt upload contract');
+const image = document.paths['/api/v1/households/{householdId}/receipt-scans/{id}/image'].get;
+const imageSchema = resolve(image.responses['200'].content['image/jpeg'].schema);
+assert.equal(imageSchema.type, 'string');
+assert.equal(imageSchema.format, 'binary');
+console.log('PASS binary receipt image download contract');

@@ -29,6 +29,7 @@ public sealed class ReceiptsController(ReceiptHandler handler) : ControllerBase
     [HttpGet("{id:guid}")]
     public Task<ReceiptScanResult> Get(Guid householdId, Guid id, CancellationToken ct) => handler.GetAsync(householdId, id, ct);
     [HttpGet("{id:guid}/image")]
+    [ProducesResponseType(typeof(Stream), StatusCodes.Status200OK, "image/jpeg")]
     public async Task<IActionResult> Image(Guid householdId, Guid id, CancellationToken ct)
     {
         var bytes = await handler.ImageAsync(householdId, id, ct);
