@@ -5,6 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.6" />
     <!-- Security patches for indirect dependencies; retain NuGet vulnerability auditing. -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.13" />
@@ -55,4 +58,5 @@
                     Version="10.0.11" />
   </ItemGroup>
 </Project>
+
 

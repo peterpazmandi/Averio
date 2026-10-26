@@ -120,6 +120,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy("receipt-uploads", context => RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 
         /*
          * Anonymous, email-sending endpoints: throttled per client IP to
@@ -252,3 +256,4 @@ app.MapControllers();
 app.Run();
 
 public partial class Program;
+

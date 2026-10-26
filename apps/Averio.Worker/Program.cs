@@ -16,6 +16,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, WorkerCurrentUser>();
 builder.Services.AddSingleton<RecurringBatch>();
 builder.Services.AddSingleton<RecurringAllowanceBatch>();
+builder.Services.AddHostedService<ReceiptWorker>();
 builder.Services.AddHostedService<RecurringWorker>();
 builder.Services.AddHostedService<RecurringAllowanceWorker>();
 builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }));
@@ -25,6 +26,7 @@ if (args.Contains("--verify-services"))
     using var scope = host.Services.CreateScope();
     _ = scope.ServiceProvider.GetRequiredService<RecurringHandler>();
     _ = scope.ServiceProvider.GetRequiredService<Averio.Application.PersonalMoney.RecurringAllowanceHandler>();
+    _ = scope.ServiceProvider.GetRequiredService<Averio.Application.Receipts.ReceiptProcessor>();
     Console.WriteLine("PASS worker dependency graph");
     return;
 }
@@ -59,3 +61,4 @@ internal sealed class RecurringWorker(RecurringBatch batch, ILogger<RecurringWor
         }
     }
 }
+

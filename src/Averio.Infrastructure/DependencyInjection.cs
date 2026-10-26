@@ -108,6 +108,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordResetRequestThrottle, PasswordResetRequestThrottle>();
         services.AddSingleton<IResendEmailVerificationThrottle, ResendEmailVerificationThrottle>();
 
+        Receipts.ReceiptServices.AddReceiptServices(services, configuration);
         ConfigureEmail(services, configuration);
 
         return services;
@@ -150,4 +151,5 @@ public static class DependencyInjection
         services.AddHostedService(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
     }
 }
+
 

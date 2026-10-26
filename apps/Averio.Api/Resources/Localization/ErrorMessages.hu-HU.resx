@@ -347,7 +347,14 @@
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Érvénytelen havi személyespénz-ütemezés. Ellenőrizd az összeget, a dátumokat és a háztartástagot.</value></data>
   <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>A havi juttatások átmenetileg nem érhetők el</value></data>
   <data name="Error_RecurringAllowanceDatabaseUpdateRequired" xml:space="preserve"><value>Az ütemezett juttatásokhoz adatbázis-frissítés szükséges. Kérd az üzemeltetőt a legújabb EF-migrációk alkalmazására, majd próbáld újra.</value></data>
+  <data name="Error_ReceiptDisabled" xml:space="preserve"><value>A nyugták beolvasása nincs engedélyezve.</value></data>
+  <data name="Error_ReceiptInvalid" xml:space="preserve"><value>Érvénytelen nyugtakérés.</value></data>
+  <data name="Error_ReceiptImageInvalid" xml:space="preserve"><value>Tölts fel egy érvényes, legfeljebb 10 MB-os JPEG- vagy PNG-képet.</value></data>
+  <data name="Error_ReceiptChanged" xml:space="preserve"><value>A nyugta megváltozott. Frissíts, majd próbáld újra.</value></data>
+  <data name="Error_ReceiptLimit" xml:space="preserve"><value>Elérted a napi nyugtafeltöltési korlátot.</value></data>
+  <data name="Error_ReceiptStorage" xml:space="preserve"><value>A nyugták tárhelye átmenetileg nem érhető el.</value></data>
 </root>
+
 
 
 

@@ -30,6 +30,8 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
+        services.AddScoped<Receipts.ReceiptHandler>();
+        services.AddScoped<Receipts.ReceiptProcessor>();
         services.AddScoped<Recurring.RecurringHandler>();
         services.AddScoped<RegisterUserHandler>();
         services.AddScoped<Households.Invitations.InvitationHandler>();
@@ -98,5 +100,6 @@ public static class DependencyInjection
         return services;
     }
 }
+
 
 
