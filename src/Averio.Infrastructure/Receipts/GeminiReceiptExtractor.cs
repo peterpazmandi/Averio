@@ -65,7 +65,10 @@ public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiRecei
                 .Where(x => !x.TryGetProperty("thought", out var thought) || !thought.GetBoolean())
                 .Select(x => x.TryGetProperty("text", out var t) ? t.GetString() : ""));
             var draft = JsonSerializer.Deserialize<ReceiptDraft>(text, JsonOptions) ?? throw Invalid();
-            return ReceiptDraftValidation.Validate(draft);
+            // Normalize once in ReceiptProcessor, where every extraction provider
+            // crosses the same trust boundary. Revalidating normalized observations
+            // would erase evidence such as the date_uncertain warning.
+            return draft;
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)
         { throw Invalid(); }

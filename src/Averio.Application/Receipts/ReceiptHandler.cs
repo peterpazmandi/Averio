@@ -36,8 +36,12 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
             await tx.CommitAsync(ct);
         }
         // No database locks across external I/O. Worker cleans abandoned uploads.
+        // Anchor the write deadline to the durable record, not to process resumption.
+        // Cleanup waits five minutes from creation, including for discarded uploads.
+        var remaining = scan.CreatedAt.AddMinutes(1) - clock.GetUtcNow();
+        if (remaining <= TimeSpan.Zero) throw Conflict();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        timeout.CancelAfter(remaining);
         try { await documents.PutAsync(scan.ObjectKey, image, timeout.Token); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception) { throw new BusinessRuleException("receipt_storage_unavailable", "Error_ReceiptStorage"); }

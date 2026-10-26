@@ -68,7 +68,11 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
                 .SetProperty(x => x.NextAttemptAt, now.AddMinutes(1))
                 .SetProperty(x => x.LeaseToken, (Guid?)null).SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
-    private IQueryable<ReceiptScan> Expired(DateTimeOffset now) => db.Set<ReceiptScan>().Where(x => x.DocumentDeletedAt == null &&
+    private IQueryable<ReceiptScan> Expired(DateTimeOffset now) => db.Set<ReceiptScan>().Where(x => x.DocumentDeletedAt == null
+        // Even a discarded/departed upload may still be writing its object.
+        // Its one-minute write deadline is anchored to CreatedAt; allow a settling
+        // interval before recording physical deletion, including after API crashes.
+        && x.CreatedAt <= now.AddMinutes(-5) && x.NextAttemptAt <= now &&
         (x.Status == ReceiptScanStatus.Discarded || x.ExpiresAt <= now
             || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now.AddMinutes(-5))
             || !db.HouseholdMembers.Any(m => m.Id == x.HouseholdMemberId && m.HouseholdId == x.HouseholdId && m.LeftAtUtc == null)));
@@ -77,9 +81,14 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
     public async Task<bool> ExpireAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await Expired(now).Where(x => x.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Discarded)
+                .SetProperty(x => x.NextAttemptAt, now.AddMinutes(2))
                 .SetProperty(x => x.DraftJson, (string?)null).SetProperty(x => x.LeaseToken, (Guid?)null)
                 .SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
+    public async Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct)
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Discarded
+                && x.DocumentDeletedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.NextAttemptAt, retryAt), ct);
     public async Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Discarded)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.DocumentDeletedAt, now), ct);

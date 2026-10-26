@@ -16,8 +16,14 @@ internal sealed class ReceiptWorker(IServiceScopeFactory scopes, ReceiptOptions 
         {
             try
             {
-                using (var scope = scopes.CreateScope())
-                    await scope.ServiceProvider.GetRequiredService<ReceiptProcessor>().CleanupAsync(stoppingToken);
+                using var scope = scopes.CreateScope();
+                var failures = await scope.ServiceProvider.GetRequiredService<ReceiptProcessor>().CleanupAsync(stoppingToken);
+                if (failures > 0) logger.LogWarning("Receipt cleanup deferred {Count} failed deletions", failures);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+            catch (Exception) { logger.LogError("Receipt cleanup failed; extraction will continue"); }
+            try
+            {
                 for (var i = 0; i < 10 && options.Enabled; i++)
                 {
                     using var scope = scopes.CreateScope();

@@ -28,13 +28,28 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
         await receipts.FinishAsync(scan.Id, scan.LeaseToken!.Value, clock.GetUtcNow(), draft, failure, transient, ct);
         return true;
     }
-    public async Task CleanupAsync(CancellationToken ct)
+    public async Task<int> CleanupAsync(CancellationToken ct)
     {
+        var failures = 0;
         foreach (var scan in await receipts.CleanupCandidatesAsync(clock.GetUtcNow(), ct))
         {
+            // Expire atomically reserves this cleanup attempt for two minutes.
             if (!await receipts.ExpireAsync(scan.Id, clock.GetUtcNow(), ct)) continue;
-            await documents.DeleteAsync(scan.ObjectKey, ct);
-            await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(60));
+            try
+            {
+                await documents.DeleteAsync(scan.ObjectKey, timeout.Token);
+                await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception)
+            {
+                failures++;
+                // A poisoned object must not monopolize the oldest-first batch.
+                await receipts.DeferCleanupAsync(scan.Id, clock.GetUtcNow().AddMinutes(1), ct);
+            }
         }
+        return failures;
     }
 }

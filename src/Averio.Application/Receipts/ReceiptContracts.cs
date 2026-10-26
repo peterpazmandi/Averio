@@ -40,5 +40,6 @@ public interface IReceiptRepository
     Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct);
     Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct);
     Task<bool> ExpireAsync(Guid id, DateTimeOffset now, CancellationToken ct);
+    Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct);
     Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct);
 }

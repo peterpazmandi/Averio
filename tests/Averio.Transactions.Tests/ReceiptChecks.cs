@@ -36,7 +36,14 @@ internal static class ReceiptChecks
         await Reject<BusinessRuleException>(() => normalizer.NormalizeAsync(new MemoryStream(jpeg[..(jpeg.Length / 2)]), default));
         var handler = new StubHttp(input);
         var extractor = new GeminiReceiptExtractor(new HttpClient(handler), Options.Create(new GeminiReceiptOptions { ApiKey = "test", Model = "test-model" }));
-        Check((await extractor.ExtractAsync(jpeg, default)).Total == "9000.00", "provider draft");
+        Check((await extractor.ExtractAsync(jpeg, default)).Total == "9000", "provider returns raw observations");
+        handler.Text = JsonSerializer.Serialize(input with { Date = "10/11/26", Warnings = ["provider_warning"] });
+        var raw = await extractor.ExtractAsync(jpeg, default);
+        Check(raw.Date == "10/11/26", "adapter preserves ambiguous date until application validation");
+        var normalized = ReceiptDraftValidation.Validate(raw);
+        Check(normalized.Date is null && normalized.Warnings.Contains("date_uncertain")
+            && !normalized.Warnings.Contains("provider_warning"), "application retains uncertainty without trusting provider warnings");
+        handler.Text = null;
         Check(handler.Request!.Contains("responseJsonSchema") && handler.Request.Contains("image/jpeg") && handler.Key == "test", "provider contract");
         handler.Status = HttpStatusCode.TooManyRequests;
         try { await extractor.ExtractAsync(jpeg, default); throw new Exception("429 accepted"); }
