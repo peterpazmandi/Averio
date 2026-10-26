@@ -1,5 +1,8 @@
+
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.RateLimiting;
 using Averio.Api.Authentication;
 using Averio.Api.ErrorHandling;
@@ -7,6 +10,7 @@ using Averio.Api.Security;
 using Averio.Application;
 using Averio.Application.Common.Abstractions;
 using Averio.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Scalar.AspNetCore;
@@ -216,6 +220,41 @@ builder.Services.AddCors(options =>
     });
 
 var app = builder.Build();
+
+/*
+ * Trust HTTPS scheme forwarding only from the configured
+ * immediate reverse proxy.
+ *
+ * This must execute before authentication, antiforgery,
+ * and other HTTPS-sensitive middleware.
+ */
+if (app.Environment.IsProduction())
+{
+    var proxyIpValue = app.Configuration["ReverseProxy:KnownProxyIp"];
+
+    if (string.IsNullOrWhiteSpace(proxyIpValue)
+        || !IPAddress.TryParse(proxyIpValue, out var proxyIp))
+    {
+        throw new InvalidOperationException(
+            "Production requires a valid ReverseProxy:KnownProxyIp.");
+    }
+
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1
+    };
+
+    forwardedHeadersOptions.KnownProxies.Add(proxyIp);
+
+    if (proxyIp.AddressFamily == AddressFamily.InterNetwork)
+    {
+        forwardedHeadersOptions.KnownProxies.Add(
+            proxyIp.MapToIPv6());
+    }
+
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
 
 app.UseRequestLocalization();
 
