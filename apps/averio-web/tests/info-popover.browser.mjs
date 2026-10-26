@@ -26,6 +26,27 @@ try {
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
         }, { language, dark });
         await page.goto(url);
+        const accessibility = await page.context().newCDPSession(page);
+        const assertFieldDescriptions = async () => {
+            const { root } = await accessibility.send('DOM.getDocument');
+            for (const id of ['locked-currency', 'locked-balance']) {
+                const expected = (await page.locator('#' + id + '-help').textContent()).trim();
+                const { nodeId } = await accessibility.send('DOM.querySelector', { nodeId: root.nodeId, selector: '#' + id });
+                const { nodes } = await accessibility.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+                assert.equal(nodes[0].description?.value, expected, id + ' exposes its explanation, not the popover title');
+                assert.notEqual(nodes[0].description?.value, nodes[0].name?.value);
+            }
+        };
+        await page.locator('#locked-currency').waitFor();
+        await assertFieldDescriptions();
+        for (const id of ['locked-currency', 'locked-balance']) {
+            const panelId = await page.locator('#' + id + '-help').locator('..').getAttribute('id');
+            assert.notEqual(panelId, id + '-help', 'Dialog and explanation have separate IDs');
+            await page.locator('button[popovertarget="' + panelId + '"]').click();
+            await page.locator('[popover]:popover-open').waitFor();
+            await assertFieldDescriptions();
+            await page.keyboard.press('Escape');
+        }
         const headingName = await page.locator('h2[aria-label]').getAttribute('aria-label');
         assert.ok(headingName);
         await page.getByRole('heading', { name: headingName, exact: true }).waitFor();
@@ -81,6 +102,8 @@ try {
         await page.keyboard.press('Escape');
         await page.getByRole('combobox', { name: 'Language' }).selectOption(language === 'hu' ? 'de' : 'hu');
         assert.ok(!(await trigger.getAttribute('aria-label')).includes('common.infoAbout'), 'Language changes resolve translated labels.');
+        await assertFieldDescriptions();
+        await accessibility.detach();
         assert.deepEqual(errors, []);
         await page.close();
     }

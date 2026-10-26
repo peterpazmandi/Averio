@@ -6,7 +6,7 @@ interface InfoPopoverProps {
     /** Localized subject, e.g. "Allowance remaining". */
     label: string;
     children: ReactNode;
-    /** Optional stable description ID for an associated control. */
+    /** Optional ID for the explanatory text, referenced by a control’s aria-describedby. */
     id?: string;
 }
 
@@ -14,7 +14,8 @@ interface InfoPopoverProps {
 export function InfoPopover({ label, children, id }: InfoPopoverProps) {
     const { t } = useTranslation();
     const generatedId = useId();
-    const contentId = id ?? generatedId;
+    const contentId = generatedId;
+    const descriptionId = id ?? generatedId + '-text';
     const trigger = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLSpanElement>(null);
     const [open, setOpen] = useState(false);
@@ -69,7 +70,7 @@ export function InfoPopover({ label, children, id }: InfoPopoverProps) {
                 <circle cx="10" cy="6" r=".75" fill="currentColor" stroke="none" />
             </svg>
         </button>
-        <span ref={panel} id={contentId} popover="auto" role="dialog" aria-label={label} aria-describedby={contentId + '-text'} tabIndex={-1}
+        <span ref={panel} id={contentId} popover="auto" role="dialog" aria-label={label} aria-describedby={descriptionId} tabIndex={-1}
             onToggle={event => {
                 const isOpen = event.newState === 'open';
                 setOpen(isOpen);
@@ -84,7 +85,7 @@ export function InfoPopover({ label, children, id }: InfoPopoverProps) {
                 }
             }}
             className="fixed inset-auto m-0 w-80 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-xl border border-l-[3px] border-[#E4E7EC] border-l-primary-500 bg-white p-4 text-left text-sm leading-relaxed font-normal tracking-normal whitespace-normal text-[#667085] normal-case shadow-lg outline-none dark:border-[#233044] dark:border-l-primary-500 dark:bg-[#0D1726] dark:text-[#AAB4C4]">
-            <span id={contentId + '-text'}>{children}</span>
+            <span id={descriptionId}>{children}</span>
         </span>
     </span>;
 }

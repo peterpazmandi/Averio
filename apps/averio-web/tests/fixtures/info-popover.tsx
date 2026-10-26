@@ -7,6 +7,7 @@ import '../../src/index.css';
 import { InfoPopover } from '../../src/shared/components/ui/InfoPopover';
 import { AverioDialog } from '../../src/shared/components/ui/AverioDialog';
 import { AverioCard } from '../../src/shared/components/ui/AverioCard';
+import { AccountFieldHelp } from '../../src/features/accounts/components/AccountFieldHelp';
 import { CategoryReportHelp } from '../../src/features/dashboard/components/CategoryReportHelp';
 
 function Fixture() {
@@ -25,6 +26,14 @@ function Fixture() {
             <button type="button" onClick={() => setDialog(true)}>Open editor</button>
         </AverioCard>
         <output>{submitted}</output>
+        <AverioCard>
+            <label htmlFor="locked-currency">{t('onboarding.account.currency')}</label>
+            <select id="locked-currency" disabled aria-describedby="locked-currency-help"><option>EUR</option></select>
+            <AccountFieldHelp id="locked-currency-help" field={t('onboarding.account.currency')}>{t('accountManagement.currencyFixed')}</AccountFieldHelp>
+            <label htmlFor="locked-balance">{t('app.accounts.recordedBalance')}</label>
+            <input id="locked-balance" disabled value="100" aria-describedby="locked-balance-help" />
+            <AccountFieldHelp id="locked-balance-help" field={t('app.accounts.recordedBalance')}>{t('accountManagement.balanceFixed')}</AccountFieldHelp>
+        </AverioCard>
         <div className="flex min-h-[700px] items-end justify-end">
             <InfoPopover label="Edge">{Array.from({ length: 12 }, (_, i) => <span className="mb-2 block" key={i}>{t('personalMoney.description')}</span>)}</InfoPopover>
         </div>
