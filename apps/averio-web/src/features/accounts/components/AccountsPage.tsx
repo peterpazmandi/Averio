@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
@@ -33,8 +34,7 @@ export function AccountsPage({ userId, householdId }: { userId: string; househol
     return (
         <section className="space-y-6" aria-labelledby="accounts-title">
             <header className="av-page-head">
-                <div><h2 id="accounts-title">{t('app.accounts.title')}</h2>
-                    <p>{t('app.accounts.description')}</p></div>
+                <div><h2 id="accounts-title" aria-label={t('app.accounts.title')}>{t('app.accounts.title')} <InfoPopover label={t('app.accounts.title')}>{t('app.accounts.description')}</InfoPopover></h2></div>
                 <Link className="av-btn av-primary" to="/app/accounts/new">{t('accountManagement.create')}</Link>
             </header>
             {owners.isError && <div role="alert"><p className="av-error">{t('accountOwnership.loadRequired')}</p>

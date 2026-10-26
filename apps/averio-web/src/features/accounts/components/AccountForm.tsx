@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useBlocker } from '@tanstack/react-router';
@@ -102,7 +103,7 @@ export function AccountForm({ account: initialAccount, options, onCreate, onUpda
         <form className="av-account-form" onSubmit={submit} aria-busy={busy} aria-label={t(account ? 'accountManagement.edit' : 'accountManagement.create')}>
             <fieldset disabled={busy} className="av-form-content">
                 <section className="av-form-section" aria-labelledby="account-basics-title">
-                    <header><h3 id="account-basics-title">{t('accountManagement.basicsSection')}</h3><p>{t('accountManagement.basicsHelp')}</p></header>
+                    <header><h3 id="account-basics-title" aria-label={t('accountManagement.basicsSection')}>{t('accountManagement.basicsSection')} <InfoPopover label={t('accountManagement.basicsSection')}>{t('accountManagement.basicsHelp')}</InfoPopover></h3></header>
                     <div className="av-form-grid">
                         <div className="av-field"><FormField label={t('onboarding.account.name')} autoFocus required maxLength={100} value={name}
                             error={validation?.Name?.[0]} onChange={event => setName(event.target.value)} /></div>

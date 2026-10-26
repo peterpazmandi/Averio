@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -143,12 +144,7 @@ export function StatisticsPage({
         >
             <header className="av-page-head">
                 <div>
-                    <h2 id="statistics-title">
-                        {t('transactionManagement.statistics')}
-                    </h2>
-                    <p>
-                        {t('transactionManagement.statisticsDescription')}
-                    </p>
+                    <h2 id="statistics-title" aria-label={t('transactionManagement.statistics')}>{t('transactionManagement.statistics')} <InfoPopover label={t('transactionManagement.statistics')}>{t('transactionManagement.statisticsDescription')}</InfoPopover></h2>
                 </div>
                 <span className="av-badge">
                     {t('transactionManagement.last12Months')}
@@ -335,12 +331,7 @@ export function StatisticsPage({
             >
                 <div className="av-stat-head">
                     <div>
-                        <h3 id="category-year-title">
-                            {t('transactionManagement.thisYearByCategory')}
-                        </h3>
-                        <p className="av-subtle">
-                            {t('transactionManagement.categoryYearHelp')}
-                        </p>
+                        <h3 id="category-year-title" aria-label={t('transactionManagement.thisYearByCategory')}>{t('transactionManagement.thisYearByCategory')} <InfoPopover label={t('transactionManagement.thisYearByCategory')}>{t('transactionManagement.categoryYearHelp')}</InfoPopover></h3>
                     </div>
                     <span className="av-badge">
                         {new Intl.DateTimeFormat(

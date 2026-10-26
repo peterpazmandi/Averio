@@ -1,5 +1,6 @@
 export const hu = {
     common: {
+        infoAbout: "Tudnivalók: {{subject}}",
         appName: 'Averio',
         requestFailed: 'A kérés sikertelen',
         reference: 'Hivatkozás: {{reference}}',

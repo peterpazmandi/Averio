@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { Activity, useState } from 'react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -70,8 +71,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
 
     return <div className="space-y-6 text-[#152033] dark:text-[#F3F6FA]">
         <header className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">{t('householdSettings.title')}</h2>
-            <p className={muted}>{t('householdSettings.description')}</p>
+            <h2 className="text-2xl font-bold tracking-tight" aria-label={t('householdSettings.title')}>{t('householdSettings.title')} <InfoPopover label={t('householdSettings.title')}>{t('householdSettings.description')}</InfoPopover></h2>
         </header>
         {query.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-red-700 dark:text-red-300">
             <p>{t('householdSettings.loadError')}</p>
@@ -115,7 +115,7 @@ export function HouseholdPage({ userId, householdId }: { userId: string; househo
                 <Activity mode={visibleSection === 'profile' ? 'visible' : 'hidden'}>
                 <AverioCard id="household-profile" className="scroll-mt-24 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div><h3 className="text-lg font-semibold">{t('householdSettings.profile')}</h3><p className={muted}>{t('householdSettings.profileHelp')}</p></div>
+                        <div><h3 className="text-lg font-semibold" aria-label={t('householdSettings.profile')}>{t('householdSettings.profile')} <InfoPopover label={t('householdSettings.profile')}>{t('householdSettings.profileHelp')}</InfoPopover></h3></div>
                         {owner && !draft && <AverioButton disabled={reloadRequired || query.isFetching}
                             onClick={() => { if (reloadRequired || query.isFetching) return; setDraft(household); setSaved(false); }}>{t('householdSettings.edit')}</AverioButton>}
                     </div>

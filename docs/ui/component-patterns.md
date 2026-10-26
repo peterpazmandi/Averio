@@ -33,3 +33,14 @@ Reference: the transfer overview's unified cards and the transfer editor's “Ac
 Use `AverioCategorySelect` for every category choice, including parent selection and transaction items. Filter eligibility first; show personal pins in their saved sequence first, then an alphabetical category tree using the current UI locale. Include parent context for children. Category overviews keep alphabetical trees and an ordered pinned shortcut section. Category choices open in AverioDialog; never expand a transaction form inline. Clearly mark main categories and subcategories with branch lines, indentation, and full ancestor paths. Nested dialogs must isolate Escape/Tab events and share a counted scroll lock. Use the shared `categoryOrdering` helper rather than seed order or untranslated keys.
 
 Use `AverioIconPicker` for icon selection: localized named tiles, name search, current selection preview, native radio keyboard behavior and clear focus states. Preserve saved icons missing from the current catalog. New catalog entries need meaningful API names and EN/DE/HU translations.
+
+
+## Optional explanatory help
+
+Use `InfoPopover` beside a heading or label for optional definitions, calculation scope and secondary explanations. Keep validation, required formats, empty-state instructions, financial consequences and privacy choices visible. The [page-by-page helper text audit](helper-text-audit.md) records the current decisions.
+
+Use localized `label` and children; the component supplies the translated accessible “About …” name. The native non-modal popover opens on click/tap/keyboard, supports outside dismissal and Escape, and uses a 44px trigger, visible focus states, viewport-aware positioning, scrolling and light/dark styling. It can be used inside the existing AverioDialog without opening another modal. Do not nest the trigger inside another interactive element or an implicit input label. Keep long tutorials and primary task content on the page.
+
+When help is inside a heading or legend, give the heading/legend its own localized accessible name (matching its visible title). The information button and open explanation must not become part of that name. Keep the help button independently accessible.
+
+For field help, the optional InfoPopover id belongs to its explanatory text. Use that ID in the control’s aria-describedby. The dialog keeps a separate generated ID for popoverTarget and aria-controls; referencing the labeled dialog would replace the explanation with its title in the control’s accessible description.

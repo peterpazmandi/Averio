@@ -1,3 +1,4 @@
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -205,10 +206,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
     return <AverioCard className="space-y-3 !p-4 sm:!p-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
-                <h4 className="text-base font-semibold">{t('personalMoney.recurring.title')}</h4>
-                <p className="max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                    {t('personalMoney.recurring.description')}
-                </p>
+                <h4 className="text-base font-semibold" aria-label={t('personalMoney.recurring.title')}>{t('personalMoney.recurring.title')} <InfoPopover label={t('personalMoney.recurring.title')}>{t('personalMoney.recurring.description')}</InfoPopover></h4>
             </div>
             <AverioButton type="button" variant={showCreate ? 'secondary' : 'primary'}
                 disabled={schedules.isError || schedules.isLoading} aria-expanded={showCreate}
@@ -253,6 +251,7 @@ export function RecurringAllowanceManager({ userId, householdId, household }: {
                         onChange={e => { setEndsOn(e.target.value); setOperationId(crypto.randomUUID()); }} />
                 </AverioField>
             </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300">{t('personalMoney.recurring.noBankTransfer')}</p>
             <div className="flex justify-end">
                 <AverioButton type="submit" variant="primary" disabled={create.isPending || !valid}>
                     {t('personalMoney.recurring.create')}
