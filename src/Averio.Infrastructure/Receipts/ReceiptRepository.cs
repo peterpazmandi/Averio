@@ -77,7 +77,7 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
             || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now.AddMinutes(-5))
             || !db.HouseholdMembers.Any(m => m.Id == x.HouseholdMemberId && m.HouseholdId == x.HouseholdId && m.LeftAtUtc == null)));
     public async Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct)
-        => await Expired(now).AsNoTracking().OrderBy(x => x.CreatedAt).Take(50).ToListAsync(ct);
+        => await Expired(now).AsNoTracking().OrderBy(x => x.NextAttemptAt).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(50).ToListAsync(ct);
     public async Task<bool> ExpireAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await Expired(now).Where(x => x.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Discarded)

@@ -167,8 +167,22 @@ internal static class ReceiptVerification
         using (var scope = provider.CreateScope())
             Check(!(await scope.ServiceProvider.GetRequiredService<IReceiptRepository>().CleanupCandidatesAsync(clock.GetUtcNow(), default))
                 .Any(x => x.Id == poisoned.Id), "failed deletion waits for retry");
+        // This unattempted row is newer than the poisoned row. Once both are due,
+        // next-attempt ordering must put unattempted work before a previous failure.
+        var unattempted = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), new string('c', 64), 1, clock.GetUtcNow().AddMinutes(-4));
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            db.Add(unattempted); await db.SaveChangesAsync();
+        }
+        await Discard(await Get(unattempted.Id));
         store.FailDelete = null;
         clock.Advance(TimeSpan.FromMinutes(1));
+        using (var scope = provider.CreateScope())
+        {
+            var candidates = await scope.ServiceProvider.GetRequiredService<IReceiptRepository>().CleanupCandidatesAsync(clock.GetUtcNow(), default);
+            Check(candidates.First().Id == unattempted.Id, "unattempted deletion precedes poisoned retry even after retry becomes due");
+        }
         // Atomic reservations fence competing cleanup workers.
         async Task<bool> ReserveCleanup()
         {

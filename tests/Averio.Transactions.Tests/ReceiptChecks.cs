@@ -12,6 +12,7 @@ internal static class ReceiptChecks
 {
     public static async Task RunAsync()
     {
+        await ReceiptWorkerChecks.RunAsync();
         var input = new ReceiptDraft("Bolt", "2026-10-26", "huf", "9000",
             [new("Élelmiszer", "10000", "Item"), new("Kedvezmény", "-1000", "Discount"), new("Kártya", "9000", "Payment")], []);
         var draft = ReceiptDraftValidation.Validate(input);
