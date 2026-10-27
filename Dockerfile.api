@@ -1,0 +1,44 @@
+
+# syntax=docker/dockerfile:1
+
+# Build using the builder's native CPU architecture.
+# The published application targets TARGETARCH.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+ARG TARGETARCH
+
+WORKDIR /src
+
+COPY . .
+
+# Restore the packages for the target runtime architecture.
+RUN dotnet restore \
+    apps/Averio.Api/Averio.Api.csproj \
+    -a "$TARGETARCH"
+
+# Publish for ARM64 when building with --platform linux/arm64.
+RUN dotnet publish \
+    apps/Averio.Api/Averio.Api.csproj \
+    --configuration Release \
+    -a "$TARGETARCH" \
+    --self-contained false \
+    --no-restore \
+    --output /app/publish \
+    /p:UseAppHost=false
+
+# The runtime image follows the target architecture.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
+ARG VCS_REF=unknown
+
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+ENV ASPNETCORE_HTTP_PORTS=8080
+
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "Averio.Api.dll"]
