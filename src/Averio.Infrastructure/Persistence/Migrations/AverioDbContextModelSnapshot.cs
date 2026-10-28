@@ -967,6 +967,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("byte_length");
 
+                    b.Property<string>("ConfirmationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("confirmation_fingerprint");
+
                     b.Property<string>("ContentHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1065,6 +1070,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_receipt_attempts", "attempts BETWEEN 0 AND 3");
 
                             t.HasCheckConstraint("ck_receipt_bytes", "byte_length > 0 AND byte_length <= 10485760");
+
+                            t.HasCheckConstraint("ck_receipt_confirmation_fingerprint", "confirmation_fingerprint IS NULL OR (status = 'Posted' AND confirmation_fingerprint ~ '^[0-9a-f]{64}$')");
 
                             t.HasCheckConstraint("ck_receipt_draft", "(status = 'Ready') = (draft_json IS NOT NULL)");
 

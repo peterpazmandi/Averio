@@ -38,7 +38,7 @@ public interface IReceiptRepository
     Task<IReadOnlyList<ReceiptScan>> ListAsync(Guid household, Guid member, int skip, CancellationToken ct);
     Task<ReceiptScan?> GetAsync(Guid household, Guid member, Guid id, CancellationToken ct);
     Task<bool> DiscardAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct);
-    Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, DateTimeOffset now, CancellationToken ct);
+    Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct);
     Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct);
     Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct);
     Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct);

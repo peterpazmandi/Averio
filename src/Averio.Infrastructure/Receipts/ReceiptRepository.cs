@@ -29,11 +29,12 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
                 .SetProperty(x => x.DraftJson, (string?)null).SetProperty(x => x.LeaseToken, (Guid?)null)
                 .SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
-    public async Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, DateTimeOffset now, CancellationToken ct)
+    public async Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version
                 && x.Status == ReceiptScanStatus.Ready && x.ExpiresAt > now && x.DocumentDeletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Posted)
-                .SetProperty(x => x.PostedTransactionId, transactionId).SetProperty(x => x.DraftJson, (string?)null)
+                .SetProperty(x => x.PostedTransactionId, transactionId).SetProperty(x => x.ConfirmationFingerprint, confirmationFingerprint)
+                .SetProperty(x => x.DraftJson, (string?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
     public async Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct)
     {

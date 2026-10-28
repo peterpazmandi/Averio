@@ -15,6 +15,7 @@ public sealed class ReceiptScan
     public int Attempts { get; private set; }
     public Guid Version { get; private set; }
     public Guid? PostedTransactionId { get; private set; }
+    public string? ConfirmationFingerprint { get; private set; }
     public Guid? LeaseToken { get; private set; }
     public DateTimeOffset? LeaseUntil { get; private set; }
     public DateTimeOffset NextAttemptAt { get; private set; }

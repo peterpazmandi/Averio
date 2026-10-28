@@ -1,6 +1,6 @@
 # ADR-034: Explicit receipt review and atomic posting
 
-Status: Accepted
+Status: Superseded by [ADR-035](ADR-035-receipt-confirmation-request-identity.md).
 
 ## Context
 

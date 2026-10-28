@@ -81,7 +81,7 @@ internal static class ReceiptWorkerChecks
             Processed.TrySetResult();
             return Task.FromResult(true);
         }
-        public Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+        public Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public void Add(ReceiptScan row) => throw new NotSupportedException();
         public Task<ReceiptScan?> FindOperationAsync(Guid h, Guid m, Guid op, CancellationToken ct) => throw new NotSupportedException();
         public Task<int> CountUploadsAsync(Guid h, Guid m, DateTimeOffset since, CancellationToken ct) => throw new NotSupportedException();

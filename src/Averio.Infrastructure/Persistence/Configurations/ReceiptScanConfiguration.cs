@@ -15,6 +15,7 @@ public sealed class ReceiptScanConfiguration : IEntityTypeConfiguration<ReceiptS
             t.HasCheckConstraint("ck_receipt_lease", "(status = 'Processing' AND lease_token IS NOT NULL AND lease_until IS NOT NULL) OR (status <> 'Processing' AND lease_token IS NULL AND lease_until IS NULL)");
             t.HasCheckConstraint("ck_receipt_draft", "(status = 'Ready') = (draft_json IS NOT NULL)");
             t.HasCheckConstraint("ck_receipt_posted", "(status = 'Posted') = (posted_transaction_id IS NOT NULL)");
+            t.HasCheckConstraint("ck_receipt_confirmation_fingerprint", "confirmation_fingerprint IS NULL OR (status = 'Posted' AND confirmation_fingerprint ~ '^[0-9a-f]{64}$')");
             t.HasCheckConstraint("ck_receipt_expiry", "expires_at > created_at");
         });
         b.HasKey(x => x.Id);
@@ -29,6 +30,7 @@ public sealed class ReceiptScanConfiguration : IEntityTypeConfiguration<ReceiptS
         b.Property(x => x.Attempts).HasColumnName("attempts");
         b.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
         b.Property(x => x.PostedTransactionId).HasColumnName("posted_transaction_id");
+        b.Property(x => x.ConfirmationFingerprint).HasColumnName("confirmation_fingerprint").HasMaxLength(64);
         b.Property(x => x.LeaseToken).HasColumnName("lease_token");
         b.Property(x => x.LeaseUntil).HasColumnName("lease_until");
         b.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at");

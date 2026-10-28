@@ -23,8 +23,15 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         var member = household.Members.Single(x => x.UserId == userId && x.LeftAtUtc == null);
         var scan = await receipts.GetAsync(householdId, member.Id, receiptId, ct)
             ?? throw new NotFoundException("receipt", receiptId);
-        // Receipt identity is the posting idempotency key, including after expiry.
-        if (scan.PostedTransactionId is Guid posted) return posted;
+        var fingerprint = ReceiptConfirmationFingerprint.Create(expectedVersion, currency, reviewedTotal, command);
+        // Only the original confirmation can be replayed, including after expiry
+        // and subsequent ledger edits. Legacy rows cannot be reconstructed safely.
+        if (scan.PostedTransactionId is Guid posted)
+        {
+            if (scan.ConfirmationFingerprint != fingerprint)
+                throw new ConflictException("receipt_changed", "Error_ReceiptChanged");
+            return posted;
+        }
         if (scan.Status != ReceiptScanStatus.Ready || scan.Version != expectedVersion
             || scan.ExpiresAt <= clock.GetUtcNow() || scan.DocumentDeletedAt is not null)
             throw new ConflictException("receipt_changed", "Error_ReceiptChanged");
@@ -43,7 +50,7 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         var id = await transactions.CreateWithinTransactionAsync(command, userId, ct);
         // Compare-and-set also fences worker expiry/discard outside the household
         // lock. Failure rolls back ledger, aggregates, activity and allowance writes.
-        if (!await receipts.PostAsync(scan.Id, expectedVersion, id, clock.GetUtcNow(), ct))
+        if (!await receipts.PostAsync(scan.Id, expectedVersion, id, fingerprint, clock.GetUtcNow(), ct))
             throw new ConflictException("receipt_changed", "Error_ReceiptChanged");
         await tx.CommitAsync(ct);
         return id;

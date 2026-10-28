@@ -87,12 +87,61 @@ internal static class ReceiptPostingVerification
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             var row = await db.Set<ReceiptScan>().AsNoTracking().SingleAsync(x => x.Id == ready.Id);
-            Check(row.Status == ReceiptScanStatus.Posted && row.PostedTransactionId == results[0] && row.DraftJson == null, "posted link not atomic");
+            Check(row.Status == ReceiptScanStatus.Posted && row.PostedTransactionId == results[0] && row.DraftJson == null
+                && row.ConfirmationFingerprint is { Length: 64 }, "posted link and confirmation intent not atomic");
             Check(await db.Transactions.CountAsync(x => x.AccountId == accountId) == 1, "posting wrote multiple ledger rows");
             Check(await db.Transactions.Where(x => x.Id == results[0]).Select(x => x.Amount).SingleAsync() == 9m, "posting lost reviewed total");
             await Reject<ConflictException>(() => scope.ServiceProvider.GetRequiredService<ReceiptHandler>()
                 .DiscardAsync(f.HouseholdId, ready.Id, row.Version, default));
         }
+        var postedState = await Fingerprint();
+        await Reject<ConflictException>(() => Post(ready, command with { AccountId = Guid.NewGuid() }));
+        await Reject<ConflictException>(() => Post(ready, command with {
+            Items = [new TransactionItemInput("Reviewed item", category, 90m)] }, total: 90m));
+        await Reject<ConflictException>(() => Post(ready, command with {
+            Items = [new TransactionItemInput("One", category, 4m), new TransactionItemInput("Two", category, 5m)] }));
+        await Reject<ConflictException>(() => Post(ready, command with {
+            Items = [new TransactionItemInput("Reviewed item", category, 9m, PersonalMoneyAmount: 1m)] }));
+        await Reject<ConflictException>(() => Post(ready, command with { LabelIds = [Guid.NewGuid()] }));
+        await Reject<ConflictException>(() => Post(ready, command with { Visibility = TransactionVisibility.Private }));
+        await Reject<ConflictException>(() => Post(ready, command with { OccurredOn = command.OccurredOn.AddDays(1) }));
+        await Reject<ConflictException>(() => Post(ready, currency: "HUF"));
+        await Reject<ConflictException>(() => Post(ready, version: Guid.NewGuid()));
+        Check(await Post(ready, command with { Items = [new TransactionItemInput("Reviewed item", category, 9.0000m)] }, total: 9.000m) == results[0],
+            "equivalent decimal formatting must preserve confirmation identity");
+        Check(postedState == await Fingerprint(), "changed confirmation altered ledger, aggregates or allowance entries");
+        // Editing the posted ledger later must neither change original replay
+        // identity nor make the edited metadata look like the original request.
+        using (var scope = provider.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE transactions SET merchant = {"Edited later"} WHERE id = {results[0]}");
+        Check(await Post(ready) == results[0], "ledger metadata edit broke original confirmation replay");
+        await Reject<ConflictException>(() => Post(ready, command with { Merchant = "Edited later" }));
+
+        var competing = await Draft();
+        async Task<Guid?> Attempt(CreateTransactionCommand request, decimal total)
+        {
+            try { return await Post(competing, request, total: total); }
+            catch (ConflictException) { return null; }
+        }
+        var competingResults = await Task.WhenAll(Attempt(command, 9m), Attempt(command with {
+            Items = [new TransactionItemInput("Different confirmation", category, 90m)] }, 90m));
+        Check(competingResults.Count(x => x is not null) == 1, "different concurrent confirmations must have one success and one conflict");
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            Check(await db.Transactions.CountAsync(x => x.AccountId == accountId) == 2, "competing requests posted more than one additional expense");
+            var row = await db.Set<ReceiptScan>().AsNoTracking().SingleAsync(x => x.Id == competing.Id);
+            Check(row.PostedTransactionId == competingResults.Single(x => x is not null), "competing confirmation link differs from its winner");
+        }
+        var splitScan = await Draft();
+        var splitRequest = command with { Items = [new TransactionItemInput("One", category, 4m), new TransactionItemInput("Two", category, 5m)] };
+        var splitId = await Post(splitScan, splitRequest);
+        await Reject<ConflictException>(() => Post(splitScan, splitRequest with {
+            Items = [new TransactionItemInput("One", category, 5m), new TransactionItemInput("Two", category, 4m)] }));
+        await Reject<ConflictException>(() => Post(splitScan, splitRequest with { Items = splitRequest.Items.Reverse().ToArray() }));
+        Check(await Post(splitScan, splitRequest) == splitId, "unchanged split confirmation did not replay");
+
         var allocated = await Draft();
         var withAllocation = command with { Items = [new TransactionItemInput("Personal item", category, 9m, PersonalMoneyAmount: 2m)] };
         var allocatedResults = await Task.WhenAll(Post(allocated, withAllocation), Post(allocated, withAllocation));
@@ -104,6 +153,8 @@ internal static class ReceiptPostingVerification
             Check(entries.Count == 1 && entries[0].Amount == -2m && entries[0].TransactionItemId != null,
                 "receipt retry charged Personal Money more than once or lost item attribution");
         }
+        await Reject<ConflictException>(() => Post(allocated, withAllocation with {
+            Items = [new TransactionItemInput("Personal item", category, 9m, PersonalMoneyAmount: 3m)] }));
         var after = await Fingerprint();
         clock.Advance(TimeSpan.FromDays(8));
         try
@@ -114,10 +165,24 @@ internal static class ReceiptPostingVerification
             Check(await repo.ExpireAsync(ready.Id, clock.GetUtcNow(), default), "posted image cleanup was not reserved");
             await repo.MarkDocumentDeletedAsync(ready.Id, clock.GetUtcNow(), default);
             var row = await repo.GetAsync(f.HouseholdId, f.OwnerMemberId, ready.Id, default);
-            Check(row!.Status == ReceiptScanStatus.Posted && row.PostedTransactionId == results[0] && row.DocumentDeletedAt != null, "cleanup destroyed posting idempotency");
+            Check(row!.Status == ReceiptScanStatus.Posted && row.PostedTransactionId == results[0] && row.DocumentDeletedAt != null
+                && row.ConfirmationFingerprint is { Length: 64 }, "cleanup destroyed posting idempotency");
             Check(await Post(ready) == results[0] && after == await Fingerprint(), "replay or cleanup changed financial state");
+            await Reject<ConflictException>(() => Post(ready, command with { Note = "Changed after expiry" }));
         }
         finally { clock.Advance(TimeSpan.FromDays(-8)); }
+        // Already-posted rows from the preceding schema have no trustworthy
+        // original intent. Never reconstruct a fingerprint from mutable history.
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            await Reject<Npgsql.PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE receipt_scans SET confirmation_fingerprint = {"invalid"} WHERE id = {allocated.Id}"));
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE receipt_scans SET confirmation_fingerprint = NULL WHERE id = {allocated.Id}");
+        }
+        await Reject<ConflictException>(() => Post(allocated, withAllocation));
+        Check(after == await Fingerprint(), "legacy or invalid fingerprint retry changed financial state");
         user.UserId = f.MemberUserId;
         await Reject<NotFoundException>(() => Post(ready));
         user.UserId = f.OwnerUserId;
