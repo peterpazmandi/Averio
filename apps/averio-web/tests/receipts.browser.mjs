@@ -13,6 +13,8 @@ const artifacts = path.resolve(root, '../../test-results/receipts');
 fs.mkdirSync(artifacts, { recursive: true });
 const copyModule = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/receipts.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, copyModule);
+const moneyCopyModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/personalMoney.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, moneyCopyModule);
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let browser;
@@ -22,6 +24,8 @@ try {
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [375, 1440]) {
         console.log(`Receipt browser scenario: ${language}/${dark ? 'dark' : 'light'}/${width}`);
         const copy = copyModule.exports['receipts' + language.toUpperCase()];
+        const moneyCopy = moneyCopyModule.exports['personalMoney' + language.toUpperCase()];
+        const hasWallet = language === 'en' && width === 375 && !dark;
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
         const errors = [], uploads = [], posts = [];
@@ -74,7 +78,9 @@ try {
             if (pathname.endsWith('/categories')) return json([
                 { id: 'uncategorized', name: 'Other', systemKey: 'uncategorized', kind: 'Expense', isArchived: false },
                 { id: 'food', name: 'Food', systemKey: null, kind: 'Expense', isArchived: false }]);
-            if (pathname.endsWith('/personal-money/me')) return route.fulfill({ status: 204 });
+            if (pathname.endsWith('/personal-money/me')) return hasWallet
+                ? json({ walletId: 'wallet', currency: 'EUR', available: '100', entries: [], charges: [] })
+                : route.fulfill({ status: 204 });
             return json([]);
         });
         await page.goto(url);
@@ -92,16 +98,25 @@ try {
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.equal(await confirm.isDisabled(), true, 'A mismatched item total cannot be confirmed.');
         await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
-        await page.locator('input[id$="-amount"]').fill('9.00');
+        await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('0009,00');
+        await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
+        await page.locator('input[id$="-amount"]').fill('0009,00');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await account.selectOption('eur');
+        if (hasWallet) {
+            await page.getByRole('button', { name: moneyCopy.itemCharge + ' · Food Apples', exact: true }).click();
+            const allocation = page.getByRole('dialog', { name: moneyCopy.itemAllocationTitle, exact: true });
+            await allocation.getByRole('checkbox', { name: moneyCopy.itemCharge, exact: true }).check();
+            await allocation.locator('input[inputmode="decimal"]').fill('0000,5000');
+            await page.keyboard.press('Escape');
+        }
         await page.getByText(copy.observations, { exact: true }).click();
         assert.ok((await page.locator('details').textContent()).includes('Discount'));
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await confirm.click();
         await page.getByRole('alert').filter({ hasText: 'Please retry' }).waitFor();
-        assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '9.00', 'Posting failure retains the reviewed form.');
+        assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '0009,00', 'Posting failure retains the reviewed form.');
         await confirm.click();
         await page.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
         assert.equal(posts.length, 2);
@@ -109,7 +124,9 @@ try {
         assert.equal(posts[1].currency, 'EUR');
         assert.equal(posts[1].transaction.items.length, 1, 'Discount and payment lines cannot become extra expenses.');
         assert.equal(posts[1].transaction.items[0].categoryId, 'food');
-        assert.equal(posts[1].reviewedTotal, '9.00');
+        assert.equal(posts[1].reviewedTotal, '9');
+        assert.equal(posts[1].transaction.items[0].amount, '9', 'Leading-zero/comma item amounts must use the same canonical API format.');
+        if (hasWallet) assert.equal(posts[1].transaction.items[0].personalMoneyAmount, '0.5', 'Personal Money allocations must use canonical decimal strings too.');
         await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });
         await page.getByRole('button', { name: copy.upload, exact: true }).click();
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();

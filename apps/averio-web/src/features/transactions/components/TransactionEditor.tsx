@@ -1,5 +1,5 @@
 import type { ReceiptDraft } from '../../../shared/api/generated';
-import { receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
+import { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
 import { getCategoryDisplayName } from '../categoryLocalization';
 import type { ReactNode } from 'react';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
@@ -312,6 +312,12 @@ export function TransactionEditor({
 
     const receiptValid = !receiptDraft || (reviewConfirmed && receiptCurrency === currency && receiptReconciles(reviewedTotal, resolvedItems));
 
+    function submittedAmount(value: string) {
+        // Keep receipt validation and all monetary request fields on the same
+        // canonical representation, including item-level allowance allocations.
+        return receiptDraft ? normalizeReceiptAmount(value) ?? normalizeAmount(value) : normalizeAmount(value);
+    }
+
     async function submit(event: React.FormEvent) {
         event.preventDefault();
         if (busy) return;
@@ -327,9 +333,9 @@ export function TransactionEditor({
             existingItemId: transaction?.items.some(old => old.id === item.key) ? item.key : null,
             description: item.description.trim(),
             categoryId: item.categoryId,
-            amount: normalizeAmount(item.amount),
+            amount: submittedAmount(item.amount),
             personalMoneyAmount: canManagePersonalMoney(item) ? item.personalAmount === null
-                ? null : normalizeAmount(item.personalAmount) : null,
+                ? null : submittedAmount(item.personalAmount) : null,
         }));
 
         const invalidItem = mappedItems.some(item =>
@@ -359,7 +365,7 @@ export function TransactionEditor({
                 });
                 return;
             }
-            const save = onSaveReceipt ? (request: TransactionInputDto) => onSaveReceipt(request, receiptCurrency, normalizeAmount(reviewedTotal)) : onSave;
+            const save = onSaveReceipt ? (request: TransactionInputDto) => onSaveReceipt(request, receiptCurrency, submittedAmount(reviewedTotal)) : onSave;
             await save?.({
                 accountId: resolvedAccountId,
                 kind,

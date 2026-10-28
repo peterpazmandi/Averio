@@ -9,9 +9,13 @@ export function receiptItems(draft: ReceiptDraft) {
     })) : [];
 }
 
+export function normalizeReceiptAmount(value: string) {
+    return normalizeBalanceInput(value);
+}
+
 export function receiptReconciles(total: string, items: readonly { amount: string }[]) {
-    const reviewed = normalizeBalanceInput(total);
-    const amounts = items.map(item => normalizeBalanceInput(item.amount));
+    const reviewed = normalizeReceiptAmount(total);
+    const amounts = items.map(item => normalizeReceiptAmount(item.amount));
     return reviewed !== null && !reviewed.startsWith('-') && reviewed !== '0'
         && items.length > 0 && items.length <= 100
         && amounts.every(amount => amount !== null && amount !== '0' && !amount.startsWith('-'))

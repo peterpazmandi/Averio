@@ -16,7 +16,7 @@ function load(file, imports = {}) {
     return context.exports;
 }
 const money = load('../src/shared/money/decimalAmount.ts');
-const { receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
+const { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
     '../../shared/money/decimalAmount': money,
 });
 test('only item and deposit observations prefill expenses, with discounts and payment lines retained in evidence', () => {
@@ -38,6 +38,18 @@ test('reconciliation is exact, bounded, positive and rejects missing or invalid 
     assert.equal(receiptReconciles('9', [{ amount: '10' }, { amount: '-1' }]), false);
     assert.equal(receiptReconciles('1', [{ amount: '1' }, { amount: '' }]), false);
     assert.equal(receiptReconciles('1', []), false);
+});
+test('receipt monetary request values share the reconciliation canonical form', () => {
+    for (const input of ['09.00', '0009,00', ' 00009.0000 ']) {
+        const wire = normalizeReceiptAmount(input);
+        assert.equal(wire, '9');
+        assert.equal(receiptReconciles(input, [{ amount: '09.00' }]), true);
+        assert.match(wire, /^(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,4})?$/);
+    }
+    assert.equal(normalizeReceiptAmount('0000,5000'), '0.5');
+    assert.equal(normalizeReceiptAmount('0000.0000'), '0');
+    assert.equal(normalizeReceiptAmount('1e2'), null);
+    assert.equal(normalizeReceiptAmount('1000000000000000'), null);
 });
 test('category suggestions require a unique complete category-name match and support Unicode', () => {
     const categories = [{ id: 'a', displayName: 'Élelmiszer' }, { id: 'b', displayName: 'Food' }];
