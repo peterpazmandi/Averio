@@ -396,7 +396,7 @@ export function TransactionEditor({
             }}>{t('transactionManagement.void')}</AverioButton>}
             <AverioButton disabled={busy} onClick={onCancel}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
-                disabled={busy || !receiptValid || !resolvedAccountId || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                disabled={busy || !receiptValid || !resolvedAccountId || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
@@ -419,6 +419,10 @@ export function TransactionEditor({
                 <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
                     onChange={event => setReviewConfirmed(event.target.checked)} />{t('receipts.reviewConsent')}</label>
             </AverioCard>}
+            {receiptDraft && [accounts, owners, categories].map((query, index) => query.isError && <AverioCard key={index} className="grid gap-2">
+                <p role="alert" className="text-sm text-red-700 dark:text-red-300">{query.error.message}</p>
+                <div><AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('receipts.retry')}</AverioButton></div>
+            </AverioCard>)}
             {transaction && personalRelation && <div className="rounded-xl border border-emerald-400/30 bg-emerald-50 p-3 dark:bg-emerald-950/30">
                 <p className="mb-2 text-xs font-semibold">{t('personalMoney.relationDetails')}</p>
                 <PersonalMoneyRelationBadge relation={personalRelation} detail />
@@ -439,7 +443,7 @@ export function TransactionEditor({
                     <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => { setAccountId(e.target.value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
                         <option value="" disabled>{t('transactionManagement.account')}</option>
                         {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
-                    </AverioSelect>{receiptDraft && !accounts.isPending && writableAccounts.length === 0 && <span className="text-sm">{t('receipts.noAccount')}</span>}</AverioField>
+                    </AverioSelect>{receiptDraft && accounts.isSuccess && owners.isSuccess && writableAccounts.length === 0 && <span className="text-sm">{t('receipts.noAccount')}</span>}</AverioField>
                     <AverioField>{t(recurring ? 'recurring.starts' : 'transactionManagement.date')}<AverioInput type="date" value={occurredOn} required disabled={busy || !!rule}
                         min={recurring && !rule ? new Date().toISOString().slice(0, 10) : undefined} onChange={e => setOccurredOn(e.target.value)} /></AverioField>
                 </div>

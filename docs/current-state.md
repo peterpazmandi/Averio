@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-17
+**Status date:** 2026-10-28
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -162,7 +162,7 @@ The following are not yet treated as implemented:
 - goals
 - cross-currency personal-money attribution, bank refund detection and automatic settlement
 - historical CSV/XLSX import
-- AI receipt scanning
+- production rollout of AI receipt scanning (disabled by default; provider benchmark and operational gates pending)
 - bank connections
 - 2FA and social login
 - production Worker project
@@ -267,4 +267,4 @@ Member-private weekly/monthly/yearly schedules, review/actual amount/skip, opt-i
 
 ## Private receipt scanning foundation
 
-Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. The feature is disabled by default and never writes ledger transactions. See [receipt scanning](receipt-scanning.md) for the three-PR plan, API contract, configuration and rollout gates.
+Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. Extraction alone never writes ledger transactions. The capture/inbox/review slice adds EN/DE/HU image capture/upload, polling, private image/evidence review, editable fields and category suggestions, explicit account/currency/privacy selection, exact reconciliation and human confirmation through the existing transaction editor. Posting atomically commits the normal ledger/aggregate/optional Personal Money effects and the receipt's unique transaction link; retries cannot post twice. Temporary image cleanup preserves that link. The feature remains disabled by default; production provider benchmarking, paid quotas, metrics and permanent attachment retention remain PR 3 work. Apply AddReceiptPosting before deploying this slice. See [receipt scanning](receipt-scanning.md) and [ADR-034](decisions/ADR-034-receipt-review-and-atomic-posting.md).

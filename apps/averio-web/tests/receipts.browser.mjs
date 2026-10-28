@@ -20,10 +20,13 @@ try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(url)).ok) break; } catch {} await pause(100); }
     browser = await chromium.launch({ ...(process.argv[2] ? { executablePath: process.argv[2] } : { channel: 'chrome' }), headless: true });
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [375, 1440]) {
+        console.log(`Receipt browser scenario: ${language}/${dark ? 'dark' : 'light'}/${width}`);
         const copy = copyModule.exports['receipts' + language.toUpperCase()];
         const page = await browser.newPage({ viewport: { width, height: 900 } });
+        page.setDefaultTimeout(15000);
         const errors = [], uploads = [], posts = [];
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
+        let failAccounts = language === 'en' && width === 375 && !dark;
         let uploaded = false, discarded = false, recorded = false;
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
@@ -64,6 +67,7 @@ try {
                 return json([ready(), ...(uploaded ? [queued()] : [])]);
             }
             if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
+            if (pathname.endsWith('/accounts') && failAccounts) { failAccounts = false; return fail(503); }
             if (pathname.endsWith('/accounts')) return json([
                 { id: 'eur', name: 'EUR bank', currency: 'EUR', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] },
                 { id: 'huf', name: 'HUF bank', currency: 'HUF', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] }]);
@@ -76,6 +80,9 @@ try {
         await page.goto(url);
         await page.getByRole('button', { name: copy.retry, exact: true }).click();
         await page.getByRole('button', { name: copy.review, exact: true }).click();
+        if (language === 'en' && width === 375 && !dark) {
+            await page.getByRole('button', { name: copy.retry, exact: true }).click();
+        }
         const confirm = page.getByRole('button', { name: copy.confirm, exact: true });
         assert.equal(await confirm.isDisabled(), true);
         assert.equal(await page.locator('input[type="date"]').inputValue(), '', 'Missing dates must not silently become today.');
