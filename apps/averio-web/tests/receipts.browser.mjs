@@ -103,7 +103,7 @@ try {
         assert.equal(posts[1].transaction.items.length, 1, 'Discount and payment lines cannot become extra expenses.');
         assert.equal(posts[1].transaction.items[0].categoryId, 'food');
         assert.equal(posts[1].reviewedTotal, '9.00');
-        await page.locator('input[type="file"]').setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });
+        await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });
         await page.getByRole('button', { name: copy.upload, exact: true }).click();
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();
         await page.getByText(copy.status.Queued, { exact: true }).waitFor();
@@ -118,7 +118,7 @@ try {
         enabled = false;
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.disabled, { exact: true }).waitFor();
-        assert.equal(await page.locator('input[type="file"]').isDisabled(), true);
+        assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
         assert.deepEqual(errors, []);
         await page.close();
     }

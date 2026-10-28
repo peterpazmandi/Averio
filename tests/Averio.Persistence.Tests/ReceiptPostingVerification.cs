@@ -93,6 +93,17 @@ internal static class ReceiptPostingVerification
             await Reject<ConflictException>(() => scope.ServiceProvider.GetRequiredService<ReceiptHandler>()
                 .DiscardAsync(f.HouseholdId, ready.Id, row.Version, default));
         }
+        var allocated = await Draft();
+        var withAllocation = command with { Items = [new TransactionItemInput("Personal item", category, 9m, PersonalMoneyAmount: 2m)] };
+        var allocatedResults = await Task.WhenAll(Post(allocated, withAllocation), Post(allocated, withAllocation));
+        Check(allocatedResults[0] == allocatedResults[1], "allocation confirmation was not idempotent");
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var entries = await db.PersonalMoneyEntries.AsNoTracking().Where(x => x.TransactionId == allocatedResults[0]).ToListAsync();
+            Check(entries.Count == 1 && entries[0].Amount == -2m && entries[0].TransactionItemId != null,
+                "receipt retry charged Personal Money more than once or lost item attribution");
+        }
         var after = await Fingerprint();
         clock.Advance(TimeSpan.FromDays(8));
         try

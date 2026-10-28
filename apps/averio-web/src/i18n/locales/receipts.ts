@@ -1,6 +1,6 @@
 export const receiptsEN = {
     title: 'Receipts', capture: 'Scan receipt', privateHelp: 'Your scans and images are private to you. Nothing changes your finances until you confirm a transaction.',
-    formats: 'Take a clear photo or choose a JPEG or PNG image, up to 10 MiB. PDF and HEIC are not supported.', chooseFile: 'Take photo or choose image',
+    formats: 'Take a clear photo or choose a JPEG or PNG image, up to 10 MiB. PDF and HEIC are not supported.', chooseFile: 'Choose image', takePhoto: 'Take photo',
     upload: 'Upload receipt', uploading: 'Uploading…', retryUpload: 'Retry same upload', uploaded: 'Receipt uploaded. You can leave this page while it is processed.',
     uploadRecovery: 'An interrupted upload may already be in the inbox. Refresh before trying again. If it stays Uploading, discard it and select the image again.',
     fileInvalid: 'Choose a nonempty JPEG or PNG image up to 10 MiB.', disabled: 'New receipt scanning is currently disabled. You can still review existing drafts.',
@@ -20,7 +20,7 @@ export const receiptsEN = {
 };
 export const receiptsDE: typeof receiptsEN = {
     title: 'Belege', capture: 'Beleg scannen', privateHelp: 'Deine Scans und Bilder sind nur für dich sichtbar. Erst deine Bestätigung erstellt eine Buchung.',
-    formats: 'Fotografiere den Beleg deutlich oder wähle ein JPEG- oder PNG-Bild bis 10 MiB. PDF und HEIC werden nicht unterstützt.', chooseFile: 'Foto aufnehmen oder Bild wählen',
+    formats: 'Fotografiere den Beleg deutlich oder wähle ein JPEG- oder PNG-Bild bis 10 MiB. PDF und HEIC werden nicht unterstützt.', chooseFile: 'Bild wählen', takePhoto: 'Foto aufnehmen',
     upload: 'Beleg hochladen', uploading: 'Wird hochgeladen…', retryUpload: 'Denselben Upload wiederholen', uploaded: 'Beleg hochgeladen. Du kannst die Seite während der Verarbeitung verlassen.',
     uploadRecovery: 'Ein unterbrochener Upload kann bereits im Posteingang sein. Aktualisiere vor einem erneuten Versuch. Bleibt er bei „Wird hochgeladen“, verwirf ihn und wähle das Bild erneut.',
     fileInvalid: 'Wähle ein nicht leeres JPEG- oder PNG-Bild bis 10 MiB.', disabled: 'Neue Belegscans sind derzeit deaktiviert. Vorhandene Entwürfe kannst du weiterhin prüfen.',
@@ -40,7 +40,7 @@ export const receiptsDE: typeof receiptsEN = {
 };
 export const receiptsHU: typeof receiptsEN = {
     title: 'Nyugták', capture: 'Nyugta beolvasása', privateHelp: 'A beolvasott nyugtákat és képeket csak te látod. A pénzügyeid csak a tranzakció megerősítésekor változnak.',
-    formats: 'Készíts éles fotót, vagy válassz legfeljebb 10 MiB méretű JPEG- vagy PNG-képet. A PDF és a HEIC nem támogatott.', chooseFile: 'Fotó készítése vagy kép kiválasztása',
+    formats: 'Készíts éles fotót, vagy válassz legfeljebb 10 MiB méretű JPEG- vagy PNG-képet. A PDF és a HEIC nem támogatott.', chooseFile: 'Kép kiválasztása', takePhoto: 'Fotó készítése',
     upload: 'Nyugta feltöltése', uploading: 'Feltöltés…', retryUpload: 'Ugyanazon feltöltés újrapróbálása', uploaded: 'A nyugta feltöltve. A feldolgozás közben elhagyhatod ezt az oldalt.',
     uploadRecovery: 'A megszakadt feltöltés már szerepelhet a listában. Újrapróbálás előtt frissíts. Ha továbbra is feltöltés alatt áll, vesd el, és válaszd ki újra a képet.',
     fileInvalid: 'Válassz nem üres, legfeljebb 10 MiB méretű JPEG- vagy PNG-képet.', disabled: 'Új nyugták beolvasása jelenleg ki van kapcsolva. A meglévő piszkozatokat továbbra is ellenőrizheted.',

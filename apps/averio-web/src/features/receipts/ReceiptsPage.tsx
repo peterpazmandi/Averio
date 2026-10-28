@@ -18,6 +18,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const { t, i18n } = useTranslation();
     const cache = useQueryClient();
     const input = useRef<HTMLInputElement>(null);
+    const camera = useRef<HTMLInputElement>(null);
     const [selection, setSelection] = useState<{ file: File; operationId: string } | null>(null);
     const [fileError, setFileError] = useState('');
     const [notice, setNotice] = useState('');
@@ -36,6 +37,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         mutationFn: (value: { file: File; operationId: string }) => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansPost({ householdId, ...value }),
         onSuccess: async () => {
             setSelection(null); if (input.current) input.current.value = '';
+            if (camera.current) camera.current.value = '';
             setNotice(t('receipts.uploaded')); await refresh();
         },
         // A lost response may still represent an accepted upload. Refresh the
@@ -83,10 +85,13 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             {capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
             {capabilities.isSuccess && !capabilities.data.enabled && <p role="status">{t('receipts.disabled')}</p>}
             <label className="grid gap-2 text-sm font-semibold">{t('receipts.chooseFile')}
-                <input ref={input} type="file" accept="image/jpeg,image/png" capture="environment" className="min-h-11 min-w-0 max-w-full rounded-xl border border-slate-300 p-2 dark:border-slate-700"
+                <input ref={input} type="file" accept="image/jpeg,image/png" className="min-h-11 min-w-0 max-w-full rounded-xl border border-slate-300 p-2 dark:border-slate-700"
                     disabled={!capabilities.data?.enabled || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
             </label>
-            <div><AverioButton variant="primary" disabled={!selection || !capabilities.data?.enabled || upload.isPending}
+            <input ref={camera} type="file" accept="image/jpeg,image/png" capture="environment" hidden aria-label={t('receipts.takePhoto')}
+                disabled={!capabilities.data?.enabled || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
+            <div className="flex flex-wrap gap-2"><AverioButton disabled={!capabilities.data?.enabled || upload.isPending} onClick={() => camera.current?.click()}>{t('receipts.takePhoto')}</AverioButton>
+            <AverioButton variant="primary" disabled={!selection || !capabilities.data?.enabled || upload.isPending}
                 onClick={() => selection && upload.mutate(selection)}>{t(upload.isPending ? 'receipts.uploading' : upload.isError ? 'receipts.retryUpload' : 'receipts.upload')}</AverioButton></div>
             {fileError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{fileError}</p>}
             {upload.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{upload.error.message} {t('receipts.uploadRecovery')}</p>}
