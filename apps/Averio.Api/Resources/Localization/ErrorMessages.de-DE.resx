@@ -347,7 +347,14 @@
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Ungültiger monatlicher Personal-Money-Zeitplan. Prüfe Betrag, Zeitraum und Haushaltsmitglied.</value></data>
   <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>Monatliche Zuteilungen derzeit nicht verfügbar</value></data>
   <data name="Error_RecurringAllowanceDatabaseUpdateRequired" xml:space="preserve"><value>Für geplante Zuteilungen muss die Datenbank aktualisiert werden. Bitte die aktuellen EF-Migrationen anwenden lassen und erneut versuchen.</value></data>
+  <data name="Error_ReceiptDisabled" xml:space="preserve"><value>Das Scannen von Belegen ist nicht aktiviert.</value></data>
+  <data name="Error_ReceiptInvalid" xml:space="preserve"><value>Die Beleganfrage ist ungültig.</value></data>
+  <data name="Error_ReceiptImageInvalid" xml:space="preserve"><value>Lade ein gültiges JPEG- oder PNG-Bild mit maximal 10 MB hoch.</value></data>
+  <data name="Error_ReceiptChanged" xml:space="preserve"><value>Der Beleg wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
+  <data name="Error_ReceiptLimit" xml:space="preserve"><value>Das tägliche Limit für Beleg-Uploads wurde erreicht.</value></data>
+  <data name="Error_ReceiptStorage" xml:space="preserve"><value>Der Belegspeicher ist vorübergehend nicht verfügbar.</value></data>
 </root>
+
 
 
 

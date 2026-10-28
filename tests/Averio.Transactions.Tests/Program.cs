@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 var checks = new (string Name, Action Run)[]
 {
+    ("receipt images, amounts and provider contract", () => ReceiptChecks.RunAsync().GetAwaiter().GetResult()),
     ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
     ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
     ("recurring calendar anchors", RecurringChecks.Calendar),
@@ -348,3 +349,4 @@ static void Throws<TException>(Action action)
 
     throw new Exception($"Expected {typeof(TException).Name}.");
 }
+

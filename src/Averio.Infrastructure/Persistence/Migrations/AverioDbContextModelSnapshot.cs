@@ -952,6 +952,121 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Receipts.ReceiptScan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<int>("ByteLength")
+                        .HasColumnType("integer")
+                        .HasColumnName("byte_length");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("content_hash");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DocumentDeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("document_deleted_at");
+
+                    b.Property<string>("DraftJson")
+                        .HasMaxLength(262144)
+                        .HasColumnType("character varying(262144)")
+                        .HasColumnName("draft_json");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("failure_code");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lease_token");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lease_until");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("object_key");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "CreatedAt");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "OperationId")
+                        .IsUnique();
+
+                    b.ToTable("receipt_scans", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_attempts", "attempts BETWEEN 0 AND 3");
+
+                            t.HasCheckConstraint("ck_receipt_bytes", "byte_length > 0 AND byte_length <= 10485760");
+
+                            t.HasCheckConstraint("ck_receipt_draft", "(status = 'Ready') = (draft_json IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_receipt_expiry", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_receipt_lease", "(status = 'Processing' AND lease_token IS NOT NULL AND lease_until IS NOT NULL) OR (status <> 'Processing' AND lease_token IS NULL AND lease_until IS NULL)");
+
+                            t.HasCheckConstraint("ck_receipt_status", "status IN ('Uploading','Queued','Processing','Ready','Failed','Discarded')");
+                        });
+                });
+
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2057,6 +2172,16 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasOne("Averio.Domain.Households.HouseholdMember", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId", "RecipientMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Receipts.ReceiptScan", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

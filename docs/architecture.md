@@ -313,3 +313,9 @@ Filtered active-user/owner indexes retain departed memberships for attribution. 
 
 The Activities vertical slice uses an explicit `ActivityHandler`, a privacy-filtered EF repository and separate personal assignment records. Ledger create/update may include assignment changes in the same unit of work. Bulk assignment holds the member row lock and commits atomically; close/reopen uses the same lock. Independent GUID versions reject stale metadata writes without changing ledger concurrency tokens. Results are computed from visible source transactions, not household reporting aggregates, and preserve original currencies. Composite database foreign keys enforce household/member ownership. See [ADR-022](decisions/ADR-022-personal-activities.md) and the [activity API and rollout guide](activities.md).
 
+
+
+
+## Private receipt scanning foundation
+
+Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. The feature is disabled by default and never writes ledger transactions. See [receipt scanning](receipt-scanning.md) for the three-PR plan, API contract, configuration and rollout gates.

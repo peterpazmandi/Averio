@@ -262,3 +262,9 @@ Dashboard category reports now support contextual empty-state actions, simpler e
 ## Recurring transactions — 2026-10-15
 
 Member-private weekly/monthly/yearly schedules, review/actual amount/skip, opt-in automatic recording, pause/resume/stop, anchored dates, atomic idempotent ledger posting and visible occurrence history are implemented. The EN/DE/HU screens use shared Tailwind cards/dialogs and the canonical design. Apply AddRecurringTransactions explicitly and deploy Averio.Worker for automatic recording. See [Recurring transactions](recurring-transactions.md) for operation, limits and verification.
+
+
+
+## Private receipt scanning foundation
+
+Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. The feature is disabled by default and never writes ledger transactions. See [receipt scanning](receipt-scanning.md) for the three-PR plan, API contract, configuration and rollout gates.

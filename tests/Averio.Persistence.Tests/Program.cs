@@ -156,6 +156,8 @@ static async Task RunVerificationAsync(string connectionString)
     var fixture = await SeedFixtureAsync(provider, clock.GetUtcNow());
     currentUser.UserId = fixture.OwnerUserId;
 
+    await ReceiptVerification.RunAsync(provider, currentUser, fixture, clock.GetUtcNow());
+
     await SchemaConstraintVerification.RunAsync(provider, fixture, clock.GetUtcNow());
 
     await CheckAsync(
@@ -986,4 +988,5 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
+
 
