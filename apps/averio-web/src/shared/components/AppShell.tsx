@@ -54,7 +54,7 @@ export function AppShell({ children }: PropsWithChildren) {
         .map((part) => part[0]).join('').toLocaleUpperCase();
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
-    const title = pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
+    const title = pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
         ? t('householdSettings.title')
         : pathname.startsWith('/app/accounts')
         ? t('app.navigation.accounts')
@@ -92,7 +92,7 @@ export function AppShell({ children }: PropsWithChildren) {
                     <div className="av-help-card">
                         <strong>{t('concept.receiptTitle')}</strong>
                         <p>{t('concept.receiptDescription')}</p>
-                        <span className="av-nav-badge">{t('concept.soon')}</span>
+                        <button type="button" className="min-h-11 rounded-lg px-2 text-sm font-semibold text-emerald-300 focus-visible:outline-2" onClick={() => { setMenuOpen(false); void navigate({ to: '/app/receipts' }); }}>{t('receipts.title')}</button>
                     </div>
                 </div>
             </>

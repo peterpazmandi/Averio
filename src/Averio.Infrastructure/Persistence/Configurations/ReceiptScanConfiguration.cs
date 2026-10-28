@@ -9,11 +9,12 @@ public sealed class ReceiptScanConfiguration : IEntityTypeConfiguration<ReceiptS
     public void Configure(EntityTypeBuilder<ReceiptScan> b)
     {
         b.ToTable("receipt_scans", t => {
-            t.HasCheckConstraint("ck_receipt_status", "status IN ('Uploading','Queued','Processing','Ready','Failed','Discarded')");
+            t.HasCheckConstraint("ck_receipt_status", "status IN ('Uploading','Queued','Processing','Ready','Failed','Discarded','Posted')");
             t.HasCheckConstraint("ck_receipt_attempts", "attempts BETWEEN 0 AND 3");
             t.HasCheckConstraint("ck_receipt_bytes", "byte_length > 0 AND byte_length <= 10485760");
             t.HasCheckConstraint("ck_receipt_lease", "(status = 'Processing' AND lease_token IS NOT NULL AND lease_until IS NOT NULL) OR (status <> 'Processing' AND lease_token IS NULL AND lease_until IS NULL)");
             t.HasCheckConstraint("ck_receipt_draft", "(status = 'Ready') = (draft_json IS NOT NULL)");
+            t.HasCheckConstraint("ck_receipt_posted", "(status = 'Posted') = (posted_transaction_id IS NOT NULL)");
             t.HasCheckConstraint("ck_receipt_expiry", "expires_at > created_at");
         });
         b.HasKey(x => x.Id);
@@ -27,6 +28,7 @@ public sealed class ReceiptScanConfiguration : IEntityTypeConfiguration<ReceiptS
         b.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.Attempts).HasColumnName("attempts");
         b.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
+        b.Property(x => x.PostedTransactionId).HasColumnName("posted_transaction_id");
         b.Property(x => x.LeaseToken).HasColumnName("lease_token");
         b.Property(x => x.LeaseUntil).HasColumnName("lease_until");
         b.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at");
@@ -41,6 +43,10 @@ public sealed class ReceiptScanConfiguration : IEntityTypeConfiguration<ReceiptS
         b.HasIndex(x => new { x.HouseholdId, x.HouseholdMemberId, x.OperationId }).IsUnique();
         b.HasIndex(x => new { x.HouseholdId, x.HouseholdMemberId, x.CreatedAt });
         b.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        b.HasOne<Averio.Domain.Transactions.Transaction>().WithMany()
+            .HasForeignKey(x => new { x.HouseholdId, x.PostedTransactionId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(x => x.PostedTransactionId).IsUnique();
         b.HasIndex(x => x.ExpiresAt);
     }
 }

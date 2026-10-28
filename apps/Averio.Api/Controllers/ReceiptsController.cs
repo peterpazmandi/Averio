@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Averio.Application.Receipts;
+using Averio.Api.Mapping;
+using Averio.Contracts.Transactions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -9,8 +11,19 @@ namespace Averio.Api.Controllers;
 [ApiController, Authorize]
 [Route("api/v1/households/{householdId:guid}/receipt-scans")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class ReceiptsController(ReceiptHandler handler) : ControllerBase
+public sealed class ReceiptsController(ReceiptHandler handler, PostReceiptHandler posting) : ControllerBase
 {
+    [HttpGet("capabilities")]
+    public Task<ReceiptCapabilities> Capabilities(Guid householdId, CancellationToken ct)
+        => handler.CapabilitiesAsync(householdId, ct);
+
+    [HttpPost("{id:guid}/transaction")]
+    public async Task<CreateTransactionResponse> Post(Guid householdId, Guid id, PostReceiptRequest request, CancellationToken ct)
+    {
+        var command = TransactionMapper.ToCommand(householdId, request.Transaction);
+        return new(await posting.HandleAsync(householdId, id, request.ExpectedVersion,
+            request.Currency, DecimalAmountMapper.ParseTransactionAmount(request.ReviewedTotal), command, ct));
+    }
     [HttpPost, EnableRateLimiting("receipt-uploads")]
     [RequestSizeLimit(ReceiptOptions.MaxUploadBytes + 65536)]
     [RequestFormLimits(MultipartBodyLengthLimit = ReceiptOptions.MaxUploadBytes + 65536)]

@@ -14,6 +14,7 @@ public sealed class ReceiptScan
     public ReceiptScanStatus Status { get; private set; }
     public int Attempts { get; private set; }
     public Guid Version { get; private set; }
+    public Guid? PostedTransactionId { get; private set; }
     public Guid? LeaseToken { get; private set; }
     public DateTimeOffset? LeaseUntil { get; private set; }
     public DateTimeOffset NextAttemptAt { get; private set; }
@@ -36,4 +37,4 @@ public sealed class ReceiptScan
             UpdatedAt = now, NextAttemptAt = now, ExpiresAt = now.AddDays(7) };
     }
 }
-public enum ReceiptScanStatus { Uploading, Queued, Processing, Ready, Failed, Discarded }
+public enum ReceiptScanStatus { Uploading, Queued, Processing, Ready, Failed, Discarded, Posted }

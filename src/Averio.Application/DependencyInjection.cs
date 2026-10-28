@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         services.AddScoped<Receipts.ReceiptHandler>();
+        services.AddScoped<Receipts.PostReceiptHandler>();
         services.AddScoped<Receipts.ReceiptProcessor>();
         services.AddScoped<Recurring.RecurringHandler>();
         services.AddScoped<RegisterUserHandler>();

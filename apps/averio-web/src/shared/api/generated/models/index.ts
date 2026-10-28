@@ -76,6 +76,8 @@ export * from './PersonalMoneyChargeResponse';
 export * from './PersonalMoneyEventResponse';
 export * from './PersonalMoneySnapshotResponse';
 export * from './PersonalMoneySummaryResponse';
+export * from './PostReceiptRequest';
+export * from './ReceiptCapabilities';
 export * from './ReceiptDraft';
 export * from './ReceiptLine';
 export * from './ReceiptScanResult';

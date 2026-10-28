@@ -130,8 +130,18 @@ jobs:
           node tests/personal-money.browser.mjs
           node tests/recurring-allowance.browser.mjs
           node tests/transaction-editor.browser.mjs
+          node tests/receipts.browser.mjs
           node tests/household-navigation.browser.mjs
           node tests/landing-review.browser.mjs
+
+      - name: Upload receipt review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: receipt-review-screenshots
+          path: test-results/receipts
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload responsive navigation screenshots
         if: always()

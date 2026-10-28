@@ -1025,6 +1025,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("operation_id");
 
+                    b.Property<Guid?>("PostedTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("posted_transaction_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1043,6 +1047,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("PostedTransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "PostedTransactionId");
 
                     b.HasIndex("Status", "NextAttemptAt");
 
@@ -1063,7 +1072,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_receipt_lease", "(status = 'Processing' AND lease_token IS NOT NULL AND lease_until IS NOT NULL) OR (status <> 'Processing' AND lease_token IS NULL AND lease_until IS NULL)");
 
-                            t.HasCheckConstraint("ck_receipt_status", "status IN ('Uploading','Queued','Processing','Ready','Failed','Discarded')");
+                            t.HasCheckConstraint("ck_receipt_posted", "(status = 'Posted') = (posted_transaction_id IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_receipt_status", "status IN ('Uploading','Queued','Processing','Ready','Failed','Discarded','Posted')");
                         });
                 });
 
@@ -2185,6 +2196,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "PostedTransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Averio.Domain.Recurring.RecurringItem", b =>

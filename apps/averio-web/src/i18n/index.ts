@@ -1,3 +1,4 @@
+import { receiptsEN, receiptsDE, receiptsHU } from './locales/receipts';
 import { landingEN, landingDE, landingHU } from './locales/landing';
 import { recurringEN, recurringDE, recurringHU } from './locales/recurring';
 import { savedViewsEN, savedViewsDE, savedViewsHU } from './locales/savedViews';
@@ -36,15 +37,15 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, landing: landingEN, transactionLinks: transactionLinksEN,
+                translation: { ...en, landing: landingEN, receipts: receiptsEN, transactionLinks: transactionLinksEN,
             recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, personalMoney: personalMoneyEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, landing: landingDE, transactionLinks: transactionLinksDE,
+                translation: { ...de, landing: landingDE, receipts: receiptsDE, transactionLinks: transactionLinksDE,
             recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, personalMoney: personalMoneyDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, landing: landingHU, transactionLinks: transactionLinksHU,
+                translation: { ...hu, landing: landingHU, receipts: receiptsHU, transactionLinks: transactionLinksHU,
             recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, personalMoney: personalMoneyHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },

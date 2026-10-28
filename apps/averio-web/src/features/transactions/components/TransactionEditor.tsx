@@ -1,3 +1,7 @@
+import type { ReceiptDraft } from '../../../shared/api/generated';
+import { receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
+import { getCategoryDisplayName } from '../categoryLocalization';
+import type { ReactNode } from 'react';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { useMemo, useState } from 'react';
 import type { RecurringRuleResponse, SaveRecurringRuleRequest } from '../../../shared/api/generated';
@@ -35,6 +39,9 @@ interface Props {
     transaction: TransactionDto | null;
     personalRelation?: PersonalMoneyRelation;
     initialKind?: TransactionKind;
+    receiptDraft?: ReceiptDraft;
+    receiptEvidence?: ReactNode;
+    onSaveReceipt?: (request: TransactionInputDto, currency: string, reviewedTotal: string) => Promise<void>;
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
     initialRecurring?: boolean;
@@ -90,6 +97,7 @@ export function TransactionEditor({
     transaction: initialTransaction,
     personalRelation,
     initialKind = 'Expense',
+    receiptDraft, receiptEvidence, onSaveReceipt,
     recurringRule: initialRule,
     initialRecurring = false,
     onSaveRecurring,
@@ -113,29 +121,33 @@ export function TransactionEditor({
     const busy = parentBusy || submitting;
     const { t, i18n } = useTranslation();
     const queryClient = useQueryClient();
+    const [receiptCurrency, setReceiptCurrency] = useState(receiptDraft?.currency ?? '');
+    const [reviewedTotal, setReviewedTotal] = useState(receiptDraft?.total ?? '');
+    const [reviewConfirmed, setReviewConfirmed] = useState(false);
     const accounts = useQuery(accountsQueries.list(userId, householdId, !!rule));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writableAccounts = useMemo(() => (accounts.data ?? []).filter(account =>
         account.id === rule?.accountId || (account.status === 'Active'
         && (!transaction || account.currency === transaction.currency)
+        && (!receiptDraft || account.currency === receiptCurrency)
         && (
             account.scope === 'Household'
             || account.owners.some(owner =>
                 owner.householdMemberId === owners.data?.currentMemberId)
-        ))), [accounts.data, owners.data?.currentMemberId, transaction, rule]);
+        ))), [accounts.data, owners.data?.currentMemberId, transaction, rule, receiptDraft, receiptCurrency]);
 
-    const firstAccountId = rule?.accountId ?? transaction?.accountId ?? writableAccounts[0]?.id ?? '';
+    const firstAccountId = rule?.accountId ?? transaction?.accountId ?? (receiptDraft ? '' : writableAccounts[0]?.id) ?? '';
     const [accountId, setAccountId] = useState(firstAccountId);
     const [kind, setKind] = useState<TransactionKind>((rule?.kind as TransactionKind | undefined) ?? transaction?.kind ?? initialKind);
     const [visibility, setVisibility] = useState<TransactionVisibility>(
         (rule?.visibility as TransactionVisibility | undefined) ?? transaction?.visibility ?? 'Household',
     );
-    const [merchant, setMerchant] = useState(rule?.merchant ?? transaction?.merchant ?? '');
+    const [merchant, setMerchant] = useState(rule?.merchant ?? transaction?.merchant ?? receiptDraft?.merchant ?? '');
     const [note, setNote] = useState(rule?.note ?? transaction?.note ?? '');
     const [activityId, setActivityId] = useState(rule?.activityId ?? transaction?.activityId ?? '');
-    const [occurredOn, setOccurredOn] = useState(rule?.startsOn ?? transaction?.occurredOn ?? (initialRecurring ? new Date().toISOString().slice(0, 10) : todayIso()));
+    const [occurredOn, setOccurredOn] = useState(rule?.startsOn ?? transaction?.occurredOn ?? receiptDraft?.date ?? (receiptDraft ? '' : initialRecurring ? new Date().toISOString().slice(0, 10) : todayIso()));
     const [items, setItems] = useState<EditorItem[]>(() =>
-        rule ? rule.items.map(item => ({ key: itemKey(), ...item, personalAmount: null })) : transaction?.items.length
+        receiptDraft && receiptItems(receiptDraft).length ? receiptItems(receiptDraft).map(item => ({ ...item, key: itemKey(), personalAmount: null })) : rule ? rule.items.map(item => ({ key: itemKey(), ...item, personalAmount: null })) : transaction?.items.length
             ? [...transaction.items]
                 .sort((a, b) => a.position - b.position)
                 .map(item => ({
@@ -162,7 +174,7 @@ export function TransactionEditor({
     const [error, setError] = useState('');
     const [allowanceItemKey, setAllowanceItemKey] = useState<string | null>(null);
 
-    const resolvedAccountId = accountId || writableAccounts[0]?.id || '';
+    const resolvedAccountId = receiptDraft ? (writableAccounts.some(a => a.id === accountId) ? accountId : '') : accountId || writableAccounts[0]?.id || '';
     const account = writableAccounts.find(item => item.id === resolvedAccountId);
     const forcedVisibility: TransactionVisibility | undefined =
         account?.visibility === 'Private'
@@ -298,11 +310,14 @@ export function TransactionEditor({
             : [...current, id]);
     }
 
+    const receiptValid = !receiptDraft || (reviewConfirmed && receiptCurrency === currency && receiptReconciles(reviewedTotal, resolvedItems));
+
     async function submit(event: React.FormEvent) {
         event.preventDefault();
         if (busy) return;
         setError('');
 
+        if (!receiptValid) { setError(t('receipts.reconcileHelp')); return; }
         if (!resolvedAccountId || !occurredOn || resolvedItems.length === 0) {
             setError(t('transactionManagement.formInvalid'));
             return;
@@ -344,7 +359,8 @@ export function TransactionEditor({
                 });
                 return;
             }
-            await onSave?.({
+            const save = onSaveReceipt ? (request: TransactionInputDto) => onSaveReceipt(request, receiptCurrency, normalizeAmount(reviewedTotal)) : onSave;
+            await save?.({
                 accountId: resolvedAccountId,
                 kind,
                 visibility: effectiveVisibility,
@@ -364,7 +380,7 @@ export function TransactionEditor({
     }
 
 
-    return <><AverioDialog open wide title={t(rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
+    return <><AverioDialog open wide title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={onCancel}
         actions={<>
             {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
@@ -380,11 +396,29 @@ export function TransactionEditor({
             }}>{t('transactionManagement.void')}</AverioButton>}
             <AverioButton disabled={busy} onClick={onCancel}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
-                disabled={busy || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
-                {t(busy ? 'transactionManagement.saving' : recurring ? 'recurring.save' : 'transactionManagement.save')}
+                disabled={busy || !receiptValid || !resolvedAccountId || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
         <form id="transaction-editor" className="grid gap-4" onSubmit={submit}>
+            {receiptDraft && <AverioCard className="grid gap-3">
+                <h3 className="font-bold">{t('receipts.review')}</h3>
+                <p className="text-sm">{t('receipts.reviewHelp')}</p>
+                {receiptEvidence}
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <AverioField>{t('receipts.currency')}<AverioSelect required aria-label={t('receipts.currency')} value={receiptCurrency} disabled={busy}
+                        onChange={event => { setReceiptCurrency(event.target.value); setAccountId(''); setReviewConfirmed(false); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
+                        <option value="">{t('receipts.chooseCurrency')}</option>
+                        {!['EUR', 'USD', 'HUF'].includes(receiptCurrency) && receiptCurrency && <option value={receiptCurrency} disabled>{receiptCurrency}</option>}
+                        {['EUR', 'USD', 'HUF'].map(code => <option key={code}>{code}</option>)}
+                    </AverioSelect></AverioField>
+                    <AverioField>{t('receipts.reviewedTotal')}<AverioInput required inputMode="decimal" aria-label={t('receipts.reviewedTotal')}
+                        value={reviewedTotal} disabled={busy} onChange={event => { setReviewedTotal(event.target.value); setReviewConfirmed(false); }} /></AverioField>
+                </div>
+                <p className="text-sm" role="status">{t(receiptReconciles(reviewedTotal, resolvedItems) ? 'receipts.reconciled' : 'receipts.reconcileHelp')}</p>
+                <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
+                    onChange={event => setReviewConfirmed(event.target.checked)} />{t('receipts.reviewConsent')}</label>
+            </AverioCard>}
             {transaction && personalRelation && <div className="rounded-xl border border-emerald-400/30 bg-emerald-50 p-3 dark:bg-emerald-950/30">
                 <p className="mb-2 text-xs font-semibold">{t('personalMoney.relationDetails')}</p>
                 <PersonalMoneyRelationBadge relation={personalRelation} detail />
@@ -393,7 +427,7 @@ export function TransactionEditor({
 
             <AverioCard className="grid gap-4">
                 <div><h3 className="font-bold" aria-label={t('transactionManagement.basics')}>{t('transactionManagement.basics')} <InfoPopover label={t('transactionManagement.basics')}>{t('transactionManagement.basicsHelp')}</InfoPopover></h3></div>
-                <fieldset className="flex gap-3" disabled={busy || !!rule}>
+                <fieldset className="flex gap-3" disabled={busy || !!rule || !!receiptDraft}>
                     <legend className="sr-only">{t('transactionManagement.type')}</legend>
                     {(['Income', 'Expense'] as const).map(value => <label key={value}
                         className={'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 font-semibold ' + (kind === value ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700')}>
@@ -405,7 +439,7 @@ export function TransactionEditor({
                     <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => { setAccountId(e.target.value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
                         <option value="" disabled>{t('transactionManagement.account')}</option>
                         {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
-                    </AverioSelect></AverioField>
+                    </AverioSelect>{receiptDraft && !accounts.isPending && writableAccounts.length === 0 && <span className="text-sm">{t('receipts.noAccount')}</span>}</AverioField>
                     <AverioField>{t(recurring ? 'recurring.starts' : 'transactionManagement.date')}<AverioInput type="date" value={occurredOn} required disabled={busy || !!rule}
                         min={recurring && !rule ? new Date().toISOString().slice(0, 10) : undefined} onChange={e => setOccurredOn(e.target.value)} /></AverioField>
                 </div>
@@ -461,6 +495,12 @@ export function TransactionEditor({
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
+                        {receiptDraft && (() => {
+                            const suggestion = suggestReceiptCategory(item.description, (categories.data ?? []).filter(c => !c.isArchived && c.systemKey !== 'uncategorized')
+                                .map(c => ({ id: c.id, displayName: getCategoryDisplayName(c, t) })));
+                            return suggestion && suggestion.id !== item.categoryId ? <AverioButton disabled={busy} className="mt-2 text-xs"
+                                onClick={() => updateItem(item.key, { categoryId: suggestion.id })}>{t('receipts.suggestion', { category: suggestion.displayName })}</AverioButton> : null;
+                        })()}
                     </div>
                     <div className="min-w-0">
                         <label htmlFor={item.key + '-amount'} className="mb-[7px] block text-[13px] font-semibold sm:sr-only">{t('transactionManagement.amount')} · {currency}</label>

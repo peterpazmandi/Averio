@@ -13,7 +13,9 @@ public sealed record ReceiptLine(string Description, string? Amount, string Kind
 public sealed record ReceiptDraft(string? Merchant, string? Date, string? Currency,
     string? Total, ReceiptLine[] Lines, string[] Warnings);
 public sealed record ReceiptScanResult(Guid Id, string Status, Guid Version, int Attempts,
-    DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string? FailureCode, ReceiptDraft? Draft);
+    DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string? FailureCode, ReceiptDraft? Draft,
+    Guid? PostedTransactionId = null);
+public sealed record ReceiptCapabilities(bool Enabled, int MaxUploadBytes);
 public interface IReceiptImageNormalizer { Task<byte[]> NormalizeAsync(Stream input, CancellationToken ct); }
 public interface IReceiptDocumentStore
 {
@@ -36,6 +38,7 @@ public interface IReceiptRepository
     Task<IReadOnlyList<ReceiptScan>> ListAsync(Guid household, Guid member, int skip, CancellationToken ct);
     Task<ReceiptScan?> GetAsync(Guid household, Guid member, Guid id, CancellationToken ct);
     Task<bool> DiscardAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct);
+    Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, DateTimeOffset now, CancellationToken ct);
     Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct);
     Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct);
     Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct);
