@@ -78,3 +78,10 @@ Apply **AddReceiptPosting** after **AddReceiptScans**, then **AddReceiptConfirma
 
 The Verify workflow includes PostgreSQL confirmation privacy, invalid/stale/expired state, reconciliation, rollback, concurrent confirmation, retry and cleanup tests; exact-decimal/category frontend tests; and EN/DE/HU mobile/desktop light/dark browser scenarios for inbox recovery, review, confirmation retry, idempotent upload retry, discard and the disabled state. Browser screenshots are uploaded as `receipt-review-screenshots`. Automated tests use synthetic receipts and mocked extraction/storage, without production provider calls.
 
+
+
+### Receipt review usability
+
+Capture uses explicit camera/gallery buttons and a local photo preview with remove/replace controls before uploading. A cancelled picker keeps the existing selection. Retrying an uncertain upload keeps its operation ID. The inbox puts ready drafts first and explains automatic processing updates.
+
+Review is grouped into purchase details, items/categories, and final total confirmation. Source photo and raw observations are expandable; extraction warnings remain visible. Labels follow the items in a collapsed optional section. Receipt privacy remains visible, and the acknowledgement sits beside the receipt/item totals at the end. Model and household category suggestions still require explicit application, and remembering a household rule remains opt-in. Ordinary transaction and recurring forms retain their existing layout.

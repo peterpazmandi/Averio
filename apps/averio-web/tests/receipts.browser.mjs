@@ -94,6 +94,9 @@ try {
         assert.equal(await page.locator('input[type="date"]').inputValue(), '', 'Missing dates must not silently become today.');
         const account = page.locator('select').filter({ has: page.locator('option[value="eur"]') });
         assert.equal(await account.inputValue(), '', 'Receipt review requires an explicit account selection.');
+        const labelsToggle = page.getByRole('button').filter({ hasText: copy.optionalLabels });
+        assert.equal(await labelsToggle.getAttribute('aria-expanded'), 'false');
+        await labelsToggle.click();
         await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor();
         assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '9', 'Unique matching discount prefills the net item amount.');
         await page.getByText(copy.discountsSuggested, { exact: true }).waitFor();
@@ -101,8 +104,8 @@ try {
         assert.equal(await account.locator('option[value="huf"]').count(), 0, 'No implicit currency conversion.');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.equal(await confirm.isDisabled(), true, 'A mismatched item total cannot be confirmed.');
-        await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
         await page.getByText(dark ? copy.householdRuleSuggestion : copy.modelCategorySuggestion, { exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
         const remember = page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) });
         assert.equal(await remember.isChecked(), false, 'Household rule sharing is opt-in.');
         if (dark) await remember.check();
@@ -119,9 +122,14 @@ try {
             await allocation.locator('input[inputmode="decimal"]').fill('0000,5000');
             await page.keyboard.press('Escape');
         }
+        await page.getByRole('heading', { name: copy.confirmStep, exact: true }).scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(artifacts, `confirm-${language}-${dark}-${width}.png`), fullPage: true });
         await page.getByText(copy.observations, { exact: true }).click();
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
-        assert.ok((await page.locator('details').textContent()).includes('Discount'));
+        assert.ok((await page.locator('details').filter({ has: page.getByText(copy.observations, { exact: true }) }).textContent()).includes('Discount'));
+        await page.getByText(copy.viewPhoto, { exact: true }).click();
+        await page.getByAltText(copy.imageAlt).waitFor();
+        await page.getByText(copy.viewPhoto, { exact: true }).click();
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
         await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(artifacts, `items-${language}-${dark}-${width}.png`), fullPage: true });
@@ -140,7 +148,14 @@ try {
         assert.equal(posts[1].reviewedTotal, '9');
         assert.equal(posts[1].transaction.items[0].amount, '9', 'Leading-zero/comma item amounts must use the same canonical API format.');
         if (hasWallet) assert.equal(posts[1].transaction.items[0].personalMoneyAmount, '0.5', 'Personal Money allocations must use canonical decimal strings too.');
+        await page.screenshot({ path: path.join(artifacts, `inbox-${language}-${dark}-${width}.png`), fullPage: true });
         await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });
+        await page.getByAltText(copy.selectedPhoto).waitFor();
+        await page.getByRole('button', { name: copy.removePhoto, exact: true }).click();
+        assert.equal(await page.getByAltText(copy.selectedPhoto).count(), 0);
+        await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });
+        await page.getByAltText(copy.selectedPhoto).waitFor();
+        await page.screenshot({ path: path.join(artifacts, `photo-${language}-${dark}-${width}.png`), fullPage: true });
         await page.getByRole('button', { name: copy.upload, exact: true }).click();
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();
         await page.getByText(copy.status.Queued, { exact: true }).waitFor();
