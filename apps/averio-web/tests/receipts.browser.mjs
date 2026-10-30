@@ -89,6 +89,16 @@ try {
         if (language === 'en' && width === 375 && !dark) {
             await page.getByRole('button', { name: copy.retry, exact: true }).click();
         }
+        async function assertItemAlignment() {
+            if (width < 640) return;
+            const rows = await page.locator('input[id$="-description"]').evaluateAll(inputs => inputs.map(input => {
+                const row = input.parentElement.parentElement;
+                const controls = [input, row.children[1].querySelector('button'), row.querySelector('input[id$="-amount"]'), row.lastElementChild.querySelector('button')];
+                return controls.map(control => control.getBoundingClientRect().top);
+            }));
+            for (const tops of rows) assert.ok(Math.max(...tops) - Math.min(...tops) <= 2,
+                'Description, category, amount and remove must align even with suggestions, discounts and household-rule controls.');
+        }
         const confirm = page.getByRole('button', { name: copy.confirm, exact: true });
         assert.equal(await confirm.isDisabled(), true);
         assert.equal(await page.locator('input[type="date"]').inputValue(), '', 'Missing dates must not silently become today.');
@@ -105,10 +115,12 @@ try {
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.equal(await confirm.isDisabled(), true, 'A mismatched item total cannot be confirmed.');
         await page.getByText(dark ? copy.householdRuleSuggestion : copy.modelCategorySuggestion, { exact: true }).waitFor();
+        await assertItemAlignment();
         await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
         const remember = page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) });
         assert.equal(await remember.isChecked(), false, 'Household rule sharing is opt-in.');
         if (dark) await remember.check();
+        await assertItemAlignment();
         await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('0009,00');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         await page.locator('input[id$="-amount"]').fill('0009,00');
