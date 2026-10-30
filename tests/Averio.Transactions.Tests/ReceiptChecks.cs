@@ -45,6 +45,18 @@ internal static class ReceiptChecks
         var categoryId = Guid.NewGuid();
         await extractor.ExtractAsync(jpeg, [new ReceiptCategoryOption(categoryId, "Groceries > Dairy")], default);
         Check(handler.Request!.Contains(categoryId.ToString()) && handler.Request.Contains("Dairy"), "provider receives authorized category catalogue");
+        foreach (var suggestion in new[] { "null", "\"\"", "\"food\"", "42", "{}", "[]", JsonSerializer.Serialize(categoryId) })
+        {
+            handler.Text = $$"""
+                {"merchant":"Shop","date":"2026-10-30","currency":"EUR","total":"9.00",
+                 "lines":[{"description":"Milk","amount":"9.00","kind":"Item","suggestedCategoryId":{{suggestion}}}]}
+                """;
+            var parsed = await extractor.ExtractAsync(jpeg, default);
+            Check(parsed.Total == "9.00" && parsed.Lines[0].Description == "Milk"
+                && parsed.Lines[0].Amount == "9.00", "invalid optional category preserves receipt evidence");
+            Check(parsed.Lines[0].SuggestedCategoryId == (suggestion == JsonSerializer.Serialize(categoryId) ? categoryId : null),
+                "only valid category GUIDs survive provider parsing");
+        }
         handler.Text = JsonSerializer.Serialize(input with { Date = "10/11/26", Warnings = ["provider_warning"] });
         var raw = await extractor.ExtractAsync(jpeg, default);
         Check(raw.Date == "10/11/26", "adapter preserves ambiguous date until application validation");

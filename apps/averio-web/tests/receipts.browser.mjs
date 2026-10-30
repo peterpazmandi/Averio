@@ -74,6 +74,7 @@ try {
             if (pathname.endsWith('/accounts') && failAccounts) { failAccounts = false; return fail(503); }
             if (pathname.endsWith('/accounts')) return json([
                 { id: 'eur', name: 'EUR bank', currency: 'EUR', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] },
+                { id: 'private-eur', name: 'Private EUR', currency: 'EUR', scope: 'Personal', visibility: 'Private', includeInHouseholdReports: false, status: 'Active', owners: [{ householdMemberId: 'member' }] },
                 { id: 'huf', name: 'HUF bank', currency: 'HUF', scope: 'Household', visibility: 'Household', includeInHouseholdReports: true, status: 'Active', owners: [] }]);
             if (pathname.endsWith('/categories')) return json([
                 { id: 'uncategorized', name: 'Other', systemKey: 'uncategorized', kind: 'Expense', isArchived: false },
@@ -146,6 +147,20 @@ try {
         await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(artifacts, `items-${language}-${dark}-${width}.png`), fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        const consent = page.getByRole('checkbox', { name: copy.reviewConsent });
+        if (!hasWallet) {
+            for (const accountId of ['private-eur', 'eur']) {
+                await account.selectOption(accountId);
+                assert.equal(await consent.isChecked(), false, 'Changing account/privacy invalidates the reviewed intent.');
+                assert.equal(await confirm.isDisabled(), true, 'A changed account requires fresh acknowledgement.');
+                await consent.check();
+                assert.equal(await confirm.isEnabled(), true);
+            }
+        }
+        await page.locator('input[type="date"]').fill('2026-10-29');
+        assert.equal(await consent.isChecked(), false, 'Changing receipt details invalidates acknowledgement.');
+        await page.locator('input[type="date"]').fill('2026-10-28');
+        await consent.check();
         await confirm.click();
         await page.getByRole('alert').filter({ hasText: 'Please retry' }).waitFor();
         assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '0009,00', 'Posting failure retains the reviewed form.');

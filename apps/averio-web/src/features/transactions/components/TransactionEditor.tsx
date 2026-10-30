@@ -220,6 +220,7 @@ export function TransactionEditor({
             && (amountToScaled(storedPersonalAmount(item)) ?? 0n) > 0n);
     }
     function chargeAllItems() {
+        if (receiptDraft) setReviewConfirmed(false);
         setItems(current => current.map(item => ({
             ...item, personalAmount: canChargePersonalMoney ? normalizeAmount(item.amount) : '0',
         })));
@@ -259,6 +260,7 @@ export function TransactionEditor({
             accountId: newLabelScope === 'Account' ? resolvedAccountId : null,
         }),
         onSuccess: async result => {
+            if (receiptDraft) setReviewConfirmed(false);
             setSelectedLabelIds(current =>
                 current.includes(result.id) ? current : [...current, result.id]);
             setNewLabelName('');
@@ -298,6 +300,7 @@ export function TransactionEditor({
     }
 
     function addItem() {
+        if (receiptDraft) setReviewConfirmed(false);
         setItems(current => [...current, {
             key: itemKey(),
             description: '',
@@ -308,12 +311,14 @@ export function TransactionEditor({
     }
 
     function removeItem(key: string) {
+        if (receiptDraft) setReviewConfirmed(false);
         setItems(current => current.length === 1
             ? current
             : current.filter(item => item.key !== key));
     }
 
     function toggleLabel(id: string) {
+        if (receiptDraft) setReviewConfirmed(false);
         setSelectedLabelIds(current => current.includes(id)
             ? current.filter(labelId => labelId !== id)
             : [...current, id]);
@@ -449,7 +454,13 @@ export function TransactionEditor({
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
-        <form id="transaction-editor" className="grid gap-4" onSubmit={submit}>
+        <form id="transaction-editor" className="grid gap-4" onSubmit={submit}
+            onChangeCapture={event => {
+                // Any edited field invalidates the reviewed intent, including
+                // account changes that also change visibility or allocations.
+                if (receiptDraft && !(event.target instanceof HTMLInputElement
+                    && event.target.name === 'receipt-review-confirmation')) setReviewConfirmed(false);
+            }}>
             {receiptDraft && <AverioCard className="grid gap-3">
                 <p className="text-sm">{t('receipts.reviewHelp')}</p>
                 {receiptEvidence}
@@ -611,7 +622,7 @@ export function TransactionEditor({
                     <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900"><p className="text-sm">{t('receipts.itemsTotal')}</p><p className="text-xl font-bold">{currency ? formatDecimalAmount(total, currency, language) : total}</p></div>
                 </div>
                 <p className={'rounded-xl p-3 text-sm ' + (receiptReconciles(reviewedTotal, resolvedItems) ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200')} role="status">{t(receiptReconciles(reviewedTotal, resolvedItems) ? 'receipts.reconciled' : 'receipts.reconcileHelp')}</p>
-                <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
+                <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="receipt-review-confirmation" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
                     onChange={event => setReviewConfirmed(event.target.checked)} />{t('receipts.reviewConsent')}</label>
             </AverioCard>}
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
