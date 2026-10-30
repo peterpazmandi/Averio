@@ -18,6 +18,15 @@ internal static class ReceiptConfirmationChecks
         string Fingerprint(CreateTransactionCommand command, decimal total = 4.6m)
             => ReceiptConfirmationFingerprint.Create(version, "EUR", total, command);
         var fingerprint = Fingerprint(request);
+        Check(ReceiptConfirmationFingerprint.Create(version, "EUR", 4.6m, request, []) == fingerprint,
+            "empty rules must preserve old confirmation fingerprints");
+        var rules = new RememberReceiptCategory[] { new(0, 0), new(2, 1) };
+        var withRules = ReceiptConfirmationFingerprint.Create(version, "EUR", 4.6m, request, rules);
+        Check(withRules != fingerprint, "sharing consent must be part of confirmation intent");
+        Check(withRules == ReceiptConfirmationFingerprint.Create(version, "EUR", 4.6m, request, rules.Reverse().ToArray()),
+            "rule selection order has no meaning");
+        Check(withRules != ReceiptConfirmationFingerprint.Create(version, "EUR", 4.6m, request, [new(0, 1), new(2, 0)]),
+            "changed source mapping must conflict");
         var culture = CultureInfo.CurrentCulture;
         try
         {
@@ -40,3 +49,4 @@ internal static class ReceiptConfirmationChecks
 
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }
+

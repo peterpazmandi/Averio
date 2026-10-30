@@ -9,10 +9,11 @@ namespace Averio.Application.Receipts;
 
 public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository households,
     IAccountRepository accounts, IReceiptRepository receipts, CreateTransactionHandler transactions,
-    IUnitOfWork uow, TimeProvider clock)
+    IUnitOfWork uow, TimeProvider clock, ReceiptCategorization? categorization = null)
 {
     public async Task<Guid> HandleAsync(Guid householdId, Guid receiptId, Guid expectedVersion,
-        string currency, decimal reviewedTotal, CreateTransactionCommand command, CancellationToken ct)
+        string currency, decimal reviewedTotal, CreateTransactionCommand command, CancellationToken ct,
+        IReadOnlyList<RememberReceiptCategory>? rememberCategoryRules = null)
     {
         var userId = user.UserId ?? throw new AuthenticationFailedException();
         await using var tx = await uow.BeginTransactionAsync(ct);
@@ -23,7 +24,10 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         var member = household.Members.Single(x => x.UserId == userId && x.LeftAtUtc == null);
         var scan = await receipts.GetAsync(householdId, member.Id, receiptId, ct)
             ?? throw new NotFoundException("receipt", receiptId);
-        var fingerprint = ReceiptConfirmationFingerprint.Create(expectedVersion, currency, reviewedTotal, command);
+        var selections = rememberCategoryRules ?? [];
+        if (selections.Count > 100 || selections.Any(s => s is null))
+            throw new BusinessRuleException("receipt_category_rule_invalid", "Error_ReceiptCategoryRuleInvalid");
+        var fingerprint = ReceiptConfirmationFingerprint.Create(expectedVersion, currency, reviewedTotal, command, selections);
         // Only the original confirmation can be replayed, including after expiry
         // and subsequent ledger edits. Legacy rows cannot be reconstructed safely.
         if (scan.PostedTransactionId is Guid posted)
@@ -48,6 +52,12 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
             throw new BusinessRuleException("receipt_currency", "Error_ReceiptCurrency");
 
         var id = await transactions.CreateWithinTransactionAsync(command, userId, ct);
+        if (selections.Count > 0)
+        {
+            if (categorization is null) throw new InvalidOperationException("Receipt categorization is not registered.");
+            var draft = scan.DraftJson is null ? null : System.Text.Json.JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson);
+            await categorization.RememberAsync(householdId, member.Id, draft, command, selections, clock.GetUtcNow(), ct);
+        }
         // Compare-and-set also fences worker expiry/discard outside the household
         // lock. Failure rolls back ledger, aggregates, activity and allowance writes.
         if (!await receipts.PostAsync(scan.Id, expectedVersion, id, fingerprint, clock.GetUtcNow(), ct))
@@ -56,3 +66,4 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         return id;
     }
 }
+

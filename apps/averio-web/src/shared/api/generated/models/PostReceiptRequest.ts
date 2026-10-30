@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RememberReceiptCategoryRequest } from './RememberReceiptCategoryRequest';
+import {
+    RememberReceiptCategoryRequestFromJSON,
+    RememberReceiptCategoryRequestFromJSONTyped,
+    RememberReceiptCategoryRequestToJSON,
+    RememberReceiptCategoryRequestToJSONTyped,
+} from './RememberReceiptCategoryRequest';
 import type { CreateTransactionRequest } from './CreateTransactionRequest';
 import {
     CreateTransactionRequestFromJSON,
@@ -43,6 +50,10 @@ export interface PostReceiptRequest {
      * 
      */
     transaction: CreateTransactionRequest;
+    /**
+     * 
+     */
+    rememberCategoryRules?: Array<RememberReceiptCategoryRequest> | null;
 }
 
 /**
@@ -70,6 +81,7 @@ export function PostReceiptRequestFromJSONTyped(json: any, ignoreDiscriminator: 
         'currency': json['currency'],
         'reviewedTotal': json['reviewedTotal'],
         'transaction': CreateTransactionRequestFromJSON(json['transaction']),
+        'rememberCategoryRules': json['rememberCategoryRules'] === undefined ? undefined : json['rememberCategoryRules'] === null ? null : ((json['rememberCategoryRules'] as Array<any>).map(RememberReceiptCategoryRequestFromJSON)),
     };
 }
 
@@ -88,6 +100,7 @@ export function PostReceiptRequestToJSONTyped(value?: PostReceiptRequest | null,
         'currency': value['currency'],
         'reviewedTotal': value['reviewedTotal'],
         'transaction': CreateTransactionRequestToJSON(value['transaction']),
+        'rememberCategoryRules': value['rememberCategoryRules'] == null ? undefined : ((value['rememberCategoryRules'] as Array<any>).map(RememberReceiptCategoryRequestToJSON)),
     };
 }
 

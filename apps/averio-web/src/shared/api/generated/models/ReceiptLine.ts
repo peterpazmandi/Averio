@@ -35,6 +35,14 @@ export interface ReceiptLine {
      * 
      */
     suggestedDescription?: string | null;
+    /**
+     * 
+     */
+    suggestedCategoryId?: string | null;
+    /**
+     * 
+     */
+    categorySuggestionSource?: string | null;
 }
 
 /**
@@ -61,6 +69,8 @@ export function ReceiptLineFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'amount': json['amount'],
         'kind': json['kind'],
         'suggestedDescription': json['suggestedDescription'] === undefined ? undefined : json['suggestedDescription'] === null ? null : json['suggestedDescription'],
+        'suggestedCategoryId': json['suggestedCategoryId'] === undefined ? undefined : json['suggestedCategoryId'] === null ? null : json['suggestedCategoryId'],
+        'categorySuggestionSource': json['categorySuggestionSource'] === undefined ? undefined : json['categorySuggestionSource'] === null ? null : json['categorySuggestionSource'],
     };
 }
 
@@ -79,6 +89,8 @@ export function ReceiptLineToJSONTyped(value?: ReceiptLine | null, ignoreDiscrim
         'amount': value['amount'],
         'kind': value['kind'],
         'suggestedDescription': value['suggestedDescription'],
+        'suggestedCategoryId': value['suggestedCategoryId'],
+        'categorySuggestionSource': value['categorySuggestionSource'],
     };
 }
 

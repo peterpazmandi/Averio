@@ -1,4 +1,4 @@
-import type { ReceiptDraft } from '../../../shared/api/generated';
+import type { ReceiptDraft, RememberReceiptCategoryRequest } from '../../../shared/api/generated';
 import { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
 import { getCategoryDisplayName } from '../categoryLocalization';
 import type { ReactNode } from 'react';
@@ -41,7 +41,7 @@ interface Props {
     initialKind?: TransactionKind;
     receiptDraft?: ReceiptDraft;
     receiptEvidence?: ReactNode;
-    onSaveReceipt?: (request: TransactionInputDto, currency: string, reviewedTotal: string) => Promise<void>;
+    onSaveReceipt?: (request: TransactionInputDto, currency: string, reviewedTotal: string, rememberCategoryRules: RememberReceiptCategoryRequest[]) => Promise<void>;
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
     initialRecurring?: boolean;
@@ -53,6 +53,11 @@ interface Props {
 }
 
 interface EditorItem {
+    receiptLineIndex?: number;
+    canRememberCategory?: boolean;
+    rememberCategory?: boolean;
+    suggestedCategoryId?: string;
+    categorySuggestionSource?: string;
     originalDescription?: string;
     originalAmount?: string;
     discountAmount?: string;
@@ -287,6 +292,7 @@ export function TransactionEditor({
     const allowanceItem = resolvedItems.find(item => item.key === allowanceItemKey);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
+        if (receiptDraft) setReviewConfirmed(false);
         setItems(current => current.map(item =>
             item.key === key ? { ...item, ...patch } : item));
     }
@@ -368,7 +374,10 @@ export function TransactionEditor({
                 });
                 return;
             }
-            const save = onSaveReceipt ? (request: TransactionInputDto) => onSaveReceipt(request, receiptCurrency, submittedAmount(reviewedTotal)) : onSave;
+            const remembered = resolvedItems.flatMap((item, itemIndex) => item.rememberCategory && item.canRememberCategory
+                && item.receiptLineIndex !== undefined && item.categoryId !== uncategorizedId
+                ? [{ lineIndex: item.receiptLineIndex, itemIndex }] : []);
+            const save = onSaveReceipt ? (request: TransactionInputDto) => onSaveReceipt(request, receiptCurrency, submittedAmount(reviewedTotal), remembered) : onSave;
             await save?.({
                 accountId: resolvedAccountId,
                 kind,
@@ -515,10 +524,21 @@ export function TransactionEditor({
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
                         {receiptDraft && (() => {
-                            const suggestion = suggestReceiptCategory(item.description, (categories.data ?? []).filter(c => !c.isArchived && c.systemKey !== 'uncategorized')
-                                .map(c => ({ id: c.id, displayName: getCategoryDisplayName(c, t) })));
-                            return suggestion && suggestion.id !== item.categoryId ? <AverioButton disabled={busy} className="mt-2 text-xs"
-                                onClick={() => updateItem(item.key, { categoryId: suggestion.id })}>{t('receipts.suggestion', { category: suggestion.displayName })}</AverioButton> : null;
+                            const available = (categories.data ?? []).filter(c => !c.isArchived && c.systemKey !== 'uncategorized')
+                                .map(c => ({ id: c.id, displayName: getCategoryDisplayName(c, t) }));
+                            const supplied = available.find(c => c.id === item.suggestedCategoryId);
+                            const suggestion = supplied ?? suggestReceiptCategory(item.description, available);
+                            return <>
+                            {suggestion && suggestion.id !== item.categoryId ? <AverioButton disabled={busy} className="mt-2 text-xs"
+                                onClick={() => updateItem(item.key, { categoryId: suggestion.id })}>{t('receipts.suggestion', { category: suggestion.displayName })}</AverioButton> : null}
+                            {supplied && <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{t(item.categorySuggestionSource === 'HouseholdRule' ? 'receipts.householdRuleSuggestion' : 'receipts.modelCategorySuggestion')}</p>}
+                            {item.canRememberCategory && receiptDraft.merchant?.trim() && <label className="mt-2 flex min-h-11 items-start gap-2 text-xs">
+                                <input type="checkbox" className="mt-1 size-4 shrink-0 accent-emerald-500" checked={!!item.rememberCategory && item.categoryId !== uncategorizedId}
+                                    disabled={busy || !item.categoryId || item.categoryId === uncategorizedId || !available.some(c => c.id === item.categoryId)}
+                                    onChange={event => updateItem(item.key, { rememberCategory: event.target.checked })} />
+                                <span>{t('receipts.rememberCategory')}<span className="mt-1 block text-slate-600 dark:text-slate-300">{t('receipts.rememberCategoryHelp')}</span></span>
+                            </label>}
+                            </>;
                         })()}
                     </div>
                     <div className="min-w-0">
@@ -611,3 +631,4 @@ export function TransactionEditor({
         </div>
     </AverioDialog>}</>;
 }
+

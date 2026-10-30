@@ -1,4 +1,8 @@
 export const receiptsEN = {
+    rememberCategory: "Remember this category for our household",
+    rememberCategoryHelp: "After confirmation, share this merchant/item match with household members. Future suggestions still need review. Remembering a new choice replaces the previous rule.",
+    householdRuleSuggestion: "Suggested by a remembered household rule.",
+    modelCategorySuggestion: "AI category suggestion — review before applying.",
     labelsChooseAccount: "Choose an account above to load its available labels.",
     discountsSuggested: "Matching discounts are included in the suggested item amounts. Check each allocation against the receipt before confirming.",
     discountsManual: "Check discount allocation: amounts may already be net, or a discount could not be matched safely. Adjust the affected items until the total matches.",
@@ -25,6 +29,10 @@ export const receiptsEN = {
     warnings: { review_required: 'Check all extracted details before recording.', date_uncertain: 'The printed date is ambiguous. Enter the correct date.', date_missing: 'A date could not be determined.', currency_needs_review: 'Choose the correct supported currency.', total_needs_review: 'Enter the correct receipt total.', items_incomplete: 'Some item amounts could not be read. Check every item.' },
 };
 export const receiptsDE: typeof receiptsEN = {
+    rememberCategory: 'Diese Kategorie für unseren Haushalt merken',
+    rememberCategoryHelp: 'Nach der Bestätigung wird diese Händler-/Artikelzuordnung im Haushalt geteilt. Künftige Vorschläge müssen weiter geprüft werden. Eine neu gemerkte Auswahl ersetzt die bisherige Regel.',
+    householdRuleSuggestion: 'Vorschlag aus einer gespeicherten Haushaltsregel.',
+    modelCategorySuggestion: 'KI-Kategorievorschlag — vor dem Übernehmen prüfen.',
     labelsChooseAccount: "Wähle oben ein Konto, um die verfügbaren Labels zu laden.",
     discountsSuggested: "Zugeordnete Rabatte sind in den vorgeschlagenen Postenbeträgen enthalten. Prüfe jede Zuordnung vor dem Bestätigen am Beleg.",
     discountsManual: "Prüfe die Rabattzuordnung: Beträge können bereits reduziert sein oder ein Rabatt war nicht eindeutig zuzuordnen. Passe die betroffenen Posten an, bis die Summe stimmt.",
@@ -51,6 +59,10 @@ export const receiptsDE: typeof receiptsEN = {
     warnings: { review_required: 'Prüfe alle erkannten Angaben vor dem Buchen.', date_uncertain: 'Das gedruckte Datum ist mehrdeutig. Trage das richtige Datum ein.', date_missing: 'Es konnte kein Datum ermittelt werden.', currency_needs_review: 'Wähle die richtige unterstützte Währung.', total_needs_review: 'Trage den richtigen Gesamtbetrag ein.', items_incomplete: 'Einige Postenbeträge waren nicht lesbar. Prüfe jeden Posten.' },
 };
 export const receiptsHU: typeof receiptsEN = {
+    rememberCategory: 'Jegyezd meg ezt a kategóriát a háztartásunknak',
+    rememberCategoryHelp: 'Jóváhagyás után ez a bolt–termék párosítás elérhető lesz a háztartás tagjainak. A későbbi javaslatokat is ellenőrizni kell. Új választás megjegyzése felülírja a korábbi szabályt.',
+    householdRuleSuggestion: 'Megjegyzett háztartási szabály alapján javasolva.',
+    modelCategorySuggestion: 'MI-kategóriajavaslat — alkalmazás előtt ellenőrizd.',
     labelsChooseAccount: "A címkék betöltéséhez előbb válassz fent egy számlát.",
     discountsSuggested: "Az egyeztetett kedvezményeket levontuk a javasolt tételösszegekből. Megerősítés előtt ellenőrizd a hozzárendeléseket a nyugtán.",
     discountsManual: "Ellenőrizd a kedvezményeket: az összegek már tartalmazhatják őket, vagy nem lehetett egyértelműen tételhez rendelni őket. Módosítsd az érintett tételeket, amíg a végösszeg egyezik.",
@@ -76,3 +88,4 @@ export const receiptsHU: typeof receiptsEN = {
     kinds: { Item: 'Áru', Deposit: 'Betétdíj', Discount: 'Kedvezmény', Tax: 'Adó', Subtotal: 'Részösszeg', Payment: 'Fizetés', Other: 'Egyéb' },
     warnings: { review_required: 'Rögzítés előtt ellenőrizd az összes felismert adatot.', date_uncertain: 'A nyomtatott dátum nem egyértelmű. Add meg a helyes dátumot.', date_missing: 'Nem sikerült megállapítani a dátumot.', currency_needs_review: 'Válaszd ki a megfelelő támogatott pénznemet.', total_needs_review: 'Add meg a nyugta helyes végösszegét.', items_incomplete: 'Néhány tétel összege nem volt olvasható. Ellenőrizz minden tételt.' },
 };
+

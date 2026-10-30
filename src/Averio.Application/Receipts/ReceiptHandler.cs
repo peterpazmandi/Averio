@@ -7,7 +7,7 @@ namespace Averio.Application.Receipts;
 
 public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository households,
     IReceiptRepository receipts, IReceiptImageNormalizer images, IReceiptDocumentStore documents,
-    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock)
+    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null)
 {
     public async Task<ReceiptCapabilities> CapabilitiesAsync(Guid household, CancellationToken ct)
     {
@@ -62,9 +62,14 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     {
         if (skip < 0 || skip > 10000) throw Invalid();
         var member = await Authorize(household, ct);
-        return (await receipts.ListAsync(household, member, skip, ct)).Select(Map).ToArray();
+        var mapped = (await receipts.ListAsync(household, member, skip, ct)).Select(Map).ToArray();
+        return categorization is null ? mapped : await categorization.ApplyAsync(household, mapped, ct);
     }
-    public async Task<ReceiptScanResult> GetAsync(Guid household, Guid id, CancellationToken ct) => Map(await Find(household, id, ct));
+    public async Task<ReceiptScanResult> GetAsync(Guid household, Guid id, CancellationToken ct)
+    {
+        var mapped = Map(await Find(household, id, ct));
+        return categorization is null ? mapped : (await categorization.ApplyAsync(household, [mapped], ct))[0];
+    }
     public async Task<byte[]> ImageAsync(Guid household, Guid id, CancellationToken ct)
     {
         var scan = await Find(household, id, ct);
@@ -108,3 +113,4 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     private static BusinessRuleException Invalid() => new("receipt_invalid", "Error_ReceiptInvalid");
     private static ConflictException Conflict() => new("receipt_changed", "Error_ReceiptChanged");
 }
+

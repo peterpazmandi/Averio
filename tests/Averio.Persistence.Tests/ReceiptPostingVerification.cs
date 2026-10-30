@@ -38,15 +38,16 @@ internal static class ReceiptPostingVerification
             var row = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), new string('a', 64), 1,
                 expired ? now.AddDays(-8) : now);
             db.Add(row); await db.SaveChangesAsync();
-            string? draft = status == "Ready" ? JsonSerializer.Serialize(new ReceiptDraft("Shop", null, "EUR", "9", [], [])) : null;
+            string? draft = status == "Ready" ? JsonSerializer.Serialize(new ReceiptDraft("Shop", null, "EUR", "9", [new("TS KEFIR 175G", "9", "Item")], [])) : null;
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE receipt_scans SET status = {status}, draft_json = {draft} WHERE id = {row.Id}");
             return row;
         }
-        async Task<Guid> Post(ReceiptScan scan, CreateTransactionCommand? request = null, string currency = "EUR", decimal total = 9m, Guid? version = null)
+        async Task<Guid> Post(ReceiptScan scan, CreateTransactionCommand? request = null, string currency = "EUR", decimal total = 9m, Guid? version = null,
+            RememberReceiptCategory[]? rules = null)
         {
             using var scope = provider.CreateScope();
             return await scope.ServiceProvider.GetRequiredService<PostReceiptHandler>().HandleAsync(f.HouseholdId,
-                scan.Id, version ?? scan.Version, currency, total, request ?? command, default);
+                scan.Id, version ?? scan.Version, currency, total, request ?? command, default, rules);
         }
         async Task<string> Fingerprint()
         {
@@ -55,7 +56,8 @@ internal static class ReceiptPostingVerification
             return JsonSerializer.Serialize(new {
                 Transactions = await db.Transactions.CountAsync(),
                 Aggregates = await db.TransactionAggregates.AsNoTracking().OrderBy(x => x.AccountId).ThenBy(x => x.DimensionType).ThenBy(x => x.DimensionId).ThenBy(x => x.Period).ThenBy(x => x.PeriodStart).ToListAsync(),
-                Entries = await db.PersonalMoneyEntries.CountAsync()
+                Entries = await db.PersonalMoneyEntries.CountAsync(),
+                Rules = await db.Set<ReceiptCategoryRule>().AsNoTracking().OrderBy(r => r.HouseholdId).ThenBy(r => r.MatchKey).ToListAsync()
             });
         }
         var ready = await Draft();
@@ -186,9 +188,36 @@ internal static class ReceiptPostingVerification
         user.UserId = f.MemberUserId;
         await Reject<NotFoundException>(() => Post(ready));
         user.UserId = f.OwnerUserId;
-        Console.WriteLine("PASS receipt posting privacy, reconciliation, rollback, concurrency, replay and cleanup");
+        var ruleScan = await Draft();
+        var beforeBadRule = await Fingerprint();
+        await Reject<BusinessRuleException>(() => Post(ruleScan, rules: [new(100, 0)]));
+        Check(beforeBadRule == await Fingerprint(), "invalid rule did not roll back ledger writes");
+        var ruleResults = await Task.WhenAll(Post(ruleScan, rules: [new(0, 0)]), Post(ruleScan, rules: [new(0, 0)]));
+        Check(ruleResults[0] == ruleResults[1], "rule confirmation retry posted twice");
+        await Reject<ConflictException>(() => Post(ruleScan));
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var saved = await db.Set<ReceiptCategoryRule>().SingleAsync(r => r.HouseholdId == f.HouseholdId);
+            Check(saved.MatchKey == ReceiptCategorization.MatchKey("Shop", "TS KEFIR 175G") && saved.CategoryId == category
+                && saved.UpdatedByMemberId == f.OwnerMemberId, "rule not atomically saved from source evidence");
+            var store = scope.ServiceProvider.GetRequiredService<IReceiptCategoryRuleStore>();
+            Check((await store.GetAsync(Guid.NewGuid(), default)).Count == 0, "rules leaked across households");
+        }
+        var nextScan = await Draft();
+        using (var scope = provider.CreateScope())
+        {
+            var next = await scope.ServiceProvider.GetRequiredService<ReceiptHandler>().GetAsync(f.HouseholdId, nextScan.Id, default);
+            Check(next.Draft!.Lines[0].SuggestedCategoryId == category && next.Draft.Lines[0].CategorySuggestionSource == "HouseholdRule",
+                "next receipt did not use saved household suggestion");
+        }
+        // Upsert the same match through a later explicit confirmation; old replay must not reapply rules.
+        var later = await Post(nextScan, rules: [new(0, 0)]);
+        Check(later != ruleResults[0] && await Post(ruleScan, rules: [new(0, 0)]) == ruleResults[0], "rule retry changed posting identity");
+        Console.WriteLine("PASS receipt posting privacy, reconciliation, rollback, concurrency, replay, cleanup and household category rules");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static async Task Reject<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
 }
+

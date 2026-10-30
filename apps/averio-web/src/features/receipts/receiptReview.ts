@@ -16,10 +16,14 @@ function matchesDiscount(discount: string, description: string) {
 }
 
 export function receiptItems(draft: ReceiptDraft) {
-    const lines = draft.lines.filter(line => line.kind === 'Item' || line.kind === 'Deposit');
+    const indexed = draft.lines.map((line, lineIndex) => ({ ...line, lineIndex }));
+    const lines = indexed.filter(line => line.kind === 'Item' || line.kind === 'Deposit');
     // Never silently truncate a large receipt into a smaller expense.
     if (lines.length > 100) return [];
     const items = lines.map(line => ({
+        receiptLineIndex: line.lineIndex, canRememberCategory: line.kind === 'Item', rememberCategory: false,
+        suggestedCategoryId: line.suggestedCategoryId ?? undefined,
+        categorySuggestionSource: line.categorySuggestionSource ?? undefined,
         description: line.suggestedDescription?.trim() || line.description,
         originalDescription: line.description, originalAmount: line.amount ?? '',
         discountAmount: '', categoryId: '', amount: line.amount ?? '',
@@ -69,3 +73,4 @@ export function suggestReceiptCategory(description: string, categories: readonly
     });
     return matches.length === 1 ? matches[0] : undefined;
 }
+

@@ -9,7 +9,8 @@ public sealed class ReceiptOptions
     public const int MaxAttempts = 3;
 }
 // Exact decimal strings. Observations, not trusted ledger inputs.
-public sealed record ReceiptLine(string Description, string? Amount, string Kind, string? SuggestedDescription = null);
+public sealed record ReceiptLine(string Description, string? Amount, string Kind, string? SuggestedDescription = null,
+    Guid? SuggestedCategoryId = null, string? CategorySuggestionSource = null);
 public sealed record ReceiptDraft(string? Merchant, string? Date, string? Currency,
     string? Total, ReceiptLine[] Lines, string[] Warnings);
 public sealed record ReceiptScanResult(Guid Id, string Status, Guid Version, int Attempts,
@@ -23,7 +24,12 @@ public interface IReceiptDocumentStore
     Task<byte[]> GetAsync(string key, CancellationToken ct);
     Task DeleteAsync(string key, CancellationToken ct);
 }
-public interface IReceiptExtractor { Task<ReceiptDraft> ExtractAsync(byte[] jpeg, CancellationToken ct); }
+public interface IReceiptExtractor
+{
+    Task<ReceiptDraft> ExtractAsync(byte[] jpeg, CancellationToken ct);
+    Task<ReceiptDraft> ExtractAsync(byte[] jpeg, IReadOnlyList<ReceiptCategoryOption> categories, CancellationToken ct)
+        => ExtractAsync(jpeg, ct);
+}
 public sealed class ReceiptExtractionException(string code, bool transient) : Exception(code)
 {
     public string Code { get; } = code;
@@ -46,3 +52,4 @@ public interface IReceiptRepository
     Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct);
     Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct);
 }
+

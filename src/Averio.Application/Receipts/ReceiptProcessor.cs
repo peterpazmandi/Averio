@@ -2,7 +2,7 @@ using System.Text.Json;
 namespace Averio.Application.Receipts;
 
 public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocumentStore documents,
-    IReceiptExtractor extractor, ReceiptOptions options, TimeProvider clock)
+    IReceiptExtractor extractor, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null)
 {
     public async Task<bool> ProcessNextAsync(CancellationToken ct)
     {
@@ -16,8 +16,15 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
         try
         {
             var bytes = await documents.GetAsync(scan.ObjectKey, timeout.Token);
-            var result = await extractor.ExtractAsync(bytes, timeout.Token);
-            draft = JsonSerializer.Serialize(ReceiptDraftValidation.Validate(result));
+            IReadOnlyList<ReceiptCategoryOption> catalog = categorization is null ? []
+                : (await categorization.CatalogAsync(scan.HouseholdId, timeout.Token)).Take(500).ToArray();
+            var result = ReceiptDraftValidation.Validate(await extractor.ExtractAsync(bytes, catalog, timeout.Token));
+            var allowed = catalog.Select(c => c.Id).ToHashSet();
+            result = result with { Lines = result.Lines.Select(line => line with {
+                SuggestedCategoryId = line.Kind == "Item" && line.SuggestedCategoryId is Guid id && allowed.Contains(id) ? id : null,
+                CategorySuggestionSource = null
+            }).ToArray() };
+            draft = JsonSerializer.Serialize(result);
             if (draft.Length > 262144) throw new ReceiptExtractionException("invalid_extraction", false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

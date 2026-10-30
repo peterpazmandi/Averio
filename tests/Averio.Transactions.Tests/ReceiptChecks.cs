@@ -42,6 +42,9 @@ internal static class ReceiptChecks
         var handler = new StubHttp(input);
         var extractor = new GeminiReceiptExtractor(new HttpClient(handler), Options.Create(new GeminiReceiptOptions { ApiKey = "test", Model = "test-model" }));
         Check((await extractor.ExtractAsync(jpeg, default)).Total == "9000", "provider returns raw observations");
+        var categoryId = Guid.NewGuid();
+        await extractor.ExtractAsync(jpeg, [new ReceiptCategoryOption(categoryId, "Groceries > Dairy")], default);
+        Check(handler.Request!.Contains(categoryId.ToString()) && handler.Request.Contains("Dairy"), "provider receives authorized category catalogue");
         handler.Text = JsonSerializer.Serialize(input with { Date = "10/11/26", Warnings = ["provider_warning"] });
         var raw = await extractor.ExtractAsync(jpeg, default);
         Check(raw.Date == "10/11/26", "adapter preserves ambiguous date until application validation");
@@ -56,7 +59,7 @@ internal static class ReceiptChecks
                 .GetProperty("responseJsonSchema").GetProperty("properties").GetProperty("lines");
             Check(linesSchema.GetProperty("type").GetString() == "array"
                 && !linesSchema.TryGetProperty("maxItems", out _), "provider schema omits rejected array bound");
-            Check(linesSchema.GetProperty("items").GetProperty("required").GetArrayLength() == 4,
+            Check(linesSchema.GetProperty("items").GetProperty("required").GetArrayLength() == 5,
                 "provider line structure remains required");
         }
         handler.Text = JsonSerializer.Serialize(input with {
@@ -94,3 +97,4 @@ internal static class ReceiptChecks
         }
     }
 }
+

@@ -21,6 +21,8 @@ public static class ReceiptServices
                 && System.Text.RegularExpressions.Regex.IsMatch(x.Model, "^[a-zA-Z0-9.-]{1,100}$")),
                 "Enabled receipts require a Gemini API key and explicitly selected model.").ValidateOnStart();
         services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<IReceiptCategoryRuleStore, ReceiptCategoryRuleStore>();
+        services.AddScoped<ReceiptCategorization>();
         services.AddSingleton<IReceiptImageNormalizer, ReceiptImageNormalizer>();
         if (string.IsNullOrWhiteSpace(config["Receipts:Storage:Bucket"]))
         {

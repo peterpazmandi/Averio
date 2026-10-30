@@ -19,6 +19,21 @@ const money = load('../src/shared/money/decimalAmount.ts');
 const { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
     '../../shared/money/decimalAmount': money,
 });
+test('category suggestions remain unapplied and source indices survive non-item lines', () => {
+    const draft = { lines: [
+        { kind: 'Subtotal', description: 'Subtotal', amount: '5' },
+        { kind: 'Item', description: 'KEFIR', amount: '4', suggestedCategoryId: 'dairy', categorySuggestionSource: 'HouseholdRule' },
+        { kind: 'Deposit', description: 'Deposit', amount: '1' },
+    ] };
+    const items = receiptItems(draft);
+    assert.equal(items[0].categoryId, '');
+    assert.equal(items[0].suggestedCategoryId, 'dairy');
+    assert.equal(items[0].categorySuggestionSource, 'HouseholdRule');
+    assert.equal(items[0].receiptLineIndex, 1);
+    assert.equal(items[0].rememberCategory, false);
+    assert.equal(items[0].canRememberCategory, true);
+    assert.equal(items[1].canRememberCategory, false);
+});
 test('only item and deposit observations prefill expenses, with discounts and payment lines retained in evidence', () => {
     const draft = { lines: ['Item', 'Deposit', 'Discount', 'Tax', 'Subtotal', 'Payment', 'Other']
         .map(kind => ({ kind, description: kind, amount: kind === 'Discount' ? '-1' : '2' })) };
@@ -94,3 +109,4 @@ test('AI names prefill edit fields without replacing original evidence or breaki
     assert.equal(result.originalDescription, 'TS DHUS');
     assert.equal(receiptItems({ lines: [{ ...item, suggestedDescription: null }] })[0].description, 'TS DHUS');
 });
+

@@ -2,6 +2,16 @@
 
 Receipt scanning creates a private, reviewable draft. Extracted text is untrusted and never writes transactions, balances, categories or allowances.
 
+## Category suggestions and household rules
+
+Gemini receives up to 500 available expense category IDs with hierarchy paths, including custom categories, in the existing extraction call. Clear Item lines may return an optional `suggestedCategoryId`. Unknown, foreign and non-item suggestions are discarded. Inbox/detail reads revalidate against current active categories and prefer an exact remembered household match. The editor labels the source and requires the user to apply a suggestion or select a category manually; uncertainty remains editable/uncategorized.
+
+“Remember this category for our household” is unchecked by default and explicitly explains sharing. On confirmation, optional `rememberCategoryRules` entries map original `lineIndex` to reviewed transaction `itemIndex`. The server derives matching keys from the original merchant/printed item, validates the selected category, and upserts the rule atomically with the expense. No rules are saved on failed/discarded/unconfirmed scans. Nonempty rule consent is included in confirmation fingerprints; unchanged retries return the original expense without replaying rule writes. Absent/empty selections retain compatibility with earlier fingerprints.
+
+Rules use normalized exact merchant/item matching, not fuzzy matching or other members' private financial history. Only match hashes, category IDs, household/member IDs and timestamps are stored. A later explicit remembered selection replaces that match; a dedicated rule management/delete screen is not included yet. Item breakdowns and discounts continue to use the existing single-payment accounting path.
+
+Deploy `AddReceiptCategoryRules` after `AddReceiptConfirmationFingerprint`, followed by the API, worker and frontend together. See [ADR-036](decisions/ADR-036-receipt-category-suggestions.md). No new API key or extra model call is needed. Older drafts remain reviewable; model suggestions appear on new extractions and rules can apply to existing drafts.
+
 | PR | Scope |
 | --- | --- |
 | 1 — Private processing foundation | Upload normalization, private S3 documents, durable jobs, Gemini structured extraction, uploader-only APIs, cleanup and generated client. Disabled by default. |
@@ -28,7 +38,7 @@ Uploads accept decoded JPEG/PNG only, up to 10 MiB, 24 million pixels, dimension
 
 Uploads abandoned for five minutes and drafts older than seven days are cleared and deleted by the worker. Status and idempotency metadata remain; extracted JSON is cleared on discard. Physical deletion waits until at least five minutes after upload creation, including when a user discards an upload immediately. Storage writes have a one-minute deadline anchored to that persisted creation time; the remaining interval lets in-flight writes settle even if the API process exits. A discarded image becomes inaccessible immediately. Cleanup claims use the existing next-attempt timestamp as a two-minute reservation and retry failed deletions after one minute. Each object failure is isolated. Cleanup orders by next attempt before creation time so previously failed objects cannot starve unattempted deletions. Cleanup and extraction run in independent loops and scopes, so slow storage or provider requests do not block the other workload. Keep the worker and storage configuration active when disabling new scans so cleanup continues.
 
-Amounts are nullable invariant decimal strings with at most two decimal places. Original item descriptions, discounts, deposits, tax, subtotal and payment lines are preserved separately. A printed payment line is not a ledger transaction. Uncertain dates/currencies/totals require review; warnings are stable codes, not confidence scores. Provider text cannot select a household, owner, account or category. Raw provider responses, image content and keys must not be logged.
+Amounts are nullable invariant decimal strings with at most two decimal places. Original item descriptions, discounts, deposits, tax, subtotal and payment lines are preserved separately. A printed payment line is not a ledger transaction. Uncertain dates/currencies/totals require review; warnings are stable codes, not confidence scores. Provider text cannot select a household, owner or account, or assign a ledger category. Validated category IDs are suggestions only. Raw provider responses, image content and keys must not be logged.
 
 ## Deployment
 
@@ -67,3 +77,4 @@ Posted scan metadata remains uploader-only. Shared transaction visibility never 
 Apply **AddReceiptPosting** after **AddReceiptScans**, then **AddReceiptConfirmationFingerprint**, before deploying the updated API/frontend/worker together as one compatible release. Older workers do not understand the Posted state; avoid mixed application versions. These add the nullable household-bound transaction foreign key, unique posting link, Posted state, immutable request fingerprint and database integrity checks. No shared database migration is run by implementation tooling. Keep receipt scanning disabled until the existing private-storage/provider benchmark gates are satisfied. Rollback to the old application version requires a deliberate data-aware migration plan once receipts are posted; do not drop posting links or fingerprints from an active installation.
 
 The Verify workflow includes PostgreSQL confirmation privacy, invalid/stale/expired state, reconciliation, rollback, concurrent confirmation, retry and cleanup tests; exact-decimal/category frontend tests; and EN/DE/HU mobile/desktop light/dark browser scenarios for inbox recovery, review, confirmation retry, idempotent upload retry, discard and the disabled state. Browser screenshots are uploaded as `receipt-review-screenshots`. Automated tests use synthetic receipts and mocked extraction/storage, without production provider calls.
+

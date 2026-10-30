@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import type { ReceiptScanResult } from '../../shared/api/generated';
+import type { ReceiptScanResult, RememberReceiptCategoryRequest } from '../../shared/api/generated';
 import { API_BASE_URL } from '../../shared/api/apiConfiguration';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
@@ -50,9 +50,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         onError: refresh,
     });
     const post = useMutation({
-        mutationFn: ({ scan, request, currency, reviewedTotal }: { scan: ReceiptScanResult; request: TransactionInputDto; currency: string; reviewedTotal: string }) =>
+        mutationFn: ({ scan, request, currency, reviewedTotal, rememberCategoryRules }: { scan: ReceiptScanResult; request: TransactionInputDto; currency: string; reviewedTotal: string; rememberCategoryRules: RememberReceiptCategoryRequest[] }) =>
             receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
-                postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request } }),
+                postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } }),
         onSuccess: async () => {
             setReview(null); setNotice(t('receipts.posted'));
             // Match ordinary posting invalidation, including account balances,
@@ -122,7 +122,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         {inbox.hasNextPage && <AverioButton disabled={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()}>{t('receipts.loadMore')}</AverioButton>}
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
             receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} />}
-            onSaveReceipt={(request, currency, reviewedTotal) => post.mutateAsync({ scan: review, request, currency, reviewedTotal }).then(() => undefined)}
+            onSaveReceipt={(request, currency, reviewedTotal, rememberCategoryRules) => post.mutateAsync({ scan: review, request, currency, reviewedTotal, rememberCategoryRules }).then(() => undefined)}
             busy={post.isPending} onCancel={() => setReview(null)} />}
         {discard && <AverioDialog open title={t('receipts.discard')} closeLabel={t('common.actions.close')} busy={remove.isPending} onDismiss={() => setDiscard(null)}
             actions={<><AverioButton disabled={remove.isPending} onClick={() => setDiscard(null)}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="danger" disabled={remove.isPending} onClick={() => remove.mutate(discard)}>{t('receipts.discard')}</AverioButton></>}>
@@ -147,3 +147,4 @@ function ReceiptEvidence({ householdId, scan }: { householdId: string; scan: Rec
         </details>
     </div>;
 }
+

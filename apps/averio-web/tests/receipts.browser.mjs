@@ -41,7 +41,7 @@ try {
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
             postedTransactionId: recorded ? 'transaction' : null,
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
-                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
+                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
         const queued = () => ({ ...ready(), id: 'new-scan', status: discarded ? 'Discarded' : 'Queued', draft: null, postedTransactionId: null });
         await page.route('**/api/v1/**', async route => {
@@ -102,6 +102,10 @@ try {
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.equal(await confirm.isDisabled(), true, 'A mismatched item total cannot be confirmed.');
         await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
+        await page.getByText(dark ? copy.householdRuleSuggestion : copy.modelCategorySuggestion, { exact: true }).waitFor();
+        const remember = page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) });
+        assert.equal(await remember.isChecked(), false, 'Household rule sharing is opt-in.');
+        if (dark) await remember.check();
         await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('0009,00');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         await page.locator('input[id$="-amount"]').fill('0009,00');
@@ -116,6 +120,7 @@ try {
             await page.keyboard.press('Escape');
         }
         await page.getByText(copy.observations, { exact: true }).click();
+        await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.ok((await page.locator('details').textContent()).includes('Discount'));
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
         await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
@@ -131,6 +136,7 @@ try {
         assert.equal(posts[1].currency, 'EUR');
         assert.equal(posts[1].transaction.items.length, 1, 'Discount and payment lines cannot become extra expenses.');
         assert.equal(posts[1].transaction.items[0].categoryId, 'food');
+        assert.deepEqual(posts[1].rememberCategoryRules, dark ? [{ lineIndex: 0, itemIndex: 0 }] : [], 'Only explicit rule consent is submitted.');
         assert.equal(posts[1].reviewedTotal, '9');
         assert.equal(posts[1].transaction.items[0].amount, '9', 'Leading-zero/comma item amounts must use the same canonical API format.');
         if (hasWallet) assert.equal(posts[1].transaction.items[0].personalMoneyAmount, '0.5', 'Personal Money allocations must use canonical decimal strings too.');
@@ -155,3 +161,4 @@ try {
     }
     console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
+

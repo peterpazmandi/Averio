@@ -91,6 +91,7 @@ export * from './RecurringRuleResponse';
 export * from './RefundPersonalMoneyRequest';
 export * from './RegisterUserRequest';
 export * from './RegisterUserResponse';
+export * from './RememberReceiptCategoryRequest';
 export * from './RequestPasswordResetRequest';
 export * from './ResendEmailVerificationRequest';
 export * from './ResetPasswordRequest';

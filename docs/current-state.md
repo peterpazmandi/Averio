@@ -268,3 +268,10 @@ Member-private weekly/monthly/yearly schedules, review/actual amount/skip, opt-i
 ## Private receipt scanning foundation
 
 Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. Extraction alone never writes ledger transactions. The capture/inbox/review slice adds EN/DE/HU image capture/upload, polling, private image/evidence review, editable fields and category suggestions, explicit account/currency/privacy selection, exact reconciliation and human confirmation through the existing transaction editor. Posting atomically commits the normal ledger/aggregate/optional Personal Money effects and the receipt's unique transaction link and immutable confirmation fingerprint; identical retries return the original transaction, while changed intent conflicts. Temporary image cleanup preserves that link. The feature remains disabled by default; production provider benchmarking, paid quotas, metrics and permanent attachment retention remain PR 3 work. Apply AddReceiptPosting and AddReceiptConfirmationFingerprint before deploying this slice. See [receipt scanning](receipt-scanning.md) and [ADR-035](decisions/ADR-035-receipt-confirmation-request-identity.md).
+
+
+## Receipt category suggestions (PR 24 follow-up)
+
+- Gemini suggests only from the household expense catalogue, with current-category validation and explicit apply actions.
+- Users can opt in to remembering exact merchant/printed-item matches for the household at confirmation. Rules take precedence over model suggestions and commit atomically with the expense; retry identity includes rule-sharing intent.
+- EN/DE/HU UI, generated API contracts, EF migration `AddReceiptCategoryRules`, and regression coverage accompany ADR-036. No production migration or live provider benchmark has been run.
