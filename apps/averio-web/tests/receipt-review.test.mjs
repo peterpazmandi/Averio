@@ -58,3 +58,39 @@ test('category suggestions require a unique complete category-name match and sup
     assert.equal(suggestReceiptCategory('Élelmiszer Food', categories), undefined);
     assert.equal(suggestReceiptCategory('Food', [...categories, { id: 'c', displayName: 'Food' }]), undefined);
 });
+
+test('discount suggestions reconcile the Tesco receipt and preserve original evidence', () => {
+    const lines = [
+        ['TOR MEX TORT', '3078'], ['ZEWA DEL LEV 3R24T', '4329'], ['GMO M S DAR', '3398'],
+        ['TS S-M DHUS', '1839'], ['LARA HY TOR', '929'], ['MAGY TEJF', '537'], ['TS KEFIR', '357'],
+        ['VENUSZ SOS', '426'], ['GOUDAS STANGLI', '438'], ['BANAN LEDIG', '403'], ['GAGA BABY WIPES 72DB', '1436'], ['Tesco bag', '19'],
+    ].map(([description, amount]) => ({ description, amount, kind: 'Item' }));
+    lines.push({ description: 'CC ZEWA DEL LEV 3R24', amount: '-860', kind: 'Discount' },
+        { description: '11866 GAGA BABY WIPE', amount: '-150', kind: 'Discount' });
+    const draft = { total: '16179', lines };
+    const original = JSON.stringify(draft);
+    const items = receiptItems(draft);
+    assert.equal(items[1].amount, '3469');
+    assert.equal(items[10].amount, '1286');
+    assert.equal(items[1].discountAmount, '-860');
+    assert.equal(receiptReconciles('16179', items), true);
+    assert.equal(JSON.stringify(draft), original);
+});
+test('discount matching leaves ambiguous, unmatched, invalid and already-net amounts for review', () => {
+    const item = { description: 'Food Apples', amount: '10', kind: 'Item' };
+    const discount = { description: 'Food Apples discount', amount: '-1', kind: 'Discount' };
+    assert.equal(receiptItems({ total: '9', lines: [item, discount] })[0].amount, '9');
+    assert.equal(receiptItems({ total: '19', lines: [item, item, discount] })[0].amount, '10');
+    assert.equal(receiptItems({ total: '9', lines: [item, { ...discount, description: 'Coupon' }] })[0].amount, '10');
+    assert.equal(receiptItems({ total: '8', lines: [item, discount] })[0].amount, '10');
+    assert.equal(receiptItems({ total: '10', lines: [item, discount] })[0].discountAmount, '');
+    assert.equal(receiptItems({ total: '9', lines: [item, { ...discount, amount: 'oops' }] })[0].amount, '10');
+    assert.equal(receiptItems({ total: '0', lines: [item, { ...discount, amount: '-10' }] })[0].amount, '10');
+});
+test('AI names prefill edit fields without replacing original evidence or breaking old drafts', () => {
+    const item = { description: 'TS DHUS', suggestedDescription: 'Darált hús', kind: 'Item', amount: '100' };
+    const result = receiptItems({ total: '100', lines: [item] })[0];
+    assert.equal(result.description, 'Darált hús');
+    assert.equal(result.originalDescription, 'TS DHUS');
+    assert.equal(receiptItems({ lines: [{ ...item, suggestedDescription: null }] })[0].description, 'TS DHUS');
+});

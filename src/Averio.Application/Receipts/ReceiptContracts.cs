@@ -9,7 +9,7 @@ public sealed class ReceiptOptions
     public const int MaxAttempts = 3;
 }
 // Exact decimal strings. Observations, not trusted ledger inputs.
-public sealed record ReceiptLine(string Description, string? Amount, string Kind);
+public sealed record ReceiptLine(string Description, string? Amount, string Kind, string? SuggestedDescription = null);
 public sealed record ReceiptDraft(string? Merchant, string? Date, string? Currency,
     string? Total, ReceiptLine[] Lines, string[] Warnings);
 public sealed record ReceiptScanResult(Guid Id, string Status, Guid Version, int Attempts,

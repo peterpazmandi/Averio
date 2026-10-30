@@ -41,7 +41,7 @@ try {
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
             postedTransactionId: recorded ? 'transaction' : null,
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
-                lines: [{ description: 'Food Apples', amount: '10.00', kind: 'Item' }, { description: 'Discount', amount: '-1.00', kind: 'Discount' },
+                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
         const queued = () => ({ ...ready(), id: 'new-scan', status: discarded ? 'Discarded' : 'Queued', draft: null, postedTransactionId: null });
         await page.route('**/api/v1/**', async route => {
@@ -94,6 +94,10 @@ try {
         assert.equal(await page.locator('input[type="date"]').inputValue(), '', 'Missing dates must not silently become today.');
         const account = page.locator('select').filter({ has: page.locator('option[value="eur"]') });
         assert.equal(await account.inputValue(), '', 'Receipt review requires an explicit account selection.');
+        await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor();
+        assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '9', 'Unique matching discount prefills the net item amount.');
+        await page.getByText(copy.discountsSuggested, { exact: true }).waitFor();
+        await page.getByText(copy.originalLine.replace('{{description}}', 'FOOD APPLES'), { exact: true }).waitFor();
         assert.equal(await account.locator('option[value="huf"]').count(), 0, 'No implicit currency conversion.');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.equal(await confirm.isDisabled(), true, 'A mismatched item total cannot be confirmed.');
@@ -103,6 +107,7 @@ try {
         await page.locator('input[id$="-amount"]').fill('0009,00');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await account.selectOption('eur');
+        await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor({ state: 'hidden' });
         if (hasWallet) {
             await page.getByRole('button', { name: moneyCopy.itemCharge + ' · Food Apples', exact: true }).click();
             const allocation = page.getByRole('dialog', { name: moneyCopy.itemAllocationTitle, exact: true });
@@ -113,6 +118,8 @@ try {
         await page.getByText(copy.observations, { exact: true }).click();
         assert.ok((await page.locator('details').textContent()).includes('Discount'));
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
+        await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(artifacts, `items-${language}-${dark}-${width}.png`), fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await confirm.click();
         await page.getByRole('alert').filter({ hasText: 'Please retry' }).waitFor();

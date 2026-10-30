@@ -53,6 +53,9 @@ interface Props {
 }
 
 interface EditorItem {
+    originalDescription?: string;
+    originalAmount?: string;
+    discountAmount?: string;
     key: string;
     description: string;
     categoryId: string;
@@ -458,8 +461,9 @@ export function TransactionEditor({
             </AverioCard>
             <AverioCard className="grid gap-3">
                 <div><h3 className="font-bold" aria-label={t('transactionManagement.labels')}>{t('transactionManagement.labels')} <InfoPopover label={t('transactionManagement.labels')}>{t('transactionManagement.labelsHelp')}</InfoPopover></h3></div>
-                {labels.isPending && <p role="status">{t('common.status.loading')}</p>}
-                {labels.isError && <p role="alert">{labels.error.message}</p>}
+                {!resolvedAccountId && <p className="text-sm">{t('receipts.labelsChooseAccount')}</p>}
+                {labels.isLoading && <p role="status">{t('common.status.loading')}</p>}
+                {labels.isError && <div role="alert"><p>{labels.error.message}</p><AverioButton disabled={busy || labels.isFetching} onClick={() => void labels.refetch()}>{t('receipts.retry')}</AverioButton></div>}
                 {labels.isSuccess && !labels.data.length && <p className="text-xs">{t('transactionManagement.noLabelsYet')}</p>}
                 <div className="flex flex-wrap gap-2">
                     {(labels.data ?? []).map(label => <AverioButton key={label.id} aria-pressed={resolvedLabelIds.includes(label.id)}
@@ -467,7 +471,7 @@ export function TransactionEditor({
                         className={resolvedLabelIds.includes(label.id) ? 'border-emerald-500! bg-emerald-500/10!' : ''}>
                         {resolvedLabelIds.includes(label.id) ? '✓ ' : ''}{label.name}
                     </AverioButton>)}
-                    {!newLabelOpen && <AverioButton disabled={busy} onClick={() => { createLabelMutation.reset(); setNewLabelOpen(true); }}>
+                    {!newLabelOpen && <AverioButton disabled={busy || !resolvedAccountId} onClick={() => { createLabelMutation.reset(); setNewLabelOpen(true); }}>
                         + {t('transactionManagement.addNewLabel')}
                     </AverioButton>}
                 </div>
@@ -493,6 +497,7 @@ export function TransactionEditor({
                         <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
                     </div>
                 </div>
+                {receiptDraft && receiptDraft.lines.some(line => line.kind === 'Discount') && <p className="text-sm" role="status">{t(items.some(item => item.discountAmount) ? 'receipts.discountsSuggested' : 'receipts.discountsManual')}</p>}
                 <div aria-hidden="true" className="hidden gap-3 text-[13px] font-semibold sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
                     <span>{t('transactionManagement.itemDescription')}</span>
                     <span>{t('transactionManagement.category')}</span>
@@ -500,7 +505,11 @@ export function TransactionEditor({
                 </div>
                 {resolvedItems.map((item, index) => <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-3 dark:border-slate-700 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
                     <div className="col-span-2 sm:col-span-1"><label htmlFor={item.key + '-description'} className="mb-[7px] block text-[13px] font-semibold sm:sr-only">{t('transactionManagement.itemDescription')}</label><AverioInput id={item.key + '-description'} required value={item.description} maxLength={160} disabled={busy}
-                        onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} /></div>
+                        onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} />
+                        {item.originalDescription && <p className="mt-1 break-words text-xs text-slate-600 dark:text-slate-300">{t('receipts.originalLine', { description: item.originalDescription })}</p>}
+                        {item.originalDescription && item.description !== item.originalDescription && <p className="mt-1 text-xs">{t('receipts.nameSuggestion')}</p>}
+                        {item.discountAmount && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.discountApplied', { gross: item.originalAmount, discount: item.discountAmount })}</p>}
+                    </div>
                     <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-[7px] block text-[13px] font-semibold sm:hidden">{t('transactionManagement.category')}</span>
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}

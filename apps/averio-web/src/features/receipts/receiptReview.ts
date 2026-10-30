@@ -1,12 +1,48 @@
 import type { ReceiptDraft } from '../../shared/api/generated';
 import { normalizeBalanceInput, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 
+// Compare printed evidence, never AI-renamed descriptions. Require two meaningful
+// matching words and a unique candidate; short codes alone cannot select an item.
+function discountWords(value: string) {
+    return [...new Set(value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase()
+        .match(/[a-z0-9]+/g)?.filter(word => word.length >= 3) ?? [])];
+}
+function matchesDiscount(discount: string, description: string) {
+    const words = discountWords(discount);
+    const itemWords = discountWords(description);
+    const shared = words.filter(word => itemWords.some(item => item === word
+        || (Math.min(item.length, word.length) >= 4 && (item.startsWith(word) || word.startsWith(item)))));
+    return shared.length >= 2 && shared.length / words.length >= 0.6;
+}
+
 export function receiptItems(draft: ReceiptDraft) {
     const lines = draft.lines.filter(line => line.kind === 'Item' || line.kind === 'Deposit');
     // Never silently truncate a large receipt into a smaller expense.
-    return lines.length <= 100 ? lines.map(line => ({
-        description: line.description, categoryId: '', amount: line.amount ?? '',
-    })) : [];
+    if (lines.length > 100) return [];
+    const items = lines.map(line => ({
+        description: line.suggestedDescription?.trim() || line.description,
+        originalDescription: line.description, originalAmount: line.amount ?? '',
+        discountAmount: '', categoryId: '', amount: line.amount ?? '',
+    }));
+    const discounts = draft.lines.filter(line => line.kind === 'Discount');
+    // A printed total that already matches must not have its discounts applied twice.
+    if (!discounts.length || receiptReconciles(draft.total ?? '', items)) return items;
+    const proposed = items.map(item => ({ ...item }));
+    for (const discount of discounts) {
+        const amount = normalizeReceiptAmount(discount.amount ?? '');
+        if (!amount?.startsWith('-')) return items;
+        const candidates = lines.flatMap((line, index) => line.kind === 'Item'
+            && matchesDiscount(discount.description, line.description) ? [index] : []);
+        if (candidates.length !== 1) return items;
+        const target = proposed[candidates[0]];
+        const gross = normalizeReceiptAmount(target.amount);
+        if (gross === null) return items;
+        target.amount = sumDecimalAmounts([gross, amount]);
+        target.discountAmount = sumDecimalAmounts([target.discountAmount || '0', amount]);
+    }
+    // Suggestions must reconcile as a whole. Ambiguity, free items and unmatched
+    // discounts remain manual review; do not spread an unexplained discrepancy.
+    return receiptReconciles(draft.total ?? '', proposed) ? proposed : items;
 }
 
 export function normalizeReceiptAmount(value: string) {

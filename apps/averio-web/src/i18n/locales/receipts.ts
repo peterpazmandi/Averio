@@ -1,4 +1,10 @@
 export const receiptsEN = {
+    labelsChooseAccount: "Choose an account above to load its available labels.",
+    discountsSuggested: "Matching discounts are included in the suggested item amounts. Check each allocation against the receipt before confirming.",
+    discountsManual: "Check discount allocation: amounts may already be net, or a discount could not be matched safely. Adjust the affected items until the total matches.",
+    originalLine: "Printed: {{description}}",
+    nameSuggestion: "Suggested name — review and edit if needed.",
+    discountApplied: "Suggested adjustment: {{gross}} plus discount {{discount}}. The amount remains editable.",
     title: 'Receipts', capture: 'Scan receipt', privateHelp: 'Your scans and images are private to you. Nothing changes your finances until you confirm a transaction.',
     formats: 'Take a clear photo or choose a JPEG or PNG image, up to 10 MiB. PDF and HEIC are not supported.', chooseFile: 'Choose image', takePhoto: 'Take photo',
     upload: 'Upload receipt', uploading: 'Uploading…', retryUpload: 'Retry same upload', uploaded: 'Receipt uploaded. You can leave this page while it is processed.',
@@ -19,6 +25,12 @@ export const receiptsEN = {
     warnings: { review_required: 'Check all extracted details before recording.', date_uncertain: 'The printed date is ambiguous. Enter the correct date.', date_missing: 'A date could not be determined.', currency_needs_review: 'Choose the correct supported currency.', total_needs_review: 'Enter the correct receipt total.', items_incomplete: 'Some item amounts could not be read. Check every item.' },
 };
 export const receiptsDE: typeof receiptsEN = {
+    labelsChooseAccount: "Wähle oben ein Konto, um die verfügbaren Labels zu laden.",
+    discountsSuggested: "Zugeordnete Rabatte sind in den vorgeschlagenen Postenbeträgen enthalten. Prüfe jede Zuordnung vor dem Bestätigen am Beleg.",
+    discountsManual: "Prüfe die Rabattzuordnung: Beträge können bereits reduziert sein oder ein Rabatt war nicht eindeutig zuzuordnen. Passe die betroffenen Posten an, bis die Summe stimmt.",
+    originalLine: "Aufgedruckt: {{description}}",
+    nameSuggestion: "Namensvorschlag – bei Bedarf prüfen und bearbeiten.",
+    discountApplied: "Vorgeschlagene Anpassung: {{gross}} plus Rabatt {{discount}}. Der Betrag bleibt bearbeitbar.",
     title: 'Belege', capture: 'Beleg scannen', privateHelp: 'Deine Scans und Bilder sind nur für dich sichtbar. Erst deine Bestätigung erstellt eine Buchung.',
     formats: 'Fotografiere den Beleg deutlich oder wähle ein JPEG- oder PNG-Bild bis 10 MiB. PDF und HEIC werden nicht unterstützt.', chooseFile: 'Bild wählen', takePhoto: 'Foto aufnehmen',
     upload: 'Beleg hochladen', uploading: 'Wird hochgeladen…', retryUpload: 'Denselben Upload wiederholen', uploaded: 'Beleg hochgeladen. Du kannst die Seite während der Verarbeitung verlassen.',
@@ -39,6 +51,12 @@ export const receiptsDE: typeof receiptsEN = {
     warnings: { review_required: 'Prüfe alle erkannten Angaben vor dem Buchen.', date_uncertain: 'Das gedruckte Datum ist mehrdeutig. Trage das richtige Datum ein.', date_missing: 'Es konnte kein Datum ermittelt werden.', currency_needs_review: 'Wähle die richtige unterstützte Währung.', total_needs_review: 'Trage den richtigen Gesamtbetrag ein.', items_incomplete: 'Einige Postenbeträge waren nicht lesbar. Prüfe jeden Posten.' },
 };
 export const receiptsHU: typeof receiptsEN = {
+    labelsChooseAccount: "A címkék betöltéséhez előbb válassz fent egy számlát.",
+    discountsSuggested: "Az egyeztetett kedvezményeket levontuk a javasolt tételösszegekből. Megerősítés előtt ellenőrizd a hozzárendeléseket a nyugtán.",
+    discountsManual: "Ellenőrizd a kedvezményeket: az összegek már tartalmazhatják őket, vagy nem lehetett egyértelműen tételhez rendelni őket. Módosítsd az érintett tételeket, amíg a végösszeg egyezik.",
+    originalLine: "Nyugtán: {{description}}",
+    nameSuggestion: "Javasolt elnevezés – ellenőrizd, és szükség esetén módosítsd.",
+    discountApplied: "Javasolt módosítás: {{gross}} és {{discount}} kedvezmény. Az összeg továbbra is szerkeszthető.",
     title: 'Nyugták', capture: 'Nyugta beolvasása', privateHelp: 'A beolvasott nyugtákat és képeket csak te látod. A pénzügyeid csak a tranzakció megerősítésekor változnak.',
     formats: 'Készíts éles fotót, vagy válassz legfeljebb 10 MiB méretű JPEG- vagy PNG-képet. A PDF és a HEIC nem támogatott.', chooseFile: 'Kép kiválasztása', takePhoto: 'Fotó készítése',
     upload: 'Nyugta feltöltése', uploading: 'Feltöltés…', retryUpload: 'Ugyanazon feltöltés újrapróbálása', uploaded: 'A nyugta feltöltve. A feldolgozás közben elhagyhatod ezt az oldalt.',

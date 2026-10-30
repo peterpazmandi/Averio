@@ -31,6 +31,10 @@ export interface ReceiptLine {
      * 
      */
     kind: string;
+    /**
+     * 
+     */
+    suggestedDescription?: string | null;
 }
 
 /**
@@ -56,6 +60,7 @@ export function ReceiptLineFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'description': json['description'],
         'amount': json['amount'],
         'kind': json['kind'],
+        'suggestedDescription': json['suggestedDescription'] === undefined ? undefined : json['suggestedDescription'] === null ? null : json['suggestedDescription'],
     };
 }
 
@@ -73,6 +78,7 @@ export function ReceiptLineToJSONTyped(value?: ReceiptLine | null, ignoreDiscrim
         'description': value['description'],
         'amount': value['amount'],
         'kind': value['kind'],
+        'suggestedDescription': value['suggestedDescription'],
     };
 }
 
