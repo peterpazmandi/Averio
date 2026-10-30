@@ -222,6 +222,7 @@ static async Task RunVerificationAsync(string connectionString)
     await CheckAsync(
         "previously applied allowance migration repairs live records",
         () => VerifyLegacyRecurringAllowanceUpgradeAsync(provider, currentUser, fixture, clock));
+    await ReceiptPostingVerification.RunAsync(provider, currentUser, fixture, clock);
 }
 
 static async Task CheckAsync(string name, Func<Task> check)

@@ -23,3 +23,13 @@ const imageSchema = resolve(image.responses['200'].content['image/jpeg'].schema)
 assert.equal(imageSchema.type, 'string');
 assert.equal(imageSchema.format, 'binary');
 console.log('PASS binary receipt image download contract');
+
+const posting = document.paths['/api/v1/households/{householdId}/receipt-scans/{id}/transaction'].post;
+const postSchema = resolve(posting.requestBody.content['application/json'].schema);
+assert.ok(['expectedVersion', 'currency', 'reviewedTotal', 'transaction'].every(key => postSchema.required.includes(key)));
+assert.equal(resolve(postSchema.properties.reviewedTotal).type, 'string');
+assert.equal(resolve(postSchema.properties.currency).type, 'string');
+assert.equal(resolve(postSchema.properties.expectedVersion).format, 'uuid');
+assert.ok(posting.responses['200']);
+assert.ok(document.paths['/api/v1/households/{householdId}/receipt-scans/capabilities'].get.responses['200']);
+console.log('PASS required receipt confirmation and capabilities contract');

@@ -124,6 +124,11 @@ jobs:
           node tests/info-popover.browser.mjs
           node tests/helper-pages.browser.mjs
 
+      - name: Verify receipt browser flows
+        timeout-minutes: 3
+        working-directory: apps/averio-web
+        run: node tests/receipts.browser.mjs
+
       - name: Verify Personal Money browser flows
         working-directory: apps/averio-web
         run: |
@@ -132,6 +137,15 @@ jobs:
           node tests/transaction-editor.browser.mjs
           node tests/household-navigation.browser.mjs
           node tests/landing-review.browser.mjs
+
+      - name: Upload receipt review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: receipt-review-screenshots
+          path: test-results/receipts
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload responsive navigation screenshots
         if: always()

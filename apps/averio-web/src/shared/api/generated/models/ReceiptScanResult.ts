@@ -59,6 +59,10 @@ export interface ReceiptScanResult {
      * 
      */
     draft: ReceiptDraft | null;
+    /**
+     * 
+     */
+    postedTransactionId?: string | null;
 }
 
 /**
@@ -94,6 +98,7 @@ export function ReceiptScanResultFromJSONTyped(json: any, ignoreDiscriminator: b
         'expiresAt': json['expiresAt'],
         'failureCode': json['failureCode'],
         'draft': ReceiptDraftFromJSON(json['draft']),
+        'postedTransactionId': json['postedTransactionId'] === undefined ? undefined : json['postedTransactionId'] === null ? null : json['postedTransactionId'],
     };
 }
 
@@ -116,6 +121,7 @@ export function ReceiptScanResultToJSONTyped(value?: ReceiptScanResult | null, i
         'expiresAt': value['expiresAt'],
         'failureCode': value['failureCode'],
         'draft': ReceiptDraftToJSON(value['draft']),
+        'postedTransactionId': value['postedTransactionId'],
     };
 }
 

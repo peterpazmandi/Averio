@@ -20,7 +20,13 @@ public static class ReceiptDraftValidation
         if (currency is not "EUR" and not "USD" and not "HUF") warnings.Add("currency_needs_review");
         var total = Amount(draft.Total);
         if (total is null || total <= 0) warnings.Add("total_needs_review");
-        var lines = draft.Lines.Select(x => x with { Amount = Format(Amount(x.Amount)) }).ToArray();
+        var lines = draft.Lines.Select(x => x with {
+            Amount = Format(Amount(x.Amount)),
+            // Optional AI wording is a suggestion, never a replacement for source evidence.
+            SuggestedDescription = x.Kind == "Item" && !string.IsNullOrWhiteSpace(x.SuggestedDescription)
+                && x.SuggestedDescription.Trim().Length <= 160
+                ? x.SuggestedDescription.Trim() : null
+        }).ToArray();
         if (lines.Length == 0 || lines.Any(x => x.Amount is null)) warnings.Add("items_incomplete");
         // Keep discounts, taxes and payments as evidence, not additional ledger items.
         warnings.Add("review_required");

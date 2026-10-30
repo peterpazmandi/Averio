@@ -14,10 +14,32 @@
 
 import * as runtime from '../runtime';
 import {
+    type CreateTransactionResponse,
+    CreateTransactionResponseFromJSON,
+    CreateTransactionResponseToJSON,
+} from '../models/CreateTransactionResponse';
+import {
+    type PostReceiptRequest,
+    PostReceiptRequestFromJSON,
+    PostReceiptRequestToJSON,
+} from '../models/PostReceiptRequest';
+import {
+    type ReceiptCapabilities,
+    ReceiptCapabilitiesFromJSON,
+    ReceiptCapabilitiesToJSON,
+} from '../models/ReceiptCapabilities';
+import {
     type ReceiptScanResult,
     ReceiptScanResultFromJSON,
     ReceiptScanResultToJSON,
 } from '../models/ReceiptScanResult';
+
+export interface ApiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
 
 export interface ApiV1HouseholdsHouseholdIdReceiptScansGetRequest {
     /**
@@ -67,6 +89,21 @@ export interface ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest {
     id: string;
 }
 
+export interface ApiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    postReceiptRequest: PostReceiptRequest;
+}
+
 export interface ApiV1HouseholdsHouseholdIdReceiptScansPostRequest {
     /**
      * 
@@ -86,6 +123,49 @@ export interface ApiV1HouseholdsHouseholdIdReceiptScansPostRequest {
  * 
  */
 export class ReceiptsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/receipt-scans/capabilities`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReceiptCapabilities>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ReceiptCapabilitiesFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGet(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReceiptCapabilities> {
+        const response = await this.apiV1HouseholdsHouseholdIdReceiptScansCapabilitiesGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdReceiptScansGet without sending the request
@@ -294,6 +374,67 @@ export class ReceiptsApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdReceiptScansIdImageGet(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost().'
+            );
+        }
+
+        if (requestParameters['postReceiptRequest'] == null) {
+            throw new runtime.RequiredError(
+                'postReceiptRequest',
+                'Required parameter "postReceiptRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/receipt-scans/{id}/transaction`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PostReceiptRequestToJSON(requestParameters['postReceiptRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateTransactionResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CreateTransactionResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateTransactionResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

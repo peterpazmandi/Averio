@@ -24,6 +24,10 @@ internal static class ReceiptChecks
         await Reject<ReceiptExtractionException>(() => Task.FromResult(ReceiptDraftValidation.Validate(input with { Lines = [new("X", "1", "Account")] })));
         await Reject<ReceiptExtractionException>(() => Task.FromResult(ReceiptDraftValidation.Validate(new(null, null, null, null, [], []))));
         await Reject<ReceiptExtractionException>(() => Task.FromResult(ReceiptDraftValidation.Validate(input with { Lines = Enumerable.Repeat(new ReceiptLine("X", "1", "Item"), 301).ToArray() })));
+        var named = ReceiptDraftValidation.Validate(input with { Lines = [new("TS DHUS", "100", "Item", " Darált hús ")] });
+        Check(named.Lines[0].Description == "TS DHUS" && named.Lines[0].SuggestedDescription == "Darált hús", "name suggestions retain printed evidence");
+        Check(ReceiptDraftValidation.Validate(input with { Lines = [new("X", "1", "Item", new string('x', 161))] }).Lines[0].SuggestedDescription is null, "oversized name suggestion ignored");
+        Check(ReceiptDraftValidation.Validate(input with { Lines = [new("X", "-1", "Discount", "Wrong name")] }).Lines[0].SuggestedDescription is null, "non-item suggestions ignored");
         var normalizer = new ReceiptImageNormalizer();
         using var bitmap = new SKBitmap(64, 48);
         bitmap.Erase(SKColors.White);
@@ -38,6 +42,21 @@ internal static class ReceiptChecks
         var handler = new StubHttp(input);
         var extractor = new GeminiReceiptExtractor(new HttpClient(handler), Options.Create(new GeminiReceiptOptions { ApiKey = "test", Model = "test-model" }));
         Check((await extractor.ExtractAsync(jpeg, default)).Total == "9000", "provider returns raw observations");
+        var categoryId = Guid.NewGuid();
+        await extractor.ExtractAsync(jpeg, [new ReceiptCategoryOption(categoryId, "Groceries > Dairy")], default);
+        Check(handler.Request!.Contains(categoryId.ToString()) && handler.Request.Contains("Dairy"), "provider receives authorized category catalogue");
+        foreach (var suggestion in new[] { "null", "\"\"", "\"food\"", "42", "{}", "[]", JsonSerializer.Serialize(categoryId) })
+        {
+            handler.Text = $$"""
+                {"merchant":"Shop","date":"2026-10-30","currency":"EUR","total":"9.00",
+                 "lines":[{"description":"Milk","amount":"9.00","kind":"Item","suggestedCategoryId":{{suggestion}}}]}
+                """;
+            var parsed = await extractor.ExtractAsync(jpeg, default);
+            Check(parsed.Total == "9.00" && parsed.Lines[0].Description == "Milk"
+                && parsed.Lines[0].Amount == "9.00", "invalid optional category preserves receipt evidence");
+            Check(parsed.Lines[0].SuggestedCategoryId == (suggestion == JsonSerializer.Serialize(categoryId) ? categoryId : null),
+                "only valid category GUIDs survive provider parsing");
+        }
         handler.Text = JsonSerializer.Serialize(input with { Date = "10/11/26", Warnings = ["provider_warning"] });
         var raw = await extractor.ExtractAsync(jpeg, default);
         Check(raw.Date == "10/11/26", "adapter preserves ambiguous date until application validation");
@@ -46,6 +65,21 @@ internal static class ReceiptChecks
             && !normalized.Warnings.Contains("provider_warning"), "application retains uncertainty without trusting provider warnings");
         handler.Text = null;
         Check(handler.Request!.Contains("responseJsonSchema") && handler.Request.Contains("image/jpeg") && handler.Key == "test", "provider contract");
+        using (var requestJson = JsonDocument.Parse(handler.Request!))
+        {
+            var linesSchema = requestJson.RootElement.GetProperty("generationConfig")
+                .GetProperty("responseJsonSchema").GetProperty("properties").GetProperty("lines");
+            Check(linesSchema.GetProperty("type").GetString() == "array"
+                && !linesSchema.TryGetProperty("maxItems", out _), "provider schema omits rejected array bound");
+            Check(linesSchema.GetProperty("items").GetProperty("required").GetArrayLength() == 5,
+                "provider line structure remains required");
+        }
+        handler.Text = JsonSerializer.Serialize(input with {
+            Lines = Enumerable.Repeat(new ReceiptLine("X", "1", "Item"), 301).ToArray()
+        });
+        var oversized = await extractor.ExtractAsync(jpeg, default);
+        await Reject<ReceiptExtractionException>(() => Task.FromResult(ReceiptDraftValidation.Validate(oversized)));
+        handler.Text = null;
         handler.Status = HttpStatusCode.TooManyRequests;
         try { await extractor.ExtractAsync(jpeg, default); throw new Exception("429 accepted"); }
         catch (ReceiptExtractionException e) { Check(e.Transient, "429 retryable"); }
@@ -75,3 +109,4 @@ internal static class ReceiptChecks
         }
     }
 }
+

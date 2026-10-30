@@ -24,10 +24,17 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
     public Task<ReceiptScan?> GetAsync(Guid h, Guid m, Guid id, CancellationToken ct)
         => Owned(h,m).SingleOrDefaultAsync(x => x.Id == id, ct);
     public async Task<bool> DiscardAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct)
-        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version)
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version && x.Status != ReceiptScanStatus.Posted)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Discarded)
                 .SetProperty(x => x.DraftJson, (string?)null).SetProperty(x => x.LeaseToken, (Guid?)null)
                 .SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null)
+                .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
+    public async Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct)
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version
+                && x.Status == ReceiptScanStatus.Ready && x.ExpiresAt > now && x.DocumentDeletedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Posted)
+                .SetProperty(x => x.PostedTransactionId, transactionId).SetProperty(x => x.ConfirmationFingerprint, confirmationFingerprint)
+                .SetProperty(x => x.DraftJson, (string?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
     public async Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct)
     {
@@ -80,16 +87,16 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
         => await Expired(now).AsNoTracking().OrderBy(x => x.NextAttemptAt).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(50).ToListAsync(ct);
     public async Task<bool> ExpireAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await Expired(now).Where(x => x.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Discarded)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, x => x.Status == ReceiptScanStatus.Posted ? ReceiptScanStatus.Posted : ReceiptScanStatus.Discarded)
                 .SetProperty(x => x.NextAttemptAt, now.AddMinutes(2))
                 .SetProperty(x => x.DraftJson, (string?)null).SetProperty(x => x.LeaseToken, (Guid?)null)
                 .SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
     public async Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct)
-        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Discarded
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && (x.Status == ReceiptScanStatus.Discarded || x.Status == ReceiptScanStatus.Posted)
                 && x.DocumentDeletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.NextAttemptAt, retryAt), ct);
     public async Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct)
-        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Discarded)
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && (x.Status == ReceiptScanStatus.Discarded || x.Status == ReceiptScanStatus.Posted))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.DocumentDeletedAt, now), ct);
 }

@@ -11,6 +11,9 @@ using Microsoft.EntityFrameworkCore.Metadata;
 var checks = new (string Name, Action Run)[]
 {
     ("receipt images, amounts and provider contract", () => ReceiptChecks.RunAsync().GetAwaiter().GetResult()),
+    ("receipt request MVC record validation", ReceiptRequestValidationChecks.Run),
+    ("receipt confirmation request identity and canonical values", ReceiptConfirmationChecks.Run),
+    ("receipt category suggestions and household rules", () => ReceiptCategoryChecks.RunAsync().GetAwaiter().GetResult()),
     ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
     ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
     ("recurring calendar anchors", RecurringChecks.Calendar),
@@ -349,4 +352,5 @@ static void Throws<TException>(Action action)
 
     throw new Exception($"Expected {typeof(TException).Name}.");
 }
+
 

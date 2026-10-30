@@ -1,6 +1,6 @@
 # Averio Current State
 
-**Status date:** 2026-10-17
+**Status date:** 2026-10-28
 **Scope:** restarted implementation on the `develop` branch
 
 This document describes only the restarted codebase. Features from the earlier
@@ -162,7 +162,7 @@ The following are not yet treated as implemented:
 - goals
 - cross-currency personal-money attribution, bank refund detection and automatic settlement
 - historical CSV/XLSX import
-- AI receipt scanning
+- production rollout of AI receipt scanning (disabled by default; provider benchmark and operational gates pending)
 - bank connections
 - 2FA and social login
 - production Worker project
@@ -267,4 +267,11 @@ Member-private weekly/monthly/yearly schedules, review/actual amount/skip, opt-i
 
 ## Private receipt scanning foundation
 
-Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. The feature is disabled by default and never writes ledger transactions. See [receipt scanning](receipt-scanning.md) for the three-PR plan, API contract, configuration and rollout gates.
+Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. Extraction alone never writes ledger transactions. The capture/inbox/review slice adds EN/DE/HU image capture/upload, polling, private image/evidence review, editable fields and category suggestions, explicit account/currency/privacy selection, exact reconciliation and human confirmation through the existing transaction editor. Posting atomically commits the normal ledger/aggregate/optional Personal Money effects and the receipt's unique transaction link and immutable confirmation fingerprint; identical retries return the original transaction, while changed intent conflicts. Temporary image cleanup preserves that link. The feature remains disabled by default; production provider benchmarking, paid quotas, metrics and permanent attachment retention remain PR 3 work. Apply AddReceiptPosting and AddReceiptConfirmationFingerprint before deploying this slice. See [receipt scanning](receipt-scanning.md) and [ADR-035](decisions/ADR-035-receipt-confirmation-request-identity.md).
+
+
+## Receipt category suggestions (PR 24 follow-up)
+
+- Gemini suggests only from the household expense catalogue, with current-category validation and explicit apply actions.
+- Users can opt in to remembering exact merchant/printed-item matches for the household at confirmation. Rules take precedence over model suggestions and commit atomically with the expense; retry identity includes rule-sharing intent.
+- EN/DE/HU UI, generated API contracts, EF migration `AddReceiptCategoryRules`, and regression coverage accompany ADR-036. No production migration or live provider benchmark has been run.

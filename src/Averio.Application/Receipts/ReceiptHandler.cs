@@ -7,8 +7,13 @@ namespace Averio.Application.Receipts;
 
 public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository households,
     IReceiptRepository receipts, IReceiptImageNormalizer images, IReceiptDocumentStore documents,
-    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock)
+    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null)
 {
+    public async Task<ReceiptCapabilities> CapabilitiesAsync(Guid household, CancellationToken ct)
+    {
+        _ = await Authorize(household, ct);
+        return new(options.Enabled, ReceiptOptions.MaxUploadBytes);
+    }
     public async Task<ReceiptScanResult> UploadAsync(Guid household, Guid operation, Stream input, CancellationToken ct)
     {
         if (!options.Enabled) throw new BusinessRuleException("receipt_disabled", "Error_ReceiptDisabled");
@@ -57,9 +62,14 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     {
         if (skip < 0 || skip > 10000) throw Invalid();
         var member = await Authorize(household, ct);
-        return (await receipts.ListAsync(household, member, skip, ct)).Select(Map).ToArray();
+        var mapped = (await receipts.ListAsync(household, member, skip, ct)).Select(Map).ToArray();
+        return categorization is null ? mapped : await categorization.ApplyAsync(household, mapped, ct);
     }
-    public async Task<ReceiptScanResult> GetAsync(Guid household, Guid id, CancellationToken ct) => Map(await Find(household, id, ct));
+    public async Task<ReceiptScanResult> GetAsync(Guid household, Guid id, CancellationToken ct)
+    {
+        var mapped = Map(await Find(household, id, ct));
+        return categorization is null ? mapped : (await categorization.ApplyAsync(household, [mapped], ct))[0];
+    }
     public async Task<byte[]> ImageAsync(Guid household, Guid id, CancellationToken ct)
     {
         var scan = await Find(household, id, ct);
@@ -95,11 +105,12 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     private ReceiptScanResult Map(ReceiptScan scan)
     {
         var expired = scan.ExpiresAt <= clock.GetUtcNow();
-        return new(scan.Id, expired ? "Expired" : scan.Status.ToString(), scan.Version, scan.Attempts,
+        return new(scan.Id, expired && scan.Status != ReceiptScanStatus.Posted ? "Expired" : scan.Status.ToString(), scan.Version, scan.Attempts,
             scan.CreatedAt, scan.ExpiresAt, scan.FailureCode,
             !expired && scan.Status == ReceiptScanStatus.Ready && scan.DraftJson is not null
-                ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null);
+                ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null, scan.PostedTransactionId);
     }
     private static BusinessRuleException Invalid() => new("receipt_invalid", "Error_ReceiptInvalid");
     private static ConflictException Conflict() => new("receipt_changed", "Error_ReceiptChanged");
 }
+

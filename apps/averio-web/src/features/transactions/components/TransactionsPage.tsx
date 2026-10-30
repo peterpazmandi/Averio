@@ -239,6 +239,7 @@ export function TransactionsPage({
                     <h2 id="transactions-title" aria-label={t('transactionManagement.title')}>{t('transactionManagement.title')} <InfoPopover label={t('transactionManagement.title')}>{t('transactionManagement.description')}</InfoPopover></h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+            <Link to="/app/receipts" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus-visible:outline-2 dark:border-slate-700 dark:bg-slate-900"><ConceptIcon name="receipt" />{t('receipts.capture')}</Link>
             <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
                 <button
                     type="button"
