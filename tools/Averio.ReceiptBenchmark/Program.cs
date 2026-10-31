@@ -32,7 +32,7 @@ if (samples.Length is < 30 or > 50 || new[] { "hu", "de", "en" }.Any(l => sample
     Console.Error.WriteLine("Require 30–50 unique samples, at least 10 per HU/DE/EN, existing images and verified date/currency/positive total labels.");
     return 2;
 }
-using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+using var http = ReceiptTimeouts.CreateProviderClient();
 var extractor = new GeminiReceiptExtractor(http, Options.Create(new GeminiReceiptOptions { ApiKey = key, Model = model }));
 var normalizer = new ReceiptImageNormalizer();
 long tokens = 0;
@@ -50,7 +50,7 @@ foreach (var sample in samples)
     var result = new Result(sample.Id, sample.Language, false, false, false, 0, 0, "failed");
     try
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(65));
+        using var timeout = ReceiptTimeouts.CreateProcessingCancellation();
         await using var input = File.OpenRead(Path.Combine(Path.GetDirectoryName(manifest)!, sample.Image));
         var image = await normalizer.NormalizeAsync(input, timeout.Token);
         var actual = ReceiptDraftValidation.Validate(await extractor.ExtractAsync(image, timeout.Token));

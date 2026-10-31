@@ -70,7 +70,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const quota = capabilities.data;
     const exhausted = quota?.monthlyLimit !== undefined && quota.monthlyUsed !== undefined && quota.monthlyUsed >= quota.monthlyLimit;
     // An ambiguous upload response must remain retryable with its original operation ID.
-    const canUpload = capabilities.isSuccess && quota?.enabled && (!exhausted || upload.isError);
+    const canStartUpload = capabilities.isSuccess && quota?.enabled && !exhausted;
+    const canRetryUpload = selection !== null && upload.isError;
+    const canSubmitUpload = canStartUpload || canRetryUpload;
     const scans = inbox.data?.pages.flat() ?? [];
     const orderedScans = [...scans].sort((a, b) => Number(b.status === 'Ready') - Number(a.status === 'Ready'));
     function choose(file?: File) {
@@ -106,18 +108,18 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             {capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
             {capabilities.isSuccess && !capabilities.data.enabled && <p role="status">{t('receipts.disabled')}</p>}
                 <input ref={input} type="file" accept="image/jpeg,image/png" hidden aria-label={t('receipts.chooseFile')}
-                    disabled={!canUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
+                    disabled={!canStartUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
             <input ref={camera} type="file" accept="image/jpeg,image/png" capture="environment" hidden aria-label={t('receipts.takePhoto')}
-                disabled={!canUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
+                disabled={!canStartUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
             <div className="grid gap-2 sm:grid-cols-2">
-                <AverioButton variant={selection ? 'secondary' : 'primary'} disabled={!canUpload || upload.isPending} onClick={() => camera.current?.click()}>{t('receipts.takePhoto')}</AverioButton>
-                <AverioButton disabled={!canUpload || upload.isPending} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
+                <AverioButton variant={selection ? 'secondary' : 'primary'} disabled={!canStartUpload || upload.isPending} onClick={() => camera.current?.click()}>{t('receipts.takePhoto')}</AverioButton>
+                <AverioButton disabled={!canStartUpload || upload.isPending} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('receipts.formats')}</p>
             {selection && <div className="grid gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
                 <SelectedReceipt file={selection.file} />
                 <div className="flex flex-wrap gap-2">
-                    <AverioButton variant="primary" disabled={!canUpload || upload.isPending}
+                    <AverioButton variant="primary" disabled={!canSubmitUpload || upload.isPending}
                         onClick={() => upload.mutate(selection)}>{t(upload.isPending ? 'receipts.uploading' : upload.isError ? 'receipts.retryUpload' : 'receipts.upload')}</AverioButton>
                     <AverioButton disabled={upload.isPending} onClick={() => { setSelection(null); upload.reset(); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = ''; }}>{t('receipts.removePhoto')}</AverioButton>
                 </div>
@@ -131,7 +133,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         {inbox.isSuccess && scans.length === 0 && <AverioCard className="grid justify-items-center gap-3 py-10 text-center">
             <svg aria-hidden="true" focusable="false" viewBox="0 0 120 100" className="h-28 w-36 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="3"><path d="M35 10h50v80l-10-6-10 6-10-6-10 6-10-6V10Z"/><path d="M45 28h30M45 42h30M45 56h20"/><circle cx="90" cy="68" r="18" className="fill-white dark:fill-slate-950"/><path d="m81 68 6 6 12-13"/></svg>
             <h3 className="font-bold">{t('receipts.emptyTitle')}</h3><p className="max-w-md text-sm">{t('receipts.emptyHelp')}</p>
-            <AverioButton variant="primary" disabled={!canUpload} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
+            <AverioButton variant="primary" disabled={!canStartUpload} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
         </AverioCard>}
         {scans.length > 0 && <h3 className="font-bold">{t('receipts.inboxTitle')}</h3>}
         <ul className="grid gap-3" aria-label={t('receipts.title')}>

@@ -38,7 +38,7 @@ public static class ReceiptServices
             Timeout = TimeSpan.FromSeconds(45), MaxErrorRetry = 0
         }));
         services.AddScoped<IReceiptDocumentStore, S3ReceiptDocumentStore>();
-        services.AddHttpClient<IReceiptExtractor, GeminiReceiptExtractor>(client => client.Timeout = TimeSpan.FromSeconds(50))
+        services.AddHttpClient<IReceiptExtractor, GeminiReceiptExtractor>(ReceiptTimeouts.ConfigureProviderClient)
             .RedactLoggedHeaders(["x-goog-api-key"]);
         return services;
     }

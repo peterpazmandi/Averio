@@ -13,8 +13,7 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
         ReceiptMetrics.QueueAgeSeconds.Record(Math.Max(0, (clock.GetUtcNow() - scan.CreatedAt).TotalSeconds));
         string? draft = null, failure = null;
         var transient = false;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        using var timeout = ReceiptTimeouts.CreateProcessingCancellation(ct);
         try
         {
             var bytes = await documents.GetAsync(scan.ObjectKey, timeout.Token);

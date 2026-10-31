@@ -68,8 +68,13 @@ try {
             if (pathname.endsWith('/receipt-scans')) {
                 if (req.method() === 'POST') {
                     uploads.push(req.postDataBuffer().toString());
-                    if (failUpload) { failUpload = false; return fail(503); }
-                    uploaded = true; return json(queued());
+                    if (failUpload) {
+                        // The server accepted the operation, but its response was lost.
+                        failUpload = false; uploaded = true; monthlyUsed++;
+                        return fail(503);
+                    }
+                    // Replaying the same operation returns the accepted scan without charging again.
+                    return json(queued());
                 }
                 if (failInbox) { failInbox = false; return fail(503); }
                 return json([ready(), ...(uploaded ? [queued()] : [])]);
@@ -188,10 +193,21 @@ try {
         await page.getByAltText(copy.selectedPhoto).waitFor();
         await page.screenshot({ path: path.join(artifacts, `photo-${language}-${dark}-${width}.png`), fullPage: true });
         await page.getByRole('button', { name: copy.upload, exact: true }).click();
+        await page.getByRole('button', { name: copy.retryUpload, exact: true }).waitFor();
+        const usedAfterAcceptance = monthlyUsed;
+        enabled = false;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.disabled, { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: copy.takePhoto, exact: true }).isDisabled(), true);
+        assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: copy.retryUpload, exact: true }).isEnabled(), true);
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();
         await page.getByText(copy.status.Queued, { exact: true }).waitFor();
         const operation = body => /name="operationId"\r\n\r\n([^\r]+)/.exec(body)?.[1];
         assert.equal(uploads.length, 2);
+        assert.equal(monthlyUsed, usedAfterAcceptance, 'Disabled-state recovery must not consume another scan.');
+        enabled = true;
         assert.ok(operation(uploads[0]));
         assert.equal(operation(uploads[0]), operation(uploads[1]), 'Upload retry must reuse its operation ID.');
         await page.getByRole('button', { name: copy.discard, exact: true }).click();
