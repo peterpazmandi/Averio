@@ -40,7 +40,8 @@ internal static class ReceiptRolloutVerification
         using (var scope = provider.CreateScope())
         {
             var handler = Handler(scope.ServiceProvider);
-            Check((await handler.GetAsync(f.HouseholdId, second.Id, default)).PossibleDuplicate, "Same uploader duplicate missing");
+            var duplicate = await handler.GetAsync(f.HouseholdId, second.Id, default);
+            Check(duplicate.PossibleDuplicate && duplicate.MatchingReceiptId == accepted.Id, "Same uploader duplicate link missing");
             Check((await handler.ListAsync(f.HouseholdId, 0, default)).Single(s => s.Id == accepted.Id).PossibleDuplicate, "Inbox duplicate missing");
         }
         user.UserId = f.MemberUserId;
@@ -72,3 +73,4 @@ internal static class ReceiptRolloutVerification
     private static async Task Reject<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
 }
+

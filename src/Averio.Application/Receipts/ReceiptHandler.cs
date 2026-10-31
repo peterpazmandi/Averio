@@ -82,7 +82,9 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     {
         var scan = await Find(household, id, ct);
         var duplicates = await receipts.DuplicateHashesAsync(household, scan.HouseholdMemberId, [scan.ContentHash], clock.GetUtcNow(), ct);
-        var mapped = Map(scan) with { PossibleDuplicate = duplicates.Contains(scan.ContentHash) };
+        var match = duplicates.Contains(scan.ContentHash)
+            ? await receipts.FindDuplicateAsync(household, scan.HouseholdMemberId, scan.Id, scan.ContentHash, clock.GetUtcNow(), ct) : null;
+        var mapped = Map(scan) with { PossibleDuplicate = match is not null, MatchingReceiptId = match?.Id };
         return categorization is null ? mapped : (await categorization.ApplyAsync(household, [mapped], ct))[0];
     }
     public async Task<byte[]> ImageAsync(Guid household, Guid id, CancellationToken ct)
@@ -139,4 +141,5 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     private static BusinessRuleException Invalid() => new("receipt_invalid", "Error_ReceiptInvalid");
     private static ConflictException Conflict() => new("receipt_changed", "Error_ReceiptChanged");
 }
+
 

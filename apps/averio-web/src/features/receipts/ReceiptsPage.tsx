@@ -9,6 +9,7 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { TransactionEditor } from '../transactions/components/TransactionEditor';
+import { createTransaction } from '../transactions/api/transactionApi';
 import type { TransactionInputDto } from '../transactions/api/transactionApi';
 import { receiptKeys, receiptQueries, receiptsApi } from './receiptQueries';
 
@@ -23,6 +24,8 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const [fileError, setFileError] = useState('');
     const [notice, setNotice] = useState('');
     const [review, setReview] = useState<ReceiptScanResult | null>(null);
+    const [manual, setManual] = useState<ReceiptScanResult | null>(null);
+    const [matching, setMatching] = useState<string | null>(null);
     const [photo, setPhoto] = useState<ReceiptScanResult | null>(null);
     const [discard, setDiscard] = useState<ReceiptScanResult | null>(null);
     const capabilities = useQuery(receiptQueries.capabilities(userId, householdId));
@@ -65,6 +68,14 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                 ...['transactions', 'accounts', 'dashboard', 'statistics', 'personal-money', 'activities']
                     .map(key => cache.invalidateQueries({ predicate: query => query.queryKey[0] === key && query.queryKey.includes(userId) && query.queryKey.includes(householdId) })),
             ]);
+        },
+    });
+    const manualSave = useMutation({
+        mutationFn: (request: TransactionInputDto) => createTransaction(householdId, request),
+        onSuccess: async () => {
+            setManual(null); setNotice(t('receipts.posted'));
+            await Promise.all(['transactions', 'accounts', 'dashboard', 'statistics', 'personal-money', 'activities']
+                .map(key => cache.invalidateQueries({ predicate: query => query.queryKey[0] === key && query.queryKey.includes(userId) && query.queryKey.includes(householdId) })));
         },
     });
     const quota = capabilities.data;
@@ -141,11 +152,18 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                 <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><h3 className="break-words font-bold">{scan.draft?.merchant || t('receipts.receipt')}</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-300">{new Date(scan.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)}</p></div>
                     <span className={'rounded-full px-3 py-1 text-xs font-semibold ' + (scan.status === 'Ready' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200')}>{t('receipts.status.' + scan.status, { defaultValue: t('receipts.status.Unknown') })}</span></div>
-                {scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')}</p>}
+                {scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={() => setMatching(scan.id)}>{t('receipts.viewMatch')}</AverioButton></p>}
                 {scan.status === 'Ready' && scan.draft && <p className="text-lg font-bold">{scan.draft.total ?? '—'} {scan.draft.currency}</p>}
                 {['Queued', 'Processing'].includes(scan.status) && <p className="text-sm" role="status">{t('receipts.processingHelp')}</p>}
                 {scan.status === 'Ready' && <p className="text-sm">{t('receipts.expires', { date: new Date(scan.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>}
-                {scan.status === 'Failed' && <p className="text-sm">{t('receipts.failedHelp')}</p>}
+                {scan.status === 'Failed' && <div className="grid gap-2">
+                    <p className="text-sm">{t(['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
+                    <p className="text-xs">{t('receipts.newScanCharge')}</p>
+                    <div className="flex flex-wrap gap-2">
+                        <AverioButton disabled={!canStartUpload || upload.isPending} onClick={() => input.current?.click()}>{t('receipts.anotherPhoto')}</AverioButton>
+                        <AverioButton onClick={() => { manualSave.reset(); setManual(scan); }}>{t('receipts.enterManually')}</AverioButton>
+                    </div>
+                </div>}
                 {scan.status === 'Uploading' && <p className="text-sm">{t('receipts.uploadRecovery')}</p>}
                 <div className="flex flex-wrap gap-2">
                     {scan.status === 'Ready' && scan.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(scan); }}>{t('receipts.review')}</AverioButton>}
@@ -160,9 +178,15 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         </ul>
         {inbox.hasNextPage && <AverioButton disabled={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()}>{t('receipts.loadMore')}</AverioButton>}
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
-            receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} />}
+            receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} />}
+            receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={review} buttonOnly />}
             onSaveReceipt={(request, currency, reviewedTotal, rememberCategoryRules) => post.mutateAsync({ scan: review, request, currency, reviewedTotal, rememberCategoryRules }).then(() => undefined)}
             busy={post.isPending} onCancel={() => setReview(null)} />}
+        {manual && <TransactionEditor key={'manual-' + manual.id} userId={userId} householdId={householdId} transaction={null}
+            receiptEvidence={<><p>{t('receipts.manualHelp')}</p><ReceiptPhoto householdId={householdId} scan={manual} /></>}
+            receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={manual} buttonOnly />}
+            onSave={request => manualSave.mutateAsync(request).then(() => undefined)} busy={manualSave.isPending} onCancel={() => setManual(null)} />}
+        {matching && <MatchingReceipt userId={userId} householdId={householdId} id={matching} onClose={() => setMatching(null)} />}
         {photo && <AverioDialog open title={t('receipts.viewPhoto')} closeLabel={t('common.actions.close')} onDismiss={() => setPhoto(null)} actions={<AverioButton onClick={() => setPhoto(null)}>{t('common.actions.close')}</AverioButton>}>
             <p className="mb-3 text-sm">{t('receipts.imageExpires', { date: new Date(photo.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>
             <ReceiptPhoto householdId={householdId} scan={photo} />
@@ -188,10 +212,10 @@ function SelectedReceipt({ file }: { file: File }) {
     </div>;
 }
 
-function ReceiptEvidence({ householdId, scan }: { householdId: string; scan: ReceiptScanResult }) {
+function ReceiptEvidence({ householdId, scan, onMatch }: { householdId: string; scan: ReceiptScanResult; onMatch: () => void }) {
     const { t } = useTranslation();
     return <div className="grid gap-3">
-        {scan.possibleDuplicate && <p role="alert" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')}</p>}
+        {scan.possibleDuplicate && <p role="alert" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={onMatch}>{t('receipts.viewMatch')}</AverioButton></p>}
         <ul className="space-y-1 text-sm text-amber-900 dark:text-amber-200">{scan.draft?.warnings.filter(warning => warning !== 'review_required').map(warning => <li key={warning}>{t('receipts.warnings.' + warning, { defaultValue: t('receipts.warnings.review_required') })}</li>)}</ul>
         <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><summary className="min-h-11 cursor-pointer py-3 font-semibold">{t('receipts.viewPhoto')}</summary>
         <ReceiptPhoto householdId={householdId} scan={scan} />
@@ -206,12 +230,51 @@ function ReceiptEvidence({ householdId, scan }: { householdId: string; scan: Rec
 }
 
 
-function ReceiptPhoto({ householdId, scan }: { householdId: string; scan: ReceiptScanResult }) {
+function ReceiptPhoto({ householdId, scan, buttonOnly = false }: { householdId: string; scan: ReceiptScanResult; buttonOnly?: boolean }) {
     const { t } = useTranslation();
     const [imageFailed, setImageFailed] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const [zoom, setZoom] = useState(100);
+    const src = `${API_BASE_URL}/api/v1/households/${encodeURIComponent(householdId)}/receipt-scans/${encodeURIComponent(scan.id)}/image`;
+    const retry = <p role="alert">{t('receipts.imageFailed')} <AverioButton onClick={() => setImageFailed(false)}>{t('receipts.retry')}</AverioButton></p>;
     return <>
-        {!imageFailed ? <img src={`${API_BASE_URL}/api/v1/households/${encodeURIComponent(householdId)}/receipt-scans/${encodeURIComponent(scan.id)}/image`}
-            alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => setImageFailed(true)} />
-            : <p role="alert">{t('receipts.imageFailed')} <AverioButton onClick={() => setImageFailed(false)}>{t('receipts.retry')}</AverioButton></p>}
+        {!buttonOnly && (!imageFailed ? <img src={src} alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => setImageFailed(true)} /> : retry)}
+        <AverioButton onClick={() => { setZoom(100); setExpanded(true); }}>{t('receipts.expandPhoto')}</AverioButton>
+        {expanded && <AverioDialog open wide title={t('receipts.expandPhoto')} closeLabel={t('common.actions.close')} onDismiss={() => setExpanded(false)}
+            actions={<AverioButton onClick={() => setExpanded(false)}>{t('common.actions.close')}</AverioButton>}>
+            <p>{t('receipts.zoomHelp')}</p>
+            <label className="my-3 flex flex-wrap items-center gap-3">{t('receipts.zoom')} · {zoom}%
+                <input type="range" min="100" max="400" step="25" value={zoom} aria-label={t('receipts.zoom')} onChange={event => setZoom(Number(event.target.value))} />
+            </label>
+            {!imageFailed ? <div className="max-h-[65dvh] overflow-auto" tabIndex={0} role="region" aria-label={t('receipts.imageAlt')}>
+                <img src={src} alt={t('receipts.imageAlt')} style={{ width: zoom + '%', maxWidth: 'none' }} onError={() => setImageFailed(true)} />
+            </div> : retry}
+        </AverioDialog>}
     </>;
 }
+
+function MatchingReceipt({ userId, householdId, id, onClose }: { userId: string; householdId: string; id: string; onClose: () => void }) {
+    const { t, i18n } = useTranslation();
+    const match = useQuery({
+        queryKey: [...receiptKeys.all(userId, householdId), 'match', id],
+        staleTime: 0,
+        queryFn: async ({ signal }) => {
+            const source = await receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdGet({ householdId, id }, { signal });
+            return source.matchingReceiptId ? receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdGet({ householdId, id: source.matchingReceiptId }, { signal }) : null;
+        },
+    });
+    return <AverioDialog open title={t('receipts.matchTitle')} closeLabel={t('common.actions.close')} onDismiss={onClose}
+        actions={<AverioButton onClick={onClose}>{t('common.actions.close')}</AverioButton>}>
+        {match.isPending && <p role="status">{t('common.status.loading')}</p>}
+        {match.isError && <p role="alert">{match.error.message} <AverioButton onClick={() => void match.refetch()}>{t('receipts.retry')}</AverioButton></p>}
+        {match.isSuccess && !match.data && <p>{t('receipts.noMatch')}</p>}
+        {match.data && <div className="grid gap-3">
+            <p className="font-bold">{match.data.draft?.merchant || t('receipts.receipt')}</p>
+            <p>{new Date(match.data.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)} · {t('receipts.status.' + match.data.status, { defaultValue: t('receipts.status.Unknown') })}</p>
+            {match.data.draft && <p>{match.data.draft.total} {match.data.draft.currency}</p>}
+            {match.data.imageAvailable && <ReceiptPhoto householdId={householdId} scan={match.data} />}
+            {match.data.postedTransactionId && <Link to="/app/transactions" search={{ transaction: match.data.postedTransactionId }} className="inline-flex min-h-11 items-center font-semibold text-emerald-700 dark:text-emerald-300">{t('receipts.openTransaction')}</Link>}
+        </div>}
+    </AverioDialog>;
+}
+

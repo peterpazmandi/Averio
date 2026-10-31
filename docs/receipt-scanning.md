@@ -149,3 +149,12 @@ dotnet run --project tools/Averio.ReceiptBenchmark -- --live /private/manifest.j
 The command makes billable calls, uses the production normalizer/extractor/validator, uses the same 50-second provider HTTP timeout and 60-second overall processing deadline as production, and checkpoints per-sample accuracy, latency and available token counts without image/provider text. It exits nonzero unless total/date accuracy is at least 95% **per language** and currency accuracy is 100%; ten-sample language groups therefore require all ten to pass. Errors count as incorrect. The tool does not automatically retry or resume; after interruption inspect the checkpoint before deciding whether to incur repeat charges. Empty category catalogues mean this runner checks extraction fields, not custom-category suggestion accuracy.
 
 Record the dated model/version, private results location, median/p95 latency, observed provider spend, correction time, item/discount/category review findings and operator sign-off. Passing field scores alone does not release the feature: validate privacy, duplicate warnings, quota boundaries, image cleanup, mobile capture and the existing accounting flow. Mark this gate complete only after that real run.
+
+
+### Review and recovery usability
+
+- Closing an edited receipt review asks whether to keep editing or discard corrections. Reload/closing the browser also warns while corrections are unsaved; corrections are not persisted as a saved draft.
+- A fixed-footer photo action opens a scrollable, zoomable viewer without resetting the review. The original extracted total stays visible beside reconciliation guidance, which reports the exact difference and marks invalid item amounts.
+- Duplicate details resolve a matching receipt through uploader-scoped queries (including recorded receipts whose photo has expired), and show its status/date and transaction link. Hashes are never exposed to the browser.
+- Failed scans offer a replacement-photo action and direct manual entry. Replacement scanning uses another allowance slot; manual entry does not. Manual entry creates an ordinary transaction and leaves the failed scan unchanged, as explained before entry. Provider failures do not imply a poor-quality photo.
+

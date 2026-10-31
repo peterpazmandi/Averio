@@ -3,7 +3,7 @@ import { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceipt
 import { getCategoryDisplayName } from '../categoryLocalization';
 import type { ReactNode } from 'react';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RecurringRuleResponse, SaveRecurringRuleRequest } from '../../../shared/api/generated';
 import { RecurringTimingFields } from '../../recurring/RecurringTimingFields';
 import { AverioField, AverioInput, AverioSelect, AverioTextarea } from '../../../shared/components/ui/AverioFormControls';
@@ -41,6 +41,7 @@ interface Props {
     initialKind?: TransactionKind;
     receiptDraft?: ReceiptDraft;
     receiptEvidence?: ReactNode;
+    receiptPhotoAction?: ReactNode;
     onSaveReceipt?: (request: TransactionInputDto, currency: string, reviewedTotal: string, rememberCategoryRules: RememberReceiptCategoryRequest[]) => Promise<void>;
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
@@ -105,7 +106,7 @@ export function TransactionEditor({
     transaction: initialTransaction,
     personalRelation,
     initialKind = 'Expense',
-    receiptDraft, receiptEvidence, onSaveReceipt,
+    receiptDraft, receiptEvidence, receiptPhotoAction, onSaveReceipt,
     recurringRule: initialRule,
     initialRecurring = false,
     onSaveRecurring,
@@ -324,6 +325,23 @@ export function TransactionEditor({
             : [...current, id]);
     }
 
+    const editSnapshot = JSON.stringify({ accountId, merchant, note, activityId, occurredOn, items, selectedLabelIds, visibility, receiptCurrency, reviewedTotal });
+    const [initialSnapshot] = useState(editSnapshot);
+    const dirty = Boolean(receiptDraft || receiptEvidence) && editSnapshot !== initialSnapshot;
+    const [confirmClose, setConfirmClose] = useState(false);
+    function dismiss() { if (dirty) setConfirmClose(true); else onCancel(); }
+    useEffect(() => {
+        if (!dirty) return;
+        const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+        window.addEventListener('beforeunload', warn);
+        return () => window.removeEventListener('beforeunload', warn);
+    }, [dirty]);
+    const validReceiptAmount = (value: string) => {
+        const normalized = normalizeReceiptAmount(value);
+        return normalized !== null && normalized !== '0' && !normalized.startsWith('-');
+    };
+    const difference = receiptDraft && validReceiptAmount(reviewedTotal) && resolvedItems.every(item => validReceiptAmount(item.amount))
+        ? subtractDecimalAmounts(total, normalizeReceiptAmount(reviewedTotal)!) : null;
     const receiptValid = !receiptDraft || (reviewConfirmed && receiptCurrency === currency && receiptReconciles(reviewedTotal, resolvedItems));
 
     function submittedAmount(value: string) {
@@ -435,7 +453,7 @@ export function TransactionEditor({
     </>;
 
     return <><AverioDialog open wide title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
-        closeLabel={t('common.actions.close')} busy={busy} onDismiss={onCancel}
+        closeLabel={t('common.actions.close')} busy={busy} onDismiss={dismiss}
         actions={<>
             {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
                 onClick={() => {
@@ -448,7 +466,8 @@ export function TransactionEditor({
                     void onVoid(transaction.updatedAt).catch(reason => setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
                 }
             }}>{t('transactionManagement.void')}</AverioButton>}
-            <AverioButton disabled={busy} onClick={onCancel}>{t('common.actions.cancel')}</AverioButton>
+            {receiptPhotoAction}
+            <AverioButton disabled={busy} onClick={dismiss}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
                 disabled={busy || !receiptValid || !resolvedAccountId || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
@@ -461,7 +480,7 @@ export function TransactionEditor({
                 if (receiptDraft && !(event.target instanceof HTMLInputElement
                     && event.target.name === 'receipt-review-confirmation')) setReviewConfirmed(false);
             }}>
-            {receiptDraft && <AverioCard className="grid gap-3">
+            {(receiptDraft || receiptEvidence) && <AverioCard className="grid gap-3">
                 <p className="text-sm">{t('receipts.reviewHelp')}</p>
                 {receiptEvidence}
             </AverioCard>}
@@ -553,7 +572,9 @@ export function TransactionEditor({
                     <div className="min-w-0">
                         <label htmlFor={item.key + '-amount'} className="mb-[7px] block text-[13px] font-semibold sm:sr-only">{t('transactionManagement.amount')} · {currency}</label>
                         <div className="flex min-w-0 gap-1">
-                            <AverioInput id={item.key + '-amount'} className="min-w-0" required inputMode="decimal" value={item.amount} disabled={busy}
+                            <AverioInput id={item.key + '-amount'} className="min-w-0" required
+                                aria-invalid={!!receiptDraft && !validReceiptAmount(item.amount)}
+                                aria-describedby={receiptDraft && !validReceiptAmount(item.amount) ? item.key + '-amount-error' : undefined} inputMode="decimal" value={item.amount} disabled={busy}
                                 onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" />
                             {canManagePersonalMoney(item) && <AverioButton size="icon" disabled={busy} aria-haspopup="dialog"
                                 aria-label={t('personalMoney.itemCharge') + ' · ' + (item.description || index + 1)}
@@ -563,6 +584,7 @@ export function TransactionEditor({
                                     : 'shrink-0'}
                                 onClick={() => setAllowanceItemKey(item.key)}><ConceptIcon name="savings" /></AverioButton>}
                         </div>
+                        {receiptDraft && !validReceiptAmount(item.amount) && <p id={item.key + '-amount-error'} className="mt-1 text-xs text-red-700 dark:text-red-300">{t('receipts.invalidItemAmount')}</p>}
                     </div>
                     <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
@@ -621,6 +643,9 @@ export function TransactionEditor({
                         value={reviewedTotal} disabled={busy} onChange={event => { setReviewedTotal(event.target.value); setReviewConfirmed(false); }} /></AverioField>
                     <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900"><p className="text-sm">{t('receipts.itemsTotal')}</p><p className="text-xl font-bold">{currency ? formatDecimalAmount(total, currency, language) : total}</p></div>
                 </div>
+                <p className="text-sm">{t('receipts.extractedTotal', { amount: receiptDraft.total ?? '—', currency: receiptDraft.currency ?? '' })}</p>
+                {difference !== null && difference !== '0' && <p role="status" className="font-semibold text-amber-900 dark:text-amber-200">{t(difference.startsWith('-') ? 'receipts.itemsBelow' : 'receipts.itemsAbove',
+                    { amount: formatDecimalAmount(difference.replace(/^-/, ''), receiptCurrency || 'EUR', language) })}</p>}
                 <p className={'rounded-xl p-3 text-sm ' + (receiptReconciles(reviewedTotal, resolvedItems) ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200')} role="status">{t(receiptReconciles(reviewedTotal, resolvedItems) ? 'receipts.reconciled' : 'receipts.reconcileHelp')}</p>
                 <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="receipt-review-confirmation" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
                     onChange={event => setReviewConfirmed(event.target.checked)} />{t('receipts.reviewConsent')}</label>
@@ -628,6 +653,10 @@ export function TransactionEditor({
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
     </AverioDialog>
+    {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}
+        actions={<><AverioButton onClick={() => setConfirmClose(false)}>{t('receipts.keepEditing')}</AverioButton><AverioButton variant="danger" onClick={onCancel}>{t('receipts.discardEdits')}</AverioButton></>}>
+        <p>{t('receipts.unsavedHelp')}</p>
+    </AverioDialog>}
     {allowanceItem && canManagePersonalMoney(allowanceItem) && <AverioDialog open title={t('personalMoney.itemAllocationTitle')}
         closeLabel={t('common.actions.close')} onDismiss={() => setAllowanceItemKey(null)} busy={busy}
         actions={<AverioButton variant="primary" onClick={() => setAllowanceItemKey(null)}>{t('common.actions.close')}</AverioButton>}>
@@ -654,4 +683,5 @@ export function TransactionEditor({
         </div>
     </AverioDialog>}</>;
 }
+
 

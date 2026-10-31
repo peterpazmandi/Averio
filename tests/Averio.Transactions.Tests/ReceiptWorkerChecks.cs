@@ -84,6 +84,7 @@ internal static class ReceiptWorkerChecks
         public Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public Task<int> CountMonthlyUploadsAsync(Guid h, DateTimeOffset start, DateTimeOffset end, CancellationToken ct) => throw new NotSupportedException();
         public Task<IReadOnlySet<string>> DuplicateHashesAsync(Guid h, Guid m, string[] hashes, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ReceiptScan?> FindDuplicateAsync(Guid h, Guid m, Guid id, string hash, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public Task<bool> DeletePostedImageAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public void Add(ReceiptScan row) => throw new NotSupportedException();
         public Task<ReceiptScan?> FindOperationAsync(Guid h, Guid m, Guid op, CancellationToken ct) => throw new NotSupportedException();
@@ -94,3 +95,4 @@ internal static class ReceiptWorkerChecks
         public Task<bool> DiscardAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
     }
 }
+

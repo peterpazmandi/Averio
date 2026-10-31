@@ -25,7 +25,7 @@ public sealed record ReceiptDraft(string? Merchant, string? Date, string? Curren
     string? Total, ReceiptLine[] Lines, string[] Warnings);
 public sealed record ReceiptScanResult(Guid Id, string Status, Guid Version, int Attempts,
     DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string? FailureCode, ReceiptDraft? Draft,
-    Guid? PostedTransactionId = null, bool ImageAvailable = false, bool PossibleDuplicate = false);
+    Guid? PostedTransactionId = null, bool ImageAvailable = false, bool PossibleDuplicate = false, Guid? MatchingReceiptId = null);
 public sealed record ReceiptCapabilities(bool Enabled, int MaxUploadBytes, int MonthlyLimit = 0,
     int MonthlyUsed = 0, DateTimeOffset? ResetsAt = null, int PostedImageRetentionDays = 0);
 public interface IReceiptImageNormalizer { Task<byte[]> NormalizeAsync(Stream input, CancellationToken ct); }
@@ -52,6 +52,7 @@ public interface IReceiptRepository
     Task<int> CountUploadsAsync(Guid household, Guid member, DateTimeOffset since, CancellationToken ct);
     Task<int> CountMonthlyUploadsAsync(Guid household, DateTimeOffset start, DateTimeOffset end, CancellationToken ct);
     Task<IReadOnlySet<string>> DuplicateHashesAsync(Guid household, Guid member, string[] hashes, DateTimeOffset now, CancellationToken ct);
+    Task<ReceiptScan?> FindDuplicateAsync(Guid household, Guid member, Guid id, string hash, DateTimeOffset now, CancellationToken ct);
     Task<bool> DeletePostedImageAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct);
     void Add(ReceiptScan scan);
     Task<bool> QueueAsync(Guid id, DateTimeOffset now, CancellationToken ct);
@@ -66,4 +67,5 @@ public interface IReceiptRepository
     Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct);
     Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct);
 }
+
 

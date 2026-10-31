@@ -28,7 +28,8 @@ try {
         const hasWallet = language === 'en' && width === 375 && !dark;
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
-        const errors = [], uploads = [], posts = [];
+        const errors = [], uploads = [], posts = [], manualPosts = [];
+        let showFailed = false;
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
         let failAccounts = language === 'en' && width === 375 && !dark;
         let uploaded = false, discarded = false, recorded = false, photoDeleted = false, monthlyUsed = 1;
@@ -39,7 +40,7 @@ try {
         }, { language, dark });
         const ready = () => ({ id: 'scan', status: recorded ? 'Posted' : 'Ready', version: 'version', attempts: 1,
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
-            postedTransactionId: recorded ? 'transaction' : null, imageAvailable: !photoDeleted, possibleDuplicate: true,
+            postedTransactionId: recorded ? 'transaction' : null, imageAvailable: !photoDeleted, possibleDuplicate: true, matchingReceiptId: 'original',
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
                 lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
@@ -55,6 +56,10 @@ try {
                 assert.equal(new URL(req.url()).searchParams.get('expectedVersion'), 'version');
                 photoDeleted = true; return route.fulfill({ status: 204 });
             }
+            if (pathname.endsWith('/receipt-scans/scan')) return json(ready());
+            if (pathname.endsWith('/receipt-scans/original')) return json({ ...ready(), id: 'original', status: 'Posted', draft: null, postedTransactionId: 'original-transaction' });
+            if (pathname.endsWith('/receipt-scans/original/image') || pathname.endsWith('/receipt-scans/failed/image')) return route.fulfill({ status: 200, contentType: 'image/png', body: png });
+            if (pathname.endsWith('/transactions') && req.method() === 'POST') { manualPosts.push(req.postDataJSON()); return json({ id: 'manual-transaction' }); }
             if (pathname.endsWith('/receipt-scans/scan/image')) return route.fulfill({ status: 200, contentType: 'image/png', body: png });
             if (pathname.endsWith('/receipt-scans/scan/transaction')) {
                 posts.push(req.postDataJSON());
@@ -77,7 +82,7 @@ try {
                     return json(queued());
                 }
                 if (failInbox) { failInbox = false; return fail(503); }
-                return json([ready(), ...(uploaded ? [queued()] : [])]);
+                return json([ready(), ...(uploaded ? [queued()] : []), ...(showFailed ? [{ ...ready(), id: 'failed', status: 'Failed', draft: null, postedTransactionId: null, failureCode: 'provider_unavailable', possibleDuplicate: false, imageAvailable: true }] : [])]);
             }
             if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
             if (pathname.endsWith('/accounts') && failAccounts) { failAccounts = false; return fail(503); }
@@ -99,6 +104,31 @@ try {
         if (language === 'en' && width === 375 && !dark) {
             await page.getByRole('button', { name: copy.retry, exact: true }).click();
         }
+        // Accidental dismissal must not silently erase reviewed values.
+        await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('8');
+        await page.getByText(copy.itemsAbove.replace('{{amount}}', new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(1)), { exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog', { name: copy.unsavedTitle, exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.keepEditing, exact: true }).click();
+        assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '8');
+        await page.locator('input[id$="-amount"]').fill('0');
+        assert.equal(await page.locator('input[id$="-amount"]').getAttribute('aria-invalid'), 'true');
+        await page.getByText(copy.invalidItemAmount, { exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: copy.discardEdits, exact: true }).click();
+        await page.getByRole('button', { name: copy.review, exact: true }).click();
+        assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '9.00');
+        // Photo inspection is reachable from the fixed editor footer.
+        await page.getByRole('button', { name: copy.expandPhoto, exact: true }).click();
+        const zoom = page.getByRole('slider', { name: copy.zoom, exact: true });
+        await zoom.focus(); await page.keyboard.press('End');
+        assert.equal(await zoom.inputValue(), '400');
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog', { name: copy.review, exact: true }).getByRole('button', { name: copy.viewMatch, exact: true }).click();
+        const matchDialog = page.getByRole('dialog', { name: copy.matchTitle, exact: true });
+        await matchDialog.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
+        assert.ok((await matchDialog.getByRole('link').getAttribute('href')).includes('original-transaction'));
+        await page.keyboard.press('Escape');
         async function assertItemAlignment() {
             if (width < 640) return;
             const rows = await page.locator('input[id$="-description"]').evaluateAll(inputs => inputs.map(input => {
@@ -231,9 +261,26 @@ try {
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.disabled, { exact: true }).waitFor();
         assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
+        showFailed = true;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.providerFailed, { exact: true }).waitFor();
+        await page.getByText(copy.newScanCharge, { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: copy.anotherPhoto, exact: true }).isDisabled(), true);
+        const beforeManual = monthlyUsed;
+        await page.getByRole('button', { name: copy.enterManually, exact: true }).click();
+        await page.getByText(copy.manualHelp, { exact: true }).waitFor();
+        await page.locator('input[id$="-description"]').fill('Manual groceries');
+        await page.locator('input[id$="-amount"]').fill('4.50');
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.getByText(copy.manualHelp, { exact: true }).waitFor({ state: 'hidden' });
+        assert.equal(manualPosts.length, 1);
+        assert.equal(manualPosts[0].items[0].amount, '4.50');
+        assert.equal(monthlyUsed, beforeManual, 'Manual recovery must not consume scan quota.');
+        assert.equal(uploads.length, 2);
         assert.deepEqual(errors, []);
         await page.close();
     }
     console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
+
 

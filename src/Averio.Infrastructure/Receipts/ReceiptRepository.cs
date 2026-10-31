@@ -20,6 +20,12 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
                 && (x.Status == ReceiptScanStatus.Posted || (x.ExpiresAt > now
                     && (x.Status == ReceiptScanStatus.Queued || x.Status == ReceiptScanStatus.Processing || x.Status == ReceiptScanStatus.Ready))))
             .GroupBy(x => x.ContentHash).Where(g => g.Count() > 1).Select(g => g.Key).ToListAsync(ct)).ToHashSet();
+    public Task<ReceiptScan?> FindDuplicateAsync(Guid h, Guid m, Guid id, string hash, DateTimeOffset now, CancellationToken ct)
+        => Owned(h, m).Where(x => x.Id != id && x.ContentHash == hash
+                && (x.Status == ReceiptScanStatus.Posted || (x.ExpiresAt > now
+                    && (x.Status == ReceiptScanStatus.Queued || x.Status == ReceiptScanStatus.Processing || x.Status == ReceiptScanStatus.Ready))))
+            .OrderByDescending(x => x.Status == ReceiptScanStatus.Posted).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id)
+            .FirstOrDefaultAsync(ct);
     public async Task<bool> DeletePostedImageAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version
                 && x.Status == ReceiptScanStatus.Posted && x.CreatedAt < now && x.ExpiresAt > now)
@@ -115,3 +121,4 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && (x.Status == ReceiptScanStatus.Discarded || x.Status == ReceiptScanStatus.Posted))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.DocumentDeletedAt, now), ct);
 }
+
