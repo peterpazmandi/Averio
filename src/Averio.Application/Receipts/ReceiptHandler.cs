@@ -12,11 +12,14 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     public async Task<ReceiptCapabilities> CapabilitiesAsync(Guid household, CancellationToken ct)
     {
         _ = await Authorize(household, ct);
-        return new(options.Enabled, ReceiptOptions.MaxUploadBytes);
+        var now = clock.GetUtcNow();
+        var start = ReceiptOptions.MonthStart(now);
+        return new(options.Enabled, ReceiptOptions.MaxUploadBytes, options.MonthlyLimit(household, now),
+            await receipts.CountMonthlyUploadsAsync(household, start, start.AddMonths(1), ct), start.AddMonths(1),
+            options.RetainPostedImages ? options.PostedImageRetentionDays : 0);
     }
     public async Task<ReceiptScanResult> UploadAsync(Guid household, Guid operation, Stream input, CancellationToken ct)
     {
-        if (!options.Enabled) throw new BusinessRuleException("receipt_disabled", "Error_ReceiptDisabled");
         _ = await Authorize(household, ct);
         if (operation == Guid.Empty) throw Invalid();
         var image = await images.NormalizeAsync(input, ct);
@@ -32,14 +35,22 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
                 if (previous.ContentHash != hash) throw Conflict();
                 return Map(previous);
             }
+            if (!options.Enabled) throw new BusinessRuleException("receipt_disabled", "Error_ReceiptDisabled");
             var now = clock.GetUtcNow();
+            var start = ReceiptOptions.MonthStart(now);
+            if (await receipts.CountMonthlyUploadsAsync(household, start, start.AddMonths(1), ct) >= options.MonthlyLimit(household, now))
+            {
+                ReceiptMetrics.Uploads.Add(1, new KeyValuePair<string, object?>("outcome", "monthly_limit"));
+                throw new BusinessRuleException("receipt_monthly_limit", "Error_ReceiptMonthlyLimit");
+            }
             if (await receipts.CountUploadsAsync(household, member, now.AddDays(-1), ct) >= options.DailyUploadLimit)
                 throw new BusinessRuleException("receipt_limit", "Error_ReceiptLimit");
-            scan = ReceiptScan.Create(household, member, operation, hash, image.Length, now);
+            scan = ReceiptScan.Create(household, member, operation, hash, image.Length, now, options.RetainPostedImages);
             receipts.Add(scan);
             await uow.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         }
+        ReceiptMetrics.Uploads.Add(1, new KeyValuePair<string, object?>("outcome", "admitted"));
         // No database locks across external I/O. Worker cleans abandoned uploads.
         // Anchor the write deadline to the durable record, not to process resumption.
         // Cleanup waits five minutes from creation, including for discarded uploads.
@@ -62,12 +73,16 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     {
         if (skip < 0 || skip > 10000) throw Invalid();
         var member = await Authorize(household, ct);
-        var mapped = (await receipts.ListAsync(household, member, skip, ct)).Select(Map).ToArray();
+        var rows = await receipts.ListAsync(household, member, skip, ct);
+        var duplicates = await receipts.DuplicateHashesAsync(household, member, rows.Select(x => x.ContentHash).Distinct().ToArray(), clock.GetUtcNow(), ct);
+        var mapped = rows.Select(x => Map(x) with { PossibleDuplicate = duplicates.Contains(x.ContentHash) }).ToArray();
         return categorization is null ? mapped : await categorization.ApplyAsync(household, mapped, ct);
     }
     public async Task<ReceiptScanResult> GetAsync(Guid household, Guid id, CancellationToken ct)
     {
-        var mapped = Map(await Find(household, id, ct));
+        var scan = await Find(household, id, ct);
+        var duplicates = await receipts.DuplicateHashesAsync(household, scan.HouseholdMemberId, [scan.ContentHash], clock.GetUtcNow(), ct);
+        var mapped = Map(scan) with { PossibleDuplicate = duplicates.Contains(scan.ContentHash) };
         return categorization is null ? mapped : (await categorization.ApplyAsync(household, [mapped], ct))[0];
     }
     public async Task<byte[]> ImageAsync(Guid household, Guid id, CancellationToken ct)
@@ -83,6 +98,16 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
         if (current.Status == ReceiptScanStatus.Discarded || current.ExpiresAt <= clock.GetUtcNow())
             throw new NotFoundException("receipt", id);
         return bytes;
+    }
+    public async Task DeleteImageAsync(Guid household, Guid id, Guid version, CancellationToken ct)
+    {
+        await using var tx = await uow.BeginTransactionAsync(ct);
+        var scan = await Find(household, id, ct);
+        if (scan.Status != ReceiptScanStatus.Posted) throw Conflict();
+        // A retry after expiry/deletion is already satisfied, independent of the old version.
+        if (scan.DocumentDeletedAt is not null || scan.ExpiresAt <= clock.GetUtcNow()) return;
+        if (!await receipts.DeletePostedImageAsync(scan.Id, version, clock.GetUtcNow(), ct)) throw Conflict();
+        await tx.CommitAsync(ct);
     }
     public async Task DiscardAsync(Guid household, Guid id, Guid version, CancellationToken ct)
     {
@@ -108,7 +133,8 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
         return new(scan.Id, expired && scan.Status != ReceiptScanStatus.Posted ? "Expired" : scan.Status.ToString(), scan.Version, scan.Attempts,
             scan.CreatedAt, scan.ExpiresAt, scan.FailureCode,
             !expired && scan.Status == ReceiptScanStatus.Ready && scan.DraftJson is not null
-                ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null, scan.PostedTransactionId);
+                ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null, scan.PostedTransactionId,
+            !expired && scan.DocumentDeletedAt is null && scan.Status is not (ReceiptScanStatus.Discarded or ReceiptScanStatus.Uploading));
     }
     private static BusinessRuleException Invalid() => new("receipt_invalid", "Error_ReceiptInvalid");
     private static ConflictException Conflict() => new("receipt_changed", "Error_ReceiptChanged");

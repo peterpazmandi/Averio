@@ -95,6 +95,11 @@ public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiRecei
         try
         {
             using var json = JsonDocument.Parse(limited.ToArray());
+            if (json.RootElement.TryGetProperty("usageMetadata", out var usage) && usage.ValueKind == JsonValueKind.Object)
+                foreach (var field in new[] { "promptTokenCount", "candidatesTokenCount", "thoughtsTokenCount" })
+                    if (usage.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.Number
+                        && value.TryGetInt64(out var count) && count >= 0)
+                        ReceiptMetrics.Tokens.Add(count, new KeyValuePair<string, object?>("kind", field));
             var candidate = json.RootElement.GetProperty("candidates")[0];
             if (candidate.GetProperty("finishReason").GetString() != "STOP") throw Invalid();
             var text = string.Concat(candidate.GetProperty("content").GetProperty("parts").EnumerateArray()

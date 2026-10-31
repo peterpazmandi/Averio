@@ -31,7 +31,7 @@ try {
         const errors = [], uploads = [], posts = [];
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
         let failAccounts = language === 'en' && width === 375 && !dark;
-        let uploaded = false, discarded = false, recorded = false;
+        let uploaded = false, discarded = false, recorded = false, photoDeleted = false, monthlyUsed = 1;
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -39,7 +39,7 @@ try {
         }, { language, dark });
         const ready = () => ({ id: 'scan', status: recorded ? 'Posted' : 'Ready', version: 'version', attempts: 1,
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
-            postedTransactionId: recorded ? 'transaction' : null,
+            postedTransactionId: recorded ? 'transaction' : null, imageAvailable: !photoDeleted, possibleDuplicate: true,
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
                 lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
@@ -50,7 +50,11 @@ try {
             const fail = status => route.fulfill({ status, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Please retry', detail: 'Please retry', status }) });
             if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
             if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
-            if (pathname.endsWith('/receipt-scans/capabilities')) return json({ enabled, maxUploadBytes: 10485760 });
+            if (pathname.endsWith('/receipt-scans/capabilities')) return json({ enabled, maxUploadBytes: 10485760, monthlyLimit: 10, monthlyUsed, resetsAt: "2026-11-01T00:00:00Z", postedImageRetentionDays: 365 });
+            if (pathname.endsWith('/receipt-scans/scan/image') && req.method() === 'DELETE') {
+                assert.equal(new URL(req.url()).searchParams.get('expectedVersion'), 'version');
+                photoDeleted = true; return route.fulfill({ status: 204 });
+            }
             if (pathname.endsWith('/receipt-scans/scan/image')) return route.fulfill({ status: 200, contentType: 'image/png', body: png });
             if (pathname.endsWith('/receipt-scans/scan/transaction')) {
                 posts.push(req.postDataJSON());
@@ -194,6 +198,19 @@ try {
         await page.getByRole('button', { name: copy.discard, exact: true }).last().click();
         await page.getByText(copy.status.Discarded, { exact: true }).waitFor();
         assert.equal(posts.length, 2, 'Upload and discard never post financial records.');
+        monthlyUsed = 10;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.quotaExhausted, { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
+        await page.getByRole('button', { name: copy.viewPhoto, exact: true }).click();
+        await page.getByRole('dialog').getByAltText(copy.imageAlt).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: copy.deletePhoto, exact: true }).click();
+        await page.getByRole('dialog').getByText(copy.deletePhotoHelp, { exact: true }).waitFor();
+        await page.getByRole('dialog').getByRole('button', { name: copy.deletePhoto, exact: true }).click();
+        await page.getByRole('button', { name: copy.viewPhoto, exact: true }).waitFor({ state: 'hidden' });
+        await page.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
+        assert.equal(posts.length, 2, 'Deleting a photo must not post or delete an expense.');
         enabled = false;
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.disabled, { exact: true }).waitFor();

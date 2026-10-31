@@ -9,6 +9,8 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
         if (!options.Enabled) return false;
         var scan = await receipts.ClaimAsync(clock.GetUtcNow(), ct);
         if (scan is null) return false;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        ReceiptMetrics.QueueAgeSeconds.Record(Math.Max(0, (clock.GetUtcNow() - scan.CreatedAt).TotalSeconds));
         string? draft = null, failure = null;
         var transient = false;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -32,7 +34,11 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
         catch (ReceiptExtractionException ex) { failure = ex.Code; transient = ex.Transient; }
         catch (Exception) { failure = "processing_failed"; transient = true; }
         if (failure is not null) draft = null;
-        await receipts.FinishAsync(scan.Id, scan.LeaseToken!.Value, clock.GetUtcNow(), draft, failure, transient, ct);
+        var accepted = await receipts.FinishAsync(scan.Id, scan.LeaseToken!.Value, clock.GetUtcNow(), draft, failure, transient, ct);
+        var outcome = !accepted ? "fenced" : draft is not null ? "ready" : transient && scan.Attempts < ReceiptOptions.MaxAttempts ? "retry" : "failed";
+        ReceiptMetrics.Extractions.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
+        ReceiptMetrics.ProcessingSeconds.Record(System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalSeconds,
+            new KeyValuePair<string, object?>("outcome", outcome));
         return true;
     }
     public async Task<int> CleanupAsync(CancellationToken ct)
@@ -48,11 +54,13 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
             {
                 await documents.DeleteAsync(scan.ObjectKey, timeout.Token);
                 await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
+                ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "deleted"));
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception)
             {
                 failures++;
+                ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "retry"));
                 // A poisoned object must not monopolize the oldest-first batch.
                 await receipts.DeferCleanupAsync(scan.Id, clock.GetUtcNow().AddMinutes(1), ct);
             }

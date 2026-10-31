@@ -52,6 +52,12 @@ public sealed class ReceiptsController(ReceiptHandler handler, PostReceiptHandle
         Response.Headers.XContentTypeOptions = "nosniff";
         return File(bytes, "image/jpeg");
     }
+    [HttpDelete("{id:guid}/image")]
+    public async Task<IActionResult> DeleteImage(Guid householdId, Guid id, [FromQuery, BindRequired] Guid expectedVersion, CancellationToken ct)
+    {
+        await handler.DeleteImageAsync(householdId, id, expectedVersion, ct);
+        return NoContent();
+    }
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Discard(Guid householdId, Guid id, [FromQuery, BindRequired] Guid expectedVersion, CancellationToken ct)
     {

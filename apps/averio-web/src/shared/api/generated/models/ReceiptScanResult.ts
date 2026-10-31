@@ -63,6 +63,14 @@ export interface ReceiptScanResult {
      * 
      */
     postedTransactionId?: string | null;
+    /**
+     * 
+     */
+    imageAvailable?: boolean;
+    /**
+     * 
+     */
+    possibleDuplicate?: boolean;
 }
 
 /**
@@ -99,6 +107,8 @@ export function ReceiptScanResultFromJSONTyped(json: any, ignoreDiscriminator: b
         'failureCode': json['failureCode'],
         'draft': ReceiptDraftFromJSON(json['draft']),
         'postedTransactionId': json['postedTransactionId'] === undefined ? undefined : json['postedTransactionId'] === null ? null : json['postedTransactionId'],
+        'imageAvailable': json['imageAvailable'] == null ? undefined : json['imageAvailable'],
+        'possibleDuplicate': json['possibleDuplicate'] == null ? undefined : json['possibleDuplicate'],
     };
 }
 
@@ -122,6 +132,8 @@ export function ReceiptScanResultToJSONTyped(value?: ReceiptScanResult | null, i
         'failureCode': value['failureCode'],
         'draft': ReceiptDraftToJSON(value['draft']),
         'postedTransactionId': value['postedTransactionId'],
+        'imageAvailable': value['imageAvailable'],
+        'possibleDuplicate': value['possibleDuplicate'],
     };
 }
 

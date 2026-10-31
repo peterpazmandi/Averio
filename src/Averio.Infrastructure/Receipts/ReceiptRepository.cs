@@ -4,7 +4,7 @@ using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 namespace Averio.Infrastructure.Receipts;
 
-public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
+public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? options = null) : IReceiptRepository
 {
     private IQueryable<ReceiptScan> Owned(Guid h, Guid m) => db.Set<ReceiptScan>().AsNoTracking()
         .Where(x => x.HouseholdId == h && x.HouseholdMemberId == m
@@ -13,6 +13,18 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
         => Owned(h,m).SingleOrDefaultAsync(x => x.OperationId == op, ct);
     public Task<int> CountUploadsAsync(Guid h, Guid m, DateTimeOffset since, CancellationToken ct)
         => Owned(h,m).CountAsync(x => x.CreatedAt >= since, ct);
+    public Task<int> CountMonthlyUploadsAsync(Guid h, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
+        => db.Set<ReceiptScan>().CountAsync(x => x.HouseholdId == h && x.CreatedAt >= start && x.CreatedAt < end, ct);
+    public async Task<IReadOnlySet<string>> DuplicateHashesAsync(Guid h, Guid m, string[] hashes, DateTimeOffset now, CancellationToken ct)
+        => (await Owned(h, m).Where(x => hashes.Contains(x.ContentHash)
+                && (x.Status == ReceiptScanStatus.Posted || (x.ExpiresAt > now
+                    && (x.Status == ReceiptScanStatus.Queued || x.Status == ReceiptScanStatus.Processing || x.Status == ReceiptScanStatus.Ready))))
+            .GroupBy(x => x.ContentHash).Where(g => g.Count() > 1).Select(g => g.Key).ToListAsync(ct)).ToHashSet();
+    public async Task<bool> DeletePostedImageAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct)
+        => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Version == version
+                && x.Status == ReceiptScanStatus.Posted && x.CreatedAt < now && x.ExpiresAt > now)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ExpiresAt, now).SetProperty(x => x.NextAttemptAt, now)
+                .SetProperty(x => x.UpdatedAt, now).SetProperty(x => x.Version, Guid.NewGuid()), ct) == 1;
     public void Add(ReceiptScan scan) => db.Add(scan);
     public async Task<bool> QueueAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Uploading
@@ -34,6 +46,9 @@ public sealed class ReceiptRepository(AverioDbContext db) : IReceiptRepository
                 && x.Status == ReceiptScanStatus.Ready && x.ExpiresAt > now && x.DocumentDeletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Posted)
                 .SetProperty(x => x.PostedTransactionId, transactionId).SetProperty(x => x.ConfirmationFingerprint, confirmationFingerprint)
+                // Only the new prefix is outside the legacy eight-day S3 lifecycle.
+                .SetProperty(x => x.ExpiresAt, x => x.ObjectKey.StartsWith("receipt-images/")
+                    ? now.AddDays(options == null ? 365 : options.PostedImageRetentionDays) : x.ExpiresAt)
                 .SetProperty(x => x.DraftJson, (string?)null)
                 .SetProperty(x => x.Version, Guid.NewGuid()).SetProperty(x => x.UpdatedAt, now), ct) == 1;
     public async Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct)

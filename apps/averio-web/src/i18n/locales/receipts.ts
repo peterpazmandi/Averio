@@ -1,4 +1,15 @@
 export const receiptsEN = {
+    quota: "Household scans this month: {{used}} / {{limit}}",
+    quotaReset: "Allowance resets on {{date}}.",
+    quotaExhausted: "Monthly allowance used. You can still review receipts and open saved photos.",
+    quotaHelp: "Each accepted upload uses one scan, including failed or discarded scans. Retrying the same upload uses no extra scan. The allowance is shared by your household.",
+    retentionHelp: "New receipt photos are kept for {{days}} days after confirmation. Only you can view or delete them.",
+    temporaryHelp: "Receipt photos are temporary and expire seven days after upload, including after confirmation.",
+    duplicate: "Possible duplicate: the same photo is already in your inbox or recorded receipts. Check before recording another expense. Different photos of the same receipt may not be detected.",
+    deletePhoto: "Delete saved photo",
+    deletePhotoHelp: "Remove access to this photo now. The expense and its items stay unchanged. Permanent image deletion runs in the background.",
+    imageExpires: "This private photo is available until {{date}}.",
+
     howItWorks: "From receipt to expense",
     photoStep: "Add a photo",
     reviewStep: "Check the details",
@@ -46,6 +57,17 @@ export const receiptsEN = {
     warnings: { review_required: 'Check all extracted details before recording.', date_uncertain: 'The printed date is ambiguous. Enter the correct date.', date_missing: 'A date could not be determined.', currency_needs_review: 'Choose the correct supported currency.', total_needs_review: 'Enter the correct receipt total.', items_incomplete: 'Some item amounts could not be read. Check every item.' },
 };
 export const receiptsDE: typeof receiptsEN = {
+    quota: "Haushaltsscans diesen Monat: {{used}} / {{limit}}",
+    quotaReset: "Das Kontingent wird am {{date}} zurückgesetzt.",
+    quotaExhausted: "Monatliches Kontingent aufgebraucht. Du kannst weiterhin Belege prüfen und gespeicherte Fotos öffnen.",
+    quotaHelp: "Jeder angenommene Upload verbraucht einen Scan, auch bei Fehlern oder verworfenen Belegen. Ein erneuter Versuch desselben Uploads kostet keinen weiteren Scan. Das Kontingent gilt für den gesamten Haushalt.",
+    retentionHelp: "Neue Belegfotos bleiben nach der Bestätigung {{days}} Tage gespeichert. Nur du kannst sie ansehen oder löschen.",
+    temporaryHelp: "Belegfotos sind vorübergehend und laufen sieben Tage nach dem Upload ab, auch nach der Bestätigung.",
+    duplicate: "Mögliches Duplikat: Dasselbe Foto ist bereits in deinem Posteingang oder in deinen erfassten Belegen. Prüfe dies vor einer weiteren Buchung. Andere Fotos desselben Belegs werden möglicherweise nicht erkannt.",
+    deletePhoto: "Gespeichertes Foto löschen",
+    deletePhotoHelp: "Entferne jetzt den Zugriff auf dieses Foto. Die Ausgabe und ihre Posten bleiben unverändert. Das Bild wird im Hintergrund endgültig gelöscht.",
+    imageExpires: "Dieses private Foto ist bis zum {{date}} verfügbar.",
+
     howItWorks: "Vom Beleg zur Ausgabe",
     photoStep: "Foto hinzufügen",
     reviewStep: "Angaben prüfen",
@@ -93,6 +115,17 @@ export const receiptsDE: typeof receiptsEN = {
     warnings: { review_required: 'Prüfe alle erkannten Angaben vor dem Buchen.', date_uncertain: 'Das gedruckte Datum ist mehrdeutig. Trage das richtige Datum ein.', date_missing: 'Es konnte kein Datum ermittelt werden.', currency_needs_review: 'Wähle die richtige unterstützte Währung.', total_needs_review: 'Trage den richtigen Gesamtbetrag ein.', items_incomplete: 'Einige Postenbeträge waren nicht lesbar. Prüfe jeden Posten.' },
 };
 export const receiptsHU: typeof receiptsEN = {
+    quota: "A háztartás szkennelései ebben a hónapban: {{used}} / {{limit}}",
+    quotaReset: "A keret újraindul: {{date}}.",
+    quotaExhausted: "Elfogyott a havi keret. A nyugtákat továbbra is ellenőrizheted, a mentett fotókat pedig megnyithatod.",
+    quotaHelp: "Minden elfogadott feltöltés egy szkennelést használ fel, a sikertelen és elvetett nyugták is. Ugyanannak a feltöltésnek az újrapróbálása nem használ újabb keretet. A keret közös a háztartásban.",
+    retentionHelp: "Az új nyugtafotókat a megerősítés után {{days}} napig tároljuk. Csak te nézheted meg és törölheted őket.",
+    temporaryHelp: "A nyugtafotók ideiglenesek: a feltöltéstől számított hét nap után lejárnak, megerősítés után is.",
+    duplicate: "Lehetséges ismétlődés: ugyanez a fotó már szerepel a beérkezett vagy rögzített nyugtáid között. Ellenőrizd, mielőtt újabb kiadást rögzítesz. Ugyanarról a nyugtáról készült más fotót nem feltétlenül ismerünk fel.",
+    deletePhoto: "Mentett fotó törlése",
+    deletePhotoHelp: "A fotó elérése azonnal megszűnik. A kiadás és a tételei változatlanok maradnak. A kép végleges törlése a háttérben történik.",
+    imageExpires: "Ezt a privát fotót eddig érheted el: {{date}}.",
+
     howItWorks: "Nyugtából kiadás",
     photoStep: "Adj hozzá fotót",
     reviewStep: "Ellenőrizd az adatokat",

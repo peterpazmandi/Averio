@@ -356,6 +356,7 @@
   <data name="Error_ReceiptReconciliation" xml:space="preserve"><value>Gleiche den geprüften Gesamtbetrag vor der Bestätigung mit allen Buchungsposten ab.</value></data>
   <data name="Error_ReceiptCurrency" xml:space="preserve"><value>Die geprüfte Belegwährung muss mit dem gewählten Konto übereinstimmen.</value></data>
   <data name="Error_ReceiptCategoryRuleInvalid" xml:space="preserve"><value>Prüfe die Kategorien für Haushaltsregeln. Wähle einen gültigen Artikel und eine aktive Ausgabenkategorie.</value></data>
+  <data name="Error_ReceiptMonthlyLimit" xml:space="preserve"><value>Das monatliche Belegscan-Kontingent deines Haushalts ist aufgebraucht. Es wird am Anfang des nächsten UTC-Monats zurückgesetzt. Vorhandene Belege bleiben verfügbar.</value></data>
 </root>
 
 

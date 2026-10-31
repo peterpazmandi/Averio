@@ -31,12 +31,12 @@ internal static class ReceiptPostingVerification
         var command = new CreateTransactionCommand(f.HouseholdId, accountId, TransactionKind.Expense,
             TransactionVisibility.Household, "Reviewed shop", null, DateOnly.FromDateTime(now.UtcDateTime),
             [new TransactionItemInput("Reviewed item", category, 9m)], []);
-        async Task<ReceiptScan> Draft(string status = "Ready", bool expired = false)
+        async Task<ReceiptScan> Draft(string status = "Ready", bool expired = false, bool retainable = false)
         {
             using var scope = provider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             var row = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), new string('a', 64), 1,
-                expired ? now.AddDays(-8) : now);
+                expired ? now.AddDays(-8) : now, retainable);
             db.Add(row); await db.SaveChangesAsync();
             string? draft = status == "Ready" ? JsonSerializer.Serialize(new ReceiptDraft("Shop", null, "EUR", "9", [new("TS KEFIR 175G", "9", "Item")], [])) : null;
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE receipt_scans SET status = {status}, draft_json = {draft} WHERE id = {row.Id}");
@@ -214,6 +214,31 @@ internal static class ReceiptPostingVerification
         // Upsert the same match through a later explicit confirmation; old replay must not reapply rules.
         var later = await Post(nextScan, rules: [new(0, 0)]);
         Check(later != ruleResults[0] && await Post(ruleScan, rules: [new(0, 0)]) == ruleResults[0], "rule retry changed posting identity");
+        var retained = await Draft(retainable: true);
+        var retainedId = await Post(retained);
+        var financialState = await Fingerprint();
+        clock.Advance(TimeSpan.FromMinutes(6));
+        try
+        {
+            using var scope = provider.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IReceiptRepository>();
+            var handler = scope.ServiceProvider.GetRequiredService<ReceiptHandler>();
+            var saved = await handler.GetAsync(f.HouseholdId, retained.Id, default);
+            Check(saved.ImageAvailable && saved.ExpiresAt == now.AddDays(365), "Posted image retention was not extended");
+            Check(!await repo.ExpireAsync(retained.Id, now.AddDays(8), default), "Temporary cleanup deleted retained image");
+            user.UserId = f.MemberUserId;
+            await Reject<NotFoundException>(() => handler.DeleteImageAsync(f.HouseholdId, retained.Id, saved.Version, default));
+            user.UserId = f.OwnerUserId;
+            await Reject<ConflictException>(() => handler.DeleteImageAsync(f.HouseholdId, retained.Id, Guid.NewGuid(), default));
+            await handler.DeleteImageAsync(f.HouseholdId, retained.Id, saved.Version, default);
+            await handler.DeleteImageAsync(f.HouseholdId, retained.Id, saved.Version, default);
+            Check(!(await handler.GetAsync(f.HouseholdId, retained.Id, default)).ImageAvailable, "Deleted image still advertised");
+            await Reject<NotFoundException>(() => handler.ImageAsync(f.HouseholdId, retained.Id, default));
+            Check(await repo.ExpireAsync(retained.Id, clock.GetUtcNow(), default), "Image deletion was not scheduled");
+            await repo.MarkDocumentDeletedAsync(retained.Id, clock.GetUtcNow(), default);
+            Check(await Post(retained) == retainedId && financialState == await Fingerprint(), "Photo deletion modified the ledger or broke replay");
+        }
+        finally { clock.Advance(TimeSpan.FromMinutes(-6)); }
         Console.WriteLine("PASS receipt posting privacy, reconciliation, rollback, concurrency, replay, cleanup and household category rules");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }

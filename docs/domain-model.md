@@ -363,3 +363,7 @@ See [ADR-029](decisions/ADR-029-personal-money-entitlements-funding-attribution.
 A RecurringRule belongs to one household member and account, with a category, exact decimal amount, income/expense kind, transaction visibility, original date, cadence, optional end date and version. Rule visibility is always personal. Its next date is derived from the original anchor and occurrence index. Pause retains dates; stop is terminal.
 
 A RecurringOccurrence receipt is uniquely identified by rule/date and belongs to the same household. A recorded receipt references a ledger transaction and original recorded amount; a skipped receipt references neither. The receipt, ledger, aggregates and next date commit atomically. Correcting or voiding a transaction never reopens its receipt. History filters current transaction visibility.
+
+## Receipt rollout controls (PR 3)
+
+Household UTC monthly receipt allowances, time-bounded operator-managed paid entitlements, uploader-only exact-photo duplicate warnings, opt-in retained posted photos and content-free metrics are implemented. Posted-photo deletion preserves the financial transaction and immutable confirmation identity. No new schema migration is needed. See [ADR-037](decisions/ADR-037-receipt-rollout-quotas-and-retention.md) and [rollout/benchmark instructions](receipt-scanning.md). Real provider accuracy and production storage checks remain release gates; checkout/billing is not implemented.

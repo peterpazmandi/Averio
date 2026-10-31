@@ -11,6 +11,9 @@ public static class ReceiptServices
     public static IServiceCollection AddReceiptServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddOptions<ReceiptOptions>().Bind(config.GetSection("Receipts"))
+            .Validate(x => x.FreeMonthlyLimit is >= 0 and <= 10000 && x.PaidMonthlyLimit >= x.FreeMonthlyLimit
+                && x.PaidMonthlyLimit <= 10000 && x.PostedImageRetentionDays is >= 1 and <= 365
+                && x.PaidHouseholds.Keys.All(id => id != Guid.Empty), "Invalid receipt quota or retention configuration.")
             .Validate(x => x.DailyUploadLimit is >= 1 and <= 100, "Receipt upload limit must be between 1 and 100.").ValidateOnStart();
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ReceiptOptions>>().Value);
         services.AddOptions<ReceiptStorageOptions>().Bind(config.GetSection("Receipts:Storage"))
