@@ -4,6 +4,8 @@ using Averio.Infrastructure.Receipts;
 using Averio.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 
 internal static class ReceiptWorkerChecks
@@ -15,11 +17,13 @@ internal static class ReceiptWorkerChecks
             var repository = new Repository(failCleanupRead);
             var documents = new Documents();
             var options = new ReceiptOptions { Enabled = true };
+            var processingLog = new Capture<ReceiptProcessor>();
+            var workerLog = new Capture<ReceiptWorker>();
             using var services = new ServiceCollection()
-                .AddScoped(_ => new ReceiptProcessor(repository, documents, new Extractor(), options, TimeProvider.System))
+                .AddScoped(_ => new ReceiptProcessor(repository, documents, new Extractor(), options, TimeProvider.System, logger: processingLog))
                 .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
             using var worker = new ReceiptWorker(services.GetRequiredService<IServiceScopeFactory>(),
-                options, Options.Create(new ReceiptStorageOptions { Bucket = "test" }), NullLogger<ReceiptWorker>.Instance);
+                options, Options.Create(new ReceiptStorageOptions { Bucket = "test" }), workerLog);
             await worker.StartAsync(default);
             try
             {
@@ -34,7 +38,44 @@ internal static class ReceiptWorkerChecks
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await worker.StopAsync(timeout.Token);
             }
+            if (!processingLog.Messages.Any(x => x.Contains("Receipt claimed:"))
+                || !processingLog.Messages.Any(x => x.Contains("Outcome=ready"))
+                || !workerLog.Messages.Any(x => x.Contains("Receipt worker starting:")))
+                throw new Exception("Receipt lifecycle diagnostics missing.");
+            if (string.Join("\n", processingLog.Messages).Contains("PRIVATE_RECEIPT"))
+                throw new Exception("Receipt contents leaked into logs.");
         }
+        using var disabledServices = new ServiceCollection().BuildServiceProvider();
+        var disabledLog = new Capture<ReceiptWorker>();
+        using var disabledWorker = new ReceiptWorker(disabledServices.GetRequiredService<IServiceScopeFactory>(), new ReceiptOptions(),
+            Options.Create(new ReceiptStorageOptions()), disabledLog);
+        await disabledWorker.StartAsync(default);
+        await disabledWorker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(5));
+        if (!disabledLog.Messages.Any(x => x.Contains("processing is disabled")) || !disabledLog.Messages.Any(x => x.Contains("cleanup is also inactive")))
+            throw new Exception("Disabled worker must explain why queued receipts will not run.");
+
+        var failureLog = new Capture<ReceiptProcessor>();
+        var processor = new ReceiptProcessor(new Repository(false, true), new Documents(), new FailedExtractor(),
+            new ReceiptOptions { Enabled = true }, TimeProvider.System, logger: failureLog);
+        await processor.ProcessNextAsync(default);
+        var failureText = string.Join("\n", failureLog.Messages);
+        if (!failureText.Contains("Stage=provider") || !failureText.Contains("Outcome=retry") || !failureText.Contains("InvalidOperationException") || failureText.Contains("PRIVATE_RECEIPT"))
+            throw new Exception("Failure diagnostics must identify stage/retry without leaking exception contents.");
+    }
+    private sealed class Capture<T> : ILogger<T>
+    {
+        public ConcurrentQueue<string> Messages { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel level) => true;
+        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (exception is not null) throw new Exception("Do not log raw receipt exceptions.");
+            Messages.Enqueue(formatter(state, exception));
+        }
+    }
+    private sealed class FailedExtractor : IReceiptExtractor
+    {
+        public Task<ReceiptDraft> ExtractAsync(byte[] bytes, CancellationToken ct) => throw new InvalidOperationException("PRIVATE_RECEIPT API key response body");
     }
     private sealed class Documents : IReceiptDocumentStore
     {
@@ -52,9 +93,9 @@ internal static class ReceiptWorkerChecks
     private sealed class Extractor : IReceiptExtractor
     {
         public Task<ReceiptDraft> ExtractAsync(byte[] bytes, CancellationToken ct)
-            => Task.FromResult(new ReceiptDraft("Shop", "2026-10-26", "EUR", "1", [new("Food", "1", "Item")], []));
+            => Task.FromResult(new ReceiptDraft("PRIVATE_RECEIPT", "2026-10-26", "EUR", "1", [new("PRIVATE_RECEIPT", "1", "Item")], []));
     }
-    private sealed class Repository(bool failCleanupRead) : IReceiptRepository
+    private sealed class Repository(bool failCleanupRead, bool expectFailure = false) : IReceiptRepository
     {
         public TaskCompletionSource CleanupStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -77,7 +118,8 @@ internal static class ReceiptWorkerChecks
         }
         public Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct)
         {
-            if (draft is null || failure is not null) throw new Exception("Extraction did not complete successfully.");
+            if (expectFailure ? draft is not null || failure != "processing_failed" || !transient : draft is null || failure is not null)
+                throw new Exception("Unexpected extraction result.");
             Processed.TrySetResult();
             return Task.FromResult(true);
         }

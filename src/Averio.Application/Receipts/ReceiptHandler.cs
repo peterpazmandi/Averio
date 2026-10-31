@@ -1,5 +1,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Domain.Receipts;
@@ -7,8 +10,9 @@ namespace Averio.Application.Receipts;
 
 public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository households,
     IReceiptRepository receipts, IReceiptImageNormalizer images, IReceiptDocumentStore documents,
-    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null)
+    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null, ILogger<ReceiptHandler>? logger = null)
 {
+    private readonly ILogger<ReceiptHandler> log = logger ?? NullLogger<ReceiptHandler>.Instance;
     public async Task<ReceiptCapabilities> CapabilitiesAsync(Guid household, CancellationToken ct)
     {
         _ = await Authorize(household, ct);
@@ -20,9 +24,33 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     }
     public async Task<ReceiptScanResult> UploadAsync(Guid household, Guid operation, Stream input, CancellationToken ct)
     {
+        var started = Stopwatch.GetTimestamp();
+        using var scope = log.BeginScope("ReceiptOperationId={ReceiptOperationId} TraceId={TraceId}", operation, Activity.Current?.TraceId.ToString());
+        log.LogInformation("Receipt upload started: OperationId={OperationId}, TraceId={TraceId}, ApiScanningEnabled={ApiScanningEnabled}", operation, Activity.Current?.TraceId.ToString(), options.Enabled);
+        try
+        {
+            var result = await UploadCoreAsync(household, operation, input, ct);
+            log.LogInformation("Receipt upload completed: OperationId={OperationId}, ScanId={ScanId}, Status={Status}, ElapsedMs={ElapsedMs}", operation, result.Id, result.Status, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            log.LogWarning("Receipt upload request cancelled: OperationId={OperationId}; admission may already have succeeded, retry the same operation", operation);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning("Receipt upload failed: OperationId={OperationId}, TraceId={TraceId}, ExceptionType={ExceptionType}, HResult={HResult}, ElapsedMs={ElapsedMs}", operation, Activity.Current?.TraceId.ToString(), ex.GetType().Name, ex.HResult, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            throw;
+        }
+    }
+    private async Task<ReceiptScanResult> UploadCoreAsync(Guid household, Guid operation, Stream input, CancellationToken ct)
+    {
         _ = await Authorize(household, ct);
         if (operation == Guid.Empty) throw Invalid();
+        log.LogDebug("Receipt normalization started: OperationId={OperationId}", operation);
         var image = await images.NormalizeAsync(input, ct);
+        log.LogDebug("Receipt normalization completed: OperationId={OperationId}, NormalizedBytes={NormalizedBytes}", operation, image.Length);
         var hash = Convert.ToHexStringLower(SHA256.HashData(image));
         ReceiptScan scan;
         await using (var tx = await uow.BeginTransactionAsync(ct))
@@ -33,14 +61,20 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
             if (previous is not null)
             {
                 if (previous.ContentHash != hash) throw Conflict();
+                log.LogInformation("Receipt upload replay: OperationId={OperationId}, ScanId={ScanId}, Status={Status}; no new scan charged", operation, previous.Id, previous.Status);
                 return Map(previous);
             }
-            if (!options.Enabled) throw new BusinessRuleException("receipt_disabled", "Error_ReceiptDisabled");
+            if (!options.Enabled)
+            {
+                log.LogWarning("Receipt upload rejected: OperationId={OperationId}, Reason=receipt_disabled", operation);
+                throw new BusinessRuleException("receipt_disabled", "Error_ReceiptDisabled");
+            }
             var now = clock.GetUtcNow();
             var start = ReceiptOptions.MonthStart(now);
             if (await receipts.CountMonthlyUploadsAsync(household, start, start.AddMonths(1), ct) >= options.MonthlyLimit(household, now))
             {
                 ReceiptMetrics.Uploads.Add(1, new KeyValuePair<string, object?>("outcome", "monthly_limit"));
+                log.LogWarning("Receipt upload rejected: OperationId={OperationId}, Reason=receipt_monthly_limit", operation);
                 throw new BusinessRuleException("receipt_monthly_limit", "Error_ReceiptMonthlyLimit");
             }
             if (await receipts.CountUploadsAsync(household, member, now.AddDays(-1), ct) >= options.DailyUploadLimit)
@@ -51,6 +85,7 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
             await tx.CommitAsync(ct);
         }
         ReceiptMetrics.Uploads.Add(1, new KeyValuePair<string, object?>("outcome", "admitted"));
+        log.LogInformation("Receipt upload admitted: OperationId={OperationId}, ScanId={ScanId}, Status=Uploading", operation, scan.Id);
         // No database locks across external I/O. Worker cleans abandoned uploads.
         // Anchor the write deadline to the durable record, not to process resumption.
         // Cleanup waits five minutes from creation, including for discarded uploads.
@@ -58,15 +93,25 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
         if (remaining <= TimeSpan.Zero) throw Conflict();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(remaining);
-        try { await documents.PutAsync(scan.ObjectKey, image, timeout.Token); }
+        log.LogInformation("Receipt storage write started: ScanId={ScanId}, Bytes={Bytes}", scan.Id, image.Length);
+        try
+        {
+            await documents.PutAsync(scan.ObjectKey, image, timeout.Token);
+            log.LogInformation("Receipt storage write completed: ScanId={ScanId}", scan.Id);
+        }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception) { throw new BusinessRuleException("receipt_storage_unavailable", "Error_ReceiptStorage"); }
+        catch (Exception ex)
+        {
+            log.LogWarning("Receipt storage write failed: ScanId={ScanId}, ExceptionType={ExceptionType}, HResult={HResult}", scan.Id, ex.GetType().Name, ex.HResult);
+            throw new BusinessRuleException("receipt_storage_unavailable", "Error_ReceiptStorage");
+        }
         await using (var tx = await uow.BeginTransactionAsync(ct))
         {
             _ = await Authorize(household, ct);
             if (!await receipts.QueueAsync(scan.Id, clock.GetUtcNow(), ct)) throw Conflict();
             await tx.CommitAsync(ct);
         }
+        log.LogInformation("Receipt queued: ScanId={ScanId}, OperationId={OperationId}; a separately running enabled Worker must claim it", scan.Id, operation);
         return await GetAsync(household, scan.Id, ct);
     }
     public async Task<IReadOnlyList<ReceiptScanResult>> ListAsync(Guid household, int skip, CancellationToken ct)
@@ -74,6 +119,7 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
         if (skip < 0 || skip > 10000) throw Invalid();
         var member = await Authorize(household, ct);
         var rows = await receipts.ListAsync(household, member, skip, ct);
+        log.LogDebug("Receipt inbox polled: Count={Count}, Skip={Skip}, Queued={Queued}, Processing={Processing}, TraceId={TraceId}", rows.Count, skip, rows.Count(x => x.Status == ReceiptScanStatus.Queued), rows.Count(x => x.Status == ReceiptScanStatus.Processing), Activity.Current?.TraceId.ToString());
         var duplicates = await receipts.DuplicateHashesAsync(household, member, rows.Select(x => x.ContentHash).Distinct().ToArray(), clock.GetUtcNow(), ct);
         var mapped = rows.Select(x => Map(x) with { PossibleDuplicate = duplicates.Contains(x.ContentHash) }).ToArray();
         return categorization is null ? mapped : await categorization.ApplyAsync(household, mapped, ct);

@@ -11,6 +11,7 @@ import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
 import { TransactionEditor } from '../transactions/components/TransactionEditor';
 import { createTransaction } from '../transactions/api/transactionApi';
 import type { TransactionInputDto } from '../transactions/api/transactionApi';
+import { createReceiptObserver, receiptLog, receiptRequest } from './receiptDiagnostics';
 import { receiptKeys, receiptQueries, receiptsApi } from './receiptQueries';
 
 const pending = new Set(['Uploading', 'Queued', 'Processing']);
@@ -28,17 +29,22 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const [matching, setMatching] = useState<string | null>(null);
     const [photo, setPhoto] = useState<ReceiptScanResult | null>(null);
     const [discard, setDiscard] = useState<ReceiptScanResult | null>(null);
+    const [observeScans] = useState(() => createReceiptObserver());
     const capabilities = useQuery(receiptQueries.capabilities(userId, householdId));
     const inbox = useInfiniteQuery({
         queryKey: [...receiptKeys.all(userId, householdId), 'inbox'],
         initialPageParam: 0,
-        queryFn: ({ pageParam, signal }) => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansGet({ householdId, skip: pageParam }, { signal }),
+        queryFn: ({ pageParam, signal }) => receiptRequest('inbox.poll', { skip: pageParam }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansGet({ householdId, skip: pageParam }, { signal }), true),
         getNextPageParam: (last, pages) => last.length === 50 && pages.length * 50 <= 10000 ? pages.length * 50 : undefined,
         refetchInterval: query => query.state.data?.pages.some(page => page.some(scan => pending.has(scan.status))) ? 3000 : false,
     });
     const refresh = () => cache.invalidateQueries({ queryKey: receiptKeys.all(userId, householdId) });
     const upload = useMutation({
-        mutationFn: (value: { file: File; operationId: string }) => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansPost({ householdId, ...value }),
+        mutationFn: async (value: { file: File; operationId: string }) => {
+            const result = await receiptRequest('upload', { operationId: value.operationId, bytes: value.file.size }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansPost({ householdId, ...value }));
+            receiptLog('upload.accepted', { operationId: value.operationId, scanId: result.id, status: result.status });
+            return result;
+        },
         onSuccess: async () => {
             setSelection(null); if (input.current) input.current.value = '';
             if (camera.current) camera.current.value = '';
@@ -49,16 +55,16 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         onError: refresh,
     });
     const remove = useMutation({
-        mutationFn: (scan: ReceiptScanResult) => scan.status === 'Posted'
+        mutationFn: (scan: ReceiptScanResult) => receiptRequest(scan.status === 'Posted' ? 'photo.delete' : 'scan.discard', { scanId: scan.id }, () => scan.status === 'Posted'
             ? receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete({ householdId, id: scan.id, expectedVersion: scan.version })
-            : receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdDelete({ householdId, id: scan.id, expectedVersion: scan.version }),
+            : receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdDelete({ householdId, id: scan.id, expectedVersion: scan.version })),
         onSuccess: async () => { setDiscard(null); await refresh(); },
         onError: refresh,
     });
     const post = useMutation({
         mutationFn: ({ scan, request, currency, reviewedTotal, rememberCategoryRules }: { scan: ReceiptScanResult; request: TransactionInputDto; currency: string; reviewedTotal: string; rememberCategoryRules: RememberReceiptCategoryRequest[] }) =>
-            receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
-                postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } }),
+            receiptRequest('scan.confirm', { scanId: scan.id }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
+                postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } })),
         onSuccess: async () => {
             setReview(null); setNotice(t('receipts.posted'));
             // Match ordinary posting invalidation, including account balances,
@@ -71,13 +77,20 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         },
     });
     const manualSave = useMutation({
-        mutationFn: (request: TransactionInputDto) => createTransaction(householdId, request),
+        mutationFn: (request: TransactionInputDto) => receiptRequest('scan.manual_entry', { scanId: manual?.id }, () => createTransaction(householdId, request)),
         onSuccess: async () => {
             setManual(null); setNotice(t('receipts.posted'));
             await Promise.all(['transactions', 'accounts', 'dashboard', 'statistics', 'personal-money', 'activities']
                 .map(key => cache.invalidateQueries({ predicate: query => query.queryKey[0] === key && query.queryKey.includes(userId) && query.queryKey.includes(householdId) })));
         },
     });
+    useEffect(() => {
+        observeScans(inbox.data?.pages.flat() ?? []);
+    }, [inbox.data, inbox.dataUpdatedAt, observeScans]);
+    useEffect(() => {
+        receiptLog('inbox.mounted');
+        return () => receiptLog('inbox.unmounted');
+    }, []);
     const quota = capabilities.data;
     const exhausted = quota?.monthlyLimit !== undefined && quota.monthlyUsed !== undefined && quota.monthlyUsed >= quota.monthlyLimit;
     // An ambiguous upload response must remain retryable with its original operation ID.
@@ -90,9 +103,12 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         if (!file) return;
         upload.reset(); setFileError(''); setNotice('');
         if (!['image/jpeg', 'image/png'].includes(file.type) || file.size === 0 || file.size > (capabilities.data?.maxUploadBytes ?? 10485760)) {
+            receiptLog('photo.rejected', { bytes: file.size }, 'warn');
             setSelection(null); setFileError(t('receipts.fileInvalid')); return;
         }
-        setSelection({ file, operationId: crypto.randomUUID() });
+        const operationId = crypto.randomUUID();
+        receiptLog('photo.selected', { operationId, bytes: file.size });
+        setSelection({ file, operationId });
     }
     return <section className="grid gap-4" aria-labelledby="receipts-title">
         <header className="flex flex-wrap items-center justify-between gap-3">
@@ -153,7 +169,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     <p className="text-xs text-slate-600 dark:text-slate-300">{new Date(scan.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)}</p></div>
                     <span className={'rounded-full px-3 py-1 text-xs font-semibold ' + (scan.status === 'Ready' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200')}>{t('receipts.status.' + scan.status, { defaultValue: t('receipts.status.Unknown') })}</span></div>
                 {scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={() => setMatching(scan.id)}>{t('receipts.viewMatch')}</AverioButton></p>}
-                {scan.status === 'Ready' && scan.draft && <p className="text-lg font-bold">{scan.draft.total ?? '—'} {scan.draft.currency}</p>}
+                {scan.status === 'Ready' && scan.draft && <p className="text-lg font-bold">{scan.draft.total ?? '-'} {scan.draft.currency}</p>}
                 {['Queued', 'Processing'].includes(scan.status) && <p className="text-sm" role="status">{t('receipts.processingHelp')}</p>}
                 {scan.status === 'Ready' && <p className="text-sm">{t('receipts.expires', { date: new Date(scan.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>}
                 {scan.status === 'Failed' && <div className="grid gap-2">
@@ -238,12 +254,12 @@ function ReceiptPhoto({ householdId, scan, buttonOnly = false }: { householdId: 
     const src = `${API_BASE_URL}/api/v1/households/${encodeURIComponent(householdId)}/receipt-scans/${encodeURIComponent(scan.id)}/image`;
     const retry = <p role="alert">{t('receipts.imageFailed')} <AverioButton onClick={() => setImageFailed(false)}>{t('receipts.retry')}</AverioButton></p>;
     return <>
-        {!buttonOnly && (!imageFailed ? <img src={src} alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => setImageFailed(true)} /> : retry)}
+        {!buttonOnly && (!imageFailed ? <img src={src} alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => { receiptLog('photo.load_failed', { scanId: scan.id }, 'warn'); setImageFailed(true); }} /> : retry)}
         <AverioButton onClick={() => { setZoom(100); setExpanded(true); }}>{t('receipts.expandPhoto')}</AverioButton>
         {expanded && <AverioDialog open wide title={t('receipts.expandPhoto')} closeLabel={t('common.actions.close')} onDismiss={() => setExpanded(false)}
             actions={<AverioButton onClick={() => setExpanded(false)}>{t('common.actions.close')}</AverioButton>}>
             <p>{t('receipts.zoomHelp')}</p>
-            <label className="my-3 flex flex-wrap items-center gap-3">{t('receipts.zoom')} · {zoom}%
+            <label className="my-3 flex flex-wrap items-center gap-3">{t('receipts.zoom')}  {zoom}%
                 <input type="range" min="100" max="400" step="25" value={zoom} aria-label={t('receipts.zoom')} onChange={event => setZoom(Number(event.target.value))} />
             </label>
             {!imageFailed ? <div className="max-h-[65dvh] overflow-auto" tabIndex={0} role="region" aria-label={t('receipts.imageAlt')}>
@@ -270,7 +286,7 @@ function MatchingReceipt({ userId, householdId, id, onClose }: { userId: string;
         {match.isSuccess && !match.data && <p>{t('receipts.noMatch')}</p>}
         {match.data && <div className="grid gap-3">
             <p className="font-bold">{match.data.draft?.merchant || t('receipts.receipt')}</p>
-            <p>{new Date(match.data.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)} · {t('receipts.status.' + match.data.status, { defaultValue: t('receipts.status.Unknown') })}</p>
+            <p>{new Date(match.data.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)}  {t('receipts.status.' + match.data.status, { defaultValue: t('receipts.status.Unknown') })}</p>
             {match.data.draft && <p>{match.data.draft.total} {match.data.draft.currency}</p>}
             {match.data.imageAvailable && <ReceiptPhoto householdId={householdId} scan={match.data} />}
             {match.data.postedTransactionId && <Link to="/app/transactions" search={{ transaction: match.data.postedTransactionId }} className="inline-flex min-h-11 items-center font-semibold text-emerald-700 dark:text-emerald-300">{t('receipts.openTransaction')}</Link>}

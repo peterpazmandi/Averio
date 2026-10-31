@@ -4,10 +4,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Averio.Application.Receipts;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Diagnostics;
 namespace Averio.Infrastructure.Receipts;
 
-public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiReceiptOptions> options) : IReceiptExtractor
+public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiReceiptOptions> options, ILogger<GeminiReceiptExtractor>? logger = null) : IReceiptExtractor
 {
+    private readonly ILogger<GeminiReceiptExtractor> log = logger ?? NullLogger<GeminiReceiptExtractor>.Instance;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new SuggestedCategoryIdConverter() }
@@ -68,6 +72,8 @@ public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiRecei
 
     public async Task<ReceiptDraft> ExtractAsync(byte[] jpeg, IReadOnlyList<ReceiptCategoryOption> categories, CancellationToken ct)
     {
+        var started = Stopwatch.GetTimestamp();
+        log.LogDebug("Receipt provider request starting: ImageBytes={ImageBytes}, CategoryCount={CategoryCount}, TimeoutSeconds={TimeoutSeconds}", jpeg.Length, categories.Count, http.Timeout.TotalSeconds);
         using var schema = JsonDocument.Parse(Schema);
         using var request = new HttpRequestMessage(HttpMethod.Post,
             $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(options.Value.Model)}:generateContent");
@@ -81,6 +87,7 @@ public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiRecei
         });
         // The durable queue owns the retry budget; never log provider response bodies.
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        log.LogInformation("Receipt provider headers received: HttpStatus={HttpStatus}, ElapsedMs={ElapsedMs}", (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
         if (!response.IsSuccessStatusCode) throw new ReceiptExtractionException("provider_unavailable",
             response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500);
         await using var body = await response.Content.ReadAsStreamAsync(ct);
@@ -109,6 +116,7 @@ public sealed class GeminiReceiptExtractor(HttpClient http, IOptions<GeminiRecei
             // Normalize once in ReceiptProcessor, where every extraction provider
             // crosses the same trust boundary. Revalidating normalized observations
             // would erase evidence such as the date_uncertain warning.
+            log.LogInformation("Receipt provider response parsed: ResponseBytes={ResponseBytes}, ElapsedMs={ElapsedMs}", limited.Length, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             return draft;
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)

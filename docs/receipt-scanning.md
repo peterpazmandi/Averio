@@ -6,7 +6,7 @@ Receipt scanning creates a private, reviewable draft. Extracted text is untruste
 
 Gemini receives up to 500 available expense category IDs with hierarchy paths, including custom categories, in the existing extraction call. Clear Item lines may return an optional `suggestedCategoryId`. Unknown, foreign and non-item suggestions are discarded. Inbox/detail reads revalidate against current active categories and prefer an exact remembered household match. The editor labels the source and requires the user to apply a suggestion or select a category manually; uncertainty remains editable/uncategorized.
 
-“Remember this category for our household” is unchecked by default and explicitly explains sharing. On confirmation, optional `rememberCategoryRules` entries map original `lineIndex` to reviewed transaction `itemIndex`. The server derives matching keys from the original merchant/printed item, validates the selected category, and upserts the rule atomically with the expense. No rules are saved on failed/discarded/unconfirmed scans. Nonempty rule consent is included in confirmation fingerprints; unchanged retries return the original expense without replaying rule writes. Absent/empty selections retain compatibility with earlier fingerprints.
+"Remember this category for our household" is unchecked by default and explicitly explains sharing. On confirmation, optional `rememberCategoryRules` entries map original `lineIndex` to reviewed transaction `itemIndex`. The server derives matching keys from the original merchant/printed item, validates the selected category, and upserts the rule atomically with the expense. No rules are saved on failed/discarded/unconfirmed scans. Nonempty rule consent is included in confirmation fingerprints; unchanged retries return the original expense without replaying rule writes. Absent/empty selections retain compatibility with earlier fingerprints.
 
 Rules use normalized exact merchant/item matching, not fuzzy matching or other members' private financial history. Only match hashes, category IDs, household/member IDs and timestamps are stored. A later explicit remembered selection replaces that match; a dedicated rule management/delete screen is not included yet. Item breakdowns and discounts continue to use the existing single-payment accounting path.
 
@@ -14,9 +14,9 @@ Deploy `AddReceiptCategoryRules` after `AddReceiptConfirmationFingerprint`, foll
 
 | PR | Scope |
 | --- | --- |
-| 1 — Private processing foundation | Upload normalization, private S3 documents, durable jobs, Gemini structured extraction, uploader-only APIs, cleanup and generated client. Disabled by default. |
-| 2 — Capture, review and posting | Capture/inbox/review UI, editable fields and category suggestions, reconciliation, account/currency/privacy choice, optional allowance allocation, atomic explicit confirmation into normal transactions. |
-| 3 — Rollout and operational hardening | Rollout checks, private exact-photo duplicate suggestions, monthly quotas/entitlements, operational metrics, a HU/DE/EN benchmark runner and opt-in posted-photo retention. Live benchmark remains a release gate. |
+| 1 - Private processing foundation | Upload normalization, private S3 documents, durable jobs, Gemini structured extraction, uploader-only APIs, cleanup and generated client. Disabled by default. |
+| 2 - Capture, review and posting | Capture/inbox/review UI, editable fields and category suggestions, reconciliation, account/currency/privacy choice, optional allowance allocation, atomic explicit confirmation into normal transactions. |
+| 3 - Rollout and operational hardening | Rollout checks, private exact-photo duplicate suggestions, monthly quotas/entitlements, operational metrics, a HU/DE/EN benchmark runner and opt-in posted-photo retention. Live benchmark remains a release gate. |
 
 ## API
 
@@ -25,16 +25,16 @@ All endpoints require an authenticated active household member. Drafts and image
 Base: `/api/v1/households/{householdId}/receipt-scans`.
 
 - `POST`: multipart `operationId` UUID and required `file`; returns 202 with draft status. Repeating an operation with the same normalized image returns the existing record; different content conflicts. Operation IDs remain reserved after discard/expiry. An abandoned upload is not resumed: upload with a new operation ID after checking status.
-- `GET`: newest first, 50 at a time, `skip` offset (0–10000).
+- `GET`: newest first, 50 at a time, `skip` offset (0-10000).
 - `GET /{id}`: status, concurrency version, sanitized failure code and extracted draft when Ready and unexpired.
 - `GET /{id}/image`: authenticated JPEG response, no public URL, no cache.
 - `DELETE /{id}?expectedVersion={version}`: clears the draft and fences active extraction; worker deletes the document asynchronously. Stale versions conflict.
 
-Uploads accept decoded JPEG/PNG only, up to 10 MiB, 24 million pixels, dimensions 32–12000. Fresh JPEG encoding applies orientation and removes metadata. PDF, HEIC, animations and other formats are rejected. Five uploads per minute per authenticated user are permitted per API instance, plus a database-serialized rolling daily limit (default 20 per member). These are abuse controls, not subscription quotas.
+Uploads accept decoded JPEG/PNG only, up to 10 MiB, 24 million pixels, dimensions 32-12000. Fresh JPEG encoding applies orientation and removes metadata. PDF, HEIC, animations and other formats are rejected. Five uploads per minute per authenticated user are permitted per API instance, plus a database-serialized rolling daily limit (default 20 per member). These are abuse controls, not subscription quotas.
 
 ## Processing and privacy
 
-`Uploading → Queued → Processing → Ready / Failed`. Transient failures requeue after one minute, up to three attempts. Atomic `SKIP LOCKED` claims use a two-minute lease; completion requires the live lease token. Worker timeouts are shorter than leases. Crashed final attempts become Failed. Discard, expiry and departed membership fence completion.
+`Uploading  Queued  Processing  Ready / Failed`. Transient failures requeue after one minute, up to three attempts. Atomic `SKIP LOCKED` claims use a two-minute lease; completion requires the live lease token. Worker timeouts are shorter than leases. Crashed final attempts become Failed. Discard, expiry and departed membership fence completion.
 
 Uploads abandoned for five minutes and drafts older than seven days are cleared and deleted by the worker. Status and idempotency metadata remain; extracted JSON is cleared on discard. Physical deletion waits until at least five minutes after upload creation, including when a user discards an upload immediately. Storage writes have a one-minute deadline anchored to that persisted creation time; the remaining interval lets in-flight writes settle even if the API process exits. A discarded image becomes inaccessible immediately. Cleanup claims use the existing next-attempt timestamp as a two-minute reservation and retry failed deletions after one minute. Each object failure is isolated. Cleanup orders by next attempt before creation time so previously failed objects cannot starve unattempted deletions. Cleanup and extraction run in independent loops and scopes, so slow storage or provider requests do not block the other workload. Keep the worker and storage configuration active when disabling new scans so cleanup continues.
 
@@ -54,7 +54,7 @@ Set on API and worker:
 
 Use standard AWS role credentials. Configure a private S3 bucket with Block Public Access, encryption and least-privilege GetObject/PutObject/DeleteObject access to `receipt-drafts/*`. Uploads request AES256 server-side encryption. Set an eight-day lifecycle expiration for that prefix as an outage safety net. Use an unversioned bucket or configure noncurrent-version deletion too. Do not reuse this draft prefix for future posted attachments.
 
-No bucket is created and no production credentials are provisioned by this change. Before enabling for users, benchmark 30–50 representative Hungarian, German and English receipts with the selected provider/model; verify amount/date extraction, discounts/deposits, privacy, latency and cost. Production S3/Gemini calls are not part of automated tests. PR 2 supplies explicit human confirmation and atomic posting; PR 3 supplies quota/retention controls and the benchmark runner. Broad rollout still requires the real benchmark and storage checks below.
+No bucket is created and no production credentials are provisioned by this change. Before enabling for users, benchmark 30-50 representative Hungarian, German and English receipts with the selected provider/model; verify amount/date extraction, discounts/deposits, privacy, latency and cost. Production S3/Gemini calls are not part of automated tests. PR 2 supplies explicit human confirmation and atomic posting; PR 3 supplies quota/retention controls and the benchmark runner. Broad rollout still requires the real benchmark and storage checks below.
 
 ## Capture and review (PR 2)
 
@@ -86,7 +86,7 @@ Capture uses explicit camera/gallery buttons and a local photo preview with remo
 
 Review is grouped into purchase details, items/categories, and final total confirmation. Source photo and raw observations are expandable; extraction warnings remain visible. Labels follow the items in a collapsed optional section. Receipt privacy remains visible, and the acknowledgement sits beside the receipt/item totals at the end. Model and household category suggestions still require explicit application, and remembering a household rule remains opt-in. Ordinary transaction and recurring forms retain their existing layout.
 
-## PR 3 — Rollout controls (ADR-037)
+## PR 3 - Rollout controls (ADR-037)
 
 The rollout implementation adds household monthly allowances, private exact-photo duplicate suggestions, opt-in posted-image retention and content-free metrics. The temporary-image descriptions above remain applicable to legacy `receipt-drafts/` objects and to installations with retention disabled. Longer retention applies only to newly uploaded `receipt-images/` objects. There is no database migration in PR 3; apply all earlier receipt migrations before deploying.
 
@@ -100,9 +100,9 @@ Deploy API, worker and frontend together. Keep the worker/storage enabled for cl
 | `Receipts__PaidMonthlyLimit` | 100 | Household uploads with a valid operator-managed paid entitlement |
 | `Receipts__PaidHouseholds__<household-uuid>` | absent | ISO UTC entitlement expiry; configure only after independently verifying eligibility |
 | `Receipts__RetainPostedImages` | false | Use the new image prefix for newly accepted uploads |
-| `Receipts__PostedImageRetentionDays` | 365 | Days after posting; permitted range 1–365 |
+| `Receipts__PostedImageRetentionDays` | 365 | Days after posting; permitted range 1-365 |
 
-Monthly limits may be 0–10,000, and the paid limit must be at least the free limit. These defaults are not finalized pricing. The application does not yet collect payment. Expired paid access returns to the free allowance; usage does not reset. No upgrade button implies a checkout that does not exist.
+Monthly limits may be 0-10,000, and the paid limit must be at least the free limit. These defaults are not finalized pricing. The application does not yet collect payment. Expired paid access returns to the free allowance; usage does not reset. No upgrade button implies a checkout that does not exist.
 
 Before setting `RetainPostedImages=true`:
 
@@ -130,9 +130,9 @@ Collect Meter **Averio.Receipts** from both API and worker using a .NET Meter-co
 
 Start by investigating a sustained increase in failed attempts/cleanup retries, queue age over two minutes, and confirmation replay spikes. Monitor worker/container health separately: an idle or stopped worker cannot emit queue-age observations. Establish thresholds from the benchmark rather than claiming an unmeasured SLA. Record model-specific token prices separately; do not hard-code estimated dollar cost as an invoice.
 
-### Reproducible HU/DE/EN benchmark — release gate still pending
+### Reproducible HU/DE/EN benchmark - release gate still pending
 
-No real receipt corpus or production provider run is included in this PR. Automated tests use synthetic images. Run 30–50 consented, privately stored receipts, at least ten per language, covering discounts, deposits, ambiguous dates, long receipts, blur and supported currencies. Independently label the correct payable total, date and currency before execution; manually assess item/category corrections and review time too.
+No real receipt corpus or production provider run is included in this PR. Automated tests use synthetic images. Run 30-50 consented, privately stored receipts, at least ten per language, covering discounts, deposits, ambiguous dates, long receipts, blur and supported currencies. Independently label the correct payable total, date and currency before execution; manually assess item/category corrections and review time too.
 
 Create a private JSON array (keep it and photos outside Git):
 
@@ -152,6 +152,8 @@ Record the dated model/version, private results location, median/p95 latency, ob
 
 
 ### Review and recovery usability
+
+See [receipt diagnostics](receipt-diagnostics.md) for API, Worker and browser logging and troubleshooting receipts that remain queued.
 
 - Closing an edited receipt review asks whether to keep editing or discard corrections. Reload/closing the browser also warns while corrections are unsaved; corrections are not persisted as a saved draft.
 - A fixed-footer photo action opens a scrollable, zoomable viewer without resetting the review. The original extracted total stays visible beside reconciliation guidance, which reports the exact difference and marks invalid item amounts.
