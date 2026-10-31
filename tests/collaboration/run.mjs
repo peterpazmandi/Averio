@@ -167,6 +167,8 @@ try {
     assert.equal(member.household.householdId, f.householdId);
     assert.equal(member.household.role.toLowerCase(), 'member');
     assert.equal(member.onboardingRequired, false);
+    // The URL can change before the awaited navigation resolves and its cleanup runs.
+    await partner.waitForFunction(() => sessionStorage.getItem('averio.pendingInvitation') === null);
     assert.equal(await partner.evaluate(() => sessionStorage.getItem('averio.pendingInvitation')), null);
     await partner.getByText('Collaboration home', { exact: true }).first().waitFor();
     assert.equal(await partner.getByRole('button', { name: 'Edit profile', exact: true }).count(), 0);
