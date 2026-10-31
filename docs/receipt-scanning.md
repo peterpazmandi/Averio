@@ -16,7 +16,7 @@ Deploy `AddReceiptCategoryRules` after `AddReceiptConfirmationFingerprint`, foll
 | --- | --- |
 | 1 — Private processing foundation | Upload normalization, private S3 documents, durable jobs, Gemini structured extraction, uploader-only APIs, cleanup and generated client. Disabled by default. |
 | 2 — Capture, review and posting | Capture/inbox/review UI, editable fields and category suggestions, reconciliation, account/currency/privacy choice, optional allowance allocation, atomic explicit confirmation into normal transactions. |
-| 3 — Rollout and operational hardening | End-to-end rollout checks, duplicate suggestions, paid monthly quotas, operational metrics, HU/DE/EN provider benchmark and posted-receipt retention. |
+| 3 — Rollout and operational hardening | Rollout checks, private exact-photo duplicate suggestions, monthly quotas/entitlements, operational metrics, a HU/DE/EN benchmark runner and opt-in posted-photo retention. Live benchmark remains a release gate. |
 
 ## API
 
@@ -54,7 +54,7 @@ Set on API and worker:
 
 Use standard AWS role credentials. Configure a private S3 bucket with Block Public Access, encryption and least-privilege GetObject/PutObject/DeleteObject access to `receipt-drafts/*`. Uploads request AES256 server-side encryption. Set an eight-day lifecycle expiration for that prefix as an outage safety net. Use an unversioned bucket or configure noncurrent-version deletion too. Do not reuse this draft prefix for future posted attachments.
 
-No bucket is created and no production credentials are provisioned by this change. Before enabling for users, benchmark 30–50 representative Hungarian, German and English receipts with the selected provider/model; verify amount/date extraction, discounts/deposits, privacy, latency and cost. Production S3/Gemini calls are not part of automated tests. PR2 must introduce explicit human confirmation and atomic posting; PR3 completes the release and paid quota controls.
+No bucket is created and no production credentials are provisioned by this change. Before enabling for users, benchmark 30–50 representative Hungarian, German and English receipts with the selected provider/model; verify amount/date extraction, discounts/deposits, privacy, latency and cost. Production S3/Gemini calls are not part of automated tests. PR 2 supplies explicit human confirmation and atomic posting; PR 3 supplies quota/retention controls and the benchmark runner. Broad rollout still requires the real benchmark and storage checks below.
 
 ## Capture and review (PR 2)
 
@@ -70,7 +70,7 @@ The reviewer must choose an account explicitly, resolve a missing date, check cu
 
 Receipt totals, item amounts and optional Personal Money amounts are submitted using the same invariant decimal normalization as reconciliation. For example, a displayed input of `0009,00` reconciles and is sent as `9`, which the API accepts. Ordinary manual/recurring transaction submission behavior is unchanged. See [ADR-035](decisions/ADR-035-receipt-confirmation-request-identity.md).
 
-Posted scan metadata remains uploader-only. Shared transaction visibility never grants access to the private scan/image. Image access still expires after seven days; cleanup preserves Posted status and the transaction link after deleting the temporary image. Permanent posted-image retention is deferred to PR 3. A transaction link uses ordinary transaction-detail authorization and does not grant additional access.
+Posted scan metadata remains uploader-only. Shared transaction visibility never grants access to the private scan/image. Image access still expires after seven days; cleanup preserves Posted status and the transaction link after deleting the temporary image. PR 3 adds opt-in retention for new-prefix images; see the rollout controls below. Legacy temporary images keep this deadline. A transaction link uses ordinary transaction-detail authorization and does not grant additional access.
 
 ### Deployment and verification
 
