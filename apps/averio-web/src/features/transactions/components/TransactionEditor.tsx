@@ -590,7 +590,7 @@ export function TransactionEditor({
                             {item.discountAmount && <p className="text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.ux.netCalculation', { gross: item.originalAmount, discount: item.discountAmount.replace(/^-/, ''), net: sumDecimalAmounts([item.originalAmount || '0', item.discountAmount]) })}</p>}
                             {(!validReceiptAmount(item.amount) || !item.description.trim()) && <p className="text-sm text-amber-800 dark:text-amber-200">{t('receipts.ux.checkItem')}</p>}
                         </div>
-                        <div className="max-w-[50%] text-right break-words"><strong>{validReceiptAmount(item.amount) ? (receiptCurrency ? formatDecimalAmount(item.amount, receiptCurrency, language) : item.amount) : '—'}</strong>
+                        <div className="max-w-[50%] text-right break-words"><strong>{validReceiptAmount(item.amount) ? (receiptCurrency ? formatDecimalAmount(normalizeReceiptAmount(item.amount)!, receiptCurrency, language) : item.amount) : '—'}</strong>
                             <AverioButton className="ml-2" aria-expanded={expandedItems.has(item.key) || !validReceiptAmount(item.amount) || !item.description.trim()} aria-controls={item.key + '-fields'} onClick={() => setExpandedItems(current => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })}>{t(expandedItems.has(item.key) ? 'receipts.ux.done' : 'receipts.ux.edit')}</AverioButton>
                         </div>
                     </div>}

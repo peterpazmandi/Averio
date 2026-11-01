@@ -33,7 +33,7 @@ try {
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
         let failAccounts = language === 'en' && width === 375 && !dark;
         let uploaded = false, discarded = false, recorded = false, photoDeleted = false, monthlyUsed = 1;
-        page.on('pageerror', e => errors.push(e.message));
+        page.on('pageerror', e => { errors.push(e.message); console.error('Receipt page error:', e.message); });
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
@@ -175,6 +175,7 @@ try {
         await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('0009,00');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         await page.locator('input[id$="-amount"]').fill('0009,00');
+        assert.deepEqual(errors, [], 'Editing comma-decimal amounts must not crash the compact summary.');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await account.selectOption('eur');
         await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor({ state: 'hidden' });
@@ -209,6 +210,7 @@ try {
         }
         await page.locator('input[type="date"]').fill('2026-10-29');
         assert.equal(await consent.isChecked(), false, 'Changing receipt details invalidates acknowledgement.');
+        assert.deepEqual(errors, [], 'Editing comma-decimal amounts must not crash the compact summary.');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await consent.check();
         await confirm.click();
