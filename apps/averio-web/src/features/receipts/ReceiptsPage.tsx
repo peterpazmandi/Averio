@@ -259,7 +259,7 @@ function ReceiptPhoto({ householdId, scan, buttonOnly = false }: { householdId: 
         {expanded && <AverioDialog open wide title={t('receipts.expandPhoto')} closeLabel={t('common.actions.close')} onDismiss={() => setExpanded(false)}
             actions={<AverioButton onClick={() => setExpanded(false)}>{t('common.actions.close')}</AverioButton>}>
             <p>{t('receipts.zoomHelp')}</p>
-            <label className="my-3 flex flex-wrap items-center gap-3">{t('receipts.zoom')}  {zoom}%
+            <label className="my-3 flex flex-wrap items-center gap-3"><span>{t('receipts.zoom')}</span><output>{zoom}%</output>
                 <input type="range" min="100" max="400" step="25" value={zoom} aria-label={t('receipts.zoom')} onChange={event => setZoom(Number(event.target.value))} />
             </label>
             {!imageFailed ? <div className="max-h-[65dvh] overflow-auto" tabIndex={0} role="region" aria-label={t('receipts.imageAlt')}>

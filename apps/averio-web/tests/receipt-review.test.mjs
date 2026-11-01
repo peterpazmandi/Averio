@@ -19,6 +19,41 @@ const money = load('../src/shared/money/decimalAmount.ts');
 const { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
     '../../shared/money/decimalAmount': money,
 });
+
+test('OCR-damaged product suffix still allocates the two Tesco discounts exactly once', () => {
+    const draft = { total: '9497.00', lines: [
+        { kind: 'Item', description: '0,602 KG * 484,00 Ft /KG ALMA GALA LEDIG', amount: '291.00' },
+        { kind: 'Item', description: 'MILKA ALP.TEJCS.250g', amount: '1999.00' },
+        { kind: 'Item', description: '3AS KAPCS.EL.5M ZOLD', amount: '5249.00' },
+        { kind: 'Item', description: '2,000 DB * 1 599,00 Ft /DB LANDL A60 12.4/15W', amount: '3198.00' },
+        { kind: 'Subtotal', description: 'RESZOSSZEG', amount: '10737.00' },
+        { kind: 'Discount', description: 'CC LANDL A60 12.4/1Voysa miyoo', amount: '-640.00' },
+        { kind: 'Discount', description: 'CC MILKA ALP.TEJCS.2', amount: '-600.00' },
+        { kind: 'Subtotal', description: 'OSSZESEN', amount: '9497.00' },
+        { kind: 'Payment', description: 'BANKKARTYA', amount: '9497.00' },
+    ] };
+    const original = JSON.stringify(draft);
+    const items = receiptItems(draft);
+    assert.equal(items.map(x => x.amount).join(), '291.00,1399,5249.00,2558');
+    assert.equal(items[1].discountAmount, '-600');
+    assert.equal(items[3].discountAmount, '-640');
+    assert.equal(items[3].originalAmount, '3198.00');
+    assert.equal(items[3].receiptLineIndex, 3);
+    assert.equal(receiptReconciles(draft.total, items), true);
+    assert.equal(JSON.stringify(draft), original);
+    assert.equal(receiptItems(draft).map(x => x.amount).join(), items.map(x => x.amount).join());
+    assert.equal(receiptItems({ ...draft, total: '9496' })[3].amount, '3198.00');
+});
+
+test('OCR fallback refuses ambiguous models, code-only matches and numeric prices', () => {
+    const item = { kind: 'Item', description: 'LANDL A60 15W', amount: '10' };
+    const discount = { kind: 'Discount', description: 'LANDL A60 damaged suffix extra words', amount: '-1' };
+    assert.equal(receiptItems({ total: '19', lines: [item, { ...item, description: 'LANDL A60 20W' }, discount] })[0].amount, '10');
+    for (const description of ['A60 damaged suffix extra words', 'LANDL 1599 damaged suffix extra words', 'LANDL A600 damaged suffix extra words']) {
+        assert.equal(receiptItems({ total: '9', lines: [item, { ...discount, description }] })[0].amount, '10');
+    }
+    assert.equal(receiptItems({ total: '10', lines: [item, discount] })[0].discountAmount, '');
+});
 test('category suggestions remain unapplied and source indices survive non-item lines', () => {
     const draft = { lines: [
         { kind: 'Subtotal', description: 'Subtotal', amount: '5' },

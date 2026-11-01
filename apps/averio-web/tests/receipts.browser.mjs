@@ -121,8 +121,12 @@ try {
         // Photo inspection is reachable from the fixed editor footer.
         await page.getByRole('button', { name: copy.expandPhoto, exact: true }).click();
         const zoom = page.getByRole('slider', { name: copy.zoom, exact: true });
+        const zoomLabel = zoom.locator('..');
+        assert.equal(await zoomLabel.locator('output').textContent(), '100%');
+        assert.doesNotMatch(await zoomLabel.textContent(), /[\x00-\x08\x0B\x0C\x0E-\x1F]/);
         await zoom.focus(); await page.keyboard.press('End');
         assert.equal(await zoom.inputValue(), '400');
+        assert.equal(await zoomLabel.locator('output').textContent(), '400%');
         await page.keyboard.press('Escape');
         await page.getByRole('dialog', { name: copy.review, exact: true }).getByRole('button', { name: copy.viewMatch, exact: true }).click();
         const matchDialog = page.getByRole('dialog', { name: copy.matchTitle, exact: true });

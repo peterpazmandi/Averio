@@ -12,7 +12,14 @@ function matchesDiscount(discount: string, description: string) {
     const itemWords = discountWords(description);
     const shared = words.filter(word => itemWords.some(item => item === word
         || (Math.min(item.length, word.length) >= 4 && (item.startsWith(word) || word.startsWith(item)))));
-    return shared.length >= 2 && shared.length / words.length >= 0.6;
+    if (shared.length >= 2 && shared.length / words.length >= 0.6) return true;
+    // OCR can corrupt the suffix while preserving a product name and model
+    // (e.g. LANDL A60). Require both exact anchors for this fallback, never
+    // a price/quantity or fuzzy model prefix. The caller still requires one
+    // candidate and exact reconciliation of the complete discounted receipt.
+    const exact = words.filter(word => itemWords.includes(word));
+    return exact.some(word => /^[a-z]{4,}$/.test(word))
+        && exact.some(word => /[a-z]/.test(word) && /[0-9]/.test(word));
 }
 
 export function receiptItems(draft: ReceiptDraft) {
