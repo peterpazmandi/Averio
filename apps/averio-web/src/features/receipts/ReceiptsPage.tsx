@@ -196,7 +196,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
             receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} />}
             receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={review} buttonOnly />}
-            receiptComparison={<ReceiptPhoto householdId={householdId} scan={review} />}
+            receiptComparison={<ReceiptPhoto householdId={householdId} scan={review} comparison />}
             onSaveReceipt={(request, currency, reviewedTotal, rememberCategoryRules) => post.mutateAsync({ scan: review, request, currency, reviewedTotal, rememberCategoryRules }).then(() => undefined)}
             busy={post.isPending} onCancel={() => setReview(null)} />}
         {manual && <TransactionEditor key={'manual-' + manual.id} userId={userId} householdId={householdId} transaction={null}
@@ -247,7 +247,7 @@ function ReceiptEvidence({ householdId, scan, onMatch }: { householdId: string; 
 }
 
 
-function ReceiptPhoto({ householdId, scan, buttonOnly = false }: { householdId: string; scan: ReceiptScanResult; buttonOnly?: boolean }) {
+function ReceiptPhoto({ householdId, scan, buttonOnly = false, comparison = false }: { householdId: string; scan: ReceiptScanResult; buttonOnly?: boolean; comparison?: boolean }) {
     const { t } = useTranslation();
     const [imageFailed, setImageFailed] = useState(false);
     const [expanded, setExpanded] = useState(false);
@@ -255,7 +255,15 @@ function ReceiptPhoto({ householdId, scan, buttonOnly = false }: { householdId: 
     const src = `${API_BASE_URL}/api/v1/households/${encodeURIComponent(householdId)}/receipt-scans/${encodeURIComponent(scan.id)}/image`;
     const retry = <p role="alert">{t('receipts.imageFailed')} <AverioButton onClick={() => setImageFailed(false)}>{t('receipts.retry')}</AverioButton></p>;
     return <>
-        {!buttonOnly && (!imageFailed ? <img src={src} alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => { receiptLog('photo.load_failed', { scanId: scan.id }, 'warn'); setImageFailed(true); }} /> : retry)}
+        {comparison && <>
+            <label className="mb-3 flex flex-wrap items-center gap-2"><span>{t('receipts.zoom')}</span><output>{zoom}%</output>
+                <input type="range" min="100" max="400" step="25" value={zoom} aria-label={t('receipts.zoom')} onChange={event => setZoom(Number(event.target.value))} />
+            </label>
+            {!imageFailed ? <div className="max-h-[65dvh] overflow-auto rounded-xl" tabIndex={0} role="region" aria-label={t('receipts.imageAlt')}>
+                <img src={src} alt={t('receipts.imageAlt')} style={{ width: zoom + '%', maxWidth: 'none' }} onError={() => setImageFailed(true)} />
+            </div> : retry}
+        </>}
+        {!buttonOnly && !comparison && (!imageFailed ? <img src={src} alt={t('receipts.imageAlt')} className="max-h-80 w-full rounded-xl bg-slate-100 object-contain dark:bg-slate-900" onError={() => { receiptLog('photo.load_failed', { scanId: scan.id }, 'warn'); setImageFailed(true); }} /> : retry)}
         <AverioButton onClick={() => { setZoom(100); setExpanded(true); }}>{t('receipts.expandPhoto')}</AverioButton>
         {expanded && <AverioDialog open wide title={t('receipts.expandPhoto')} closeLabel={t('common.actions.close')} onDismiss={() => setExpanded(false)}
             actions={<AverioButton onClick={() => setExpanded(false)}>{t('common.actions.close')}</AverioButton>}>

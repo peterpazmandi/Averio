@@ -126,7 +126,7 @@ try {
         assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '9.00');
         // Photo inspection is reachable from the fixed editor footer.
         await page.getByRole('dialog', { name: copy.review, exact: true }).locator('footer').getByRole('button', { name: copy.expandPhoto, exact: true }).click();
-        const zoom = page.getByRole('slider', { name: copy.zoom, exact: true });
+        const zoom = page.getByRole('dialog', { name: copy.expandPhoto, exact: true }).getByRole('slider', { name: copy.zoom, exact: true });
         const zoomLabel = zoom.locator('..');
         assert.equal(await zoomLabel.locator('output').textContent(), '100%');
         assert.doesNotMatch(await zoomLabel.textContent(), /[\x00-\x08\x0B\x0C\x0E-\x1F]/);

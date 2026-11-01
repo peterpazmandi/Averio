@@ -480,7 +480,7 @@ export function TransactionEditor({
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={dismiss}
         actions={<>
             {receiptDraft && <div className="mr-auto min-w-0 text-sm" role="status">
-                <strong className="block text-lg">{t('receipts.itemsTotal')}: {formatDecimalAmount(total, receiptCurrency || 'EUR', language)}</strong>
+                <strong className="block text-lg">{t('receipts.itemsTotal')}: {(receiptCurrency ? formatDecimalAmount(total, receiptCurrency, language) : total)}</strong>
                 <span className={difference === '0' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200'}>{t(difference === '0' ? 'receipts.reconciled' : 'receipts.ux.checkTotal')}</span>
                 {!resolvedAccountId && <span className="block">{t('receipts.chooseAccount')}</span>}
             </div>}
@@ -590,7 +590,7 @@ export function TransactionEditor({
                             {item.discountAmount && <p className="text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.ux.netCalculation', { gross: item.originalAmount, discount: item.discountAmount.replace(/^-/, ''), net: sumDecimalAmounts([item.originalAmount || '0', item.discountAmount]) })}</p>}
                             {(!validReceiptAmount(item.amount) || !item.description.trim()) && <p className="text-sm text-amber-800 dark:text-amber-200">{t('receipts.ux.checkItem')}</p>}
                         </div>
-                        <div className="max-w-[50%] text-right break-words"><strong>{validReceiptAmount(item.amount) ? formatDecimalAmount(item.amount, receiptCurrency || 'EUR', language) : '—'}</strong>
+                        <div className="max-w-[50%] text-right break-words"><strong>{validReceiptAmount(item.amount) ? (receiptCurrency ? formatDecimalAmount(item.amount, receiptCurrency, language) : item.amount) : '—'}</strong>
                             <AverioButton className="ml-2" aria-expanded={expandedItems.has(item.key) || !validReceiptAmount(item.amount) || !item.description.trim()} aria-controls={item.key + '-fields'} onClick={() => setExpandedItems(current => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })}>{t(expandedItems.has(item.key) ? 'receipts.ux.done' : 'receipts.ux.edit')}</AverioButton>
                         </div>
                     </div>}
