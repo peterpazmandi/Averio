@@ -102,6 +102,7 @@ try {
         await page.getByRole('button', { name: copy.retry, exact: true }).click();
         await page.getByRole('button', { name: copy.review, exact: true }).click();
         assert.equal(await page.locator('input[id$="-amount"]').isVisible(), false, 'Valid receipt items start compact.');
+        assert.doesNotMatch(await page.getByRole('dialog', { name: copy.review, exact: true }).innerText(), /\breceipts\.[a-zA-Z]/, 'Receipt review must not expose untranslated keys.');
         await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
         await page.getByText(copy.ux.correctTotal, { exact: true }).click();
         if (language === 'en' && width === 375 && !dark) {
@@ -317,5 +318,6 @@ try {
     }
     console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
+
 
 

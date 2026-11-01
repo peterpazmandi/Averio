@@ -1,5 +1,6 @@
 export const receiptsEN = {
     ux: {
+        chooseAccount: "Choose an account",
         "checkTotal": "Check the difference before saving.",
         "checkDate": "Choose the purchase date",
         "checkCategory": "Check category (currently Other)",
@@ -100,6 +101,7 @@ export const receiptsEN = {
 };
 export const receiptsDE: typeof receiptsEN = {
     ux: {
+        chooseAccount: "Wähle ein Konto",
         "checkTotal": "Prüfe vor dem Speichern die Differenz.",
         "checkDate": "Kaufdatum auswählen",
         "checkCategory": "Kategorie prüfen (aktuell Sonstiges)",
@@ -200,6 +202,7 @@ export const receiptsDE: typeof receiptsEN = {
 };
 export const receiptsHU: typeof receiptsEN = {
     ux: {
+        chooseAccount: "Válassz számlát",
         "checkTotal": "Mentés előtt ellenőrizd az eltérést.",
         "checkDate": "Válaszd ki a vásárlás dátumát",
         "checkCategory": "Ellenőrizd a kategóriát (jelenleg Egyéb)",
