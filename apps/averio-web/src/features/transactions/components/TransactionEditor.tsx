@@ -1,5 +1,5 @@
 import type { ReceiptDraft, RememberReceiptCategoryRequest } from '../../../shared/api/generated';
-import { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
+import { assignReceiptDiscounts, normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
 import { getCategoryDisplayName } from '../categoryLocalization';
 import type { ReactNode } from 'react';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
@@ -42,6 +42,7 @@ interface Props {
     receiptDraft?: ReceiptDraft;
     receiptEvidence?: ReactNode;
     receiptPhotoAction?: ReactNode;
+    receiptComparison?: ReactNode;
     onSaveReceipt?: (request: TransactionInputDto, currency: string, reviewedTotal: string, rememberCategoryRules: RememberReceiptCategoryRequest[]) => Promise<void>;
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
@@ -106,7 +107,7 @@ export function TransactionEditor({
     transaction: initialTransaction,
     personalRelation,
     initialKind = 'Expense',
-    receiptDraft, receiptEvidence, receiptPhotoAction, onSaveReceipt,
+    receiptDraft, receiptEvidence, receiptPhotoAction, receiptComparison, onSaveReceipt,
     recurringRule: initialRule,
     initialRecurring = false,
     onSaveRecurring,
@@ -133,6 +134,9 @@ export function TransactionEditor({
     const [receiptCurrency, setReceiptCurrency] = useState(receiptDraft?.currency ?? '');
     const [reviewedTotal, setReviewedTotal] = useState(receiptDraft?.total ?? '');
     const [reviewConfirmed, setReviewConfirmed] = useState(false);
+    const [discountTargets, setDiscountTargets] = useState<Record<number, string>>({});
+    const [discountsAssigned, setDiscountsAssigned] = useState(false);
+    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
     const accounts = useQuery(accountsQueries.list(userId, householdId, !!rule));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const writableAccounts = useMemo(() => (accounts.data ?? []).filter(account =>
@@ -241,6 +245,22 @@ export function TransactionEditor({
         [categories.data],
     );
 
+    const availableSuggestions = (categories.data ?? []).filter(c => !c.isArchived && c.systemKey !== 'uncategorized')
+        .map(c => ({ id: c.id, displayName: getCategoryDisplayName(c, t) }));
+    function categorySuggestion(item: EditorItem) {
+        return availableSuggestions.find(c => c.id === item.suggestedCategoryId)
+            ?? suggestReceiptCategory(item.description, availableSuggestions);
+    }
+    const suggestibleItems = items.filter(item => (!item.categoryId || item.categoryId === uncategorizedId) && categorySuggestion(item));
+    function applyCategorySuggestions() {
+        setReviewConfirmed(false);
+        setItems(current => current.map(item => {
+            const suggestion = categorySuggestion(item);
+            return suggestion && (!item.categoryId || item.categoryId === uncategorizedId)
+                ? { ...item, categoryId: suggestion.id } : item;
+        }));
+    }
+
     const resolvedItems = useMemo(
         () => items.map(item => ({
             ...item, categoryId: resolveItemCategory(item.categoryId, uncategorizedId),
@@ -342,6 +362,10 @@ export function TransactionEditor({
     };
     const difference = receiptDraft && validReceiptAmount(reviewedTotal) && resolvedItems.every(item => validReceiptAmount(item.amount))
         ? subtractDecimalAmounts(total, normalizeReceiptAmount(reviewedTotal)!) : null;
+    const extractedDiscounts = receiptDraft?.lines.filter(line => line.kind === 'Discount') ?? [];
+    const canAssignDiscounts = !!receiptDraft && extractedDiscounts.length > 0 && !discountsAssigned && !items.some(item => item.discountAmount) && !receiptReconciles(reviewedTotal, items);
+    const discountProposal = canAssignDiscounts ? assignReceiptDiscounts(items, extractedDiscounts,
+        extractedDiscounts.map((_, index) => items.findIndex(item => item.key === discountTargets[index])), reviewedTotal) : null;
     const receiptValid = !receiptDraft || (reviewConfirmed && receiptCurrency === currency && receiptReconciles(reviewedTotal, resolvedItems));
 
     function submittedAmount(value: string) {
@@ -452,9 +476,14 @@ export function TransactionEditor({
                 </div>}
     </>;
 
-    return <><AverioDialog open wide title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
+    return <><AverioDialog open wide extraWide={!!receiptComparison} title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={dismiss}
         actions={<>
+            {receiptDraft && <div className="mr-auto min-w-0 text-sm" role="status">
+                <strong className="block text-lg">{t('receipts.itemsTotal')}: {formatDecimalAmount(total, receiptCurrency || 'EUR', language)}</strong>
+                <span className={difference === '0' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200'}>{t(difference === '0' ? 'receipts.reconciled' : 'receipts.ux.checkTotal')}</span>
+                {!resolvedAccountId && <span className="block">{t('receipts.chooseAccount')}</span>}
+            </div>}
             {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
                 onClick={() => {
                     if (window.confirm(t(transaction.isArchived ? 'transactionManagement.restoreConfirm' : 'transactionManagement.archiveConfirm')))
@@ -469,10 +498,12 @@ export function TransactionEditor({
             {receiptPhotoAction}
             <AverioButton disabled={busy} onClick={dismiss}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
-                disabled={busy || !receiptValid || !resolvedAccountId || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                disabled={busy || !receiptValid || !resolvedAccountId || (!!receiptDraft && (!occurredOn || resolvedItems.some(item => !item.description.trim() || !validReceiptAmount(item.amount)))) || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
+        <div className={receiptComparison ? 'grid items-start gap-5 xl:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.6fr)]' : ''}>
+        {receiptComparison && <aside className="hidden xl:sticky xl:top-0 xl:block">{receiptComparison}</aside>}
         <form id="transaction-editor" className="grid gap-4" onSubmit={submit}
             onChangeCapture={event => {
                 // Any edited field invalidates the reviewed intent, including
@@ -480,6 +511,12 @@ export function TransactionEditor({
                 if (receiptDraft && !(event.target instanceof HTMLInputElement
                     && event.target.name === 'receipt-review-confirmation')) setReviewConfirmed(false);
             }}>
+            {receiptDraft && <AverioCard className="grid gap-2">
+                <strong className="text-lg">{merchant || t('receipts.receipt')}</strong>
+                <p>{occurredOn || t('receipts.ux.checkDate')} · {account?.name || t('receipts.chooseAccount')}</p>
+                <p className="font-semibold">{t('receipts.reviewedTotal')}: {reviewedTotal || '—'} {receiptCurrency}</p>
+                <p className="text-xs">{t(effectiveVisibility === 'Private' ? 'transactionManagement.private' : 'transactionManagement.household')}</p>
+            </AverioCard>}
             {(receiptDraft || receiptEvidence) && <AverioCard className="grid gap-3">
                 <p className="text-sm">{t('receipts.reviewHelp')}</p>
                 {receiptEvidence}
@@ -534,20 +571,37 @@ export function TransactionEditor({
                         <AverioButton disabled={busy || resolvedItems.length >= 100} onClick={addItem}>+ {t('transactionManagement.addItem')}</AverioButton>
                     </div>
                 </div>
-                {receiptDraft && <p className="text-xs text-slate-600 dark:text-slate-300">{t('receipts.rememberCategoryHelp')}</p>}
+                {receiptDraft && <div className="flex flex-wrap items-center gap-2">
+                    <AverioButton disabled={busy || categories.isPending || categories.isError || suggestibleItems.length === 0} onClick={applyCategorySuggestions}>{t('receipts.ux.applyCategories', { count: suggestibleItems.length })}</AverioButton>
+                    <AverioButton onClick={() => setExpandedItems(new Set(items.map(item => item.key)))}>{t('receipts.ux.editAll')}</AverioButton>
+                    <p className="text-xs">{t('receipts.ux.categoriesHelp')}</p>
+                </div>}
                 {receiptDraft && receiptDraft.lines.some(line => line.kind === 'Discount') && <p className="text-sm" role="status">{t(items.some(item => item.discountAmount) ? 'receipts.discountsSuggested' : 'receipts.discountsManual')}</p>}
-                <div aria-hidden="true" className="hidden gap-3 text-[13px] font-semibold sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
+                <div aria-hidden="true" className={(receiptDraft ? 'hidden' : 'hidden sm:grid') + " gap-3 text-[13px] font-semibold sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]"}>
                     <span>{t('transactionManagement.itemDescription')}</span>
                     <span>{t('transactionManagement.category')}</span>
                     <span>{t('transactionManagement.amount')} · {currency}</span>
                 </div>
-                {resolvedItems.map((item, index) => <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-3 dark:border-slate-700 sm:items-start sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
-                    <div className="col-span-2 sm:col-span-1"><label htmlFor={item.key + '-description'} className="mb-[7px] block text-[13px] font-semibold sm:sr-only">{t('transactionManagement.itemDescription')}</label><AverioInput id={item.key + '-description'} required value={item.description} maxLength={160} disabled={busy}
+                {resolvedItems.map((item, index) => <div key={item.key}>
+                    {receiptDraft && <div className="flex items-start justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-700">
+                        <div className="min-w-0">
+                            <p className="break-words font-semibold">{item.description || t('transactionManagement.itemDescription')}</p>
+                            <p className="text-xs">{item.categoryId === uncategorizedId ? t('receipts.ux.checkCategory') : getCategoryDisplayName((categories.data ?? []).find(c => c.id === item.categoryId) ?? { name: '', systemKey: null }, t) || t('receipts.ux.checkCategory')}</p>
+                            {item.discountAmount && <p className="text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.ux.netCalculation', { gross: item.originalAmount, discount: item.discountAmount.replace(/^-/, ''), net: sumDecimalAmounts([item.originalAmount || '0', item.discountAmount]) })}</p>}
+                            {(!validReceiptAmount(item.amount) || !item.description.trim()) && <p className="text-sm text-amber-800 dark:text-amber-200">{t('receipts.ux.checkItem')}</p>}
+                        </div>
+                        <div className="max-w-[50%] text-right break-words"><strong>{validReceiptAmount(item.amount) ? formatDecimalAmount(item.amount, receiptCurrency || 'EUR', language) : '—'}</strong>
+                            <AverioButton className="ml-2" aria-expanded={expandedItems.has(item.key) || !validReceiptAmount(item.amount) || !item.description.trim()} aria-controls={item.key + '-fields'} onClick={() => setExpandedItems(current => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })}>{t(expandedItems.has(item.key) ? 'receipts.ux.done' : 'receipts.ux.edit')}</AverioButton>
+                        </div>
+                    </div>}
+                    <div id={item.key + '-fields'} hidden={!!receiptDraft && !expandedItems.has(item.key) && validReceiptAmount(item.amount) && !!item.description.trim()} onInvalidCapture={() => setExpandedItems(current => new Set([...current, item.key]))}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-3 dark:border-slate-700 sm:items-start sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
+                    <div className="col-span-2 sm:col-span-1"><label htmlFor={item.key + '-description'} className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.itemDescription')}</label><AverioInput id={item.key + '-description'} required value={item.description} maxLength={160} disabled={busy}
                         onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} />
                         {item.originalDescription && item.description !== item.originalDescription && <p className="mt-1 break-words text-xs text-slate-600 dark:text-slate-300">{t('receipts.originalLine', { description: item.originalDescription })}</p>}
                         {item.discountAmount && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.discountApplied', { gross: item.originalAmount, discount: item.discountAmount })}</p>}
                     </div>
-                    <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-[7px] block text-[13px] font-semibold sm:hidden">{t('transactionManagement.category')}</span>
+                    <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.category')}</span>
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
@@ -560,17 +614,17 @@ export function TransactionEditor({
                             {suggestion && suggestion.id !== item.categoryId ? <AverioButton disabled={busy} className="mt-2 text-xs"
                                 onClick={() => updateItem(item.key, { categoryId: suggestion.id })}>{t('receipts.suggestion', { category: suggestion.displayName })}</AverioButton> : null}
                             {supplied && supplied.id !== item.categoryId && <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{t(item.categorySuggestionSource === 'HouseholdRule' ? 'receipts.householdRuleSuggestion' : 'receipts.modelCategorySuggestion')}</p>}
-                            {item.canRememberCategory && receiptDraft.merchant?.trim() && <label className="mt-2 flex min-h-11 items-start gap-2 text-xs">
+                            {item.canRememberCategory && receiptDraft.merchant?.trim() && <details><summary className="cursor-pointer py-2 text-xs">{t('receipts.ux.rememberOptions')}</summary><label className="mt-2 flex min-h-11 items-start gap-2 text-xs">
                                 <input type="checkbox" className="mt-1 size-4 shrink-0 accent-emerald-500" checked={!!item.rememberCategory && item.categoryId !== uncategorizedId}
                                     disabled={busy || !item.categoryId || item.categoryId === uncategorizedId || !available.some(c => c.id === item.categoryId)}
                                     onChange={event => updateItem(item.key, { rememberCategory: event.target.checked })} />
                                 <span>{t('receipts.rememberCategory')}</span>
-                            </label>}
+                            </label><p className="text-xs">{t('receipts.rememberCategoryHelp')}</p></details>}
                             </>;
                         })()}
                     </div>
                     <div className="min-w-0">
-                        <label htmlFor={item.key + '-amount'} className="mb-[7px] block text-[13px] font-semibold sm:sr-only">{t('transactionManagement.amount')} · {currency}</label>
+                        <label htmlFor={item.key + '-amount'} className="mb-[7px] block text-[13px] font-semibold">{t('transactionManagement.amount')} · {currency}</label>
                         <div className="flex min-w-0 gap-1">
                             <AverioInput id={item.key + '-amount'} className="min-w-0" required
                                 aria-invalid={!!receiptDraft && !validReceiptAmount(item.amount)}
@@ -588,7 +642,7 @@ export function TransactionEditor({
                     </div>
                     <div className="flex items-end justify-end"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
-                </div>)}
+                </div></div></div>)}
                 {!recurring && kind === 'Expense' && wallet.isError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
                     <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
@@ -624,7 +678,7 @@ export function TransactionEditor({
                 <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
                 <p className="text-xs">{t('activities.privateHelp')}</p>
             </AverioDisclosure>
-            <AverioDisclosure title={t('transactionManagement.detailsPrivacy')} defaultOpen={!!receiptDraft} summary={t(effectiveVisibility === 'Private' ? 'transactionManagement.private' : 'transactionManagement.household') + (note ? ' · ' + note : '')}>
+            <AverioDisclosure title={t('transactionManagement.detailsPrivacy')} defaultOpen={false} summary={t(effectiveVisibility === 'Private' ? 'transactionManagement.private' : 'transactionManagement.household') + (note ? ' · ' + note : '')}>
                 <p className="text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p>
                 <AverioField>{t('transactionManagement.note')}<AverioTextarea aria-label={t('transactionManagement.note')} value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
                 <AverioField>{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
@@ -639,19 +693,34 @@ export function TransactionEditor({
             {receiptDraft && <AverioCard className="grid gap-4">
                 <h3 className="font-bold">{t('receipts.confirmStep')}</h3>
                 <div className="grid items-end gap-3 sm:grid-cols-2">
+                    <details><summary className="cursor-pointer py-3 font-semibold">{t('receipts.ux.correctTotal')}</summary>
+                    <p className="mb-2 text-xs">{t('receipts.ux.correctTotalHelp')}</p>
                     <AverioField>{t('receipts.reviewedTotal')}<AverioInput required inputMode="decimal" aria-label={t('receipts.reviewedTotal')}
-                        value={reviewedTotal} disabled={busy} onChange={event => { setReviewedTotal(event.target.value); setReviewConfirmed(false); }} /></AverioField>
+                        value={reviewedTotal} disabled={busy} onChange={event => { setReviewedTotal(event.target.value); setReviewConfirmed(false); }} /></AverioField></details>
                     <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900"><p className="text-sm">{t('receipts.itemsTotal')}</p><p className="text-xl font-bold">{currency ? formatDecimalAmount(total, currency, language) : total}</p></div>
                 </div>
                 <p className="text-sm">{t('receipts.extractedTotal', { amount: receiptDraft.total ?? '—', currency: receiptDraft.currency ?? '' })}</p>
                 {difference !== null && difference !== '0' && <p role="status" className="font-semibold text-amber-900 dark:text-amber-200">{t(difference.startsWith('-') ? 'receipts.itemsBelow' : 'receipts.itemsAbove',
                     { amount: formatDecimalAmount(difference.replace(/^-/, ''), receiptCurrency || 'EUR', language) })}</p>}
-                <p className={'rounded-xl p-3 text-sm ' + (receiptReconciles(reviewedTotal, resolvedItems) ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200')} role="status">{t(receiptReconciles(reviewedTotal, resolvedItems) ? 'receipts.reconciled' : 'receipts.reconcileHelp')}</p>
+                <p className={'rounded-xl p-3 text-sm ' + (receiptReconciles(reviewedTotal, resolvedItems) ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200')} role="status">{t(receiptReconciles(reviewedTotal, resolvedItems) ? 'receipts.reconciled' : 'receipts.ux.checkItems')}</p>
+                {canAssignDiscounts && <fieldset className="grid gap-3 rounded-xl border border-amber-300 p-3 dark:border-amber-800" disabled={busy}>
+                    <legend className="px-1 font-semibold">{t('receipts.kinds.Discount')}</legend>
+                    <p>{t('receipts.ux.discountsUnassigned', { amount: sumDecimalAmounts(extractedDiscounts.map(line => normalizeReceiptAmount(line.amount ?? '') ?? '0')) })}</p>
+                    <p className="text-xs">{t('receipts.ux.discountAssignmentHelp')}</p>
+                    {extractedDiscounts.map((discount, index) => <AverioField key={index}>{t('receipts.ux.discountTarget', { description: discount.description, amount: discount.amount })}
+                        <AverioSelect value={discountTargets[index] ?? ''} onChange={event => { setDiscountTargets(current => ({ ...current, [index]: event.target.value })); setReviewConfirmed(false); }}>
+                            <option value="">{t('receipts.ux.chooseItem')}</option>
+                            {items.map((item, itemIndex) => <option key={item.key} value={item.key}>{itemIndex + 1}. {item.description} · {item.amount}</option>)}
+                        </AverioSelect>
+                    </AverioField>)}
+                    <AverioButton disabled={busy || !discountProposal} onClick={() => { if (discountProposal) { setItems(discountProposal); setDiscountsAssigned(true); setReviewConfirmed(false); } }}>{t('receipts.ux.applyDiscounts')}</AverioButton>
+                </fieldset>}
                 <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="receipt-review-confirmation" className="size-4 shrink-0 accent-emerald-500" checked={reviewConfirmed} disabled={busy}
                     onChange={event => setReviewConfirmed(event.target.checked)} />{t('receipts.reviewConsent')}</label>
             </AverioCard>}
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
+        </div>
     </AverioDialog>
     {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}
         actions={<><AverioButton onClick={() => setConfirmClose(false)}>{t('receipts.keepEditing')}</AverioButton><AverioButton variant="danger" onClick={onCancel}>{t('receipts.discardEdits')}</AverioButton></>}>

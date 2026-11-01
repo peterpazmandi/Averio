@@ -60,6 +60,27 @@ export function normalizeReceiptAmount(value: string) {
     return normalizeBalanceInput(value);
 }
 
+// Explicit review assignments use current edited values, never mutate evidence,
+// and only commit as one fully reconciled proposal. Callers prevent reapplication.
+export function assignReceiptDiscounts<T extends { amount: string; discountAmount?: string; originalAmount?: string }>(
+    items: readonly T[], discounts: readonly { amount: string | null }[], targets: readonly number[], total: string,
+): T[] | null {
+    if (!discounts.length || targets.length !== discounts.length || receiptReconciles(total, items)) return null;
+    const proposal = items.map(item => ({ ...item }));
+    for (let index = 0; index < discounts.length; index++) {
+        const target = targets[index];
+        const discount = normalizeReceiptAmount(discounts[index].amount ?? '');
+        if (!Number.isInteger(target) || target < 0 || target >= proposal.length || !discount?.startsWith('-')) return null;
+        const item = proposal[target];
+        const amount = normalizeReceiptAmount(item.amount);
+        if (amount === null) return null;
+        item.originalAmount = item.discountAmount ? item.originalAmount : amount;
+        item.amount = sumDecimalAmounts([amount, discount]);
+        item.discountAmount = sumDecimalAmounts([item.discountAmount || '0', discount]);
+    }
+    return receiptReconciles(total, proposal) ? proposal : null;
+}
+
 export function receiptReconciles(total: string, items: readonly { amount: string }[]) {
     const reviewed = normalizeReceiptAmount(total);
     const amounts = items.map(item => normalizeReceiptAmount(item.amount));

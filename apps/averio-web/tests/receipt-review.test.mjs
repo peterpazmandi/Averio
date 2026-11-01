@@ -16,8 +16,26 @@ function load(file, imports = {}) {
     return context.exports;
 }
 const money = load('../src/shared/money/decimalAmount.ts');
-const { normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
+const { assignReceiptDiscounts, normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
     '../../shared/money/decimalAmount': money,
+});
+
+test('explicit discount assignment requires a complete exact positive proposal and preserves edits', () => {
+    const items = [{ amount: '1999', description: 'Edited chocolate' }, { amount: '3198' }];
+    const discounts = [{ amount: '-640' }, { amount: '-600' }];
+    const result = assignReceiptDiscounts(items, discounts, [1, 0], '3957');
+    assert.equal(result[0].description, 'Edited chocolate');
+    assert.equal(result[0].amount, '1399');
+    assert.equal(result[1].amount, '2558');
+    assert.equal(result[1].originalAmount, '3198');
+    assert.equal(result[1].discountAmount, '-640');
+    assert.equal(items[0].amount, '1999');
+    assert.equal(assignReceiptDiscounts(result, discounts, [1, 0], '3957'), null);
+    assert.equal(assignReceiptDiscounts(items, discounts, [-1, 0], '3957'), null);
+    assert.equal(assignReceiptDiscounts(items, discounts, [1], '3957'), null);
+    assert.equal(assignReceiptDiscounts(items, discounts, [1, 0], '3956'), null);
+    assert.equal(assignReceiptDiscounts([{ amount: '1' }, { amount: '10' }], [{ amount: '-2' }], [0], '9'), null);
+    assert.equal(assignReceiptDiscounts(items, [{ amount: 'oops' }], [0], '3957'), null);
 });
 
 test('OCR-damaged product suffix still allocates the two Tesco discounts exactly once', () => {

@@ -170,7 +170,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     <span className={'rounded-full px-3 py-1 text-xs font-semibold ' + (scan.status === 'Ready' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200')}>{t('receipts.status.' + scan.status, { defaultValue: t('receipts.status.Unknown') })}</span></div>
                 {scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={() => setMatching(scan.id)}>{t('receipts.viewMatch')}</AverioButton></p>}
                 {scan.status === 'Ready' && scan.draft && <p className="text-lg font-bold">{scan.draft.total ?? '-'} {scan.draft.currency}</p>}
-                {['Queued', 'Processing'].includes(scan.status) && <p className="text-sm" role="status">{t('receipts.processingHelp')}</p>}
+                {['Queued', 'Processing'].includes(scan.status) && <p className="text-sm" role="status">{t(inbox.dataUpdatedAt - Date.parse(scan.createdAt) >= 120000 ? 'receipts.ux.waitingLong' : scan.status === 'Queued' ? 'receipts.ux.waitingStart' : 'receipts.processingHelp')}</p>}
                 {scan.status === 'Ready' && <p className="text-sm">{t('receipts.expires', { date: new Date(scan.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>}
                 {scan.status === 'Failed' && <div className="grid gap-2">
                     <p className="text-sm">{t(['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
@@ -196,6 +196,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
             receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} />}
             receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={review} buttonOnly />}
+            receiptComparison={<ReceiptPhoto householdId={householdId} scan={review} />}
             onSaveReceipt={(request, currency, reviewedTotal, rememberCategoryRules) => post.mutateAsync({ scan: review, request, currency, reviewedTotal, rememberCategoryRules }).then(() => undefined)}
             busy={post.isPending} onCancel={() => setReview(null)} />}
         {manual && <TransactionEditor key={'manual-' + manual.id} userId={userId} householdId={householdId} transaction={null}

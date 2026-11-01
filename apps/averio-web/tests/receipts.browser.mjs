@@ -29,7 +29,7 @@ try {
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
         const errors = [], uploads = [], posts = [], manualPosts = [];
-        let showFailed = false;
+        let showFailed = false, manualDiscount = false;
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
         let failAccounts = language === 'en' && width === 375 && !dark;
         let uploaded = false, discarded = false, recorded = false, photoDeleted = false, monthlyUsed = 1;
@@ -42,7 +42,7 @@ try {
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
             postedTransactionId: recorded ? 'transaction' : null, imageAvailable: !photoDeleted, possibleDuplicate: true, matchingReceiptId: 'original',
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
-                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
+                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: manualDiscount ? 'Coupon' : 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
         const queued = () => ({ ...ready(), id: 'new-scan', status: discarded ? 'Discarded' : 'Queued', draft: null, postedTransactionId: null });
         await page.route('**/api/v1/**', async route => {
@@ -101,6 +101,9 @@ try {
         await page.goto(url);
         await page.getByRole('button', { name: copy.retry, exact: true }).click();
         await page.getByRole('button', { name: copy.review, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').isVisible(), false, 'Valid receipt items start compact.');
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        await page.getByText(copy.ux.correctTotal, { exact: true }).click();
         if (language === 'en' && width === 375 && !dark) {
             await page.getByRole('button', { name: copy.retry, exact: true }).click();
         }
@@ -117,9 +120,12 @@ try {
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: copy.discardEdits, exact: true }).click();
         await page.getByRole('button', { name: copy.review, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').isVisible(), false, 'Valid receipt items start compact.');
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        await page.getByText(copy.ux.correctTotal, { exact: true }).click();
         assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '9.00');
         // Photo inspection is reachable from the fixed editor footer.
-        await page.getByRole('button', { name: copy.expandPhoto, exact: true }).click();
+        await page.getByRole('dialog', { name: copy.review, exact: true }).locator('footer').getByRole('button', { name: copy.expandPhoto, exact: true }).click();
         const zoom = page.getByRole('slider', { name: copy.zoom, exact: true });
         const zoomLabel = zoom.locator('..');
         assert.equal(await zoomLabel.locator('output').textContent(), '100%');
@@ -161,6 +167,7 @@ try {
         await page.getByText(dark ? copy.householdRuleSuggestion : copy.modelCategorySuggestion, { exact: true }).waitFor();
         await assertItemAlignment();
         await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
+        await page.getByText(copy.ux.rememberOptions, { exact: true }).click();
         const remember = page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) });
         assert.equal(await remember.isChecked(), false, 'Household rule sharing is opt-in.');
         if (dark) await remember.check();
@@ -184,7 +191,7 @@ try {
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.ok((await page.locator('details').filter({ has: page.getByText(copy.observations, { exact: true }) }).textContent()).includes('Discount'));
         await page.getByText(copy.viewPhoto, { exact: true }).click();
-        await page.getByAltText(copy.imageAlt).waitFor();
+        await page.getByAltText(copy.imageAlt).filter({ visible: true }).last().waitFor();
         await page.getByText(copy.viewPhoto, { exact: true }).click();
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
         await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
@@ -281,6 +288,28 @@ try {
         assert.equal(manualPosts[0].items[0].amount, '4.50');
         assert.equal(monthlyUsed, beforeManual, 'Manual recovery must not consume scan quota.');
         assert.equal(uploads.length, 2);
+        // Unmatched discounts have an explicit recovery flow; applying category
+        // suggestions remains separate from household learning and recording.
+        recorded = false; manualDiscount = true; enabled = true;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByRole('button', { name: copy.review, exact: true }).click();
+        const applyCategories = page.getByRole('button', { name: copy.ux.applyCategories.replace('{{count}}', '1'), exact: true });
+        await applyCategories.click();
+        await page.getByRole('button', { name: copy.ux.applyCategories.replace('{{count}}', '0'), exact: true }).waitFor();
+        const applyDiscounts = page.getByRole('button', { name: copy.ux.applyDiscounts, exact: true });
+        assert.equal(await applyDiscounts.isDisabled(), true);
+        const assignment = page.getByLabel(copy.ux.discountTarget.replace('{{description}}', 'Coupon').replace('{{amount}}', '-1.00'), { exact: true });
+        await assignment.selectOption({ index: 1 });
+        assert.equal(await applyDiscounts.isEnabled(), true);
+        await applyDiscounts.click();
+        assert.equal(await applyDiscounts.count(), 0, 'Applied discounts cannot be applied twice.');
+        assert.equal(await page.getByRole('button', { name: copy.confirm, exact: true }).isDisabled(), true);
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '9');
+        await page.getByText(copy.ux.rememberOptions, { exact: true }).click();
+        assert.equal(await page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) }).isChecked(), false);
+        assert.equal(posts.length, 2, 'Review actions do not record another expense.');
+        await page.screenshot({ path: path.join(artifacts, `simplified-${language}-${dark}-${width}.png`), fullPage: true });
         assert.deepEqual(errors, []);
         await page.close();
     }
