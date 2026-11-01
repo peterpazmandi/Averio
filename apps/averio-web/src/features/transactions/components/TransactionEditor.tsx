@@ -596,12 +596,12 @@ export function TransactionEditor({
                     </div>}
                     <div id={item.key + '-fields'} hidden={!!receiptDraft && !expandedItems.has(item.key) && validReceiptAmount(item.amount) && !!item.description.trim()} onInvalidCapture={() => setExpandedItems(current => new Set([...current, item.key]))}>
                     <div className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3 border-b border-slate-200 pb-3 dark:border-slate-700 sm:items-start sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,.8fr)_44px]">
-                    <div className="col-span-2 sm:col-span-1"><label htmlFor={item.key + '-description'} className="mb-[7px] block h-5 text-[13px] font-semibold">{t('transactionManagement.itemDescription')}</label><AverioInput id={item.key + '-description'} required value={item.description} maxLength={160} disabled={busy}
+                    <div className="col-span-2 sm:col-span-1"><label htmlFor={item.key + '-description'} className={receiptDraft ? "mb-[7px] block h-5 text-[13px] font-semibold" : "mb-[7px] block text-[13px] font-semibold sm:sr-only"}>{t('transactionManagement.itemDescription')}</label><AverioInput id={item.key + '-description'} required value={item.description} maxLength={160} disabled={busy}
                         onChange={e => updateItem(item.key, { description: e.target.value })} placeholder={t('transactionManagement.itemDescriptionPlaceholder')} />
                         {item.originalDescription && item.description !== item.originalDescription && <p className="mt-1 break-words text-xs text-slate-600 dark:text-slate-300">{t('receipts.originalLine', { description: item.originalDescription })}</p>}
                         {item.discountAmount && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.discountApplied', { gross: item.originalAmount, discount: item.discountAmount })}</p>}
                     </div>
-                    <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-[7px] block h-5 text-[13px] font-semibold">{t('transactionManagement.category')}</span>
+                    <div className="col-span-2 min-w-0 sm:col-span-1"><span className={receiptDraft ? "mb-[7px] block h-5 text-[13px] font-semibold" : "mb-[7px] block text-[13px] font-semibold sm:hidden"}>{t('transactionManagement.category')}</span>
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
                             disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
@@ -624,7 +624,7 @@ export function TransactionEditor({
                         })()}
                     </div>
                     <div className="min-w-0">
-                        <label htmlFor={item.key + '-amount'} className="mb-[7px] block h-5 text-[13px] font-semibold">{t('transactionManagement.amount')} · {currency}</label>
+                        <label htmlFor={item.key + '-amount'} className={receiptDraft ? "mb-[7px] block h-5 text-[13px] font-semibold" : "mb-[7px] block text-[13px] font-semibold sm:sr-only"}>{t('transactionManagement.amount')} · {currency}</label>
                         <div className="flex min-w-0 gap-1">
                             <AverioInput id={item.key + '-amount'} className="min-w-0" required
                                 aria-invalid={!!receiptDraft && !validReceiptAmount(item.amount)}
@@ -640,7 +640,7 @@ export function TransactionEditor({
                         </div>
                         {receiptDraft && !validReceiptAmount(item.amount) && <p id={item.key + '-amount-error'} className="mt-1 text-xs text-red-700 dark:text-red-300">{t('receipts.invalidItemAmount')}</p>}
                     </div>
-                    <div className="flex items-end justify-end sm:pt-[27px]"><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
+                    <div className={receiptDraft ? "flex items-end justify-end sm:pt-[27px]" : "flex items-end justify-end"}><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
                 </div></div></div>)}
                 {!recurring && kind === 'Expense' && wallet.isError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
