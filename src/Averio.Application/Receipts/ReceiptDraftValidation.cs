@@ -28,6 +28,12 @@ public static class ReceiptDraftValidation
                 ? x.SuggestedDescription.Trim() : null
         }).ToArray();
         if (lines.Length == 0 || lines.Any(x => x.Amount is null)) warnings.Add("items_incomplete");
+        // Diagnostic only: never redistribute a discrepancy or shift prices between
+        // rows. Even a matching sum cannot establish that each pairing is correct.
+        var purchases = lines.Where(x => x.Kind is "Item" or "Deposit" or "Discount").ToArray();
+        if (total > 0 && purchases.Length > 0 && purchases.All(x => x.Amount is not null)
+            && purchases.Sum(x => Amount(x.Amount)!.Value) != total)
+            warnings.Add("items_total_mismatch");
         // Keep discounts, taxes and payments as evidence, not additional ledger items.
         warnings.Add("review_required");
         return new(draft.Merchant?.Trim(), date, currency, Format(total), lines, warnings.ToArray());

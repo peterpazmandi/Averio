@@ -20,6 +20,22 @@ const { assignReceiptDiscounts, normalizeReceiptAmount, receiptItems, receiptRec
     '../../shared/money/decimalAmount': money,
 });
 
+test('receipt review retains each product and deposit price in source order', () => {
+    const pairs = [
+        ['Vegyes viragmez', '1999', 'Item'], ['Narancsle 100%', '599', 'Item'],
+        ['Visszav.dij KF 1db', '50', 'Deposit'], ['Coca-Cola 0,5l', '419', 'Item'],
+        ['Visszav.dij BF 1db', '50', 'Deposit'], ['Kap. juht. cs.mell', '1399', 'Item'],
+    ];
+    const draft = { total: '4516', lines: pairs.map(([description, amount, kind]) => ({ description, amount, kind })) };
+    const items = receiptItems(draft);
+    assert.deepEqual(Array.from(items, item => [item.originalDescription, item.amount]), pairs.map(([description, amount]) => [description, amount]));
+    assert.equal(receiptReconciles(draft.total, items), true);
+    assert.equal(items[2].canRememberCategory, false);
+    draft.lines[1].amount = '1999';
+    assert.equal(receiptReconciles(draft.total, receiptItems(draft)), false);
+    assert.equal(receiptItems(draft)[1].amount, '1999', 'Do not invent a correction from the expected total.');
+});
+
 test('explicit discount assignment requires a complete exact positive proposal and preserves edits', () => {
     const items = [{ amount: '1999', description: 'Edited chocolate' }, { amount: '3198' }];
     const discounts = [{ amount: '-640' }, { amount: '-600' }];

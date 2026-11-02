@@ -97,7 +97,7 @@ export const receiptsEN = {
     observationsHelp: 'These are observations, not extra expenses. Only item and deposit lines prefill the editor. For more than 100 items, enter grouped items manually. Check all lines against the image.', unknownAmount: 'Amount unknown',
     status: { Uploading: 'Uploading', Queued: 'Waiting to start', Processing: 'Reading receipt', Ready: 'Ready to review', Failed: 'Could not scan', Discarded: 'Discarded', Expired: 'Expired', Posted: 'Recorded', Unknown: 'Unknown status' },
     kinds: { Item: 'Item', Deposit: 'Deposit', Discount: 'Discount', Tax: 'Tax', Subtotal: 'Subtotal', Payment: 'Payment', Other: 'Other' },
-    warnings: { review_required: 'Check all extracted details before recording.', date_uncertain: 'The printed date is ambiguous. Enter the correct date.', date_missing: 'A date could not be determined.', currency_needs_review: 'Choose the correct supported currency.', total_needs_review: 'Enter the correct receipt total.', items_incomplete: 'Some item amounts could not be read. Check every item.' },
+    warnings: { items_total_mismatch: 'The extracted lines do not match the printed total. Compare each item with its price on the photo; prices may have been assigned to neighbouring rows.', review_required: 'Check all extracted details before recording.', date_uncertain: 'The printed date is ambiguous. Enter the correct date.', date_missing: 'A date could not be determined.', currency_needs_review: 'Choose the correct supported currency.', total_needs_review: 'Enter the correct receipt total.', items_incomplete: 'Some item amounts could not be read. Check every item.' },
 };
 export const receiptsDE: typeof receiptsEN = {
     ux: {
@@ -198,7 +198,7 @@ export const receiptsDE: typeof receiptsEN = {
     observationsHelp: 'Dies sind erkannte Angaben, keine zusätzlichen Ausgaben. Nur Artikel und Pfand werden vorausgefüllt. Fasse mehr als 100 Artikel manuell zusammen. Vergleiche alle Zeilen mit dem Bild.', unknownAmount: 'Betrag unbekannt',
     status: { Uploading: 'Wird hochgeladen', Queued: 'Wartet auf den Start', Processing: 'Beleg wird gelesen', Ready: 'Bereit zur Prüfung', Failed: 'Scan fehlgeschlagen', Discarded: 'Verworfen', Expired: 'Abgelaufen', Posted: 'Gebucht', Unknown: 'Unbekannter Status' },
     kinds: { Item: 'Artikel', Deposit: 'Pfand', Discount: 'Rabatt', Tax: 'Steuer', Subtotal: 'Zwischensumme', Payment: 'Zahlung', Other: 'Sonstiges' },
-    warnings: { review_required: 'Prüfe alle erkannten Angaben vor dem Buchen.', date_uncertain: 'Das gedruckte Datum ist mehrdeutig. Trage das richtige Datum ein.', date_missing: 'Es konnte kein Datum ermittelt werden.', currency_needs_review: 'Wähle die richtige unterstützte Währung.', total_needs_review: 'Trage den richtigen Gesamtbetrag ein.', items_incomplete: 'Einige Postenbeträge waren nicht lesbar. Prüfe jeden Posten.' },
+    warnings: { items_total_mismatch: 'Die erkannten Zeilen stimmen nicht mit dem gedruckten Gesamtbetrag überein. Vergleiche jeden Artikel mit seinem Preis auf dem Foto; Preise könnten benachbarten Zeilen zugeordnet worden sein.', review_required: 'Prüfe alle erkannten Angaben vor dem Buchen.', date_uncertain: 'Das gedruckte Datum ist mehrdeutig. Trage das richtige Datum ein.', date_missing: 'Es konnte kein Datum ermittelt werden.', currency_needs_review: 'Wähle die richtige unterstützte Währung.', total_needs_review: 'Trage den richtigen Gesamtbetrag ein.', items_incomplete: 'Einige Postenbeträge waren nicht lesbar. Prüfe jeden Posten.' },
 };
 export const receiptsHU: typeof receiptsEN = {
     ux: {
@@ -299,7 +299,7 @@ export const receiptsHU: typeof receiptsEN = {
     observationsHelp: 'Ezek felismert adatok, nem további kiadások. Csak az áru- és betétdíjsorok töltik ki a szerkesztőt. Száznál több tételt kézzel vonj össze. Minden sort vess össze a képpel.', unknownAmount: 'Ismeretlen összeg',
     status: { Uploading: 'Feltöltés alatt', Queued: 'Indításra vár', Processing: 'Nyugta beolvasása', Ready: 'Ellenőrizhető', Failed: 'Sikertelen beolvasás', Discarded: 'Elvetve', Expired: 'Lejárt', Posted: 'Rögzítve', Unknown: 'Ismeretlen állapot' },
     kinds: { Item: 'Áru', Deposit: 'Betétdíj', Discount: 'Kedvezmény', Tax: 'Adó', Subtotal: 'Részösszeg', Payment: 'Fizetés', Other: 'Egyéb' },
-    warnings: { review_required: 'Rögzítés előtt ellenőrizd az összes felismert adatot.', date_uncertain: 'A nyomtatott dátum nem egyértelmű. Add meg a helyes dátumot.', date_missing: 'Nem sikerült megállapítani a dátumot.', currency_needs_review: 'Válaszd ki a megfelelő támogatott pénznemet.', total_needs_review: 'Add meg a nyugta helyes végösszegét.', items_incomplete: 'Néhány tétel összege nem volt olvasható. Ellenőrizz minden tételt.' },
+    warnings: { items_total_mismatch: 'A felismert sorok összege eltér a nyomtatott végösszegtől. Ellenőrizd minden tétel árát a fotón; az árak a szomszédos sorokhoz kerülhettek.', review_required: 'Rögzítés előtt ellenőrizd az összes felismert adatot.', date_uncertain: 'A nyomtatott dátum nem egyértelmű. Add meg a helyes dátumot.', date_missing: 'Nem sikerült megállapítani a dátumot.', currency_needs_review: 'Válaszd ki a megfelelő támogatott pénznemet.', total_needs_review: 'Add meg a nyugta helyes végösszegét.', items_incomplete: 'Néhány tétel összege nem volt olvasható. Ellenőrizz minden tételt.' },
 };
 
 
