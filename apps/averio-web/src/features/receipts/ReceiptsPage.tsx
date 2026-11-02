@@ -1,3 +1,4 @@
+import { ReceiptProgress, ReceiptProgressDetails } from './ReceiptProgress';
 import { receiptInboxRows, receiptPageSize } from './receiptInbox';
 import { AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { useEffect, useRef, useState } from 'react';
@@ -67,7 +68,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         mutationFn: (scan: ReceiptScanResult) => receiptRequest(scan.status === 'Posted' ? 'photo.delete' : 'scan.discard', { scanId: scan.id }, () => scan.status === 'Posted'
             ? receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete({ householdId, id: scan.id, expectedVersion: scan.version })
             : receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdDelete({ householdId, id: scan.id, expectedVersion: scan.version })),
-        onSuccess: async (_, scan) => { if (scan.id === recentId) setRecentId(null); setDiscard(null); await refresh(); },
+        onSuccess: async () => { setDiscard(null); await refresh(); },
         onError: refresh,
     });
     const post = useMutation({
@@ -75,7 +76,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             receiptRequest('scan.confirm', { scanId: scan.id }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
                 postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } })),
         onSuccess: async () => {
-            setReview(null); setRecentId(null); setNotice(t('receipts.overview.saved'));
+            setReview(null); setNotice(t('receipts.overview.saved'));
             // Match ordinary posting invalidation, including account balances,
             // wallet history, activity totals, statistics and the dashboard.
             await Promise.all([
@@ -131,14 +132,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             <div className="flex flex-wrap gap-2"><AverioButton disabled={inbox.isFetching} onClick={() => void refresh()}>{t('receipts.refresh')}</AverioButton><AverioButton variant="primary" disabled={upload.isPending} aria-expanded={captureOpen} aria-controls="receipt-upload-panel" onClick={() => setCaptureOpen(value => !value)}>{t(selection ? 'receipts.overview.continueScan' : 'receipts.capture')}</AverioButton></div>
         </header>
         <div id="receipt-upload-panel" hidden={!captureOpen}>
-        <ol className="mb-3 grid grid-cols-3 gap-2 text-sm" aria-label={t('receipts.howItWorks')}>
-            {['photoStep', 'reviewStep', 'saveStep'].map((step, index) => <li key={step} className="flex flex-col gap-2 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30 sm:flex-row sm:items-center">
-                <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-bold text-white">{index + 1}</span>
-                <span className="font-semibold">{t('receipts.' + step)}</span>
-            </li>)}
-        </ol>
         <AverioCard className="grid gap-4">
             <h3 className="font-bold">{t('receipts.capture')}</h3>
+            {captureOpen && <ReceiptProgress status={upload.isPending ? 'Uploading' : 'Photo'} />}
             {quota && quota.resetsAt && <div className="grid gap-1 text-sm" role="status">
                 <p className="font-semibold">{t('receipts.quota', { used: quota.monthlyUsed, limit: quota.monthlyLimit })}</p>
                 <p>{t('receipts.quotaReset', { date: new Date(quota.resetsAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language) })}</p>
@@ -175,9 +171,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         {!captureOpen && capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
         {recent && <AverioCard className="flex flex-wrap items-center justify-between gap-3" aria-label={t('receipts.overview.latest')}>
             <div className="grid gap-1"><h3 className="font-bold">{t('receipts.overview.latest')}</h3>
-                <p role="status" className="text-sm">{t('receipts.status.' + recent.status, { defaultValue: t('receipts.status.Unknown') })}</p>
                 {pending.has(recent.status) && <p className="text-xs">{t('receipts.overview.processing')}</p>}
             </div>
+            <ReceiptProgress status={post.isPending && post.variables?.scan.id === recent.id ? 'Saving' : recent.status} />
             {recent.status === 'Ready' && recent.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(recent); }}>{t('receipts.overview.reviewLatest')}</AverioButton>}
         </AverioCard>}
         {!recent && notice && <p role="status" className="text-sm text-emerald-800 dark:text-emerald-200">{notice}</p>}
@@ -238,6 +234,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     {scan.status === 'Posted' && scan.postedTransactionId && <Link to="/app/transactions" search={{ transaction: scan.postedTransactionId }} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-emerald-700 focus-visible:outline-2 dark:text-emerald-300"><ConceptIcon name="transactions" />{t('receipts.openTransaction')}</Link>}
                     {!['Posted', 'Discarded', 'Expired'].includes(scan.status) && <AverioButton disabled={remove.isPending} onClick={() => { remove.reset(); setDiscard(scan); }}>{t('receipts.discard')}</AverioButton>}
                 </div></details>
+                <ReceiptProgressDetails status={scan.status} />
             </li>)}
         </ul>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 p-4 dark:border-slate-700">
@@ -251,7 +248,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             {inbox.hasNextPage && <p className="px-4 pb-4 text-xs text-slate-600 dark:text-slate-300">{t('receipts.overview.olderHelp')}</p>}
         </AverioCard>
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
-            receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} />}
+            receiptDraft={review.draft} receiptEvidence={<><ReceiptProgress status={post.isPending ? 'Saving' : 'Ready'} /><ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} /></>}
             receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={review} buttonOnly />}
             receiptComparison={<ReceiptPhoto householdId={householdId} scan={review} comparison />}
             onSaveReceipt={(request, currency, reviewedTotal, rememberCategoryRules) => post.mutateAsync({ scan: review, request, currency, reviewedTotal, rememberCategoryRules }).then(() => undefined)}
@@ -359,4 +356,5 @@ function MatchingReceipt({ userId, householdId, id, onClose }: { userId: string;
         </div>}
     </AverioDialog>;
 }
+
 

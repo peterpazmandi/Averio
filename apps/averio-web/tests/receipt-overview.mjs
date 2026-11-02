@@ -18,7 +18,9 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             draft: index < 15 ? { merchant: `Shop ${index}`, total: '10', currency: 'EUR', lines: [], warnings: [] } : null,
         }));
         let uploaded = null;
-        await page.route('**/api/v1/**', route => {
+        let releaseUpload;
+        const uploadResponse = new Promise(resolve => { releaseUpload = resolve; });
+        await page.route('**/api/v1/**', async route => {
             const request = new URL(route.request().url());
             const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
             if (request.pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
@@ -26,6 +28,7 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             if (request.pathname.endsWith('/receipt-scans')) {
                 if (route.request().method() === 'POST') {
                     uploaded = { ...scans[64], id: 'latest', createdAt: new Date().toISOString() };
+                    await uploadResponse;
                     return json(uploaded);
                 }
                 const skip = Number(request.searchParams.get('skip') || 0);
@@ -60,17 +63,34 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
             await page.screenshot({ path: path.join(artifacts, `overview-${width}.png`), fullPage: true });
             await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: Buffer.from('fixture') });
+            const capture = page.locator('#receipt-upload-panel');
+            assert.match(await capture.locator('[aria-current="step"]').innerText(), /Add a photo/);
             await page.getByRole('button', { name: 'Scan this photo', exact: true }).click();
+            await capture.locator('[aria-current="step"]').filter({ hasText: 'Uploading' }).waitFor();
+            releaseUpload();
             const latest = page.getByLabel('Latest scan', { exact: true });
-            await latest.getByText('Waiting to start', { exact: true }).waitFor();
+            await latest.locator('[aria-current="step"]').filter({ hasText: 'Waiting to start' }).waitFor();
+            assert.equal(await latest.getByRole('list', { name: 'Scanning stages' }).getByRole('listitem').count(), 7);
             uploaded.status = 'Processing';
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-            await latest.getByText('Reading receipt', { exact: true }).waitFor();
+            await latest.locator('[aria-current="step"]').filter({ hasText: 'Reading receipt' }).waitFor();
             uploaded.status = 'Ready'; uploaded.draft = scans[0].draft;
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
             await latest.getByRole('button', { name: 'Review this receipt', exact: true }).waitFor();
             await page.screenshot({ path: path.join(artifacts, `latest-scan-${width}.png`), fullPage: true });
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+            for (const [status, label] of [['Failed', 'Could not scan'], ['Discarded', 'Discarded'], ['Expired', 'Expired'], ['Posted', 'Recorded']]) {
+                uploaded.status = status;
+                await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+                await latest.locator('[aria-current="step"]').filter({ hasText: label }).waitFor();
+                assert.equal(await latest.locator('[aria-current="step"]').count(), 1);
+            }
+            await page.getByRole('button', { name: 'History', exact: true }).click();
+            const firstRow = list.locator(':scope > li').first();
+            await firstRow.getByText('Scan progress', { exact: true }).click();
+            await firstRow.locator('[aria-current="step"]').filter({ hasText: 'Recorded' }).waitFor();
             assert.deepEqual(errors, []);
         } finally { await page.close(); }
     }
 }
+
