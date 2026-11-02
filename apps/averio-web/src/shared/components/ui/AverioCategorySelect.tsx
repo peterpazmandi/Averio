@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CategoryResponse } from '../../api/generated';
 import { getCategoryDisplayName } from '../../../features/transactions/categoryLocalization';
@@ -28,13 +28,22 @@ export function AverioCategorySelect({ categories, contextCategories = categorie
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const selected = categories.find(c => c.id === value);
-    const name = selected ? categoryPath(selected, contextCategories, t)
-        : fallback?.categoryName ?? (value ? t('categoryManagement.unavailableCategory') : noneLabel ?? t('transactionManagement.selectCategory'));
+    const selectedPath = useMemo(() => selected ? categoryPath(selected, contextCategories, t) : null,
+        [selected, contextCategories, t]);
+    const name = selectedPath
+        ?? fallback?.categoryName ?? (value ? t('categoryManagement.unavailableCategory') : noneLabel ?? t('transactionManagement.selectCategory'));
     const term = normalizeSearch(search, language);
-    const eligible = new Set(categories.map(c => c.id));
-    const matches = (c: CategoryResponse) => eligible.has(c.id) && normalizeSearch(categoryPath(c, contextCategories, t), language).includes(term);
-    const tree = categoryTree(contextCategories, t, language, matches);
-    const pins = sortCategories(categories.filter(c => c.isPinned && matches(c)), t, language);
+    // A receipt can contain 100 pickers. Closed pickers need only their selected
+    // label, not a sorted/searchable tree on every transaction keystroke.
+    const { tree, pins } = useMemo(() => {
+        if (!open || disabled) return { tree: [], pins: [] };
+        const eligible = new Set(categories.map(c => c.id));
+        const matches = (c: CategoryResponse) => eligible.has(c.id) && (!term || normalizeSearch(categoryPath(c, contextCategories, t), language).includes(term));
+        return {
+            tree: categoryTree(contextCategories, t, language, matches),
+            pins: sortCategories(categories.filter(c => c.isPinned && matches(c)), t, language),
+        };
+    }, [open, disabled, categories, contextCategories, term, t, language]);
     function close() { setOpen(false); setSearch(''); }
     function choose(id: string) { onChange(id); close(); }
     function choice(c: CategoryResponse, shortcut = false, contextOnly = false) {

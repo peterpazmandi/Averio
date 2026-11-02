@@ -11,3 +11,7 @@ The printed total remains visible; correcting it is a separate disclosure explai
 Queued and processing states have distinct copy. A pending receipt older than two minutes gets a longer-wait explanation on inbox refresh. This describes elapsed time, not a diagnosis of worker failure.
 
 Verification includes exact discount assignment tests and EN/DE/HU mobile/desktop browser scenarios for compact rows, editing, zoom, confirmation, manual discount recovery and optional category learning. Test with new users before considering the experience usability-validated.
+
+Each receipt item is an individually spaced AverioCard. Its number, description, category, amount and Edit/Done action share the header; expanded fields stay within the same border beneath a tinted header. Multiple items can remain open without losing their boundaries or edits. Ordinary transaction rows retain their shared desktop headings.
+
+Category pickers build their searchable trees only while open and memoize them until their inputs change. Closed picker labels and the receipt's localized category-suggestion catalogue are memoized too. Collapsed receipt items do not mount edit controls; their values remain in the parent draft state, and invalid items still expand automatically. This avoids rebuilding every hidden picker during typing. The receipt browser suite includes a 60-item / 180-category case covering independent editing, category search/selection, collapse/reopen persistence and card spacing, and reports input-to-paint timings without a hardware-dependent CI threshold.

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import vm from 'node:vm';
+import { verifyLargeReceipt } from './receipt-large-review.mjs';
 
 const root = process.cwd();
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', 'localhost', '--port', '5281', '--strictPort'], { cwd: root, stdio: 'ignore' });
@@ -316,7 +317,8 @@ try {
         assert.deepEqual(errors, []);
         await page.close();
     }
-    console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state and EN/DE/HU mobile/desktop themes');
+    await verifyLargeReceipt(browser, url, artifacts);
+    console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state, large item lists and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
 
 
