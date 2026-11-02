@@ -1,3 +1,5 @@
+import { receiptInboxRows, receiptPageSize } from './receiptInbox';
+import { AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +26,11 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const [selection, setSelection] = useState<{ file: File; operationId: string } | null>(null);
     const [fileError, setFileError] = useState('');
     const [notice, setNotice] = useState('');
+    const [captureOpen, setCaptureOpen] = useState(false);
+    const [history, setHistory] = useState(false);
+    const [status, setStatus] = useState('');
+    const [page, setPage] = useState(0);
+    const [recentId, setRecentId] = useState<string | null>(null);
     const [review, setReview] = useState<ReceiptScanResult | null>(null);
     const [manual, setManual] = useState<ReceiptScanResult | null>(null);
     const [matching, setMatching] = useState<string | null>(null);
@@ -45,7 +52,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             receiptLog('upload.accepted', { operationId: value.operationId, scanId: result.id, status: result.status });
             return result;
         },
-        onSuccess: async () => {
+        onSuccess: async result => {
+            setRecentId(result.id);
+            setCaptureOpen(false); setHistory(false); setStatus(''); setPage(0);
             setSelection(null); if (input.current) input.current.value = '';
             if (camera.current) camera.current.value = '';
             setNotice(t('receipts.uploaded')); await refresh();
@@ -58,7 +67,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         mutationFn: (scan: ReceiptScanResult) => receiptRequest(scan.status === 'Posted' ? 'photo.delete' : 'scan.discard', { scanId: scan.id }, () => scan.status === 'Posted'
             ? receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete({ householdId, id: scan.id, expectedVersion: scan.version })
             : receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdDelete({ householdId, id: scan.id, expectedVersion: scan.version })),
-        onSuccess: async () => { setDiscard(null); await refresh(); },
+        onSuccess: async (_, scan) => { if (scan.id === recentId) setRecentId(null); setDiscard(null); await refresh(); },
         onError: refresh,
     });
     const post = useMutation({
@@ -66,7 +75,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             receiptRequest('scan.confirm', { scanId: scan.id }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
                 postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } })),
         onSuccess: async () => {
-            setReview(null); setNotice(t('receipts.posted'));
+            setReview(null); setRecentId(null); setNotice(t('receipts.overview.saved'));
             // Match ordinary posting invalidation, including account balances,
             // wallet history, activity totals, statistics and the dashboard.
             await Promise.all([
@@ -98,9 +107,15 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const canRetryUpload = selection !== null && upload.isError;
     const canSubmitUpload = canStartUpload || canRetryUpload;
     const scans = inbox.data?.pages.flat() ?? [];
-    const orderedScans = [...scans].sort((a, b) => Number(b.status === 'Ready') - Number(a.status === 'Ready'));
+    const recent = recentId ? scans.find(scan => scan.id === recentId) ?? (upload.data?.id === recentId ? upload.data : null) : null;
+    const attentionRows = receiptInboxRows(scans, false);
+    const historyRows = receiptInboxRows(scans, true);
+    const filteredRows = receiptInboxRows(scans, history, status);
+    const currentPage = Math.min(page, Math.max(0, Math.ceil(filteredRows.length / receiptPageSize) - 1));
+    const orderedScans = filteredRows.slice(currentPage * receiptPageSize, (currentPage + 1) * receiptPageSize);
     function choose(file?: File) {
         if (!file) return;
+        setCaptureOpen(true);
         upload.reset(); setFileError(''); setNotice('');
         if (!['image/jpeg', 'image/png'].includes(file.type) || file.size === 0 || file.size > (capabilities.data?.maxUploadBytes ?? 10485760)) {
             receiptLog('photo.rejected', { bytes: file.size }, 'warn');
@@ -113,9 +128,10 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     return <section className="grid gap-4" aria-labelledby="receipts-title">
         <header className="flex flex-wrap items-center justify-between gap-3">
             <div><h2 id="receipts-title" className="text-xl font-bold">{t('receipts.title')}</h2><p className="mt-1 text-sm">{t('receipts.privateHelp')}</p></div>
-            <AverioButton disabled={inbox.isFetching} onClick={() => void refresh()}>{t('receipts.refresh')}</AverioButton>
+            <div className="flex flex-wrap gap-2"><AverioButton disabled={inbox.isFetching} onClick={() => void refresh()}>{t('receipts.refresh')}</AverioButton><AverioButton variant="primary" disabled={upload.isPending} aria-expanded={captureOpen} aria-controls="receipt-upload-panel" onClick={() => setCaptureOpen(value => !value)}>{t(selection ? 'receipts.overview.continueScan' : 'receipts.capture')}</AverioButton></div>
         </header>
-        <ol className="grid grid-cols-3 gap-2 text-sm" aria-label={t('receipts.howItWorks')}>
+        <div id="receipt-upload-panel" hidden={!captureOpen}>
+        <ol className="mb-3 grid grid-cols-3 gap-2 text-sm" aria-label={t('receipts.howItWorks')}>
             {['photoStep', 'reviewStep', 'saveStep'].map((step, index) => <li key={step} className="flex flex-col gap-2 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30 sm:flex-row sm:items-center">
                 <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-bold text-white">{index + 1}</span>
                 <span className="font-semibold">{t('receipts.' + step)}</span>
@@ -154,23 +170,54 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             {fileError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{fileError}</p>}
             {upload.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{upload.error.message} {t('receipts.uploadRecovery')}</p>}
         </AverioCard>
-        {notice && <p role="status" className="text-sm text-emerald-800 dark:text-emerald-200">{notice}</p>}
+        </div>
+        {quota && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300"><span>{t('receipts.quota', { used: quota.monthlyUsed, limit: quota.monthlyLimit })}</span>{exhausted && !captureOpen && <span role="status">{t('receipts.quotaExhausted')}</span>}{capabilities.isSuccess && !quota.enabled && !captureOpen && <span role="status">{t('receipts.disabled')}</span>}</div>}
+        {!captureOpen && capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
+        {recent && <AverioCard className="flex flex-wrap items-center justify-between gap-3" aria-label={t('receipts.overview.latest')}>
+            <div className="grid gap-1"><h3 className="font-bold">{t('receipts.overview.latest')}</h3>
+                <p role="status" className="text-sm">{t('receipts.status.' + recent.status, { defaultValue: t('receipts.status.Unknown') })}</p>
+                {pending.has(recent.status) && <p className="text-xs">{t('receipts.overview.processing')}</p>}
+            </div>
+            {recent.status === 'Ready' && recent.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(recent); }}>{t('receipts.overview.reviewLatest')}</AverioButton>}
+        </AverioCard>}
+        {!recent && notice && <p role="status" className="text-sm text-emerald-800 dark:text-emerald-200">{notice}</p>}
         {inbox.isPending && <p role="status">{t('common.status.loading')}</p>}
         {inbox.isError && <p role="alert">{inbox.error.message} <AverioButton onClick={() => void inbox.refetch()}>{t('receipts.retry')}</AverioButton></p>}
-        {inbox.isSuccess && scans.length === 0 && <AverioCard className="grid justify-items-center gap-3 py-10 text-center">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 120 100" className="h-28 w-36 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="3"><path d="M35 10h50v80l-10-6-10 6-10-6-10 6-10-6V10Z"/><path d="M45 28h30M45 42h30M45 56h20"/><circle cx="90" cy="68" r="18" className="fill-white dark:fill-slate-950"/><path d="m81 68 6 6 12-13"/></svg>
-            <h3 className="font-bold">{t('receipts.emptyTitle')}</h3><p className="max-w-md text-sm">{t('receipts.emptyHelp')}</p>
-            <AverioButton variant="primary" disabled={!canStartUpload} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
-        </AverioCard>}
-        {scans.length > 0 && <h3 className="font-bold">{t('receipts.inboxTitle')}</h3>}
-        <ul className="grid gap-3" aria-label={t('receipts.title')}>
-            {orderedScans.map(scan => <li key={scan.id}><AverioCard className="grid gap-3">
+        <AverioCard className="p-0!">
+            <div className="grid gap-3 border-b border-slate-200 p-4 dark:border-slate-700">
+                <div className="flex flex-wrap gap-2" role="group" aria-label={t('receipts.overview.views')}>
+                    {[false, true].map(value => <AverioButton key={String(value)} aria-pressed={history === value}
+                        variant={history === value ? 'primary' : 'secondary'}
+                        onClick={() => { setHistory(value); setStatus(''); setPage(0); }}>
+                        {t(value ? 'receipts.overview.history' : 'receipts.overview.attention')} <span aria-hidden="true">({value ? historyRows.length : attentionRows.length}{inbox.hasNextPage ? '+' : ''})</span>
+                    </AverioButton>)}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="max-w-xl text-sm text-slate-600 dark:text-slate-300">{t(history ? 'receipts.overview.historyHelp' : 'receipts.overview.attentionHelp')}</p>
+                    <label className="grid gap-1 text-xs font-semibold">{t('receipts.overview.filter')}
+                        <AverioSelect aria-label={t('receipts.overview.filter')} value={status} onChange={event => { setStatus(event.target.value); setPage(0); }}>
+                            <option value="">{t('receipts.overview.allStatuses')}</option>
+                            {(history ? ['Posted', 'Discarded', 'Expired'] : ['Ready', 'Queued', 'Processing', 'Failed', 'Uploading']).map(value => <option key={value} value={value}>{t('receipts.status.' + value)}</option>)}
+                        </AverioSelect>
+                    </label>
+                </div>
+            </div>
+            {orderedScans.some(scan => pending.has(scan.status)) && <p className="px-4 pt-3 text-xs text-slate-600 dark:text-slate-300">{t('receipts.overview.processing')}</p>}
+            {inbox.isSuccess && orderedScans.length === 0 && <div className="grid justify-items-center gap-2 p-8 text-center">
+                <svg aria-hidden="true" viewBox="0 0 80 80" className="size-16 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 8h40v64l-10-6-10 6-10-6-10 6V8Z"/><path d="M29 25h22M29 38h22M29 51h12"/></svg>
+                <h3 className="font-semibold">{t(inbox.hasNextPage ? 'receipts.overview.noneLoaded' : history ? 'receipts.overview.noHistory' : 'receipts.overview.clear')}</h3>
+                <p className="max-w-md text-sm text-slate-600 dark:text-slate-300">{t(inbox.hasNextPage ? 'receipts.overview.olderHelp' : 'receipts.overview.emptyHelp')}</p>
+                {!status && !history && <AverioButton variant="primary" onClick={() => setCaptureOpen(true)}>{t('receipts.capture')}</AverioButton>}
+                {status && <AverioButton onClick={() => { setStatus(''); setPage(0); }}>{t('receipts.overview.resetFilter')}</AverioButton>}
+            </div>}
+        <ul className="divide-y divide-slate-200 dark:divide-slate-700" aria-label={t('receipts.title')}>
+            {orderedScans.map(scan => <li key={scan.id} className="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5 sm:[&>p]:col-start-1 sm:[&>div]:col-start-1">
                 <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><h3 className="break-words font-bold">{scan.draft?.merchant || t('receipts.receipt')}</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-300">{new Date(scan.createdAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language)}</p></div>
                     <span className={'rounded-full px-3 py-1 text-xs font-semibold ' + (scan.status === 'Ready' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200')}>{t('receipts.status.' + scan.status, { defaultValue: t('receipts.status.Unknown') })}</span></div>
-                {scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={() => setMatching(scan.id)}>{t('receipts.viewMatch')}</AverioButton></p>}
+                {!history && scan.possibleDuplicate && <p role="status" className="text-sm text-amber-900 dark:text-amber-200">{t('receipts.duplicate')} <AverioButton onClick={() => setMatching(scan.id)}>{t('receipts.viewMatch')}</AverioButton></p>}
                 {scan.status === 'Ready' && scan.draft && <p className="text-lg font-bold">{scan.draft.total ?? '-'} {scan.draft.currency}</p>}
-                {['Queued', 'Processing'].includes(scan.status) && <p className="text-sm" role="status">{t(inbox.dataUpdatedAt - Date.parse(scan.createdAt) >= 120000 ? 'receipts.ux.waitingLong' : scan.status === 'Queued' ? 'receipts.ux.waitingStart' : 'receipts.processingHelp')}</p>}
+                {['Queued', 'Processing'].includes(scan.status) && inbox.dataUpdatedAt - Date.parse(scan.createdAt) >= 120000 && <p className="text-xs text-amber-800 dark:text-amber-200">{t('receipts.overview.delayed')}</p>}
                 {scan.status === 'Ready' && <p className="text-sm">{t('receipts.expires', { date: new Date(scan.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>}
                 {scan.status === 'Failed' && <div className="grid gap-2">
                     <p className="text-sm">{t(['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
@@ -181,6 +228,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     </div>
                 </div>}
                 {scan.status === 'Uploading' && <p className="text-sm">{t('receipts.uploadRecovery')}</p>}
+                <details className="sm:col-start-2 sm:row-start-1 sm:row-span-4 sm:self-center" open={history ? undefined : true}><summary hidden={!history} className="min-h-11 cursor-pointer py-2 text-sm font-semibold">{t('receipts.overview.details')}</summary>
                 <div className="flex flex-wrap gap-2">
                     {scan.status === 'Ready' && scan.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(scan); }}>{t('receipts.review')}</AverioButton>}
                     {scan.status === 'Posted' && scan.imageAvailable && <>
@@ -189,10 +237,19 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     </>}
                     {scan.status === 'Posted' && scan.postedTransactionId && <Link to="/app/transactions" search={{ transaction: scan.postedTransactionId }} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-emerald-700 focus-visible:outline-2 dark:text-emerald-300"><ConceptIcon name="transactions" />{t('receipts.openTransaction')}</Link>}
                     {!['Posted', 'Discarded', 'Expired'].includes(scan.status) && <AverioButton disabled={remove.isPending} onClick={() => { remove.reset(); setDiscard(scan); }}>{t('receipts.discard')}</AverioButton>}
-                </div>
-            </AverioCard></li>)}
+                </div></details>
+            </li>)}
         </ul>
-        {inbox.hasNextPage && <AverioButton disabled={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()}>{t('receipts.loadMore')}</AverioButton>}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 p-4 dark:border-slate-700">
+                <p className="text-xs" role="status">{t('receipts.overview.showing', { from: filteredRows.length ? currentPage * receiptPageSize + 1 : 0, to: Math.min((currentPage + 1) * receiptPageSize, filteredRows.length), count: filteredRows.length })}</p>
+                <div className="flex flex-wrap gap-2">
+                    <AverioButton disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('receipts.overview.previous')}</AverioButton>
+                    <AverioButton disabled={(currentPage + 1) * receiptPageSize >= filteredRows.length} onClick={() => setPage(currentPage + 1)}>{t('receipts.overview.next')}</AverioButton>
+                    {inbox.hasNextPage && <AverioButton disabled={inbox.isFetching} onClick={() => void inbox.fetchNextPage()}>{t('receipts.loadMore')}</AverioButton>}
+                </div>
+            </div>
+            {inbox.hasNextPage && <p className="px-4 pb-4 text-xs text-slate-600 dark:text-slate-300">{t('receipts.overview.olderHelp')}</p>}
+        </AverioCard>
         {review?.draft && <TransactionEditor key={review.id} userId={userId} householdId={householdId} transaction={null}
             receiptDraft={review.draft} receiptEvidence={<ReceiptEvidence householdId={householdId} scan={review} onMatch={() => setMatching(review.id)} />}
             receiptPhotoAction={<ReceiptPhoto householdId={householdId} scan={review} buttonOnly />}

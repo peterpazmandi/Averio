@@ -16,6 +16,19 @@ function load(file, imports = {}) {
     return context.exports;
 }
 const money = load('../src/shared/money/decimalAmount.ts');
+const { receiptInboxRows, receiptPageSize } = load('../src/features/receipts/receiptInbox.ts');
+
+test('receipt inbox separates history, keeps failures actionable and deduplicates overlapping pages', () => {
+    const scans = ['Posted', 'Ready', 'Discarded', 'Failed', 'Queued', 'Expired', 'Processing', 'Uploading'].map((status, index) => ({
+        id: String(index), status, createdAt: '2026-11-02T08:00:00Z',
+    }));
+    const active = receiptInboxRows([...scans, scans[1]], false);
+    assert.deepEqual(Array.from(active, scan => scan.status), ['Ready', 'Failed', 'Queued', 'Processing', 'Uploading']);
+    assert.deepEqual(Array.from(receiptInboxRows(scans, true), scan => scan.status), ['Posted', 'Discarded', 'Expired']);
+    assert.equal(receiptInboxRows(scans, false, 'Queued').length, 1);
+    assert.equal(receiptInboxRows(scans, true, 'Ready').length, 0);
+    assert.equal(receiptPageSize, 10);
+});
 const { assignReceiptDiscounts, normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } = load('../src/features/receipts/receiptReview.ts', {
     '../../shared/money/decimalAmount': money,
 });

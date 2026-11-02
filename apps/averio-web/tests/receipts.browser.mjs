@@ -6,6 +6,7 @@ import path from 'node:path';
 import ts from 'typescript';
 import vm from 'node:vm';
 import { verifyLargeReceipt } from './receipt-large-review.mjs';
+import { verifyReceiptOverview } from './receipt-overview.mjs';
 
 const root = process.cwd();
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', 'localhost', '--port', '5281', '--strictPort'], { cwd: root, stdio: 'ignore' });
@@ -219,6 +220,8 @@ try {
         await page.getByRole('alert').filter({ hasText: 'Please retry' }).waitFor();
         assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '0009,00', 'Posting failure retains the reviewed form.');
         await confirm.click();
+        await page.getByRole('button', { name: copy.overview.history, exact: true }).click();
+        await page.getByText(copy.overview.details, { exact: true }).click();
         await page.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
         assert.equal(posts.length, 2);
         assert.deepEqual(posts[0], posts[1], 'Retry uses the same draft and reviewed values.');
@@ -248,7 +251,7 @@ try {
         assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
         assert.equal(await page.getByRole('button', { name: copy.retryUpload, exact: true }).isEnabled(), true);
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();
-        await page.getByText(copy.status.Queued, { exact: true }).waitFor();
+        await page.getByRole('list', { name: copy.title, exact: true }).getByText(copy.status.Queued, { exact: true }).waitFor();
         const operation = body => /name="operationId"\r\n\r\n([^\r]+)/.exec(body)?.[1];
         assert.equal(uploads.length, 2);
         assert.equal(monthlyUsed, usedAfterAcceptance, 'Disabled-state recovery must not consume another scan.');
@@ -257,12 +260,15 @@ try {
         assert.equal(operation(uploads[0]), operation(uploads[1]), 'Upload retry must reuse its operation ID.');
         await page.getByRole('button', { name: copy.discard, exact: true }).click();
         await page.getByRole('button', { name: copy.discard, exact: true }).last().click();
-        await page.getByText(copy.status.Discarded, { exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.overview.history, exact: true }).click();
+        await page.getByRole('list', { name: copy.title, exact: true }).getByText(copy.status.Discarded, { exact: true }).waitFor();
         assert.equal(posts.length, 2, 'Upload and discard never post financial records.');
         monthlyUsed = 10;
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
-        await page.getByText(copy.quotaExhausted, { exact: true }).waitFor();
+        await page.getByText(copy.quotaExhausted, { exact: true }).last().waitFor();
+        await page.getByRole('button', { name: copy.capture, exact: true }).click();
         assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
+        await page.getByRole('list', { name: copy.title, exact: true }).locator('li').filter({ has: page.getByText(copy.status.Posted, { exact: true }) }).getByText(copy.overview.details, { exact: true }).click();
         await page.getByRole('button', { name: copy.viewPhoto, exact: true }).click();
         await page.getByRole('dialog').getByAltText(copy.imageAlt).waitFor();
         await page.keyboard.press('Escape');
@@ -277,6 +283,7 @@ try {
         await page.getByText(copy.disabled, { exact: true }).waitFor();
         assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
         showFailed = true;
+        await page.getByRole('button', { name: copy.overview.attention, exact: true }).click();
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.providerFailed, { exact: true }).waitFor();
         await page.getByText(copy.newScanCharge, { exact: true }).waitFor();
@@ -318,6 +325,7 @@ try {
         await page.close();
     }
     await verifyLargeReceipt(browser, url, artifacts);
+    await verifyReceiptOverview(browser, url, artifacts);
     console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state, large item lists and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
 
