@@ -64,33 +64,35 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             await page.screenshot({ path: path.join(artifacts, `overview-${width}.png`), fullPage: true });
             await page.locator('input[type="file"]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: Buffer.from('fixture') });
             const capture = page.locator('#receipt-upload-panel');
-            assert.match(await capture.locator('[aria-current="step"]').innerText(), /Add a photo/);
+            assert.equal(await page.getByRole('progressbar').count(), 0, 'Selecting a photo does not start scanning.');
             await page.getByRole('button', { name: 'Scan this photo', exact: true }).click();
             await capture.locator('[aria-current="step"]').filter({ hasText: 'Uploading' }).waitFor();
             releaseUpload();
             const latest = page.getByLabel('Latest scan', { exact: true });
             await latest.locator('[aria-current="step"]').filter({ hasText: 'Waiting to start' }).waitFor();
-            assert.equal(await latest.getByRole('list', { name: 'Scanning stages' }).getByRole('listitem').count(), 7);
+            assert.equal(await latest.getByRole('list', { name: 'Scanning stages' }).getByRole('listitem').count(), 3);
             uploaded.status = 'Processing';
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
             await latest.locator('[aria-current="step"]').filter({ hasText: 'Reading receipt' }).waitFor();
+            await page.screenshot({ path: path.join(artifacts, `scan-progress-${width}.png`), fullPage: true });
             uploaded.status = 'Ready'; uploaded.draft = scans[0].draft;
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
             await latest.getByRole('button', { name: 'Review this receipt', exact: true }).waitFor();
+            assert.equal(await page.getByRole('progressbar').count(), 0, 'Ready for review removes the progress bar.');
             await page.screenshot({ path: path.join(artifacts, `latest-scan-${width}.png`), fullPage: true });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
             for (const [status, label] of [['Failed', 'Could not scan'], ['Discarded', 'Discarded'], ['Expired', 'Expired'], ['Posted', 'Recorded']]) {
                 uploaded.status = status;
                 await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-                await latest.locator('[aria-current="step"]').filter({ hasText: label }).waitFor();
-                assert.equal(await latest.locator('[aria-current="step"]').count(), 1);
+                if (status === 'Failed') await latest.getByText(label, { exact: true }).waitFor();
+                else await latest.waitFor({ state: 'hidden' });
+                assert.equal(await page.getByRole('progressbar').count(), 0, 'Terminal states do not show scan progress.');
             }
             await page.getByRole('button', { name: 'History', exact: true }).click();
-            const firstRow = list.locator(':scope > li').first();
-            await firstRow.getByText('Scan progress', { exact: true }).click();
-            await firstRow.locator('[aria-current="step"]').filter({ hasText: 'Recorded' }).waitFor();
+            assert.equal(await page.getByRole('progressbar').count(), 0, 'History has no progress display.');
             assert.deepEqual(errors, []);
         } finally { await page.close(); }
     }
 }
+
 

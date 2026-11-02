@@ -17,32 +17,28 @@ function compile(path, customRequire = require) {
     return module.exports;
 }
 const copies = compile('src/i18n/locales/receipts.ts');
-const stages = ['Photo', 'Uploading', 'Queued', 'Processing', 'Ready', 'Saving', 'Posted'];
-const outcomes = ['Failed', 'Discarded', 'Expired'];
+const stages = ['Uploading', 'Queued', 'Processing'];
 for (const language of ['EN', 'DE', 'HU']) {
     const copy = copies['receipts' + language];
     const t = (key, options = {}) => {
-        if (key === 'transactionManagement.saving') return 'Saving';
-        const value = key.split('.').slice(1).reduce((node, part) => node?.[part], copy) ?? options.defaultValue;
+        const value = key.split('.').slice(1).reduce((node, part) => node?.[part], copy);
         assert.equal(typeof value, 'string', `Missing ${language} translation: ${key}`);
         return value.replace('{{status}}', options.status ?? '');
     };
     const { ReceiptProgress } = compile('src/features/receipts/ReceiptProgress.tsx', name =>
         name === 'react-i18next' ? { useTranslation: () => ({ t }) } : require(name));
-    for (const status of [...stages, ...outcomes, 'UnknownFutureState']) {
-        test(`${language} progress highlights only ${status} and keeps all outcomes visible`, () => {
+    for (const status of [...stages, 'Photo', 'Ready', 'Saving', 'Posted', 'Failed', 'Discarded', 'Expired', 'UnknownFutureState']) {
+        test(`${language} shows progress only during scanning: ${status}`, () => {
             const html = renderToStaticMarkup(createElement(ReceiptProgress, { status }));
-            const matches = [...html.matchAll(/<(li|span)\b[^>]*aria-current="step"[^>]*>([\s\S]*?)<\/\1>/g)];
-            assert.equal(matches.length, status === 'UnknownFutureState' ? 0 : 1);
-            if (matches.length) {
-                const label = status === 'Photo' ? copy.photoStep : status === 'Saving' ? 'Saving' : copy.status[status];
-                assert.ok(matches[0][2].includes(label));
+            if (!stages.includes(status)) {
+                assert.equal(html, '', 'No bar before scanning, during review, or after termination.');
+                return;
             }
-            assert.equal((html.match(/<li\b/g) ?? []).length, stages.length);
-            for (const outcome of outcomes) assert.ok(html.includes(copy.status[outcome]));
-            // No completed milestones can be inferred for a terminal branch or unknown state.
-            assert.equal((html.match(/✓/g) ?? []).length, Math.max(0, stages.indexOf(status)));
-            assert.ok(!html.includes('aria-valuenow'), 'Do not invent a percent complete for asynchronous extraction.');
+            assert.equal((html.match(/aria-current="step"/g) ?? []).length, 1);
+            assert.equal((html.match(/<li\b/g) ?? []).length, 3);
+            assert.ok(html.includes('role="progressbar"'));
+            assert.ok(html.includes(`aria-valuetext="${copy.status[status]}"`));
+            assert.ok(!html.includes('aria-valuenow'), 'Phases are not a measured percentage.');
         });
     }
 }
