@@ -266,7 +266,8 @@ try {
         monthlyUsed = 10;
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.quotaExhausted, { exact: true }).last().waitFor();
-        await page.getByRole('button', { name: copy.capture, exact: true }).click();
+        assert.equal(await page.locator('#receipt-upload-panel').isVisible(), true, 'Capture remains open after scanning and discarding.');
+        assert.equal(await page.getByRole('button', { name: copy.capture, exact: true }).getAttribute('aria-expanded'), 'true');
         assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
         await page.getByRole('list', { name: copy.title, exact: true }).locator('li').filter({ has: page.getByText(copy.status.Posted, { exact: true }) }).getByText(copy.overview.details, { exact: true }).click();
         await page.getByRole('button', { name: copy.viewPhoto, exact: true }).click();
