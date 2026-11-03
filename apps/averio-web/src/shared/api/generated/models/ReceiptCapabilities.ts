@@ -27,6 +27,22 @@ export interface ReceiptCapabilities {
      * 
      */
     maxUploadBytes: number;
+    /**
+     * 
+     */
+    monthlyLimit?: number;
+    /**
+     * 
+     */
+    monthlyUsed?: number;
+    /**
+     * 
+     */
+    resetsAt?: string | null;
+    /**
+     * 
+     */
+    postedImageRetentionDays?: number;
 }
 
 /**
@@ -50,6 +66,10 @@ export function ReceiptCapabilitiesFromJSONTyped(json: any, ignoreDiscriminator:
         
         'enabled': json['enabled'],
         'maxUploadBytes': json['maxUploadBytes'],
+        'monthlyLimit': json['monthlyLimit'] == null ? undefined : json['monthlyLimit'],
+        'monthlyUsed': json['monthlyUsed'] == null ? undefined : json['monthlyUsed'],
+        'resetsAt': json['resetsAt'] === undefined ? undefined : json['resetsAt'] === null ? null : json['resetsAt'],
+        'postedImageRetentionDays': json['postedImageRetentionDays'] == null ? undefined : json['postedImageRetentionDays'],
     };
 }
 
@@ -66,6 +86,10 @@ export function ReceiptCapabilitiesToJSONTyped(value?: ReceiptCapabilities | nul
         
         'enabled': value['enabled'],
         'maxUploadBytes': value['maxUploadBytes'],
+        'monthlyLimit': value['monthlyLimit'],
+        'monthlyUsed': value['monthlyUsed'],
+        'resetsAt': value['resetsAt'],
+        'postedImageRetentionDays': value['postedImageRetentionDays'],
     };
 }
 

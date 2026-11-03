@@ -5,6 +5,16 @@ public sealed class ReceiptOptions
 {
     public bool Enabled { get; set; }
     public int DailyUploadLimit { get; set; } = 20;
+    public int FreeMonthlyLimit { get; set; } = 10;
+    public int PaidMonthlyLimit { get; set; } = 100;
+    // Server-managed, time-bounded entitlements. Never accepted from the browser.
+    public Dictionary<Guid, DateTimeOffset> PaidHouseholds { get; set; } = [];
+    public bool RetainPostedImages { get; set; }
+    public int PostedImageRetentionDays { get; set; } = 365;
+    public int MonthlyLimit(Guid household, DateTimeOffset now)
+        => PaidHouseholds.TryGetValue(household, out var until) && until > now ? PaidMonthlyLimit : FreeMonthlyLimit;
+    public static DateTimeOffset MonthStart(DateTimeOffset now)
+        => new(now.UtcDateTime.Year, now.UtcDateTime.Month, 1, 0, 0, 0, TimeSpan.Zero);
     public const int MaxUploadBytes = 10 * 1024 * 1024;
     public const int MaxAttempts = 3;
 }
@@ -15,8 +25,9 @@ public sealed record ReceiptDraft(string? Merchant, string? Date, string? Curren
     string? Total, ReceiptLine[] Lines, string[] Warnings);
 public sealed record ReceiptScanResult(Guid Id, string Status, Guid Version, int Attempts,
     DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string? FailureCode, ReceiptDraft? Draft,
-    Guid? PostedTransactionId = null);
-public sealed record ReceiptCapabilities(bool Enabled, int MaxUploadBytes);
+    Guid? PostedTransactionId = null, bool ImageAvailable = false, bool PossibleDuplicate = false, Guid? MatchingReceiptId = null);
+public sealed record ReceiptCapabilities(bool Enabled, int MaxUploadBytes, int MonthlyLimit = 0,
+    int MonthlyUsed = 0, DateTimeOffset? ResetsAt = null, int PostedImageRetentionDays = 0);
 public interface IReceiptImageNormalizer { Task<byte[]> NormalizeAsync(Stream input, CancellationToken ct); }
 public interface IReceiptDocumentStore
 {
@@ -39,6 +50,10 @@ public interface IReceiptRepository
 {
     Task<ReceiptScan?> FindOperationAsync(Guid household, Guid member, Guid operation, CancellationToken ct);
     Task<int> CountUploadsAsync(Guid household, Guid member, DateTimeOffset since, CancellationToken ct);
+    Task<int> CountMonthlyUploadsAsync(Guid household, DateTimeOffset start, DateTimeOffset end, CancellationToken ct);
+    Task<IReadOnlySet<string>> DuplicateHashesAsync(Guid household, Guid member, string[] hashes, DateTimeOffset now, CancellationToken ct);
+    Task<ReceiptScan?> FindDuplicateAsync(Guid household, Guid member, Guid id, string hash, DateTimeOffset now, CancellationToken ct);
+    Task<bool> DeletePostedImageAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct);
     void Add(ReceiptScan scan);
     Task<bool> QueueAsync(Guid id, DateTimeOffset now, CancellationToken ct);
     Task<IReadOnlyList<ReceiptScan>> ListAsync(Guid household, Guid member, int skip, CancellationToken ct);
@@ -52,4 +67,5 @@ public interface IReceiptRepository
     Task DeferCleanupAsync(Guid id, DateTimeOffset retryAt, CancellationToken ct);
     Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct);
 }
+
 

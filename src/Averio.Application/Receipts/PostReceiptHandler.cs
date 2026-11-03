@@ -34,6 +34,7 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         {
             if (scan.ConfirmationFingerprint != fingerprint)
                 throw new ConflictException("receipt_changed", "Error_ReceiptChanged");
+            ReceiptMetrics.Confirmations.Add(1, new KeyValuePair<string, object?>("outcome", "replay"));
             return posted;
         }
         if (scan.Status != ReceiptScanStatus.Ready || scan.Version != expectedVersion
@@ -63,6 +64,7 @@ public sealed class PostReceiptHandler(ICurrentUser user, IHouseholdRepository h
         if (!await receipts.PostAsync(scan.Id, expectedVersion, id, fingerprint, clock.GetUtcNow(), ct))
             throw new ConflictException("receipt_changed", "Error_ReceiptChanged");
         await tx.CommitAsync(ct);
+        ReceiptMetrics.Confirmations.Add(1, new KeyValuePair<string, object?>("outcome", "posted"));
         return id;
     }
 }

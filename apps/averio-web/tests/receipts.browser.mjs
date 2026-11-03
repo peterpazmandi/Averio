@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import vm from 'node:vm';
+import { verifyLargeReceipt } from './receipt-large-review.mjs';
+import { verifyReceiptOverview } from './receipt-overview.mjs';
 
 const root = process.cwd();
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', 'localhost', '--port', '5281', '--strictPort'], { cwd: root, stdio: 'ignore' });
@@ -28,20 +30,21 @@ try {
         const hasWallet = language === 'en' && width === 375 && !dark;
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
-        const errors = [], uploads = [], posts = [];
+        const errors = [], uploads = [], posts = [], manualPosts = [];
+        let showFailed = false, manualDiscount = false;
         let failInbox = true, failUpload = true, failPost = true, enabled = true;
         let failAccounts = language === 'en' && width === 375 && !dark;
-        let uploaded = false, discarded = false, recorded = false;
-        page.on('pageerror', e => errors.push(e.message));
+        let uploaded = false, discarded = false, recorded = false, photoDeleted = false, monthlyUsed = 1;
+        page.on('pageerror', e => { errors.push(e.message); console.error('Receipt page error:', e.message); });
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
         }, { language, dark });
         const ready = () => ({ id: 'scan', status: recorded ? 'Posted' : 'Ready', version: 'version', attempts: 1,
             createdAt: '2026-10-28T08:00:00Z', expiresAt: '2026-11-04T08:00:00Z', failureCode: null,
-            postedTransactionId: recorded ? 'transaction' : null,
+            postedTransactionId: recorded ? 'transaction' : null, imageAvailable: !photoDeleted, possibleDuplicate: true, matchingReceiptId: 'original',
             draft: recorded ? null : { merchant: 'Shop <script>', date: null, currency: 'EUR', total: '9.00',
-                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
+                lines: [{ description: 'FOOD APPLES', suggestedDescription: 'Food Apples', suggestedCategoryId: 'food', categorySuggestionSource: dark ? 'HouseholdRule' : 'Model', amount: '10.00', kind: 'Item' }, { description: manualDiscount ? 'Coupon' : 'Food Apples Discount', amount: '-1.00', kind: 'Discount' },
                     { description: 'Card', amount: '9.00', kind: 'Payment' }], warnings: ['review_required', 'date_missing'] } });
         const queued = () => ({ ...ready(), id: 'new-scan', status: discarded ? 'Discarded' : 'Queued', draft: null, postedTransactionId: null });
         await page.route('**/api/v1/**', async route => {
@@ -50,7 +53,15 @@ try {
             const fail = status => route.fulfill({ status, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Please retry', detail: 'Please retry', status }) });
             if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
             if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
-            if (pathname.endsWith('/receipt-scans/capabilities')) return json({ enabled, maxUploadBytes: 10485760 });
+            if (pathname.endsWith('/receipt-scans/capabilities')) return json({ enabled, maxUploadBytes: 10485760, monthlyLimit: 10, monthlyUsed, resetsAt: "2026-11-01T00:00:00Z", postedImageRetentionDays: 365 });
+            if (pathname.endsWith('/receipt-scans/scan/image') && req.method() === 'DELETE') {
+                assert.equal(new URL(req.url()).searchParams.get('expectedVersion'), 'version');
+                photoDeleted = true; return route.fulfill({ status: 204 });
+            }
+            if (pathname.endsWith('/receipt-scans/scan')) return json(ready());
+            if (pathname.endsWith('/receipt-scans/original')) return json({ ...ready(), id: 'original', status: 'Posted', draft: null, postedTransactionId: 'original-transaction' });
+            if (pathname.endsWith('/receipt-scans/original/image') || pathname.endsWith('/receipt-scans/failed/image')) return route.fulfill({ status: 200, contentType: 'image/png', body: png });
+            if (pathname.endsWith('/transactions') && req.method() === 'POST') { manualPosts.push(req.postDataJSON()); return json({ id: 'manual-transaction' }); }
             if (pathname.endsWith('/receipt-scans/scan/image')) return route.fulfill({ status: 200, contentType: 'image/png', body: png });
             if (pathname.endsWith('/receipt-scans/scan/transaction')) {
                 posts.push(req.postDataJSON());
@@ -64,11 +75,16 @@ try {
             if (pathname.endsWith('/receipt-scans')) {
                 if (req.method() === 'POST') {
                     uploads.push(req.postDataBuffer().toString());
-                    if (failUpload) { failUpload = false; return fail(503); }
-                    uploaded = true; return json(queued());
+                    if (failUpload) {
+                        // The server accepted the operation, but its response was lost.
+                        failUpload = false; uploaded = true; monthlyUsed++;
+                        return fail(503);
+                    }
+                    // Replaying the same operation returns the accepted scan without charging again.
+                    return json(queued());
                 }
                 if (failInbox) { failInbox = false; return fail(503); }
-                return json([ready(), ...(uploaded ? [queued()] : [])]);
+                return json([ready(), ...(uploaded ? [queued()] : []), ...(showFailed ? [{ ...ready(), id: 'failed', status: 'Failed', draft: null, postedTransactionId: null, failureCode: 'provider_unavailable', possibleDuplicate: false, imageAvailable: true }] : [])]);
             }
             if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
             if (pathname.endsWith('/accounts') && failAccounts) { failAccounts = false; return fail(503); }
@@ -87,9 +103,45 @@ try {
         await page.goto(url);
         await page.getByRole('button', { name: copy.retry, exact: true }).click();
         await page.getByRole('button', { name: copy.review, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').isVisible(), false, 'Valid receipt items start compact.');
+        assert.doesNotMatch(await page.getByRole('dialog', { name: copy.review, exact: true }).innerText(), /\breceipts\.[a-zA-Z]/, 'Receipt review must not expose untranslated keys.');
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        await page.getByText(copy.ux.correctTotal, { exact: true }).click();
         if (language === 'en' && width === 375 && !dark) {
             await page.getByRole('button', { name: copy.retry, exact: true }).click();
         }
+        // Accidental dismissal must not silently erase reviewed values.
+        await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('8');
+        await page.getByText(copy.itemsAbove.replace('{{amount}}', new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(1)), { exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog', { name: copy.unsavedTitle, exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.keepEditing, exact: true }).click();
+        assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '8');
+        await page.locator('input[id$="-amount"]').fill('0');
+        assert.equal(await page.locator('input[id$="-amount"]').getAttribute('aria-invalid'), 'true');
+        await page.getByText(copy.invalidItemAmount, { exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: copy.discardEdits, exact: true }).click();
+        await page.getByRole('button', { name: copy.review, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').isVisible(), false, 'Valid receipt items start compact.');
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        await page.getByText(copy.ux.correctTotal, { exact: true }).click();
+        assert.equal(await page.getByLabel(copy.reviewedTotal, { exact: true }).inputValue(), '9.00');
+        // Photo inspection is reachable from the fixed editor footer.
+        await page.getByRole('dialog', { name: copy.review, exact: true }).locator('footer').getByRole('button', { name: copy.expandPhoto, exact: true }).click();
+        const zoom = page.getByRole('dialog', { name: copy.expandPhoto, exact: true }).getByRole('slider', { name: copy.zoom, exact: true });
+        const zoomLabel = zoom.locator('..');
+        assert.equal(await zoomLabel.locator('output').textContent(), '100%');
+        assert.doesNotMatch(await zoomLabel.textContent(), /[\x00-\x08\x0B\x0C\x0E-\x1F]/);
+        await zoom.focus(); await page.keyboard.press('End');
+        assert.equal(await zoom.inputValue(), '400');
+        assert.equal(await zoomLabel.locator('output').textContent(), '400%');
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog', { name: copy.review, exact: true }).getByRole('button', { name: copy.viewMatch, exact: true }).click();
+        const matchDialog = page.getByRole('dialog', { name: copy.matchTitle, exact: true });
+        await matchDialog.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
+        assert.ok((await matchDialog.getByRole('link').getAttribute('href')).includes('original-transaction'));
+        await page.keyboard.press('Escape');
         async function assertItemAlignment() {
             if (width < 640) return;
             const rows = await page.locator('input[id$="-description"]').evaluateAll(inputs => inputs.map(input => {
@@ -118,6 +170,7 @@ try {
         await page.getByText(dark ? copy.householdRuleSuggestion : copy.modelCategorySuggestion, { exact: true }).waitFor();
         await assertItemAlignment();
         await page.getByRole('button', { name: copy.suggestion.replace('{{category}}', 'Food'), exact: true }).click();
+        await page.getByText(copy.ux.rememberOptions, { exact: true }).click();
         const remember = page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) });
         assert.equal(await remember.isChecked(), false, 'Household rule sharing is opt-in.');
         if (dark) await remember.check();
@@ -125,6 +178,7 @@ try {
         await page.getByLabel(copy.reviewedTotal, { exact: true }).fill('0009,00');
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         await page.locator('input[id$="-amount"]').fill('0009,00');
+        assert.deepEqual(errors, [], 'Editing comma-decimal amounts must not crash the compact summary.');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await account.selectOption('eur');
         await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor({ state: 'hidden' });
@@ -141,7 +195,7 @@ try {
         await page.getByRole('checkbox', { name: copy.reviewConsent }).check();
         assert.ok((await page.locator('details').filter({ has: page.getByText(copy.observations, { exact: true }) }).textContent()).includes('Discount'));
         await page.getByText(copy.viewPhoto, { exact: true }).click();
-        await page.getByAltText(copy.imageAlt).waitFor();
+        await page.getByAltText(copy.imageAlt).filter({ visible: true }).last().waitFor();
         await page.getByText(copy.viewPhoto, { exact: true }).click();
         await page.screenshot({ path: path.join(artifacts, `review-${language}-${dark}-${width}.png`), fullPage: true });
         await page.locator('input[id$="-description"]').scrollIntoViewIfNeeded();
@@ -159,12 +213,15 @@ try {
         }
         await page.locator('input[type="date"]').fill('2026-10-29');
         assert.equal(await consent.isChecked(), false, 'Changing receipt details invalidates acknowledgement.');
+        assert.deepEqual(errors, [], 'Editing comma-decimal amounts must not crash the compact summary.');
         await page.locator('input[type="date"]').fill('2026-10-28');
         await consent.check();
         await confirm.click();
         await page.getByRole('alert').filter({ hasText: 'Please retry' }).waitFor();
         assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '0009,00', 'Posting failure retains the reviewed form.');
         await confirm.click();
+        await page.getByRole('button', { name: copy.overview.history, exact: true }).click();
+        await page.getByText(copy.overview.details, { exact: true }).click();
         await page.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
         assert.equal(posts.length, 2);
         assert.deepEqual(posts[0], posts[1], 'Retry uses the same draft and reviewed values.');
@@ -184,23 +241,94 @@ try {
         await page.getByAltText(copy.selectedPhoto).waitFor();
         await page.screenshot({ path: path.join(artifacts, `photo-${language}-${dark}-${width}.png`), fullPage: true });
         await page.getByRole('button', { name: copy.upload, exact: true }).click();
+        await page.getByRole('button', { name: copy.retryUpload, exact: true }).waitFor();
+        const usedAfterAcceptance = monthlyUsed;
+        enabled = false;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.disabled, { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: copy.takePhoto, exact: true }).isDisabled(), true);
+        assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: copy.retryUpload, exact: true }).isEnabled(), true);
         await page.getByRole('button', { name: copy.retryUpload, exact: true }).click();
-        await page.getByText(copy.status.Queued, { exact: true }).waitFor();
+        await page.getByRole('list', { name: copy.title, exact: true }).getByText(copy.status.Queued, { exact: true }).waitFor();
         const operation = body => /name="operationId"\r\n\r\n([^\r]+)/.exec(body)?.[1];
         assert.equal(uploads.length, 2);
+        assert.equal(monthlyUsed, usedAfterAcceptance, 'Disabled-state recovery must not consume another scan.');
+        enabled = true;
         assert.ok(operation(uploads[0]));
         assert.equal(operation(uploads[0]), operation(uploads[1]), 'Upload retry must reuse its operation ID.');
         await page.getByRole('button', { name: copy.discard, exact: true }).click();
         await page.getByRole('button', { name: copy.discard, exact: true }).last().click();
-        await page.getByText(copy.status.Discarded, { exact: true }).waitFor();
+        await page.getByRole('button', { name: copy.overview.history, exact: true }).click();
+        await page.getByRole('list', { name: copy.title, exact: true }).getByText(copy.status.Discarded, { exact: true }).waitFor();
         assert.equal(posts.length, 2, 'Upload and discard never post financial records.');
+        monthlyUsed = 10;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.quotaExhausted, { exact: true }).last().waitFor();
+        assert.equal(await page.locator('#receipt-upload-panel').isVisible(), true, 'Capture remains open after scanning and discarding.');
+        assert.equal(await page.getByRole('button', { name: copy.capture, exact: true }).getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.getByRole('button', { name: copy.chooseFile, exact: true }).isDisabled(), true);
+        await page.getByRole('list', { name: copy.title, exact: true }).locator('li').filter({ has: page.getByText(copy.status.Posted, { exact: true }) }).getByText(copy.overview.details, { exact: true }).click();
+        await page.getByRole('button', { name: copy.viewPhoto, exact: true }).click();
+        await page.getByRole('dialog').getByAltText(copy.imageAlt).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: copy.deletePhoto, exact: true }).click();
+        await page.getByRole('dialog').getByText(copy.deletePhotoHelp, { exact: true }).waitFor();
+        await page.getByRole('dialog').getByRole('button', { name: copy.deletePhoto, exact: true }).click();
+        await page.getByRole('button', { name: copy.viewPhoto, exact: true }).waitFor({ state: 'hidden' });
+        await page.getByRole('link', { name: copy.openTransaction, exact: true }).waitFor();
+        assert.equal(posts.length, 2, 'Deleting a photo must not post or delete an expense.');
         enabled = false;
         await page.getByRole('button', { name: copy.refresh, exact: true }).click();
         await page.getByText(copy.disabled, { exact: true }).waitFor();
         assert.equal(await page.locator('input[type="file"]').first().isDisabled(), true);
+        showFailed = true;
+        await page.getByRole('button', { name: copy.overview.attention, exact: true }).click();
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByText(copy.providerFailed, { exact: true }).waitFor();
+        await page.getByText(copy.newScanCharge, { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: copy.anotherPhoto, exact: true }).isDisabled(), true);
+        const beforeManual = monthlyUsed;
+        await page.getByRole('button', { name: copy.enterManually, exact: true }).click();
+        await page.getByText(copy.manualHelp, { exact: true }).waitFor();
+        await page.locator('input[id$="-description"]').fill('Manual groceries');
+        await page.locator('input[id$="-amount"]').fill('4.50');
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.getByText(copy.manualHelp, { exact: true }).waitFor({ state: 'hidden' });
+        assert.equal(manualPosts.length, 1);
+        assert.equal(manualPosts[0].items[0].amount, '4.50');
+        assert.equal(monthlyUsed, beforeManual, 'Manual recovery must not consume scan quota.');
+        assert.equal(uploads.length, 2);
+        // Unmatched discounts have an explicit recovery flow; applying category
+        // suggestions remains separate from household learning and recording.
+        recorded = false; manualDiscount = true; enabled = true;
+        await page.getByRole('button', { name: copy.refresh, exact: true }).click();
+        await page.getByRole('button', { name: copy.review, exact: true }).click();
+        const applyCategories = page.getByRole('button', { name: copy.ux.applyCategories.replace('{{count}}', '1'), exact: true });
+        await applyCategories.click();
+        await page.getByRole('button', { name: copy.ux.applyCategories.replace('{{count}}', '0'), exact: true }).waitFor();
+        const applyDiscounts = page.getByRole('button', { name: copy.ux.applyDiscounts, exact: true });
+        assert.equal(await applyDiscounts.isDisabled(), true);
+        const assignment = page.getByLabel(copy.ux.discountTarget.replace('{{description}}', 'Coupon').replace('{{amount}}', '-1.00'), { exact: true });
+        await assignment.selectOption({ index: 1 });
+        assert.equal(await applyDiscounts.isEnabled(), true);
+        await applyDiscounts.click();
+        assert.equal(await applyDiscounts.count(), 0, 'Applied discounts cannot be applied twice.');
+        assert.equal(await page.getByRole('button', { name: copy.confirm, exact: true }).isDisabled(), true);
+        await page.getByRole('button', { name: copy.ux.editAll, exact: true }).click();
+        assert.equal(await page.locator('input[id$="-amount"]').inputValue(), '9');
+        await page.getByText(copy.ux.rememberOptions, { exact: true }).click();
+        assert.equal(await page.getByRole('checkbox', { name: new RegExp(copy.rememberCategory) }).isChecked(), false);
+        assert.equal(posts.length, 2, 'Review actions do not record another expense.');
+        await page.screenshot({ path: path.join(artifacts, `simplified-${language}-${dark}-${width}.png`), fullPage: true });
         assert.deepEqual(errors, []);
         await page.close();
     }
-    console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state and EN/DE/HU mobile/desktop themes');
+    await verifyLargeReceipt(browser, url, artifacts);
+    await verifyReceiptOverview(browser, url, artifacts);
+    console.log('PASS receipt inbox, reconciliation, categories, posting/upload retry, discard, disabled state, large item lists and EN/DE/HU mobile/desktop themes');
 } finally { await browser?.close(); server.kill(); }
+
+
 

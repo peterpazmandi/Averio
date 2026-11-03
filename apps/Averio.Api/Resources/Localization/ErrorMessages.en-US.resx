@@ -356,6 +356,7 @@
   <data name="Error_ReceiptReconciliation" xml:space="preserve"><value>Reconcile the reviewed total with all transaction items before confirming.</value></data>
   <data name="Error_ReceiptCurrency" xml:space="preserve"><value>The reviewed receipt currency must match the selected account.</value></data>
   <data name="Error_ReceiptCategoryRuleInvalid" xml:space="preserve"><value>Check the categories selected for household rules. Use a valid item and an active expense category.</value></data>
+  <data name="Error_ReceiptMonthlyLimit" xml:space="preserve"><value>Your household has used its monthly receipt scan allowance. It resets at the start of the next UTC month. Existing receipts remain available.</value></data>
 </root>
 
 

@@ -12,7 +12,14 @@ function matchesDiscount(discount: string, description: string) {
     const itemWords = discountWords(description);
     const shared = words.filter(word => itemWords.some(item => item === word
         || (Math.min(item.length, word.length) >= 4 && (item.startsWith(word) || word.startsWith(item)))));
-    return shared.length >= 2 && shared.length / words.length >= 0.6;
+    if (shared.length >= 2 && shared.length / words.length >= 0.6) return true;
+    // OCR can corrupt the suffix while preserving a product name and model
+    // (e.g. LANDL A60). Require both exact anchors for this fallback, never
+    // a price/quantity or fuzzy model prefix. The caller still requires one
+    // candidate and exact reconciliation of the complete discounted receipt.
+    const exact = words.filter(word => itemWords.includes(word));
+    return exact.some(word => /^[a-z]{4,}$/.test(word))
+        && exact.some(word => /[a-z]/.test(word) && /[0-9]/.test(word));
 }
 
 export function receiptItems(draft: ReceiptDraft) {
@@ -51,6 +58,27 @@ export function receiptItems(draft: ReceiptDraft) {
 
 export function normalizeReceiptAmount(value: string) {
     return normalizeBalanceInput(value);
+}
+
+// Explicit review assignments use current edited values, never mutate evidence,
+// and only commit as one fully reconciled proposal. Callers prevent reapplication.
+export function assignReceiptDiscounts<T extends { amount: string; discountAmount?: string; originalAmount?: string }>(
+    items: readonly T[], discounts: readonly { amount: string | null }[], targets: readonly number[], total: string,
+): T[] | null {
+    if (!discounts.length || targets.length !== discounts.length || receiptReconciles(total, items)) return null;
+    const proposal = items.map(item => ({ ...item }));
+    for (let index = 0; index < discounts.length; index++) {
+        const target = targets[index];
+        const discount = normalizeReceiptAmount(discounts[index].amount ?? '');
+        if (!Number.isInteger(target) || target < 0 || target >= proposal.length || !discount?.startsWith('-')) return null;
+        const item = proposal[target];
+        const amount = normalizeReceiptAmount(item.amount);
+        if (amount === null) return null;
+        item.originalAmount = item.discountAmount ? item.originalAmount : amount;
+        item.amount = sumDecimalAmounts([amount, discount]);
+        item.discountAmount = sumDecimalAmounts([item.discountAmount || '0', discount]);
+    }
+    return receiptReconciles(total, proposal) ? proposal : null;
 }
 
 export function receiptReconciles(total: string, items: readonly { amount: string }[]) {

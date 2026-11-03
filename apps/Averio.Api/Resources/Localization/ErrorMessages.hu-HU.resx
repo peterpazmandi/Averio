@@ -356,6 +356,7 @@
   <data name="Error_ReceiptReconciliation" xml:space="preserve"><value>Megerősítés előtt egyeztesd az ellenőrzött végösszeget a tranzakció tételeivel.</value></data>
   <data name="Error_ReceiptCurrency" xml:space="preserve"><value>Az ellenőrzött nyugtán szereplő pénznemnek egyeznie kell a kiválasztott számla pénznemével.</value></data>
   <data name="Error_ReceiptCategoryRuleInvalid" xml:space="preserve"><value>Ellenőrizd a háztartási szabályokhoz kiválasztott kategóriákat. Érvényes tételt és aktív kiadási kategóriát válassz.</value></data>
+  <data name="Error_ReceiptMonthlyLimit" xml:space="preserve"><value>Elfogyott a háztartás havi nyugtaszkennelési kerete. A következő UTC szerinti hónap elején újraindul. A meglévő nyugtákat továbbra is eléred.</value></data>
 </root>
 
 

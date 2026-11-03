@@ -14,7 +14,7 @@ internal static class ReceiptVerification
     public static async Task RunAsync(ServiceProvider provider, MutableCurrentUser user, Fixture f, DateTimeOffset now)
     {
         var clock = new MutableTimeProvider(now);
-        var options = new ReceiptOptions { Enabled = true, DailyUploadLimit = 20 };
+        var options = new ReceiptOptions { Enabled = true, DailyUploadLimit = 20, FreeMonthlyLimit = 100 };
         var store = new Documents();
         var extract = new Extractor();
         using var bitmap = new SKBitmap(64, 48); bitmap.Erase(SKColors.White);

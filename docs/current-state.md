@@ -275,3 +275,7 @@ Receipt uploads create uploader-only expiring drafts, processed by a leased back
 - Gemini suggests only from the household expense catalogue, with current-category validation and explicit apply actions.
 - Users can opt in to remembering exact merchant/printed-item matches for the household at confirmation. Rules take precedence over model suggestions and commit atomically with the expense; retry identity includes rule-sharing intent.
 - EN/DE/HU UI, generated API contracts, EF migration `AddReceiptCategoryRules`, and regression coverage accompany ADR-036. No production migration or live provider benchmark has been run.
+
+## Receipt rollout controls (PR 3)
+
+Household UTC monthly receipt allowances, time-bounded operator-managed paid entitlements, uploader-only exact-photo duplicate warnings, opt-in retained posted photos and content-free metrics are implemented. Posted-photo deletion preserves the financial transaction and immutable confirmation identity. No new schema migration is needed. See [ADR-037](decisions/ADR-037-receipt-rollout-quotas-and-retention.md) and [rollout/benchmark instructions](receipt-scanning.md). Real provider accuracy and production storage checks remain release gates; checkout/billing is not implemented.

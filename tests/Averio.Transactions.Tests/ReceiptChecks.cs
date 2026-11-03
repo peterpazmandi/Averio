@@ -18,6 +18,29 @@ internal static class ReceiptChecks
         var draft = ReceiptDraftValidation.Validate(input);
         Check(draft.Total == "9000.00" && draft.Currency == "HUF" && draft.Lines[1].Amount == "-1000.00", "exact amounts");
         Check(draft.Lines[2].Kind == "Payment" && draft.Warnings.Contains("review_required"), "payment stays separate");
+        Check(!draft.Warnings.Contains("items_total_mismatch"), "discounts reconcile without counting payment twice");
+        var rowPairs = new ReceiptDraft("Shop", "2026-10-26", "HUF", "4516", [
+            new("Vegyes viragmez", "1999", "Item"), new("Narancsle 100%", "599", "Item"),
+            new("Visszav.dij KF 1db", "50", "Deposit"), new("Coca-Cola 0,5l", "419", "Item"),
+            new("Visszav.dij BF 1db", "50", "Deposit"), new("Kap. juht. cs.mell", "1399", "Item"),
+            new("Reszosszeg", "4516", "Subtotal"), new("AFA", "900", "Tax"), new("Bankkartya", "4516", "Payment")
+        ], []);
+        var paired = ReceiptDraftValidation.Validate(rowPairs);
+        Check(paired.Lines[2].Amount == "50.00" && paired.Lines[3].Amount == "419.00"
+            && !paired.Warnings.Contains("items_total_mismatch"), "row pairs retained; tax, subtotal and payment excluded");
+        var shiftedLines = rowPairs.Lines.ToArray();
+        shiftedLines[1] = shiftedLines[1] with { Amount = "1999" };
+        var shifted = ReceiptDraftValidation.Validate(rowPairs with { Lines = shiftedLines });
+        Check(shifted.Warnings.Contains("items_total_mismatch") && shifted.Lines[1].Amount == "1999.00",
+            "mismatch warns without inventing corrected amounts");
+        shiftedLines[1] = shiftedLines[1] with { Amount = null };
+        Check(ReceiptDraftValidation.Validate(rowPairs with { Lines = shiftedLines }).Warnings.Contains("items_incomplete"),
+            "uncertain row pairing stays incomplete");
+        var swapped = rowPairs.Lines.ToArray();
+        swapped[2] = swapped[2] with { Amount = "419" };
+        swapped[3] = swapped[3] with { Amount = "50" };
+        Check(ReceiptDraftValidation.Validate(rowPairs with { Lines = swapped }).Warnings.Contains("review_required"),
+            "balanced swaps still require human review");
         Check(ReceiptDraftValidation.Validate(input with { Date = "10/11/26" }).Date == null, "ambiguous date");
         foreach (var amount in new[] { "1,000", "1e3", "1.234" })
             await Reject<ReceiptExtractionException>(() => Task.FromResult(ReceiptDraftValidation.Validate(input with { Total = amount })));
@@ -42,6 +65,12 @@ internal static class ReceiptChecks
         var handler = new StubHttp(input);
         var extractor = new GeminiReceiptExtractor(new HttpClient(handler), Options.Create(new GeminiReceiptOptions { ApiKey = "test", Model = "test-model" }));
         Check((await extractor.ExtractAsync(jpeg, default)).Total == "9000", "provider returns raw observations");
+        handler.Text = JsonSerializer.Serialize(rowPairs);
+        var observedPairs = await extractor.ExtractAsync(jpeg, default);
+        Check(observedPairs.Lines.Select(line => (line.Description, line.Amount, line.Kind))
+            .SequenceEqual(rowPairs.Lines.Select(line => (line.Description, line.Amount, line.Kind))),
+            "provider adapter preserves ordered description/price pairs and deposits");
+        handler.Text = null;
         var categoryId = Guid.NewGuid();
         await extractor.ExtractAsync(jpeg, [new ReceiptCategoryOption(categoryId, "Groceries > Dairy")], default);
         Check(handler.Request!.Contains(categoryId.ToString()) && handler.Request.Contains("Dairy"), "provider receives authorized category catalogue");

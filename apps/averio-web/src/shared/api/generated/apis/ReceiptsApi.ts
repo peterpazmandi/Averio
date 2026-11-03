@@ -78,6 +78,21 @@ export interface ApiV1HouseholdsHouseholdIdReceiptScansIdGetRequest {
     id: string;
 }
 
+export interface ApiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    expectedVersion: string;
+}
+
 export interface ApiV1HouseholdsHouseholdIdReceiptScansIdImageGetRequest {
     /**
      * 
@@ -324,6 +339,67 @@ export class ReceiptsApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdReceiptScansIdGet(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReceiptScanResult> {
         const response = await this.apiV1HouseholdsHouseholdIdReceiptScansIdGetRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete().'
+            );
+        }
+
+        if (requestParameters['expectedVersion'] == null) {
+            throw new runtime.RequiredError(
+                'expectedVersion',
+                'Required parameter "expectedVersion" was null or undefined when calling apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expectedVersion'] != null) {
+            queryParameters['expectedVersion'] = requestParameters['expectedVersion'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/receipt-scans/{id}/image`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRaw(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete(requestParameters: ApiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdReceiptScansIdImageDeleteRaw(requestParameters, initOverrides);
     }
 
     /**

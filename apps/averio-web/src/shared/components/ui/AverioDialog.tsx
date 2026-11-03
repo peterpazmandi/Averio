@@ -16,11 +16,12 @@ interface AverioDialogProps {
     onDismiss: () => void;
     busy?: boolean;
     wide?: boolean;
+    extraWide?: boolean;
     initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Modal dialog with a content-sized bottom sheet on mobile. Dismissal never accepts an action. */
-export function AverioDialog({ open, title, closeLabel, children, actions, onDismiss, busy = false, wide = false, initialFocusRef }: AverioDialogProps) {
+export function AverioDialog({ open, title, closeLabel, children, actions, onDismiss, busy = false, wide = false, extraWide = false, initialFocusRef }: AverioDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
     useEffect(() => {
@@ -41,7 +42,7 @@ export function AverioDialog({ open, title, closeLabel, children, actions, onDis
     }, [open, initialFocusRef]);
 
     return createPortal(
-        <dialog ref={dialogRef} className={(wide ? "min-[601px]:w-[min(900px,calc(100vw-48px))] " : "min-[601px]:w-[min(560px,calc(100vw-48px))] ") + "fixed inset-x-0 top-auto bottom-0 m-0 h-fit max-h-dvh w-full max-w-none min-w-0 overflow-hidden rounded-t-[20px] border border-[#E4E7EC] bg-white p-0 text-[#152033] shadow-[0_24px_80px_rgba(0,0,0,0.25)] backdrop:bg-[#030A1699] open:flex open:flex-col dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] min-[601px]:inset-0 min-[601px]:m-auto min-[601px]:max-h-[calc(100dvh-48px)] min-[601px]:rounded-[20px]"} aria-labelledby={titleId} aria-busy={busy}
+        <dialog ref={dialogRef} className={(extraWide ? "min-[601px]:w-[min(1400px,calc(100vw-48px))] " : wide ? "min-[601px]:w-[min(900px,calc(100vw-48px))] " : "min-[601px]:w-[min(560px,calc(100vw-48px))] ") + "fixed inset-x-0 top-auto bottom-0 m-0 h-fit max-h-dvh w-full max-w-none min-w-0 overflow-hidden rounded-t-[20px] border border-[#E4E7EC] bg-white p-0 text-[#152033] shadow-[0_24px_80px_rgba(0,0,0,0.25)] backdrop:bg-[#030A1699] open:flex open:flex-col dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] min-[601px]:inset-0 min-[601px]:m-auto min-[601px]:max-h-[calc(100dvh-48px)] min-[601px]:rounded-[20px]"} aria-labelledby={titleId} aria-busy={busy}
             onKeyDown={event => {
                 event.stopPropagation();
                 if (event.key !== 'Tab') return;
