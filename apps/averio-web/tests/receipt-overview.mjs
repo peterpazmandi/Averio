@@ -98,7 +98,10 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             for (const [status, label] of [['Failed', 'Could not scan'], ['Discarded', 'Discarded'], ['Expired', 'Expired'], ['Posted', 'Recorded']]) {
                 uploaded.status = status;
                 await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-                await list.getByText(label, { exact: true }).first().waitFor({ state: ['Discarded', 'Expired', 'Posted'].includes(status) ? 'hidden' : 'visible' });
+                const inHistory = ['Discarded', 'Expired', 'Posted'].includes(status);
+                await page.getByRole('button', { name: inHistory ? 'History' : 'To review', exact: true }).click();
+                await page.getByLabel('Status', { exact: true }).selectOption(status);
+                await list.getByText(label, { exact: true }).first().waitFor();
                 assert.equal(await page.getByRole('progressbar').count(), 0, 'Terminal states do not show scan progress.');
             }
             await page.getByRole('button', { name: 'History', exact: true }).click();
