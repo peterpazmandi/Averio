@@ -124,8 +124,8 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                     <p className="mt-3 text-sm">{t('imports.warning')}</p>
                     <label className="mt-4 flex items-start gap-3 text-sm font-semibold"><input className="mt-1 size-5 shrink-0 accent-emerald-500" type="checkbox" checked={ack} disabled={busy} onChange={e => setAck(e.target.checked)} />{t('imports.ack')}</label>
                 </AverioCard>
-                <AverioCard><div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="mb-3 text-left font-bold">{t('imports.preview')}</caption>
-                    <thead><tr>{['date', 'kind', 'account', 'category', 'amount', 'merchant', 'note'].map(c => <th key={c} className="p-2">{t('imports.' + c)}</th>)}</tr></thead>
+                <AverioCard><div className="max-h-[28rem] overflow-auto" tabIndex={0} role="region" aria-label={t('imports.preview')}><table className="w-full text-left text-sm"><caption className="mb-3 text-left font-bold">{t('imports.preview')}</caption>
+                    <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900"><tr>{['date', 'kind', 'account', 'category', 'amount', 'merchant', 'note'].map(c => <th key={c} className="p-2">{t('imports.' + c)}</th>)}</tr></thead>
                     <tbody>{preview.rows.slice(page * 50, (page + 1) * 50).map(r => <tr key={r.sheet + r.rowNumber} className="border-t border-slate-200 dark:border-slate-700">
                         <td className="whitespace-nowrap p-2">{r.date}</td><td className="p-2">{t('imports.' + r.kind)}</td><td className="p-2">{r.account}{r.destination && ` → ${r.destination}`}</td>
                         <td className="p-2">{r.category}</td><td className="whitespace-nowrap p-2">{money(r.amount, r.currency)}</td><td className="p-2">{r.tags}</td><td className="min-w-40 p-2">{r.note}</td></tr>)}</tbody></table></div>
