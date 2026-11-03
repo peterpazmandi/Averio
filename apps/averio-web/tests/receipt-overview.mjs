@@ -67,13 +67,21 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             assert.equal(await page.getByRole('progressbar').count(), 0, 'Selecting a photo does not start scanning.');
             await page.getByRole('button', { name: 'Scan this photo', exact: true }).click();
             await capture.locator('[aria-current="step"]').filter({ hasText: 'Uploading' }).waitFor();
+            const progress = capture.getByRole('progressbar');
+            const originalBar = await progress.elementHandle();
             releaseUpload();
-            const latest = page.getByLabel('Latest scan', { exact: true });
+            const latest = capture;
+            assert.equal(await capture.isVisible(), true, 'Capture stays open after upload acceptance.');
+            assert.equal(await capture.getByRole('img').count(), 1, 'The selected photo remains visible.');
+            assert.equal(await page.getByLabel('Latest scan', { exact: true }).count(), 0, 'Progress never moves to another card.');
             await latest.locator('[aria-current="step"]').filter({ hasText: 'Waiting to start' }).waitFor();
             assert.equal(await latest.getByRole('list', { name: 'Scanning stages' }).getByRole('listitem').count(), 3);
             uploaded.status = 'Processing';
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
             await latest.locator('[aria-current="step"]').filter({ hasText: 'Reading receipt' }).waitFor();
+            assert.equal(await originalBar.evaluate(node => node.isConnected), true, 'The same progress bar stays mounted through reading.');
+            assert.equal(await capture.getByRole('button', { name: 'Choose image', exact: true }).isDisabled(), true);
+            assert.equal(await capture.getByRole('button', { name: 'Remove photo', exact: true }).isDisabled(), true);
             await page.screenshot({ path: path.join(artifacts, `scan-progress-${width}.png`), fullPage: true });
             uploaded.status = 'Ready'; uploaded.draft = scans[0].draft;
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -84,8 +92,7 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             for (const [status, label] of [['Failed', 'Could not scan'], ['Discarded', 'Discarded'], ['Expired', 'Expired'], ['Posted', 'Recorded']]) {
                 uploaded.status = status;
                 await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-                if (status === 'Failed') await latest.getByText(label, { exact: true }).waitFor();
-                else await latest.waitFor({ state: 'hidden' });
+                await latest.getByText(label, { exact: true }).waitFor();
                 assert.equal(await page.getByRole('progressbar').count(), 0, 'Terminal states do not show scan progress.');
             }
             await page.getByRole('button', { name: 'History', exact: true }).click();

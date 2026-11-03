@@ -55,8 +55,8 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         },
         onSuccess: async result => {
             setRecentId(result.id);
-            setCaptureOpen(false); setHistory(false); setStatus(''); setPage(0);
-            setSelection(null); if (input.current) input.current.value = '';
+            setHistory(false); setStatus(''); setPage(0);
+            if (input.current) input.current.value = '';
             if (camera.current) camera.current.value = '';
             setNotice(t('receipts.uploaded')); await refresh();
         },
@@ -68,7 +68,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         mutationFn: (scan: ReceiptScanResult) => receiptRequest(scan.status === 'Posted' ? 'photo.delete' : 'scan.discard', { scanId: scan.id }, () => scan.status === 'Posted'
             ? receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdImageDelete({ householdId, id: scan.id, expectedVersion: scan.version })
             : receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdDelete({ householdId, id: scan.id, expectedVersion: scan.version })),
-        onSuccess: async (_, scan) => { if (scan.id === recentId) setRecentId(null); setDiscard(null); await refresh(); },
+        onSuccess: async (_, scan) => { if (scan.id === recentId) { setRecentId(null); setSelection(null); } setDiscard(null); await refresh(); },
         onError: refresh,
     });
     const post = useMutation({
@@ -76,7 +76,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             receiptRequest('scan.confirm', { scanId: scan.id }, () => receiptsApi.apiV1HouseholdsHouseholdIdReceiptScansIdTransactionPost({ householdId, id: scan.id,
                 postReceiptRequest: { expectedVersion: scan.version, currency, reviewedTotal, transaction: request, rememberCategoryRules } })),
         onSuccess: async () => {
-            setReview(null); setRecentId(null); setNotice(t('receipts.overview.saved'));
+            setReview(null); setRecentId(null); setSelection(null); setNotice(t('receipts.overview.saved'));
             // Match ordinary posting invalidation, including account balances,
             // wallet history, activity totals, statistics and the dashboard.
             await Promise.all([
@@ -109,6 +109,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const canSubmitUpload = canStartUpload || canRetryUpload;
     const scans = inbox.data?.pages.flat() ?? [];
     const recent = recentId ? scans.find(scan => scan.id === recentId) ?? (upload.data?.id === recentId ? upload.data : null) : null;
+    const accepted = selection && upload.data?.id === recentId ? recent : null;
+    const scanStatus = accepted?.status ?? (upload.isPending ? 'Uploading' : null);
+    const scanBusy = upload.isPending || (scanStatus !== null && pending.has(scanStatus));
     const attentionRows = receiptInboxRows(scans, false);
     const historyRows = receiptInboxRows(scans, true);
     const filteredRows = receiptInboxRows(scans, history, status);
@@ -117,6 +120,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     function choose(file?: File) {
         if (!file) return;
         setCaptureOpen(true);
+        setRecentId(null);
         upload.reset(); setFileError(''); setNotice('');
         if (!['image/jpeg', 'image/png'].includes(file.type) || file.size === 0 || file.size > (capabilities.data?.maxUploadBytes ?? 10485760)) {
             receiptLog('photo.rejected', { bytes: file.size }, 'warn');
@@ -129,7 +133,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     return <section className="grid gap-4" aria-labelledby="receipts-title">
         <header className="flex flex-wrap items-center justify-between gap-3">
             <div><h2 id="receipts-title" className="text-xl font-bold">{t('receipts.title')}</h2><p className="mt-1 text-sm">{t('receipts.privateHelp')}</p></div>
-            <div className="flex flex-wrap gap-2"><AverioButton disabled={inbox.isFetching} onClick={() => void refresh()}>{t('receipts.refresh')}</AverioButton><AverioButton variant="primary" disabled={upload.isPending} aria-expanded={captureOpen} aria-controls="receipt-upload-panel" onClick={() => setCaptureOpen(value => !value)}>{t(selection ? 'receipts.overview.continueScan' : 'receipts.capture')}</AverioButton></div>
+            <div className="flex flex-wrap gap-2"><AverioButton disabled={inbox.isFetching} onClick={() => void refresh()}>{t('receipts.refresh')}</AverioButton><AverioButton variant="primary" disabled={scanBusy} aria-expanded={captureOpen} aria-controls="receipt-upload-panel" onClick={() => setCaptureOpen(value => !value)}>{t(selection ? 'receipts.overview.continueScan' : 'receipts.capture')}</AverioButton></div>
         </header>
         <div id="receipt-upload-panel" hidden={!captureOpen}>
         <AverioCard className="grid gap-4">
@@ -147,21 +151,22 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             {capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
             {capabilities.isSuccess && !capabilities.data.enabled && <p role="status">{t('receipts.disabled')}</p>}
                 <input ref={input} type="file" accept="image/jpeg,image/png" hidden aria-label={t('receipts.chooseFile')}
-                    disabled={!canStartUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
+                    disabled={!canStartUpload || scanBusy} onChange={event => choose(event.target.files?.[0])} />
             <input ref={camera} type="file" accept="image/jpeg,image/png" capture="environment" hidden aria-label={t('receipts.takePhoto')}
-                disabled={!canStartUpload || upload.isPending} onChange={event => choose(event.target.files?.[0])} />
+                disabled={!canStartUpload || scanBusy} onChange={event => choose(event.target.files?.[0])} />
             <div className="grid gap-2 sm:grid-cols-2">
-                <AverioButton variant={selection ? 'secondary' : 'primary'} disabled={!canStartUpload || upload.isPending} onClick={() => camera.current?.click()}>{t('receipts.takePhoto')}</AverioButton>
-                <AverioButton disabled={!canStartUpload || upload.isPending} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
+                <AverioButton variant={selection ? 'secondary' : 'primary'} disabled={!canStartUpload || scanBusy} onClick={() => camera.current?.click()}>{t('receipts.takePhoto')}</AverioButton>
+                <AverioButton disabled={!canStartUpload || scanBusy} onClick={() => input.current?.click()}>{t('receipts.chooseFile')}</AverioButton>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">{t('receipts.formats')}</p>
             {selection && <div className="grid gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
-                {upload.isPending && <ReceiptProgress status="Uploading" />}
-                <SelectedReceipt file={selection.file} />
+                {scanStatus && <ReceiptProgress status={scanStatus} />}
+                <SelectedReceipt file={selection.file} status={scanStatus} />
                 <div className="flex flex-wrap gap-2">
-                    <AverioButton variant="primary" disabled={!canSubmitUpload || upload.isPending}
-                        onClick={() => upload.mutate(selection)}>{t(upload.isPending ? 'receipts.uploading' : upload.isError ? 'receipts.retryUpload' : 'receipts.upload')}</AverioButton>
-                    <AverioButton disabled={upload.isPending} onClick={() => { setSelection(null); upload.reset(); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = ''; }}>{t('receipts.removePhoto')}</AverioButton>
+                    {!accepted && <AverioButton variant="primary" disabled={!canSubmitUpload || scanBusy}
+                        onClick={() => upload.mutate(selection)}>{t(upload.isPending ? 'receipts.uploading' : upload.isError ? 'receipts.retryUpload' : 'receipts.upload')}</AverioButton>}
+                    <AverioButton disabled={scanBusy} onClick={() => { setRecentId(null); setSelection(null); upload.reset(); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = ''; }}>{t('receipts.removePhoto')}</AverioButton>
+                    {accepted?.status === 'Ready' && accepted.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(accepted); }}>{t('receipts.overview.reviewLatest')}</AverioButton>}
                 </div>
             </div>}
             {fileError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{fileError}</p>}
@@ -170,14 +175,6 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
         </div>
         {quota && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300"><span>{t('receipts.quota', { used: quota.monthlyUsed, limit: quota.monthlyLimit })}</span>{exhausted && !captureOpen && <span role="status">{t('receipts.quotaExhausted')}</span>}{capabilities.isSuccess && !quota.enabled && !captureOpen && <span role="status">{t('receipts.disabled')}</span>}</div>}
         {!captureOpen && capabilities.isError && <p role="alert">{capabilities.error.message} <AverioButton onClick={() => void capabilities.refetch()}>{t('receipts.retry')}</AverioButton></p>}
-        {recent && !upload.isPending && (pending.has(recent.status) || ['Ready', 'Failed'].includes(recent.status)) && <AverioCard className="flex flex-wrap items-center justify-between gap-3" aria-label={t('receipts.overview.latest')}>
-            <div className="grid gap-1"><h3 className="font-bold">{t('receipts.overview.latest')}</h3>
-                {pending.has(recent.status) && <p className="text-xs">{t('receipts.overview.processing')}</p>}
-            </div>
-            <ReceiptProgress status={recent.status} />
-            {!pending.has(recent.status) && <p role="status" className="text-sm">{t('receipts.status.' + recent.status)}</p>}
-            {recent.status === 'Ready' && recent.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(recent); }}>{t('receipts.overview.reviewLatest')}</AverioButton>}
-        </AverioCard>}
         {!recent && notice && <p role="status" className="text-sm text-emerald-800 dark:text-emerald-200">{notice}</p>}
         {inbox.isPending && <p role="status">{t('common.status.loading')}</p>}
         {inbox.isError && <p role="alert">{inbox.error.message} <AverioButton onClick={() => void inbox.refetch()}>{t('receipts.retry')}</AverioButton></p>}
@@ -221,7 +218,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     <p className="text-sm">{t(['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
                     <p className="text-xs">{t('receipts.newScanCharge')}</p>
                     <div className="flex flex-wrap gap-2">
-                        <AverioButton disabled={!canStartUpload || upload.isPending} onClick={() => input.current?.click()}>{t('receipts.anotherPhoto')}</AverioButton>
+                        <AverioButton disabled={!canStartUpload || scanBusy} onClick={() => input.current?.click()}>{t('receipts.anotherPhoto')}</AverioButton>
                         <AverioButton onClick={() => { manualSave.reset(); setManual(scan); }}>{t('receipts.enterManually')}</AverioButton>
                     </div>
                 </div>}
@@ -271,7 +268,7 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     </section>;
 }
 
-function SelectedReceipt({ file }: { file: File }) {
+function SelectedReceipt({ file, status }: { file: File; status: string | null }) {
     const { t } = useTranslation();
     const preview = useRef<HTMLImageElement>(null);
     useEffect(() => {
@@ -281,7 +278,7 @@ function SelectedReceipt({ file }: { file: File }) {
     }, [file]);
     return <div className="flex min-w-0 items-center gap-3">
         <img ref={preview} alt={t('receipts.selectedPhoto')} className="h-24 w-20 shrink-0 rounded-lg bg-white object-contain" />
-        <div className="min-w-0"><p className="font-semibold">{t('receipts.readyToScan')}</p><p className="break-all text-sm text-slate-600 dark:text-slate-300">{file.name}</p></div>
+        <div className="min-w-0"><p className="font-semibold">{t(status ? 'receipts.status.' + status : 'receipts.readyToScan')}</p><p className="break-all text-sm text-slate-600 dark:text-slate-300">{file.name}</p></div>
     </div>;
 }
 
