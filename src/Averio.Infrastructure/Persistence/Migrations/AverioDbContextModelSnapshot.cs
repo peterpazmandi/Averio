@@ -641,6 +641,48 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Imports.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("member_id");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "MemberId", "Fingerprint")
+                        .IsUnique();
+
+                    b.ToTable("import_batches", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Labels.Label", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2157,6 +2199,16 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_household_members_users_user_id");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Imports.ImportBatch", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "MemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Averio.Domain.Labels.Label", b =>

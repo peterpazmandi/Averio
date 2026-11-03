@@ -98,9 +98,11 @@ public static class DependencyInjection
         services.AddScoped<HouseholdMemberDirectory>();
         services.AddScoped<GetAccountOwnerOptionsHandler>();
 
+        services.AddScoped<Imports.ImportHandler>();
         return services;
     }
 }
+
 
 
 

@@ -8,8 +8,20 @@ using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+// Optional local fixture: never commit personal exports to the repository.
+if (args.Length == 2 && args[0] == "--import-workbook")
+{
+    using var file = File.OpenRead(args[1]);
+    var rows = new Averio.Infrastructure.Imports.MoneyManagerXlsxReader().Read(file);
+    foreach (var group in rows.GroupBy(r => (r.Kind, r.Currency)))
+        Console.WriteLine($"{group.Key}: {group.Count()} rows, {group.Sum(r => r.Amount)}");
+    Console.WriteLine($"Repeated rows: {rows.GroupBy(r => r with { Sheet = "", RowNumber = 0 }).Sum(g => g.Count() - 1)}");
+    return 0;
+}
+
 var checks = new (string Name, Action Run)[]
 {
+    ("Money manager XLSX import validation", ImportChecks.Run),
     ("receipt quotas, UTC resets, retention and metrics", ReceiptRolloutChecks.Run),
     ("receipt benchmark and production timeout parity", () => ReceiptTimeoutChecks.RunAsync().GetAwaiter().GetResult()),
     ("receipt images, amounts and provider contract", () => ReceiptChecks.RunAsync().GetAwaiter().GetResult()),
@@ -354,5 +366,6 @@ static void Throws<TException>(Action action)
 
     throw new Exception($"Expected {typeof(TException).Name}.");
 }
+
 
 

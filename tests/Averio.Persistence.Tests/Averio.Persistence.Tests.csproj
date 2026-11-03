@@ -17,4 +17,7 @@
     <ProjectReference Include="../../src/Averio.Domain/Averio.Domain.csproj" />
     <ProjectReference Include="../../src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Averio.Transactions.Tests/ImportChecks.cs" Link="ImportChecks.cs" />
+  </ItemGroup>
 </Project>

@@ -111,6 +111,8 @@ public static class DependencyInjection
         Receipts.ReceiptServices.AddReceiptServices(services, configuration);
         ConfigureEmail(services, configuration);
 
+        services.AddScoped<Averio.Application.Imports.IXlsxImportReader, Imports.MoneyManagerXlsxReader>();
+        services.AddScoped<Averio.Application.Imports.IImportRepository, Imports.ImportRepository>();
         return services;
     }
 
@@ -151,5 +153,6 @@ public static class DependencyInjection
         services.AddHostedService(sp => sp.GetRequiredService<PasswordResetEmailQueue>());
     }
 }
+
 
 

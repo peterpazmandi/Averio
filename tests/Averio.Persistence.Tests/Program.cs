@@ -224,6 +224,7 @@ static async Task RunVerificationAsync(string connectionString)
         () => VerifyLegacyRecurringAllowanceUpgradeAsync(provider, currentUser, fixture, clock));
     await ReceiptPostingVerification.RunAsync(provider, currentUser, fixture, clock);
     await ReceiptRolloutVerification.RunAsync(provider, currentUser, fixture, clock.GetUtcNow());
+    await ImportVerification.RunAsync(provider, currentUser, fixture, clock.GetUtcNow());
 }
 
 static async Task CheckAsync(string name, Func<Task> check)
@@ -990,5 +991,6 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
+
 
 
