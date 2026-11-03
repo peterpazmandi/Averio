@@ -110,6 +110,9 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
     const scans = inbox.data?.pages.flat() ?? [];
     const recent = recentId ? scans.find(scan => scan.id === recentId) ?? (upload.data?.id === recentId ? upload.data : null) : null;
     const accepted = selection && upload.data?.id === recentId ? recent : null;
+    // Clear only the accepted selection when polling completes it. React rerenders
+    // before committing, so the completed preview never flashes in capture.
+    if (accepted?.status === 'Ready') setSelection(null);
     const scanStatus = accepted?.status ?? (upload.isPending ? 'Uploading' : null);
     const scanBusy = upload.isPending || (scanStatus !== null && pending.has(scanStatus));
     const attentionRows = receiptInboxRows(scans, false);
@@ -166,7 +169,6 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                     {!accepted && <AverioButton variant="primary" disabled={!canSubmitUpload || scanBusy}
                         onClick={() => upload.mutate(selection)}>{t(upload.isPending ? 'receipts.uploading' : upload.isError ? 'receipts.retryUpload' : 'receipts.upload')}</AverioButton>}
                     <AverioButton disabled={scanBusy} onClick={() => { setRecentId(null); setSelection(null); upload.reset(); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = ''; }}>{t('receipts.removePhoto')}</AverioButton>
-                    {accepted?.status === 'Ready' && accepted.draft && <AverioButton variant="primary" onClick={() => { post.reset(); setReview(accepted); }}>{t('receipts.overview.reviewLatest')}</AverioButton>}
                 </div>
             </div>}
             {fileError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{fileError}</p>}

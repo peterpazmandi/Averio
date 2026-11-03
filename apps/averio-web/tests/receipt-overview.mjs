@@ -85,18 +85,27 @@ export async function verifyReceiptOverview(browser, url, artifacts) {
             await page.screenshot({ path: path.join(artifacts, `scan-progress-${width}.png`), fullPage: true });
             uploaded.status = 'Ready'; uploaded.draft = scans[0].draft;
             await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-            await latest.getByRole('button', { name: 'Review this receipt', exact: true }).waitFor();
+            await list.getByRole('button', { name: 'Review receipt', exact: true }).first().waitFor();
+            await capture.getByRole('img').waitFor({ state: 'hidden' });
+            assert.equal(await capture.isVisible(), true, 'Capture stays open for the next photo.');
+            assert.equal(await capture.getByRole('button', { name: 'Remove photo', exact: true }).count(), 0);
+            assert.equal(await capture.getByRole('button', { name: 'Review this receipt', exact: true }).count(), 0);
+            assert.equal(await capture.getByRole('button', { name: 'Take photo', exact: true }).isEnabled(), true);
+            assert.equal(await list.getByText('Shop 0', { exact: true }).count() > 0, true, 'Completed receipt remains in the review inbox.');
             assert.equal(await page.getByRole('progressbar').count(), 0, 'Ready for review removes the progress bar.');
             await page.screenshot({ path: path.join(artifacts, `latest-scan-${width}.png`), fullPage: true });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
             for (const [status, label] of [['Failed', 'Could not scan'], ['Discarded', 'Discarded'], ['Expired', 'Expired'], ['Posted', 'Recorded']]) {
                 uploaded.status = status;
                 await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-                await latest.getByText(label, { exact: true }).waitFor();
+                await list.getByText(label, { exact: true }).first().waitFor({ state: ['Discarded', 'Expired', 'Posted'].includes(status) ? 'hidden' : 'visible' });
                 assert.equal(await page.getByRole('progressbar').count(), 0, 'Terminal states do not show scan progress.');
             }
             await page.getByRole('button', { name: 'History', exact: true }).click();
             assert.equal(await page.getByRole('progressbar').count(), 0, 'History has no progress display.');
+            await page.locator('input[type="file"]').first().setInputFiles({ name: 'next-receipt.png', mimeType: 'image/png', buffer: Buffer.from('next fixture') });
+            await capture.getByText('next-receipt.png', { exact: true }).waitFor();
+            assert.equal(await capture.getByRole('button', { name: 'Scan this photo', exact: true }).isEnabled(), true, 'A fresh photo can be scanned after the previous one is read.');
             assert.deepEqual(errors, []);
         } finally { await page.close(); }
     }
