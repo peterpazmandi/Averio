@@ -7,6 +7,7 @@ using Averio.Domain.Households;
 using Averio.Domain.Imports;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
+using Averio.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,8 +15,19 @@ internal static class ImportVerification
 {
     public static async Task RunAsync(ServiceProvider provider, MutableCurrentUser user, Fixture fixture, DateTimeOffset now)
     {
-        user.UserId = fixture.OwnerUserId;
-        var household = Household.CreateForUser(fixture.OwnerUserId, now);
+        ApplicationUser NewUser(string name) => new()
+        {
+            Id = Guid.NewGuid(), UserName = name + "@imports.test",
+            NormalizedUserName = (name + "@imports.test").ToUpperInvariant(),
+            Email = name + "@imports.test", NormalizedEmail = (name + "@imports.test").ToUpperInvariant(),
+            EmailConfirmed = true, DisplayName = name, PreferredCulture = "en-US",
+            CreatedAtUtc = now, SecurityStamp = Guid.NewGuid().ToString("N"),
+            ConcurrencyStamp = Guid.NewGuid().ToString("N")
+        };
+        var ownerUser = NewUser("import-owner");
+        var partnerUser = NewUser("import-partner");
+        user.UserId = ownerUser.Id;
+        var household = Household.CreateForUser(ownerUser.Id, now);
         household.CompleteOnboarding("Import checks", "DE", CurrencyCode.Eur, now);
         household.CompleteFinancialSetup(now);
         var member = household.Members.Single();
@@ -26,9 +38,10 @@ internal static class ImportVerification
         using (var scope = provider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            db.Users.AddRange(ownerUser, partnerUser);
             db.Households.Add(household); db.Accounts.AddRange(main, savings);
             await db.SaveChangesAsync();
-            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO household_members (id, household_id, user_id, role, joined_at_utc) VALUES ({Guid.NewGuid()}, {household.Id}, {fixture.MemberUserId}, {"member"}, {now})");
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO household_members (id, household_id, user_id, role, joined_at_utc) VALUES ({Guid.NewGuid()}, {household.Id}, {partnerUser.Id}, {"member"}, {now})");
         }
         async Task<ImportPreview> Preview()
         {
@@ -46,11 +59,11 @@ internal static class ImportVerification
         var request = new ConfirmImportRequest([
             new("Main", main.Id, "Household"), new("Savings", savings.Id, "Private")],
             preview.Categories.Select(c => new ImportCategoryMapping(c.Kind, c.Name, null)).ToArray(), true);
-        user.UserId = fixture.MemberUserId;
+        user.UserId = partnerUser.Id;
         await Reject<NotFoundException>(() => Confirm(preview.Id, request));
         using (var scope = provider.CreateScope())
             await Reject<NotFoundException>(() => scope.ServiceProvider.GetRequiredService<ImportHandler>().GetAsync(household.Id, preview.Id, default));
-        user.UserId = fixture.OwnerUserId;
+        user.UserId = ownerUser.Id;
         // Invalid visibility is rejected before any financial data is committed.
         await Reject<BusinessRuleException>(() => Confirm(preview.Id, request with { Accounts = [new("Main", main.Id, "Private"), new("Savings", savings.Id, "Private")] }));
         using (var scope = provider.CreateScope())
