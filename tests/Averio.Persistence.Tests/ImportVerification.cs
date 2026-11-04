@@ -135,7 +135,8 @@ internal static class ImportVerification
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             // Hide the source account: neither transaction nor transfer IDs may leak.
-            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE accounts SET scope = 'Personal', visibility = 'Private' WHERE id = {main.Id}");
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO account_owners (household_id, account_id, household_member_id) SELECT household_id, {main.Id}, id FROM household_members WHERE household_id = {household.Id} AND user_id = {partnerUser.Id}");
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE accounts SET scope = 'Personal', visibility = 'Private', include_in_household_reports = false WHERE id = {main.Id}");
         }
         var hidden = await Detail();
         Check(hidden.Review.Unavailable == 4 && hidden.Records.All(r => r.RecordId == null && r.Changed == null), "inaccessible records redact current identity and revision");
