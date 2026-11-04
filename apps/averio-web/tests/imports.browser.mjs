@@ -20,7 +20,7 @@ try {
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
         const copy = copyModule.exports['imports' + language.toUpperCase()];
-        const errors = [], confirmations = [];
+        const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -35,7 +35,14 @@ try {
             if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
             if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
             if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
-            if (pathname.endsWith('/accounts')) return json([
+            if (pathname.endsWith('/accounts') && req.method() === 'POST') {
+                const request = req.postDataJSON(); accountRequests.push(request);
+                if (accountRequests.length === 1) return route.fulfill({ status: 422, contentType: 'application/problem+json',
+                    body: JSON.stringify({ status: 422, detail: 'Account validation test' }) });
+                createdAccounts.push({ ...request, id: 'new-savings', status: 'Active', owners: [{ householdMemberId: 'member' }] });
+                return json({ id: 'new-savings' });
+            }
+            if (pathname.endsWith('/accounts')) return json([...createdAccounts,
                 { id: 'main', name: 'Main', currency: 'EUR', scope: 'Household', visibility: 'Household', status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' },
                 { id: 'savings', name: 'Savings', currency: 'EUR', scope: 'Personal', visibility: 'Private', status: 'Active', owners: [{ householdMemberId: 'member' }], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '500' },
                 { id: 'other-private', name: 'Other private', currency: 'EUR', scope: 'Personal', visibility: 'Private', status: 'Active', owners: [{ householdMemberId: 'someone-else' }] }]);
@@ -53,6 +60,35 @@ try {
         await page.getByText(copy.accountsHelp, { exact: true }).waitFor();
         assert.equal(await page.locator('select option[value="other-private"]').count(), 0);
         assert.equal(confirmations.length, 0, 'Preview must not commit');
+        const createButton = page.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Savings'), exact: true });
+        await createButton.click();
+        let dialog = page.locator('dialog[open]');
+        assert.equal(await dialog.locator('input').first().inputValue(), 'Savings');
+        assert.equal(await dialog.locator('input[readonly]').inputValue(), 'EUR');
+        assert.equal(await dialog.locator('input[type=date]').inputValue(), '2026-09-21');
+        // Cancel a pristine dialog without losing the preview or changing mappings.
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('dialog[open]').count(), 0);
+        await createButton.click();
+        dialog = page.locator('dialog[open]');
+        await dialog.locator('input[inputmode=decimal]').fill('500');
+        await page.keyboard.press('Escape');
+        await dialog.locator('footer button').first().click();
+        assert.equal(await dialog.locator('input[inputmode=decimal]').inputValue(), '500');
+        await dialog.locator('button[type=submit]').click();
+        await dialog.getByRole('alert').waitFor();
+        assert.equal(await dialog.locator('input[inputmode=decimal]').inputValue(), '500');
+        await dialog.locator('button[type=submit]').click();
+        await page.locator('dialog[open]').waitFor({ state: 'hidden' });
+        assert.equal(accountRequests.length, 2);
+        assert.equal(createdAccounts.length, 1);
+        assert.equal(accountRequests[1].currency, 'EUR');
+        assert.equal(accountRequests[1].balanceAnchorAmount, '500');
+        assert.equal(accountRequests[1].scope, 'Personal');
+        assert.equal(accountRequests[1].visibility, 'Private');
+        assert.deepEqual(accountRequests[1].ownerHouseholdMemberIds, ['member']);
+        assert.equal(page.url(), url, 'Creating an account must stay on the import page');
+        assert.equal(confirmations.length, 0, 'Creating an account must not commit the import');
         await page.locator('footer button').last().click();
         await page.getByText(copy.categoriesHelp, { exact: true }).waitFor();
         await page.locator('footer button').last().click();
@@ -67,7 +103,7 @@ try {
         await page.getByRole('heading', { name: copy.complete, exact: true }).waitFor();
         assert.equal(confirmations.length, 2);
         assert.deepEqual(confirmations[0], confirmations[1], 'Retry preserves reviewed mappings');
-        assert.deepEqual(confirmations[0].accounts, [{ source: 'Main', accountId: 'main', visibility: 'Household' }, { source: 'Savings', accountId: 'savings', visibility: 'Private' }]);
+        assert.deepEqual(confirmations[0].accounts, [{ source: 'Main', accountId: 'main', visibility: 'Household' }, { source: 'Savings', accountId: 'new-savings', visibility: 'Private' }]);
         assert.equal(confirmations[0].categories[0].categoryId, null);
         assert.equal(confirmations[0].acknowledgeBalancesAndOverlap, true);
         assert.deepEqual(errors, []);
@@ -75,5 +111,5 @@ try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         await page.close();
     }
-    console.log('PASS import review, localization, privacy defaults, pagination and retry browser flows');
+    console.log('PASS inline account creation, cancellation, validation, mapping, import review and retry browser flows');
 } finally { await browser?.close(); server.kill(); }

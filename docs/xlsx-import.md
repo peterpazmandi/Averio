@@ -6,7 +6,7 @@ Transactions → Import XLSX opens a four-step flow: upload, account mapping, ca
 
 - Maximum 5 MiB compressed, 32 MiB expanded, 10,000 records; formulas, external workbook relationships, unknown headers and unsupported currencies/formats are rejected.
 - Dates use the export's date-only Excel serials. Amounts remain decimals on the server and strings over the API.
-- Source accounts must map one-to-one to active, writable accounts with matching currencies. Create missing accounts using the existing account editor, then refresh the mapping list.
+- Source accounts must map one-to-one to active, writable accounts with matching currencies. Create missing accounts directly from each source row in a modal. The source name/currency are prefilled, the opening balance must be supplied, and the new account is automatically selected. These accounts are created immediately and remain if the import is cancelled.
 - Map categories to existing categories or explicitly retain the source names as new shared household categories. New category names are visible to household members even if the corresponding transactions are private; the mapping screen explains this.
 - Source tags become merchant text. Notes and original category names are retained. Repeated identical rows are preserved. Transfers create one transfer with two account legs, never an income/expense pair.
 - Missing receiving amounts are inferred only for same-currency transfers. Unsupported original/reporting currency conversions are rejected rather than discarded.
