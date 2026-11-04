@@ -5,7 +5,7 @@ import { createRootRoute, createRouter, RouterProvider } from '@tanstack/react-r
 import '../../src/i18n';
 import '../../src/index.css';
 import { ImportHistoryPage } from '../../src/features/imports/ImportHistoryPage';
-function Fixture() {
+export function Fixture() {
     const [batch, setBatch] = useState<string>();
     return <ImportHistoryPage key={batch ?? 'list'} userId="user" householdId="home" batchId={batch} onSelect={setBatch} />;
 }
