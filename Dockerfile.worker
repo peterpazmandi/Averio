@@ -1,0 +1,31 @@
+
+# syntax=docker/dockerfile:1
+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+ARG TARGETARCH
+
+WORKDIR /src
+
+COPY . .
+
+RUN dotnet restore \
+    apps/Averio.Worker/Averio.Worker.csproj \
+    -a "$TARGETARCH"
+
+RUN dotnet publish \
+    apps/Averio.Worker/Averio.Worker.csproj \
+    --configuration Release \
+    -a "$TARGETARCH" \
+    --self-contained false \
+    --no-restore \
+    --output /app/publish \
+    /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "Averio.Worker.dll"]
