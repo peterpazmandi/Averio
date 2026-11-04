@@ -108,7 +108,7 @@ try {
                 let match;
                 for (let attempt = 0; attempt < 2 && !match; attempt++) {
                     const result = await runChrome(chrome, [
-                        '--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
+                        '--headless', '--no-sandbox', '--no-proxy-server', '--disable-gpu', '--disable-dev-shm-usage',
                         '--disable-background-networking', '--no-first-run', '--no-default-browser-check',
                         '--user-data-dir=' + path.join(directory, 'chrome-profile-' + attempt),
                         '--dump-dom', '--virtual-time-budget=1000', '--window-size=' + width + ',1600',
