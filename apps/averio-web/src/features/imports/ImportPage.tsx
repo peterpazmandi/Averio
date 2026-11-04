@@ -76,7 +76,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
         <header className="flex flex-wrap items-center justify-between gap-3"><div>
             <h2 id="import-title" className="text-2xl font-bold">{t('imports.title')}</h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t('imports.intro')}</p>
-        </div><Link to="/app/transactions" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></header>
+        </div><Link to="/app/import-history" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('importHistory.title')}</Link><Link to="/app/transactions" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></header>
         {!loaded && <AverioCard><p role="status">{t(accounts.isError || owners.isError || categories.isError ? 'imports.loadError' : 'imports.loading')}</p>
             <AverioButton onClick={() => { void accounts.refetch(); void owners.refetch(); void categories.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>}
         {failure && <p role="alert" className="rounded-xl border border-red-300 p-4 text-red-700 dark:text-red-300">{failure instanceof ApiError ? failure.message : t('errors.genericDescription')}
@@ -84,7 +84,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
         {busy && <div role="status" className="grid gap-2"><p>{t(upload.isPending ? 'imports.reading' : 'imports.saving')}</p>
             <progress aria-label={t(upload.isPending ? 'imports.reading' : 'imports.saving')} className="h-2 w-full accent-emerald-500" /></div>}
         {completed ? <AverioCard><h3 className="text-xl font-bold">{t('imports.complete')}</h3><p className="my-3">{t('imports.completeHelp', { count: preview.count })}</p>
-            <Link to="/app/transactions" className="font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></AverioCard> : <>
+            <Link to="/app/import-history" search={{ batch: preview.id }} className="mr-4 font-semibold text-primary-700 dark:text-primary-300">{t('importHistory.records')}</Link><Link to="/app/transactions" className="font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></AverioCard> : <>
             <ol className="flex flex-wrap gap-3 text-sm" aria-label={t('imports.steps')}>
                 {['upload', 'accounts', 'categories', 'review'].map((s, i) => <li key={s} aria-current={step === i ? 'step' : undefined}
                     className={step === i ? 'font-bold text-primary-700 dark:text-primary-300' : 'text-slate-500 dark:text-slate-400'}>{i + 1}. {t('imports.' + s)}</li>)}
@@ -152,3 +152,4 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
             }} />}
     </section>;
 }
+

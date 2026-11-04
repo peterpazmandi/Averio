@@ -89,9 +89,68 @@ internal static class ImportVerification
                 household.Id, member.Id, [main.Id, savings.Id], new DateOnly(2026, 11, 3), default);
             Check(balances[main.Id] == 8755.4322m && balances[savings.Id] == 500m, "balance anchors remain authoritative");
         }
+        async Task<ImportHistoryDetail> Detail(Guid? id = null, int page = 0)
+        {
+            using var scope = provider.CreateScope();
+            return await scope.ServiceProvider.GetRequiredService<ImportHandler>().HistoryDetailAsync(household.Id, id ?? preview.Id, page, default);
+        }
+        var original = await Detail();
+        Check(original.Review.Unchanged == 4 && original.Records.All(r => r.RecordId != null && r.Changed == false), "new import revisions survive PostgreSQL precision");
+        Check(original.Batch.Summary.Count == 4 && original.Batch.TrackingAvailable, "history counts and tracking");
+        Check(original.Batch.Summary.Totals.Single(t => t.Kind == "Expense").Amount == "2469.1356", "history totals keep precision");
+        Check(!(await Detail(page: 1)).Records.Any(), "history records pagination");
+        using (var scope = provider.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<ImportHandler>();
+            Check((await handler.HistoryAsync(household.Id, 0, default)).Items.Single().Id == preview.Id, "history contains completed import");
+            Check(!(await handler.HistoryAsync(household.Id, 1, default)).Items.Any(), "history pagination");
+        }
+        user.UserId = partnerUser.Id;
+        using (var scope = provider.CreateScope())
+            Check(!(await scope.ServiceProvider.GetRequiredService<ImportHandler>().HistoryAsync(household.Id, 0, default)).Items.Any(), "history is uploader-private");
+        await Reject<NotFoundException>(() => Detail());
+        user.UserId = ownerUser.Id;
+        Guid legacyId;
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var records = await db.Transactions.Where(t => t.HouseholdId == household.Id).OrderBy(t => t.Id).ToArrayAsync();
+            records[0].MarkAllocationChanged(now.AddMinutes(1));
+            records[1].SetArchived(true, now.AddMinutes(1));
+            records[2].Void(now.AddMinutes(1));
+            var transfer = await db.Transfers.SingleAsync(t => t.HouseholdId == household.Id);
+            transfer.Update(transfer.SentAmount, transfer.ReceivedAmount, transfer.OccurredOn, "Changed later", now.AddMinutes(1));
+            var batch = await db.Set<ImportBatch>().SingleAsync(b => b.Id == preview.Id);
+            var legacy = ImportBatch.Create(household.Id, member.Id, new string('A', 64), batch.Payload, now);
+            legacy.Complete(now); legacyId = legacy.Id; db.Add(legacy);
+            await db.SaveChangesAsync();
+        }
+        var changed = await Detail();
+        Check(changed.Review.Edited == 3 && changed.Review.Voided == 1, "archive, revision and transfer edits flagged; void distinct");
+        Check(changed.Batch.Summary.Totals.SequenceEqual(original.Batch.Summary.Totals), "original totals survive edits");
+        var legacyDetail = await Detail(legacyId);
+        Check(!legacyDetail.Batch.TrackingAvailable && legacyDetail.Review.Untracked == 4
+            && legacyDetail.Records.All(r => r.RecordId == null && r.Changed == null), "legacy import never guesses record links");
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            // Hide the source account: neither transaction nor transfer IDs may leak.
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE accounts SET scope = 'Personal', visibility = 'Private' WHERE id = {main.Id}");
+        }
+        var hidden = await Detail();
+        Check(hidden.Review.Unavailable == 4 && hidden.Records.All(r => r.RecordId == null && r.Changed == null), "inaccessible records redact current identity and revision");
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            Check(await db.Transactions.CountAsync(t => t.HouseholdId == household.Id) == 3
+                && await db.Transfers.CountAsync(t => t.HouseholdId == household.Id) == 1, "preview never deletes records");
+            Check((await db.Accounts.SingleAsync(a => a.Id == main.Id)).BalanceAnchorAmount == main.BalanceAnchorAmount, "preview never changes balance anchors");
+        }
+        Console.WriteLine("PASS import history precision, privacy, revisions, pagination, legacy fallback and read-only preview");
         Console.WriteLine("PASS XLSX concurrent preview/confirmation, privacy, mapping rollback, aggregates and balance anchors");
     }
     private static void Check(bool value, string name) { if (!value) throw new Exception(name); }
     private static async Task Reject<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
 }
+

@@ -675,10 +675,25 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("payload");
 
+                    b.Property<string>("RecordLinks")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("record_links");
+
+                    b.Property<string>("SourceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source_name");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("summary");
+
                     b.HasKey("Id");
 
                     b.HasIndex("HouseholdId", "MemberId", "Fingerprint")
                         .IsUnique();
+
+                    b.HasIndex("HouseholdId", "MemberId", "CompletedAt", "Id");
 
                     b.ToTable("import_batches", (string)null);
                 });

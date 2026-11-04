@@ -15,13 +15,13 @@ using Averio.Domain.Transfers;
 
 namespace Averio.Application.Imports;
 
-public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository households,
+public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepository households,
     IAccountRepository accounts, ICategoryRepository categories, ICategoryManagementRepository categoryManagement,
     IIconCatalogRepository icons, IImportRepository imports, IXlsxImportReader reader,
     ITransactionRepository transactions, Averio.Application.Transfers.ITransferRepository transfers,
     IUnitOfWork unitOfWork, TimeProvider clock)
 {
-    public async Task<ImportPreview> PreviewAsync(Guid householdId, Stream file, CancellationToken ct)
+    public async Task<ImportPreview> PreviewAsync(Guid householdId, Stream file, CancellationToken ct, string? sourceName = null)
     {
         await MemberAsync(householdId, ct);
         var rows = reader.Read(file);
@@ -32,7 +32,7 @@ public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository househ
         var batch = await imports.FindAsync(householdId, member.Id, fingerprint, ct);
         if (batch is null)
         {
-            batch = ImportBatch.Create(householdId, member.Id, fingerprint, JsonSerializer.Serialize(rows), clock.GetUtcNow());
+            batch = ImportBatch.Create(householdId, member.Id, fingerprint, JsonSerializer.Serialize(rows), clock.GetUtcNow(), CleanSourceName(sourceName));
             imports.Add(batch);
             await unitOfWork.SaveChangesAsync(ct);
         }
@@ -97,6 +97,7 @@ public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository househ
             categoryMap.Add((mapping.Kind, mapping.Source), category);
         }
         var transactionIds = new List<Guid>();
+        var links = new List<ImportRecordLink>();
         foreach (var row in rows)
         {
             ct.ThrowIfCancellationRequested();
@@ -108,8 +109,10 @@ public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository househ
                 var received = row.ReceivedAmount ?? (destination.Currency == account.Currency ? row.Amount : throw MappingError());
                 if (row.ReceivedCurrency is not null && destination.Currency.Value != row.ReceivedCurrency
                     || destination.Currency == account.Currency && received != row.Amount) throw MappingError();
-                transfers.Add(Transfer.Create(householdId, account.Id, destination.Id, member.Id,
-                    account.Currency, destination.Currency, row.Amount, received, row.Date, row.Note, clock.GetUtcNow()));
+                var transfer = Transfer.Create(householdId, account.Id, destination.Id, member.Id,
+                    account.Currency, destination.Currency, row.Amount, received, row.Date, row.Note, clock.GetUtcNow());
+                transfers.Add(transfer);
+                links.Add(new(transfer.Id, row.Kind, StoredVersion(transfer.UpdatedAt), account.Name, destination.Name, null, false));
             }
             else
             {
@@ -118,9 +121,10 @@ public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository househ
                     Enum.Parse<TransactionKind>(row.Kind), visibility, account.Currency, row.Tags, row.Note, row.Date,
                     [new TransactionItemDraft(row.Category, category.Id, category.NameReference, category.Icon, row.Amount)], [], clock.GetUtcNow());
                 transactions.Add(transaction); transactionIds.Add(transaction.Id);
+                links.Add(new(transaction.Id, row.Kind, StoredVersion(transaction.UpdatedAt), account.Name, null, category.NameReference, category.IsBase));
             }
         }
-        batch.Complete(clock.GetUtcNow());
+        batch.Complete(clock.GetUtcNow(), JsonSerializer.Serialize(links), JsonSerializer.Serialize(Summarize(rows)));
         await unitOfWork.SaveChangesAsync(ct);
         await imports.ApplyAggregatesAsync(transactionIds.ToArray(), ct);
         await tx.CommitAsync(ct);
@@ -151,3 +155,4 @@ public sealed class ImportHandler(ICurrentUser user, IHouseholdRepository househ
                 r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray());
     }
 }
+

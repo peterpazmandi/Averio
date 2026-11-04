@@ -1,3 +1,4 @@
+import { importHistoryEN, importHistoryDE, importHistoryHU } from './locales/importHistory';
 import { importsEN, importsDE, importsHU } from './locales/imports';
 import { receiptsEN, receiptsDE, receiptsHU } from './locales/receipts';
 import { landingEN, landingDE, landingHU } from './locales/landing';
@@ -38,15 +39,15 @@ void i18n
     .init({
         resources: {
             en: {
-                translation: { ...en, imports: importsEN, landing: landingEN, receipts: receiptsEN, transactionLinks: transactionLinksEN,
+                translation: { ...en, imports: importsEN, importHistory: importHistoryEN, landing: landingEN, receipts: receiptsEN, transactionLinks: transactionLinksEN,
             recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, personalMoney: personalMoneyEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
-                translation: { ...de, imports: importsDE, landing: landingDE, receipts: receiptsDE, transactionLinks: transactionLinksDE,
+                translation: { ...de, imports: importsDE, importHistory: importHistoryDE, landing: landingDE, receipts: receiptsDE, transactionLinks: transactionLinksDE,
             recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, personalMoney: personalMoneyDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
-                translation: { ...hu, imports: importsHU, landing: landingHU, receipts: receiptsHU, transactionLinks: transactionLinksHU,
+                translation: { ...hu, imports: importsHU, importHistory: importHistoryHU, landing: landingHU, receipts: receiptsHU, transactionLinks: transactionLinksHU,
             recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, personalMoney: personalMoneyHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
@@ -94,6 +95,7 @@ i18n.on('initialized', () => {
 i18n.on('languageChanged', syncDocumentLang);
 
 export default i18n;
+
 
 
 

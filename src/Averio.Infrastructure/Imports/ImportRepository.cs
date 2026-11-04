@@ -4,7 +4,7 @@ using Averio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 namespace Averio.Infrastructure.Imports;
 
-internal sealed class ImportRepository(AverioDbContext db) : IImportRepository
+internal sealed partial class ImportRepository(AverioDbContext db) : IImportRepository
 {
     public void Add(ImportBatch batch) => db.Set<ImportBatch>().Add(batch);
     public Task<ImportBatch?> FindAsync(Guid householdId, Guid memberId, string fingerprint, CancellationToken ct)
@@ -42,3 +42,4 @@ internal sealed class ImportRepository(AverioDbContext db) : IImportRepository
             """, ct);
     }
 }
+

@@ -21,7 +21,10 @@ public interface IXlsxImportReader { IReadOnlyList<ImportRow> Read(Stream stream
 public interface IImportRepository
 {
     void Add(ImportBatch batch);
+    Task<IReadOnlyList<ImportHistoryStored>> ListCompletedAsync(Guid householdId, Guid memberId, int page, CancellationToken ct);
+    Task<IReadOnlyList<ImportCurrentRecord>> GetCurrentRecordsAsync(Guid householdId, Guid memberId, Guid[] transactionIds, Guid[] transferIds, CancellationToken ct);
     Task<ImportBatch?> FindAsync(Guid householdId, Guid memberId, string fingerprint, CancellationToken ct);
     Task<ImportBatch?> GetAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct);
     Task ApplyAggregatesAsync(Guid[] transactionIds, CancellationToken ct);
 }
+

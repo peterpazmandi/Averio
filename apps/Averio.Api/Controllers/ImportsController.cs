@@ -19,8 +19,17 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
             throw new BusinessRuleException("import_invalid", "Error_ImportInvalid");
         using var stream = new MemoryStream();
         await file.CopyToAsync(stream, ct); stream.Position = 0;
-        return Ok(await handler.PreviewAsync(householdId, stream, ct));
+        return Ok(await handler.PreviewAsync(householdId, stream, ct, file.FileName));
     }
+    [HttpGet]
+    public async Task<ActionResult<ImportHistoryPage>> History(Guid householdId, CancellationToken ct, [FromQuery] int page = 0)
+        => Ok(await handler.HistoryAsync(householdId, page, ct));
+    [HttpGet("{id:guid}/records")]
+    public async Task<ActionResult<ImportHistoryDetail>> Records(Guid householdId, Guid id, CancellationToken ct, [FromQuery] int page = 0)
+        => Ok(await handler.HistoryDetailAsync(householdId, id, page, ct));
+    [HttpGet("{id:guid}/undo-preview")]
+    public async Task<ActionResult<ImportHistoryDetail>> UndoPreview(Guid householdId, Guid id, CancellationToken ct, [FromQuery] int page = 0)
+        => Ok(await handler.HistoryDetailAsync(householdId, id, page, ct));
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ImportPreview>> Get(Guid householdId, Guid id, CancellationToken ct)
         => Ok(await handler.GetAsync(householdId, id, ct));
@@ -28,3 +37,4 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
     public async Task<ActionResult<ImportResult>> Confirm(Guid householdId, Guid id, ConfirmImportRequest request, CancellationToken ct)
         => Ok(await handler.ConfirmAsync(householdId, id, request, ct));
 }
+

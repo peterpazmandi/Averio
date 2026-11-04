@@ -126,7 +126,9 @@ jobs:
 
       - name: Verify XLSX import browser flows
         working-directory: apps/averio-web
-        run: node tests/imports.browser.mjs
+        run: |
+          node tests/imports.browser.mjs
+          node tests/import-history.browser.mjs
 
       - name: Verify receipt browser flows
         timeout-minutes: 3
@@ -227,3 +229,4 @@ jobs:
         with:
           name: landing-contact-screenshots
           path: test-results/landing-review
+

@@ -19,6 +19,16 @@ import {
     ConfirmImportRequestToJSON,
 } from '../models/ConfirmImportRequest';
 import {
+    type ImportHistoryDetail,
+    ImportHistoryDetailFromJSON,
+    ImportHistoryDetailToJSON,
+} from '../models/ImportHistoryDetail';
+import {
+    type ImportHistoryPage,
+    ImportHistoryPageFromJSON,
+    ImportHistoryPageToJSON,
+} from '../models/ImportHistoryPage';
+import {
     type ImportPreview,
     ImportPreviewFromJSON,
     ImportPreviewToJSON,
@@ -28,6 +38,17 @@ import {
     ImportResultFromJSON,
     ImportResultToJSON,
 } from '../models/ImportResult';
+
+export interface ApiV1HouseholdsHouseholdIdImportsGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    page?: number;
+}
 
 export interface ApiV1HouseholdsHouseholdIdImportsIdConfirmationPostRequest {
     /**
@@ -55,6 +76,36 @@ export interface ApiV1HouseholdsHouseholdIdImportsIdGetRequest {
     id: string;
 }
 
+export interface ApiV1HouseholdsHouseholdIdImportsIdRecordsGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    page?: number;
+}
+
+export interface ApiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    page?: number;
+}
+
 export interface ApiV1HouseholdsHouseholdIdImportsPostRequest {
     /**
      * 
@@ -70,6 +121,53 @@ export interface ApiV1HouseholdsHouseholdIdImportsPostRequest {
  * 
  */
 export class ImportsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdImportsGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdImportsGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdImportsGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/imports`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdImportsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportHistoryPage>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdImportsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImportHistoryPageFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsGet(requestParameters: ApiV1HouseholdsHouseholdIdImportsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportHistoryPage> {
+        const response = await this.apiV1HouseholdsHouseholdIdImportsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdImportsIdConfirmationPost without sending the request
@@ -180,6 +278,116 @@ export class ImportsApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdImportsIdGet(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportPreview> {
         const response = await this.apiV1HouseholdsHouseholdIdImportsIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdImportsIdRecordsGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdRecordsGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdRecordsGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsIdRecordsGet().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsIdRecordsGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/imports/{id}/records`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdRecordsGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdRecordsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportHistoryDetail>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdImportsIdRecordsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImportHistoryDetailFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdRecordsGet(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdRecordsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportHistoryDetail> {
+        const response = await this.apiV1HouseholdsHouseholdIdImportsIdRecordsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGet().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/imports/{id}/undo-preview`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportHistoryDetail>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImportHistoryDetailFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGet(requestParameters: ApiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportHistoryDetail> {
+        const response = await this.apiV1HouseholdsHouseholdIdImportsIdUndoPreviewGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
