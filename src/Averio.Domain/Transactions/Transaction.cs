@@ -9,6 +9,15 @@ public sealed class Transaction
 
     private Transaction() { }
 
+    public Guid? ImportBatchId { get; private set; }
+
+    // Origin is immutable and does not change the financial revision.
+    public void SetImportOrigin(Guid batchId)
+    {
+        if (batchId == Guid.Empty || ImportBatchId is not null) throw new InvalidOperationException();
+        ImportBatchId = batchId;
+    }
+
     public Guid Id { get; private set; }
     public Guid HouseholdId { get; private set; }
     public Guid AccountId { get; private set; }

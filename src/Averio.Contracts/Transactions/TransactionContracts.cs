@@ -69,7 +69,7 @@ public sealed record TransactionResponse(
     IReadOnlyList<TransactionItemResponse> Items,
     IReadOnlyList<TransactionLabelResponse> Labels,
     Guid? ActivityId, string? ActivityName, Guid ActivityAssignmentVersion,
-    bool IsArchived = false);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null);
 
 public sealed record TransactionPageResponse(
     IReadOnlyList<TransactionResponse> Items,

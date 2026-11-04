@@ -97,6 +97,10 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
      * 
      */
     includeArchived?: boolean;
+    /**
+     * 
+     */
+    importedOnly?: boolean;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
@@ -230,6 +234,10 @@ export class TransactionsApi extends runtime.BaseAPI {
 
         if (requestParameters['includeArchived'] != null) {
             queryParameters['includeArchived'] = requestParameters['includeArchived'];
+        }
+
+        if (requestParameters['importedOnly'] != null) {
+            queryParameters['importedOnly'] = requestParameters['importedOnly'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

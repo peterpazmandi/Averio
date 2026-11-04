@@ -89,6 +89,42 @@ internal static class ImportVerification
                 household.Id, member.Id, [main.Id, savings.Id], new DateOnly(2026, 11, 3), default);
             Check(balances[main.Id] == 8755.4322m && balances[savings.Id] == 500m, "balance anchors remain authoritative");
         }
+
+        var importedQuery = new TransactionQuery(null, null, null, null, null, 1, null, null, null, ImportedOnly: true);
+        using (var scope = provider.CreateScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<ITransactionRepository>();
+            var first = await repository.GetVisiblePageAsync(household.Id, member.Id, importedQuery, default);
+            Check(first.Items.Count == 1 && first.HasMore && first.Items[0].IsImported
+                && first.Items[0].ImportBatchId == preview.Id, "import badge and owner link survive pagination");
+            var last = first.Items[0];
+            var next = await repository.GetVisiblePageAsync(household.Id, member.Id, importedQuery with
+            { CursorDate = last.OccurredOn, CursorCreatedAt = last.CreatedAt, CursorId = last.Id }, default);
+            Check(next.Items.Count == 1 && next.Items[0].Id != last.Id && next.Items[0].ImportBatchId == preview.Id,
+                "imported filter cursor advances");
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var partnerId = await db.Set<HouseholdMember>().Where(m => m.HouseholdId == household.Id && m.UserId == partnerUser.Id)
+                .Select(m => m.Id).SingleAsync();
+            var shared = await repository.GetVisiblePageAsync(household.Id, partnerId, importedQuery with { PageSize = 40 }, default);
+            Check(shared.Items.Count == 3 && shared.Items.All(t => t.IsImported && t.ImportBatchId == null),
+                "shared imported transactions never expose another uploader's batch link");
+
+            // A newer manual transaction must not consume the imported-only page.
+            var sample = await db.Transactions.Include(t => t.Items).FirstAsync(t => t.HouseholdId == household.Id);
+            var item = sample.Items.First();
+            var manual = Transaction.Create(household.Id, main.Id, member.Id, sample.Kind, TransactionVisibility.Household,
+                CurrencyCode.Eur, "Manual", null, sample.OccurredOn.AddDays(1),
+                [new TransactionItemDraft("Manual", item.CategoryId, item.CategoryName, item.CategoryIcon, 1m)], [], now);
+            db.Transactions.Add(manual);
+            await db.SaveChangesAsync();
+            var all = await repository.GetVisiblePageAsync(household.Id, member.Id, importedQuery with { ImportedOnly = false }, default);
+            Check(all.Items[0].Id == manual.Id && !all.Items[0].IsImported && all.Items[0].ImportBatchId == null,
+                "manual transactions have no origin");
+            var filtered = await repository.GetVisiblePageAsync(household.Id, member.Id, importedQuery, default);
+            Check(filtered.Items.Count == 1 && filtered.Items[0].IsImported && filtered.HasMore,
+                "imported filtering happens before pagination");
+        }
+
         async Task<ImportHistoryDetail> Detail(Guid? id = null, int page = 0)
         {
             using var scope = provider.CreateScope();
@@ -114,7 +150,7 @@ internal static class ImportVerification
         using (var scope = provider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
-            var records = await db.Transactions.Where(t => t.HouseholdId == household.Id).OrderBy(t => t.Id).ToArrayAsync();
+            var records = await db.Transactions.Where(t => t.HouseholdId == household.Id && t.ImportBatchId != null).OrderBy(t => t.Id).ToArrayAsync();
             records[0].MarkAllocationChanged(now.AddMinutes(1));
             records[1].SetArchived(true, now.AddMinutes(1));
             records[2].Void(now.AddMinutes(1));
@@ -125,6 +161,10 @@ internal static class ImportVerification
             legacy.Complete(now); legacyId = legacy.Id; db.Add(legacy);
             await db.SaveChangesAsync();
         }
+        using (var scope = provider.CreateScope())
+            Check(await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Transactions
+                .CountAsync(t => t.HouseholdId == household.Id && t.ImportBatchId == preview.Id) == 3,
+                "editing, archiving and voiding retain import origin");
         var changed = await Detail();
         Check(changed.Review.Edited == 3 && changed.Review.Voided == 1, "archive, revision and transfer edits flagged; void distinct");
         Check(changed.Batch.Summary.Totals.SequenceEqual(original.Batch.Summary.Totals), "original totals survive edits");
@@ -143,7 +183,7 @@ internal static class ImportVerification
         using (var scope = provider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
-            Check(await db.Transactions.CountAsync(t => t.HouseholdId == household.Id) == 3
+            Check(await db.Transactions.CountAsync(t => t.HouseholdId == household.Id) == 4
                 && await db.Transfers.CountAsync(t => t.HouseholdId == household.Id) == 1, "preview never deletes records");
             Check((await db.Accounts.SingleAsync(a => a.Id == main.Id)).BalanceAnchorAmount == main.BalanceAnchorAmount, "preview never changes balance anchors");
         }

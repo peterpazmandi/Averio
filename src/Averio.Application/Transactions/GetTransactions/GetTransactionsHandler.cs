@@ -23,7 +23,7 @@ public sealed class GetTransactionsHandler(
         Guid? cursorId,
         CancellationToken cancellationToken,
         Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null,
-        bool includeArchived = false)
+        bool includeArchived = false, bool importedOnly = false)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -50,7 +50,7 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived),
+                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly),
             cancellationToken);
 
         return new TransactionPageResult(
@@ -96,7 +96,7 @@ public sealed record TransactionResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false)
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,
@@ -127,5 +127,5 @@ public sealed record TransactionResult(
             label.Name,
             label.Scope)).ToArray(),
         model.ActivityId, model.ActivityName, model.ActivityAssignmentVersion,
-        model.IsArchived);
+        model.IsArchived, model.IsImported, model.ImportBatchId);
 }

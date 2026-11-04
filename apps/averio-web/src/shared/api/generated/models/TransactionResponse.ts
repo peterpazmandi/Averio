@@ -118,6 +118,14 @@ export interface TransactionResponse {
      * 
      */
     isArchived?: boolean;
+    /**
+     * 
+     */
+    isImported?: boolean;
+    /**
+     * 
+     */
+    importBatchId?: string | null;
 }
 
 /**
@@ -178,6 +186,8 @@ export function TransactionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'activityName': json['activityName'],
         'activityAssignmentVersion': json['activityAssignmentVersion'],
         'isArchived': json['isArchived'] == null ? undefined : json['isArchived'],
+        'isImported': json['isImported'] == null ? undefined : json['isImported'],
+        'importBatchId': json['importBatchId'] === undefined ? undefined : json['importBatchId'] === null ? null : json['importBatchId'],
     };
 }
 
@@ -213,6 +223,8 @@ export function TransactionResponseToJSONTyped(value?: TransactionResponse | nul
         'activityName': value['activityName'],
         'activityAssignmentVersion': value['activityAssignmentVersion'],
         'isArchived': value['isArchived'],
+        'isImported': value['isImported'],
+        'importBatchId': value['importBatchId'],
     };
 }
 

@@ -21,6 +21,11 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         });
 
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.ImportBatchId).HasColumnName("import_batch_id");
+        builder.HasOne<Averio.Domain.Imports.ImportBatch>().WithMany()
+            .HasForeignKey(x => new { x.HouseholdId, x.ImportBatchId })
+            .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => new { x.HouseholdId, x.ImportBatchId });
         builder.HasAlternateKey(x => new { x.HouseholdId, x.Id })
             .HasName("ak_transactions_household_id_id");
 

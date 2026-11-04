@@ -1,4 +1,5 @@
 export const importHistoryEN = {
+    imported: 'Imported', importedOnly: 'Imported only', openBatch: 'View import batch',
     title: 'Import history', intro: 'Your completed imports in this household. Totals and rows show the original import, even when records change later.',
     newImport: 'Import a file', unnamed: 'Money manager workbook', completed: 'Imported {{date}}', period: '{{from}} – {{to}}', count: '{{count}} records',
     records: 'View imported records', preview: 'Preview undo', back: 'Back to history', empty: 'Your history starts here', emptyHelp: 'Completed imports will appear here with their totals and original records.',
@@ -12,6 +13,7 @@ export const importHistoryEN = {
     note: 'Note: {{note}}', tags: 'Tags: {{tags}}', privateHelp: 'Current record links are shown only when you can still access them.',
 };
 export const importHistoryDE: typeof importHistoryEN = {
+    imported: 'Importiert', importedOnly: 'Nur importierte Buchungen', openBatch: 'Import ansehen',
     title: 'Importverlauf', intro: 'Deine abgeschlossenen Importe in diesem Haushalt. Summen und Zeilen zeigen den ursprünglichen Import, auch wenn Datensätze später geändert werden.',
     newImport: 'Datei importieren', unnamed: 'Money-manager-Arbeitsmappe', completed: 'Importiert am {{date}}', period: '{{from}} – {{to}}', count: '{{count}} Datensätze',
     records: 'Importierte Datensätze ansehen', preview: 'Rückgängig-Vorschau', back: 'Zurück zum Verlauf', empty: 'Hier beginnt dein Verlauf', emptyHelp: 'Abgeschlossene Importe erscheinen hier mit Summen und ursprünglichen Datensätzen.',
@@ -25,6 +27,7 @@ export const importHistoryDE: typeof importHistoryEN = {
     note: 'Notiz: {{note}}', tags: 'Tags: {{tags}}', privateHelp: 'Aktuelle Datensätze werden nur verlinkt, wenn du weiterhin darauf zugreifen kannst.',
 };
 export const importHistoryHU: typeof importHistoryEN = {
+    imported: 'Importált', importedOnly: 'Csak importált tételek', openBatch: 'Importálás megtekintése',
     title: 'Importálási előzmények', intro: 'A háztartásban általad befejezett importálások. Az összegek és sorok az eredeti importot mutatják, akkor is, ha a tételek később módosultak.',
     newImport: 'Fájl importálása', unnamed: 'Money manager-munkafüzet', completed: 'Importálva: {{date}}', period: '{{from}} – {{to}}', count: '{{count}} tétel',
     records: 'Importált tételek megtekintése', preview: 'Visszavonás előnézete', back: 'Vissza az előzményekhez', empty: 'Itt kezdődnek az előzményeid', emptyHelp: 'A befejezett importálások itt jelennek meg az összegekkel és az eredeti tételekkel.',

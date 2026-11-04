@@ -90,7 +90,8 @@ public sealed class GetTransactionHandler(
                     label.Name,
                     label.Scope))
                 .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty,
-            transaction.IsArchived);
+            transaction.IsArchived, transaction.ImportBatchId != null,
+            transaction.CreatedByHouseholdMemberId == membership.Id ? transaction.ImportBatchId : null);
     }
 }
 
@@ -113,4 +114,4 @@ public sealed record TransactionDetailResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null);

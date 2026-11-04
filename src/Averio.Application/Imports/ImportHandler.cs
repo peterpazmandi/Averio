@@ -96,8 +96,8 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
             }
             categoryMap.Add((mapping.Kind, mapping.Source), category);
         }
-        var transactionIds = new List<Guid>();
         var links = new List<ImportRecordLink>();
+        var transactionIds = new List<Guid>();
         foreach (var row in rows)
         {
             ct.ThrowIfCancellationRequested();
@@ -120,6 +120,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 var transaction = Transaction.Create(householdId, account.Id, member.Id,
                     Enum.Parse<TransactionKind>(row.Kind), visibility, account.Currency, row.Tags, row.Note, row.Date,
                     [new TransactionItemDraft(row.Category, category.Id, category.NameReference, category.Icon, row.Amount)], [], clock.GetUtcNow());
+                transaction.SetImportOrigin(batch.Id);
                 transactions.Add(transaction); transactionIds.Add(transaction.Id);
                 links.Add(new(transaction.Id, row.Kind, StoredVersion(transaction.UpdatedAt), account.Name, null, category.NameReference, category.IsBase));
             }
@@ -155,4 +156,3 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray());
     }
 }
-

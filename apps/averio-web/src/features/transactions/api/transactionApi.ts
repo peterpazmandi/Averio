@@ -68,6 +68,7 @@ export interface TransactionFilters {
     kind?: TransactionKind;
     search?: string;
     includeArchived?: boolean;
+    importedOnly?: boolean;
     pageSize?: number;
     cursorDate?: string;
     cursorCreatedAt?: string;
