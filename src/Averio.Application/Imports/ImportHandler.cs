@@ -72,7 +72,8 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         }
         var review = await ReviewCoreAsync(householdId, member.Id, batch, request.Accounts, ct);
         var skip = request.SkippedRows?.ToHashSet() ?? [];
-        if (skip.Count != (request.SkippedRows?.Count ?? 0) || skip.Any(i => !review.Overlaps.Any(o => o.RowIndex == i))) throw MappingError();
+        var possibleDuplicates = review.Overlaps.Select(o => o.RowIndex).ToHashSet();
+        if (skip.Count != (request.SkippedRows?.Count ?? 0) || skip.Any(i => !possibleDuplicates.Contains(i))) throw MappingError();
         if ((review.Overlaps.Count > 0 || request.ReviewToken is not null) && request.ReviewToken != review.Token)
             throw new ConflictException("import_review_changed", "Error_ImportReviewChanged");
         var categorySources = rows.Where(r => r.Kind != "Transfer").Select(r => (r.Kind, r.Category)).Distinct().ToArray();

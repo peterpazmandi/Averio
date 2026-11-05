@@ -79,11 +79,13 @@ public sealed partial class ImportHandler
         }
         var map = mappings.ToDictionary(m => m.Source, m => m.AccountId);
         var candidates = await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
-        var lookup = candidates.ToLookup(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId));
+        var lookup = candidates.GroupBy(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
+            .ToDictionary(g => g.Key, g => (Count: g.Count(), Matches: g.OrderBy(c => c.Id).Take(3)
+                .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount))).ToArray()));
         var overlaps = rows.Select((r, i) => {
-            var matches = lookup[(map[r.Account], r.Kind, r.Date, r.Amount, r.Destination is null ? null : (Guid?)map[r.Destination])]
-                .Where(c => r.Kind != "Transfer" || c.ReceivedAmount == (r.ReceivedAmount ?? r.Amount)).OrderBy(c => c.Id).ToArray();
-            return new ImportOverlap(i, matches.Take(3).Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount))).ToArray(), matches.Length);
+            var matches = lookup.GetValueOrDefault((map[r.Account], r.Kind, r.Date, r.Amount,
+                r.Destination is null ? null : (Guid?)map[r.Destination], r.Kind == "Transfer" ? r.ReceivedAmount ?? r.Amount : (decimal?)null));
+            return new ImportOverlap(i, matches.Matches ?? [], matches.Count);
         }).Where(o => o.MatchCount > 0).ToArray();
         return new(Hash(new { batch.Id, Mappings = mappings.OrderBy(m => m.Source).ToArray(), Candidates = candidates.OrderBy(c => c.Id).ToArray() }), overlaps);
     }
@@ -98,7 +100,8 @@ public sealed partial class ImportHandler
         var storedLinks = Links(batch);
         var liveRecords = await imports.GetCurrentRecordsAsync(householdId, member.Id,
             storedLinks.Where(l => l.Kind != "Transfer").Select(l => l.Id).ToArray(), storedLinks.Where(l => l.Kind == "Transfer").Select(l => l.Id).ToArray(), ct);
-        var balanceLinks = storedLinks.Select(l => liveRecords.FirstOrDefault(c => c.Id == l.Id) is { } live ? l with { AccountId = live.AccountId, DestinationId = live.DestinationId } : l);
+        var liveById = liveRecords.ToDictionary(c => c.Id);
+        var balanceLinks = storedLinks.Select(l => liveById.GetValueOrDefault(l.Id) is { } live ? l with { AccountId = live.AccountId, DestinationId = live.DestinationId } : l);
         foreach (var accountId in balanceLinks.SelectMany(l => new[] { l.AccountId, l.DestinationId }).OfType<Guid>().Distinct())
         {
             var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, accountId, ct);
