@@ -13,7 +13,7 @@ export type ReviewDecision = { token: string; skippedRows: number[]; ready: bool
 export function ImportOverlapReview({ userId, householdId, batchId, mappings, rows, onChange }: {
     userId: string; householdId: string; batchId: string; mappings: ImportAccountMapping[]; rows: ImportPreviewRow[]; onChange: (value: ReviewDecision | null) => void;
 }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const query = useQuery({ queryKey: ['imports', userId, householdId, batchId, 'overlap', mappings], retry: false,
         queryFn: ({ signal }) => importsApi.apiV1HouseholdsHouseholdIdImportsIdReviewPost({ householdId, id: batchId, importReviewRequest: { accounts: mappings } }, { signal }) });
     const [selection, setSelection] = useState<{ token: string; choices: Record<number, string> }>({ token: '', choices: {} });
@@ -35,7 +35,10 @@ export function ImportOverlapReview({ userId, householdId, batchId, mappings, ro
                 <ol className="grid gap-4">{query.data.overlaps.slice(page * 20, (page + 1) * 20).map(o => <li key={o.rowIndex} className="border-t border-slate-200 pt-3 dark:border-slate-700">
                     <p className="font-semibold">{t('importTools.sourceRow', { row: o.rowIndex + 1, count: o.matchCount })}</p>
                     <p className="mt-2 text-sm">{rows[o.rowIndex]?.sheet} #{rows[o.rowIndex]?.rowNumber} · {rows[o.rowIndex]?.date} · {rows[o.rowIndex]?.account} · {rows[o.rowIndex]?.amount} {rows[o.rowIndex]?.currency} · {rows[o.rowIndex]?.tags}</p>
-                    <ul className="my-2 text-sm">{o.matches.map(m => <li key={m.id}>{m.date} · {m.description} · {m.amount} {rows[o.rowIndex]?.currency}</li>)}</ul>
+                    <ul className="my-2 text-sm">{o.matches.map(m => <li key={m.id}>
+                        {m.date} · {m.description} · {formatDecimalAmount(m.amount, rows[o.rowIndex]?.currency ?? 'EUR', i18n.resolvedLanguage ?? 'en')}
+                        {m.kind === 'Transfer' && m.receivedAmount && m.receivedCurrency && <> · {t('importTools.received')}: {formatDecimalAmount(m.receivedAmount, m.receivedCurrency, i18n.resolvedLanguage ?? 'en')}</>}
+                    </li>)}</ul>
                     <AverioField>{t('importTools.decision')}<AverioSelect aria-label={t('importTools.decision')} value={selection.token === query.data.token ? selection.choices[o.rowIndex] ?? '' : ''} onChange={e => choose(o.rowIndex, e.target.value)}>
                         <option value="">{t('importTools.choose')}</option><option value="keep">{t('importTools.keep')}</option><option value="skip">{t('importTools.skip')}</option>
                     </AverioSelect></AverioField></li>)}</ol>
