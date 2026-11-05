@@ -14,7 +14,7 @@ public sealed record ImportMappingDefaults(IReadOnlyList<ImportAccountMapping> A
 public sealed record ImportExistingRecord(Guid Id, string Kind, Guid AccountId, Guid? DestinationId, DateOnly Date,
     decimal Amount, decimal? ReceivedAmount, string Description, DateTimeOffset Version);
 public sealed record ImportOverlap(int RowIndex, IReadOnlyList<ImportOverlapMatch> Matches, int MatchCount);
-public sealed record ImportOverlapMatch(Guid Id, string Kind, string Description, DateOnly Date, string Amount);
+public sealed record ImportOverlapMatch(Guid Id, string Kind, string Description, DateOnly Date, string Amount, string? ReceivedAmount = null, string? ReceivedCurrency = null);
 public sealed record ImportReviewRequest(IReadOnlyList<ImportAccountMapping> Accounts);
 public sealed record ImportReview(string Token, IReadOnlyList<ImportOverlap> Overlaps);
 public sealed record ImportBalance(Guid AccountId, string Name, string Currency, DateOnly AnchorDate, string AnchorAmount, string CurrentBalance, DateOnly AsOf);
@@ -81,7 +81,8 @@ public sealed partial class ImportHandler
         var candidates = await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
         var lookup = candidates.GroupBy(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Matches: g.OrderBy(c => c.Id).Take(3)
-                .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount))).ToArray()));
+                .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount),
+                    c.ReceivedAmount is null ? null : Amount(c.ReceivedAmount.Value), c.ReceivedCurrency)).ToArray()));
         var overlaps = rows.Select((r, i) => {
             var matches = lookup.GetValueOrDefault((map[r.Account], r.Kind, r.Date, r.Amount,
                 r.Destination is null ? null : (Guid?)map[r.Destination], r.Kind == "Transfer" ? r.ReceivedAmount ?? r.Amount : (decimal?)null));
