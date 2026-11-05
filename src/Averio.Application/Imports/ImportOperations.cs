@@ -12,7 +12,7 @@ namespace Averio.Application.Imports;
 
 public sealed record ImportMappingDefaults(IReadOnlyList<ImportAccountMapping> Accounts, IReadOnlyList<ImportCategoryMapping> Categories);
 public sealed record ImportExistingRecord(Guid Id, string Kind, Guid AccountId, Guid? DestinationId, DateOnly Date,
-    decimal Amount, decimal? ReceivedAmount, string Description, DateTimeOffset Version);
+    decimal Amount, decimal? ReceivedAmount, string Description, DateTimeOffset Version, string Currency, string? ReceivedCurrency);
 public sealed record ImportOverlap(int RowIndex, IReadOnlyList<ImportOverlapMatch> Matches, int MatchCount);
 public sealed record ImportOverlapMatch(Guid Id, string Kind, string Description, DateOnly Date, string Amount, string? ReceivedAmount = null, string? ReceivedCurrency = null);
 public sealed record ImportReviewRequest(IReadOnlyList<ImportAccountMapping> Accounts);
