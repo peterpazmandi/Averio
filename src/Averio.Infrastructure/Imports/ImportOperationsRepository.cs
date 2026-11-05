@@ -18,9 +18,10 @@ internal sealed partial class ImportRepository
 
     public async Task<IReadOnlyList<ImportExistingRecord>> FindOverlapAsync(Guid householdId, Guid memberId, Guid[] accountIds, DateOnly start, DateOnly end, CancellationToken ct)
     {
-        var transactions = await db.VisibleTransactions(householdId, memberId).AsNoTracking()
-            .Where(t => accountIds.Contains(t.AccountId) && t.Status == TransactionStatus.Posted && t.OccurredOn >= start && t.OccurredOn <= end)
-            .Select(t => new ImportExistingRecord(t.Id, t.Kind.ToString(), t.AccountId, null, t.OccurredOn, t.Amount, null, t.Description, t.UpdatedAt))
+        var transactions = await (from t in db.VisibleTransactions(householdId, memberId).AsNoTracking()
+            join a in db.Accounts on t.AccountId equals a.Id
+            where accountIds.Contains(t.AccountId) && t.Status == TransactionStatus.Posted && t.OccurredOn >= start && t.OccurredOn <= end
+            select new ImportExistingRecord(t.Id, t.Kind.ToString(), t.AccountId, null, t.OccurredOn, t.Amount, null, t.Description, t.UpdatedAt, a.Currency.Value, null))
             .Take(100001).ToArrayAsync(ct);
         var visible = db.Accounts.Where(a => a.HouseholdId == householdId && (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId)));
         var transfers = await (from t in db.Transfers.AsNoTracking()
@@ -28,7 +29,7 @@ internal sealed partial class ImportRepository
             join b in visible on t.DestinationAccountId equals b.Id
             where t.HouseholdId == householdId && accountIds.Contains(t.SourceAccountId) && accountIds.Contains(t.DestinationAccountId)
                 && t.VoidedAt == null && t.OccurredOn >= start && t.OccurredOn <= end
-            select new ImportExistingRecord(t.Id, "Transfer", t.SourceAccountId, t.DestinationAccountId, t.OccurredOn, t.SentAmount, t.ReceivedAmount, t.Note ?? "", t.UpdatedAt))
+            select new ImportExistingRecord(t.Id, "Transfer", t.SourceAccountId, t.DestinationAccountId, t.OccurredOn, t.SentAmount, t.ReceivedAmount, t.Note ?? "", t.UpdatedAt, a.Currency.Value, b.Currency.Value))
             .Take(100001).ToArrayAsync(ct);
         if (transactions.Length > 100000 || transfers.Length > 100000) throw new BusinessRuleException("import_review_too_large", "Error_ImportReviewTooLarge");
         return transactions.Concat(transfers).ToArray();
