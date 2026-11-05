@@ -46,6 +46,14 @@ export interface ConfirmImportRequest {
      * 
      */
     acknowledgeBalancesAndOverlap: boolean;
+    /**
+     * 
+     */
+    reviewToken?: string | null;
+    /**
+     * 
+     */
+    skippedRows?: Array<number> | null;
 }
 
 /**
@@ -71,6 +79,8 @@ export function ConfirmImportRequestFromJSONTyped(json: any, ignoreDiscriminator
         'accounts': ((json['accounts'] as Array<any>).map(ImportAccountMappingFromJSON)),
         'categories': ((json['categories'] as Array<any>).map(ImportCategoryMappingFromJSON)),
         'acknowledgeBalancesAndOverlap': json['acknowledgeBalancesAndOverlap'],
+        'reviewToken': json['reviewToken'] === undefined ? undefined : json['reviewToken'] === null ? null : json['reviewToken'],
+        'skippedRows': json['skippedRows'] === undefined ? undefined : json['skippedRows'] === null ? null : json['skippedRows'],
     };
 }
 
@@ -88,6 +98,8 @@ export function ConfirmImportRequestToJSONTyped(value?: ConfirmImportRequest | n
         'accounts': ((value['accounts'] as Array<any>).map(ImportAccountMappingToJSON)),
         'categories': ((value['categories'] as Array<any>).map(ImportCategoryMappingToJSON)),
         'acknowledgeBalancesAndOverlap': value['acknowledgeBalancesAndOverlap'],
+        'reviewToken': value['reviewToken'],
+        'skippedRows': value['skippedRows'],
     };
 }
 

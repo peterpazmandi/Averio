@@ -130,6 +130,7 @@ jobs:
           node tests/imports.browser.mjs
           node tests/import-history.browser.mjs
           node tests/imported-transactions.browser.mjs
+          node tests/import-tools.browser.mjs
 
       - name: Verify receipt browser flows
         timeout-minutes: 3

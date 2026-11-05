@@ -21,6 +21,18 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
         await file.CopyToAsync(stream, ct); stream.Position = 0;
         return Ok(await handler.PreviewAsync(householdId, stream, ct, file.FileName));
     }
+    [HttpPost("{id:guid}/review")]
+    public async Task<ActionResult<ImportReview>> Review(Guid householdId, Guid id, ImportReviewRequest request, CancellationToken ct)
+        => Ok(await handler.ReviewAsync(householdId, id, request, ct));
+    [HttpGet("{id:guid}/balances")]
+    public async Task<ActionResult<IReadOnlyList<ImportBalance>>> Balances(Guid householdId, Guid id, CancellationToken ct, [FromQuery] DateOnly? asOf = null)
+        => Ok(await handler.BalancesAsync(householdId, id, asOf, ct));
+    [HttpGet("{id:guid}/undo-plan")]
+    public async Task<ActionResult<ImportUndoPlan>> UndoPlan(Guid householdId, Guid id, CancellationToken ct)
+        => Ok(await handler.UndoPlanAsync(householdId, id, ct));
+    [HttpPost("{id:guid}/undo")]
+    public async Task<ActionResult<ImportUndoResult>> Undo(Guid householdId, Guid id, ImportUndoRequest request, CancellationToken ct)
+        => Ok(await handler.UndoAsync(householdId, id, request, ct));
     [HttpGet]
     public async Task<ActionResult<ImportHistoryPage>> History(Guid householdId, CancellationToken ct, [FromQuery] int page = 0)
         => Ok(await handler.HistoryAsync(householdId, page, ct));
@@ -37,4 +49,3 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
     public async Task<ActionResult<ImportResult>> Confirm(Guid householdId, Guid id, ConfirmImportRequest request, CancellationToken ct)
         => Ok(await handler.ConfirmAsync(householdId, id, request, ct));
 }
-

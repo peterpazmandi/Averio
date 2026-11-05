@@ -9,6 +9,7 @@ const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host
 const url = 'http://localhost:5284/tests/fixtures/imports.html';
 const copyModule = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/imports.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, copyModule);
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/importTools.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, copyModule);
 let browser;
 try {
     for (let i = 0; i < 80; i++) {
@@ -20,6 +21,7 @@ try {
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         page.setDefaultTimeout(15000);
         const copy = copyModule.exports['imports' + language.toUpperCase()];
+        const toolsCopy = copyModule.exports['importTools' + language.toUpperCase()];
         const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
@@ -28,7 +30,7 @@ try {
         }, { language, dark: width === 375 });
         const rows = Array.from({ length: 52 }, (_, i) => ({ sheet: 'Kiad�sok', rowNumber: i + 3, kind: 'Expense', date: '2026-09-21', account: 'Main', destination: null, category: 'Food', amount: '12.3456', currency: 'EUR', receivedAmount: null, receivedCurrency: null, tags: '<script>shop</script>', note: 'Original note' }));
         rows.push({ ...rows[0], sheet: '�tutal�s', kind: 'Transfer', destination: 'Savings', category: '', amount: '10' });
-        const preview = { id: 'batch', status: 'Draft', count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
+        const preview = { id: 'batch', status: 'Draft', defaults: { accounts: [{ source: 'Main', accountId: 'main', visibility: 'Household' }], categories: [] }, count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
         await page.route('**/api/v1/**', async route => {
             const req = route.request(), pathname = new URL(req.url()).pathname;
             const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
@@ -43,15 +45,17 @@ try {
                 return json({ id: 'new-savings' });
             }
             if (pathname.endsWith('/accounts')) return json([...createdAccounts,
-                { id: 'main', name: 'Main', currency: 'EUR', scope: 'Household', visibility: 'Household', status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' },
+                { id: 'main', name: 'Renamed main', currency: 'EUR', scope: 'Household', visibility: 'Household', status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' },
                 { id: 'savings', name: 'Savings', currency: 'EUR', scope: 'Personal', visibility: 'Private', status: 'Active', owners: [{ householdMemberId: 'member' }], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '500' },
                 { id: 'other-private', name: 'Other private', currency: 'EUR', scope: 'Personal', visibility: 'Private', status: 'Active', owners: [{ householdMemberId: 'someone-else' }] }]);
             if (pathname.endsWith('/categories')) return json([]);
             if (pathname.endsWith('/imports')) { assert.match(req.postDataBuffer().toString(), /fixture.xlsx/); return json(preview); }
+            if (pathname.endsWith('/review')) return json({ token: 'review-token', overlaps: [{ rowIndex: 0, matchCount: 1, matches: [{ id: 'existing', kind: 'Expense', description: 'Earlier purchase', date: '2026-09-21', amount: '12.3456' }] }] });
+            if (pathname.endsWith('/balances')) return json([]);
             if (pathname.endsWith('/confirmation')) {
                 confirmations.push(req.postDataJSON());
                 if (confirmations.length === 1) return route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ status: 503, detail: 'Retry test' }) });
-                return json({ id: 'batch', status: 'Completed', transactions: 52, transfers: 1 });
+                return json({ id: 'batch', status: 'Completed', transactions: 51, transfers: 1, accounts: 2, skipped: 1 });
             }
             throw new Error(`Unexpected request ${pathname}`);
         });
@@ -96,6 +100,7 @@ try {
         assert.equal(await page.locator('tbody tr').count(), 50);
         assert.equal(await page.locator('footer button').last().isDisabled(), true);
         assert.equal(await page.locator('tbody script').count(), 0, 'Source tags are rendered as text');
+        await page.getByLabel(toolsCopy.decision, { exact: true }).selectOption('skip');
         await page.getByRole('checkbox').check();
         await page.locator('footer button').last().click();
         await page.getByRole('alert').waitFor();
@@ -106,6 +111,8 @@ try {
         assert.deepEqual(confirmations[0].accounts, [{ source: 'Main', accountId: 'main', visibility: 'Household' }, { source: 'Savings', accountId: 'new-savings', visibility: 'Private' }]);
         assert.equal(confirmations[0].categories[0].categoryId, null);
         assert.equal(confirmations[0].acknowledgeBalancesAndOverlap, true);
+        assert.equal(confirmations[0].reviewToken, 'review-token');
+        assert.deepEqual(confirmations[0].skippedRows, [0]);
         assert.deepEqual(errors, []);
         assert.doesNotMatch(await page.locator('body').innerText(), /imports\.[a-zA-Z]/);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

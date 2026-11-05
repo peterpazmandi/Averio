@@ -35,6 +35,14 @@ export interface ImportResult {
      * 
      */
     transfers: number;
+    /**
+     * 
+     */
+    accounts?: number;
+    /**
+     * 
+     */
+    skipped?: number;
 }
 
 /**
@@ -62,6 +70,8 @@ export function ImportResultFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'status': json['status'],
         'transactions': json['transactions'],
         'transfers': json['transfers'],
+        'accounts': json['accounts'] == null ? undefined : json['accounts'],
+        'skipped': json['skipped'] == null ? undefined : json['skipped'],
     };
 }
 
@@ -80,6 +90,8 @@ export function ImportResultToJSONTyped(value?: ImportResult | null, ignoreDiscr
         'status': value['status'],
         'transactions': value['transactions'],
         'transfers': value['transfers'],
+        'accounts': value['accounts'],
+        'skipped': value['skipped'],
     };
 }
 

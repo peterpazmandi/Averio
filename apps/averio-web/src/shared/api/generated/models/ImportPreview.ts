@@ -20,6 +20,20 @@ import {
     ImportCategorySourceToJSON,
     ImportCategorySourceToJSONTyped,
 } from './ImportCategorySource';
+import type { ImportMappingDefaults } from './ImportMappingDefaults';
+import {
+    ImportMappingDefaultsFromJSON,
+    ImportMappingDefaultsFromJSONTyped,
+    ImportMappingDefaultsToJSON,
+    ImportMappingDefaultsToJSONTyped,
+} from './ImportMappingDefaults';
+import type { ImportResult } from './ImportResult';
+import {
+    ImportResultFromJSON,
+    ImportResultFromJSONTyped,
+    ImportResultToJSON,
+    ImportResultToJSONTyped,
+} from './ImportResult';
 import type { ImportTotal } from './ImportTotal';
 import {
     ImportTotalFromJSON,
@@ -81,6 +95,14 @@ export interface ImportPreview {
      * 
      */
     rows: Array<ImportPreviewRow>;
+    /**
+     * 
+     */
+    defaults?: ImportMappingDefaults | null;
+    /**
+     * 
+     */
+    completion?: ImportResult | null;
 }
 
 /**
@@ -120,6 +142,8 @@ export function ImportPreviewFromJSONTyped(json: any, ignoreDiscriminator: boole
         'totals': ((json['totals'] as Array<any>).map(ImportTotalFromJSON)),
         'repeatedRows': json['repeatedRows'],
         'rows': ((json['rows'] as Array<any>).map(ImportPreviewRowFromJSON)),
+        'defaults': json['defaults'] === undefined ? undefined : json['defaults'] === null ? null : ImportMappingDefaultsFromJSON(json['defaults']),
+        'completion': json['completion'] === undefined ? undefined : json['completion'] === null ? null : ImportResultFromJSON(json['completion']),
     };
 }
 
@@ -144,6 +168,8 @@ export function ImportPreviewToJSONTyped(value?: ImportPreview | null, ignoreDis
         'totals': ((value['totals'] as Array<any>).map(ImportTotalToJSON)),
         'repeatedRows': value['repeatedRows'],
         'rows': ((value['rows'] as Array<any>).map(ImportPreviewRowToJSON)),
+        'defaults': ImportMappingDefaultsToJSON(value['defaults']),
+        'completion': ImportResultToJSON(value['completion']),
     };
 }
 

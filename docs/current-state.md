@@ -279,3 +279,8 @@ Receipt uploads create uploader-only expiring drafts, processed by a leased back
 ## Receipt rollout controls (PR 3)
 
 Household UTC monthly receipt allowances, time-bounded operator-managed paid entitlements, uploader-only exact-photo duplicate warnings, opt-in retained posted photos and content-free metrics are implemented. Posted-photo deletion preserves the financial transaction and immutable confirmation identity. No new schema migration is needed. See [ADR-037](decisions/ADR-037-receipt-rollout-quotas-and-retention.md) and [rollout/benchmark instructions](receipt-scanning.md). Real provider accuracy and production storage checks remain release gates; checkout/billing is not implemented.
+
+
+## XLSX import review and recovery
+
+Import now includes explicit cross-file overlap decisions, remembered account/category mappings, a completion summary with actual counts, balance reconciliation and partial safe undo. Undo voids eligible records atomically, preserving edited or dependent records and balance references. Batch privacy and exact decimals are maintained. See [XLSX import](xlsx-import.md) and [ADR-038](decisions/ADR-038-import-review-and-safe-undo.md).

@@ -2,7 +2,7 @@ namespace Averio.Application.Imports;
 
 // Array order matches the immutable source rows; never infer links from amounts or dates.
 public sealed record ImportRecordLink(Guid Id, string Kind, DateTimeOffset Version,
-    string Account, string? Destination, string? Category, bool CategoryIsBase);
+    string Account, string? Destination, string? Category, bool CategoryIsBase, Guid? AccountId = null, Guid? DestinationId = null, Guid? CategoryId = null, string? Visibility = null, bool Skipped = false);
 public sealed record ImportHistorySummary(int Count, DateOnly From, DateOnly To, IReadOnlyList<ImportTotal> Totals);
 public sealed record ImportHistoryItem(Guid Id, string? SourceName, DateTimeOffset CompletedAt,
     ImportHistorySummary Summary, bool TrackingAvailable);
@@ -14,6 +14,6 @@ public sealed record ImportUndoSummary(int Unchanged, int Edited, int Voided, in
 public sealed record ImportHistoryDetail(ImportHistoryItem Batch, IReadOnlyList<ImportHistoryRecord> Records,
     ImportUndoSummary Review, DateTimeOffset CheckedAt, bool HasMore);
 
-public sealed record ImportCurrentRecord(Guid Id, bool IsTransfer, DateTimeOffset Version, bool Voided, bool CanModify);
+public sealed record ImportCurrentRecord(Guid Id, bool IsTransfer, DateTimeOffset Version, bool Voided, bool CanModify, Guid? AccountId = null, Guid? DestinationId = null);
 public sealed record ImportHistoryStored(Guid Id, string? SourceName, DateTimeOffset CompletedAt,
     string? Summary, string? LegacyPayload, bool TrackingAvailable);

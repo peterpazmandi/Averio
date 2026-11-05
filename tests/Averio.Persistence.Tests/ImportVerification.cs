@@ -145,6 +145,12 @@ internal static class ImportVerification
         using (var scope = provider.CreateScope())
             Check(!(await scope.ServiceProvider.GetRequiredService<ImportHandler>().HistoryAsync(household.Id, 0, default)).Items.Any(), "history is uploader-private");
         await Reject<NotFoundException>(() => Detail());
+        using (var scope = provider.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<ImportHandler>();
+            await Reject<NotFoundException>(() => handler.UndoPlanAsync(household.Id, preview.Id, default));
+            await Reject<NotFoundException>(() => handler.UndoAsync(household.Id, preview.Id, new("unknown", true), default));
+        }
         user.UserId = ownerUser.Id;
         Guid legacyId;
         using (var scope = provider.CreateScope())
@@ -187,6 +193,7 @@ internal static class ImportVerification
                 && await db.Transfers.CountAsync(t => t.HouseholdId == household.Id) == 1, "preview never deletes records");
             Check((await db.Accounts.SingleAsync(a => a.Id == main.Id)).BalanceAnchorAmount == main.BalanceAnchorAmount, "preview never changes balance anchors");
         }
+        await ImportImprovementVerification.RunAsync(provider, household.Id, member.Id, now);
         Console.WriteLine("PASS import history precision, privacy, revisions, pagination, legacy fallback and read-only preview");
         Console.WriteLine("PASS XLSX concurrent preview/confirmation, privacy, mapping rollback, aggregates and balance anchors");
     }

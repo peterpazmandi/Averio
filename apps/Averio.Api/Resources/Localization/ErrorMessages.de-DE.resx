@@ -359,6 +359,8 @@
   <data name="Error_ReceiptMonthlyLimit" xml:space="preserve"><value>Das monatliche Belegscan-Kontingent deines Haushalts ist aufgebraucht. Es wird am Anfang des nächsten UTC-Monats zurückgesetzt. Vorhandene Belege bleiben verfügbar.</value></data>
 <data name="Error_ImportInvalid" xml:space="preserve"><value>Nicht unterstützte Datei. Verwende einen unveränderten ungarischen Money-manager-XLSX-Export mit maximal 5 MB und 10.000 Zeilen. Formeln, Uhrzeiten und Währungsumrechnungen werden nicht unterstützt.</value></data>
 <data name="Error_ImportMapping" xml:space="preserve"><value>Prüfe Kontowährungen, Sichtbarkeit und Kategoriezuordnungen und bestätige den Hinweis zu Salden und Überschneidungen.</value></data>
+<data name="Error_ImportReviewChanged" xml:space="preserve"><value>Die Importprüfung hat sich geändert. Aktualisiere sie und bestätige deine Auswahl erneut.</value></data>
+<data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Dieser Zeitraum enthält zu viele Einträge. Exportiere einen kleineren Zeitraum.</value></data>
 </root>
 
 

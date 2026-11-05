@@ -19,7 +19,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
     IAccountRepository accounts, ICategoryRepository categories, ICategoryManagementRepository categoryManagement,
     IIconCatalogRepository icons, IImportRepository imports, IXlsxImportReader reader,
     ITransactionRepository transactions, Averio.Application.Transfers.ITransferRepository transfers,
-    IUnitOfWork unitOfWork, TimeProvider clock)
+    IUnitOfWork unitOfWork, TimeProvider clock, IAccountBalanceReader balances)
 {
     public async Task<ImportPreview> PreviewAsync(Guid householdId, Stream file, CancellationToken ct, string? sourceName = null)
     {
@@ -37,7 +37,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
             await unitOfWork.SaveChangesAsync(ct);
         }
         await tx.CommitAsync(ct);
-        return Preview(batch);
+        return Preview(batch) with { Defaults = await DefaultsAsync(householdId, member.Id, ct) };
     }
     public async Task<ImportPreview> GetAsync(Guid householdId, Guid id, CancellationToken ct)
     {
@@ -70,6 +70,11 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 || !TransactionAccess.IsVisibilityAllowed(account, visibility)) throw MappingError();
             accountMap.Add(mapping.Source, (account, visibility));
         }
+        var review = await ReviewCoreAsync(householdId, member.Id, batch, request.Accounts, ct);
+        var skip = request.SkippedRows?.ToHashSet() ?? [];
+        if (skip.Count != (request.SkippedRows?.Count ?? 0) || skip.Any(i => !review.Overlaps.Any(o => o.RowIndex == i))) throw MappingError();
+        if ((review.Overlaps.Count > 0 || request.ReviewToken is not null) && request.ReviewToken != review.Token)
+            throw new ConflictException("import_review_changed", "Error_ImportReviewChanged");
         var categorySources = rows.Where(r => r.Kind != "Transfer").Select(r => (r.Kind, r.Category)).Distinct().ToArray();
         if (request.Categories.Count != categorySources.Length
             || request.Categories.Select(c => (c.Kind, c.Source)).Distinct().Count() != categorySources.Length
@@ -80,6 +85,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         var categoryMap = new Dictionary<(string, string), Category>();
         foreach (var mapping in request.Categories)
         {
+            if (!rows.Where((_, i) => !skip.Contains(i)).Any(r => r.Kind == mapping.Kind && r.Category == mapping.Source)) continue;
             var kind = Enum.Parse<TransactionKind>(mapping.Kind);
             Category category;
             if (mapping.CategoryId is Guid categoryId)
@@ -101,6 +107,14 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         foreach (var row in rows)
         {
             ct.ThrowIfCancellationRequested();
+            if (skip.Contains(links.Count))
+            {
+                links.Add(new(Guid.Empty, row.Kind, default, accountMap[row.Account].Account.Name, null, null, false,
+                    accountMap[row.Account].Account.Id, row.Destination is null ? null : accountMap[row.Destination].Account.Id,
+                    row.Kind == "Transfer" ? null : request.Categories.Single(c => c.Kind == row.Kind && c.Source == row.Category).CategoryId,
+                    accountMap[row.Account].Visibility.ToString(), true));
+                continue;
+            }
             var (account, visibility) = accountMap[row.Account];
             if (account.Currency.Value != row.Currency) throw MappingError();
             if (row.Kind == "Transfer")
@@ -112,7 +126,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 var transfer = Transfer.Create(householdId, account.Id, destination.Id, member.Id,
                     account.Currency, destination.Currency, row.Amount, received, row.Date, row.Note, clock.GetUtcNow());
                 transfers.Add(transfer);
-                links.Add(new(transfer.Id, row.Kind, StoredVersion(transfer.UpdatedAt), account.Name, destination.Name, null, false));
+                links.Add(new(transfer.Id, row.Kind, StoredVersion(transfer.UpdatedAt), account.Name, destination.Name, null, false, account.Id, destination.Id));
             }
             else
             {
@@ -122,10 +136,10 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                     [new TransactionItemDraft(row.Category, category.Id, category.NameReference, category.Icon, row.Amount)], [], clock.GetUtcNow());
                 transaction.SetImportOrigin(batch.Id);
                 transactions.Add(transaction); transactionIds.Add(transaction.Id);
-                links.Add(new(transaction.Id, row.Kind, StoredVersion(transaction.UpdatedAt), account.Name, null, category.NameReference, category.IsBase));
+                links.Add(new(transaction.Id, row.Kind, StoredVersion(transaction.UpdatedAt), account.Name, null, category.NameReference, category.IsBase, account.Id, null, category.Id, visibility.ToString()));
             }
         }
-        batch.Complete(clock.GetUtcNow(), JsonSerializer.Serialize(links), JsonSerializer.Serialize(Summarize(rows)));
+        batch.Complete(clock.GetUtcNow(), JsonSerializer.Serialize(links), JsonSerializer.Serialize(Summarize(rows.Where((_, i) => !skip.Contains(i)).ToArray(), rows)));
         await unitOfWork.SaveChangesAsync(ct);
         await imports.ApplyAggregatesAsync(transactionIds.ToArray(), ct);
         await tx.CommitAsync(ct);
@@ -141,7 +155,12 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
     private static BusinessRuleException MappingError() => new("import_mapping_invalid", "Error_ImportMapping");
     private static ImportRow[] Rows(ImportBatch batch) => JsonSerializer.Deserialize<ImportRow[]>(batch.Payload)!;
     private static ImportResult Result(ImportBatch batch, IReadOnlyList<ImportRow> rows)
-        => new(batch.Id, "Completed", rows.Count(r => r.Kind != "Transfer"), rows.Count(r => r.Kind == "Transfer"));
+        {
+        var links = Links(batch);
+        var included = rows.Where((_, i) => links.Length != rows.Count || !links[i].Skipped).ToArray();
+        return new(batch.Id, "Completed", included.Count(r => r.Kind != "Transfer"), included.Count(r => r.Kind == "Transfer"),
+            included.SelectMany(r => r.Destination is null ? new[] { r.Account } : new[] { r.Account, r.Destination }).Distinct().Count(), rows.Count - included.Length);
+    }
     private static ImportPreview Preview(ImportBatch batch)
     {
         var rows = Rows(batch);
@@ -153,6 +172,6 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 g.Sum(r => r.Amount).ToString(CultureInfo.InvariantCulture), g.Count())).ToArray(),
             rows.GroupBy(r => r with { Sheet = "", RowNumber = 0 }).Sum(g => g.Count() - 1), rows.Select(r => new ImportPreviewRow(r.Sheet, r.RowNumber, r.Kind, r.Date,
                 r.Account, r.Destination, r.Category, r.Amount.ToString(CultureInfo.InvariantCulture), r.Currency,
-                r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray());
+                r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray(), Completion: batch.CompletedAt is null ? null : Result(batch, rows));
     }
 }

@@ -7,6 +7,7 @@ import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioLogo } from '../../shared/components/branding/AverioLogo';
 import { formatDecimalAmount } from '../../shared/money/decimalAmount';
+import { ImportUndo, ImportReconciliation } from './ImportTools';
 import { importQueries } from './importQueries';
 
 const linkStyle = 'font-semibold text-primary-700 underline-offset-4 hover:underline dark:text-primary-300';
@@ -50,8 +51,10 @@ export function ImportHistoryPage({ userId, householdId, batchId, onSelect }: {
                         <AverioButton disabled={detail.isFetching} onClick={() => { void detail.refetch(); }}>{t('importHistory.refresh')}</AverioButton>
                     </footer>
                 </AverioCard>
+                {review && <ImportUndo userId={userId} householdId={householdId} batchId={batchId} />}
+                {!review && <ImportReconciliation userId={userId} householdId={householdId} batchId={batchId} />}
                 {review && <AverioCard><h3 className="text-xl font-bold">{t('importHistory.undo')}</h3>
-                    <p className="my-3 text-sm">{t('importHistory.undoHelp')}</p>
+                    <p className="my-3 text-sm">{t('importTools.recordStates')}</p>
                     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {(['unchanged', 'edited', 'voided', 'unavailable', 'untracked', 'readOnly'] as const).map(state =>
                             <div key={state}><dt className="text-sm">{t('importHistory.' + (state === 'readOnly' ? state : state[0].toUpperCase() + state.slice(1)))}</dt>
@@ -79,7 +82,7 @@ export function ImportHistoryPage({ userId, householdId, batchId, onSelect }: {
                         {r.tags && <p className="text-sm">{t('importHistory.tags', { tags: r.tags })}</p>}
                         {r.note && <p className="whitespace-pre-wrap text-sm">{t('importHistory.note', { note: r.note })}</p>}
                         <footer className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-3 text-sm dark:border-slate-700">
-                            <span className={record.state === 'Edited' ? 'font-bold text-amber-800 dark:text-amber-200' : 'font-semibold'}>{t('importHistory.' + record.state)}</span>
+                            <span className={record.state === 'Edited' ? 'font-bold text-amber-800 dark:text-amber-200' : 'font-semibold'}>{t(record.state === 'Skipped' ? 'importTools.Skipped' : 'importHistory.' + record.state)}</span>
                             {record.recordId && !record.canModify && <span>{t('importHistory.readOnly')}</span>}
                             {record.recordId && (r.kind === 'Transfer'
                                 ? <Link to="/app/transfers" className={linkStyle}>{t('importHistory.transfers')}</Link>

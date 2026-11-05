@@ -25,7 +25,7 @@ internal sealed partial class ImportRepository
             where transactionIds.Contains(t.Id)
             select new ImportCurrentRecord(t.Id, false, t.UpdatedAt, t.Status == TransactionStatus.Voided,
                 a.Status == AccountStatus.Active && a.CutoverAtUtc == null &&
-                (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId))))
+                (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId)), t.AccountId))
             .ToArrayAsync(ct);
         var visible = db.Accounts.Where(a => a.HouseholdId == householdId &&
             (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId)));
@@ -36,7 +36,7 @@ internal sealed partial class ImportRepository
             select new ImportCurrentRecord(t.Id, true, t.UpdatedAt, t.VoidedAt != null,
                 a.Status == AccountStatus.Active && b.Status == AccountStatus.Active && a.CutoverAtUtc == null && b.CutoverAtUtc == null &&
                 (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId)) &&
-                (b.Scope == AccountScope.Household || b.Owners.Any(o => o.HouseholdMemberId == memberId))))
+                (b.Scope == AccountScope.Household || b.Owners.Any(o => o.HouseholdMemberId == memberId)), t.SourceAccountId, t.DestinationAccountId))
             .ToArrayAsync(ct);
         return transactions.Concat(transfers).ToArray();
     }
