@@ -36,8 +36,10 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
             imports.Add(batch);
             await unitOfWork.SaveChangesAsync(ct);
         }
+        // Category suggestions use the same ledger lock as the preview and account checks.
+        var defaults = await DefaultsAsync(householdId, member.Id, ct);
         await tx.CommitAsync(ct);
-        return Preview(batch) with { Defaults = await DefaultsAsync(householdId, member.Id, ct) };
+        return Preview(batch) with { Defaults = defaults };
     }
     public async Task<ImportPreview> GetAsync(Guid householdId, Guid id, CancellationToken ct)
     {
