@@ -39,6 +39,8 @@ export interface ImportOverlapMatch {
      * 
      */
     amount: string;
+    receivedAmount?: string | null;
+    receivedCurrency?: string | null;
 }
 
 /**
@@ -68,6 +70,8 @@ export function ImportOverlapMatchFromJSONTyped(json: any, ignoreDiscriminator: 
         'description': json['description'],
         'date': json['date'],
         'amount': json['amount'],
+        'receivedAmount': json['receivedAmount'] == null ? undefined : json['receivedAmount'],
+        'receivedCurrency': json['receivedCurrency'] == null ? undefined : json['receivedCurrency'],
     };
 }
 
@@ -87,6 +91,8 @@ export function ImportOverlapMatchToJSONTyped(value?: ImportOverlapMatch | null,
         'description': value['description'],
         'date': value['date'],
         'amount': value['amount'],
+        'receivedAmount': value['receivedAmount'],
+        'receivedCurrency': value['receivedCurrency'],
     };
 }
 
