@@ -70,8 +70,8 @@ export function ImportOverlapMatchFromJSONTyped(json: any, ignoreDiscriminator: 
         'description': json['description'],
         'date': json['date'],
         'amount': json['amount'],
-        'receivedAmount': json['receivedAmount'] == null ? undefined : json['receivedAmount'],
-        'receivedCurrency': json['receivedCurrency'] == null ? undefined : json['receivedCurrency'],
+        'receivedAmount': json['receivedAmount'] === undefined ? undefined : json['receivedAmount'] === null ? null : json['receivedAmount'],
+        'receivedCurrency': json['receivedCurrency'] === undefined ? undefined : json['receivedCurrency'] === null ? null : json['receivedCurrency'],
     };
 }
 
