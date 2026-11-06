@@ -39,7 +39,13 @@ export interface ImportOverlapMatch {
      * 
      */
     amount: string;
+    /**
+     * 
+     */
     receivedAmount?: string | null;
+    /**
+     * 
+     */
     receivedCurrency?: string | null;
 }
 
