@@ -14,10 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Build and test
+  backend:
+    name: Backend checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -54,14 +54,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
-          cache: npm
-          cache-dependency-path: apps/averio-web/package-lock.json
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
 
       - name: Restore backend
         run: dotnet restore Averio.slnx
@@ -102,6 +94,22 @@ jobs:
             -- --invitation-previews "$RUNNER_TEMP/averio-email-previews"
           node tests/email/invitation-layout.mjs "$RUNNER_TEMP/averio-email-previews"
 
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+
       - name: Install frontend dependencies
         working-directory: apps/averio-web
         run: npm ci
@@ -118,13 +126,71 @@ jobs:
         working-directory: apps/averio-web
         run: npm run lint
 
+  browser:
+    name: Browser flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      AVERIO_TEST_CONNECTION_STRING: >-
+        Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+      ConnectionStrings__AverioDatabase: >-
+        Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+
+      - name: Restore backend
+        run: dotnet restore Averio.slnx
+
+      - name: Build backend for collaboration flows
+        run: dotnet build Averio.slnx --configuration Release --no-restore
+
+      - name: Install frontend dependencies
+        working-directory: apps/averio-web
+        run: npm ci
+
+      - name: Build frontend for collaboration flows
+        working-directory: apps/averio-web
+        run: npm run build
+
       - name: Verify information popover browser flows
+        timeout-minutes: 5
         working-directory: apps/averio-web
         run: |
           node tests/info-popover.browser.mjs
           node tests/helper-pages.browser.mjs
 
       - name: Verify XLSX import browser flows
+        timeout-minutes: 10
         working-directory: apps/averio-web
         run: |
           node tests/imports.browser.mjs
@@ -138,6 +204,7 @@ jobs:
         run: node tests/receipts.browser.mjs
 
       - name: Verify Personal Money browser flows
+        timeout-minutes: 15
         working-directory: apps/averio-web
         run: |
           node tests/personal-money.browser.mjs
@@ -165,6 +232,7 @@ jobs:
           retention-days: 7
 
       - name: Verify collaboration in separate browser sessions
+        timeout-minutes: 20
         working-directory: apps/averio-web
         run: npm run test:collaboration
 
@@ -177,11 +245,75 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Upload landing and contact screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-contact-screenshots
+          path: test-results/landing-review
+          if-no-files-found: ignore
+          retention-days: 7
+
+  generated_client:
+    name: Generated OpenAPI client
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      ConnectionStrings__AverioDatabase: >-
+        Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5180
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Restore backend
+        run: dotnet restore Averio.slnx
+
+      - name: Build backend
+        run: dotnet build Averio.slnx --configuration Release --no-restore
+
+      - name: Install frontend dependencies
+        working-directory: apps/averio-web
+        run: npm ci
+
       - name: Verify generated OpenAPI client
         working-directory: apps/averio-web
-        env:
-          ASPNETCORE_ENVIRONMENT: Development
-          ASPNETCORE_URLS: http://localhost:5180
         run: |
           set -euo pipefail
 
@@ -223,12 +355,3 @@ jobs:
             echo "Generated API client is out of date."
             exit 1
           fi
-
-
-      - name: Upload landing and contact screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: landing-contact-screenshots
-          path: test-results/landing-review
-
