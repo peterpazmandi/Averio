@@ -232,7 +232,11 @@ var app = builder.Build();
  * This must execute before authentication, antiforgery,
  * and other HTTPS-sensitive middleware.
  */
-if (app.Environment.IsProduction())
+var isProductionLike =
+    app.Environment.IsProduction()
+    || app.Environment.IsEnvironment("Integration");
+
+if (isProductionLike)
 {
     var proxyIpValue = app.Configuration["ReverseProxy:KnownProxyIp"];
 
@@ -240,7 +244,8 @@ if (app.Environment.IsProduction())
         || !IPAddress.TryParse(proxyIpValue, out var proxyIp))
     {
         throw new InvalidOperationException(
-            "Production requires a valid ReverseProxy:KnownProxyIp.");
+            $"{app.Environment.EnvironmentName} requires a valid " +
+            "ReverseProxy:KnownProxyIp.");
     }
 
     var forwardedHeadersOptions = new ForwardedHeadersOptions
