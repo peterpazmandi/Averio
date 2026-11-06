@@ -357,7 +357,12 @@
   <data name="Error_ReceiptCurrency" xml:space="preserve"><value>Az ellenőrzött nyugtán szereplő pénznemnek egyeznie kell a kiválasztott számla pénznemével.</value></data>
   <data name="Error_ReceiptCategoryRuleInvalid" xml:space="preserve"><value>Ellenőrizd a háztartási szabályokhoz kiválasztott kategóriákat. Érvényes tételt és aktív kiadási kategóriát válassz.</value></data>
   <data name="Error_ReceiptMonthlyLimit" xml:space="preserve"><value>Elfogyott a háztartás havi nyugtaszkennelési kerete. A következő UTC szerinti hónap elején újraindul. A meglévő nyugtákat továbbra is eléred.</value></data>
+<data name="Error_ImportInvalid" xml:space="preserve"><value>Nem támogatott munkafüzet. Módosítatlan magyar Money manager XLSX-exportot használj, legfeljebb 5 MB mérettel és 10 000 sorral. Képletek, időpontok és pénznemváltások nem támogatottak.</value></data>
+<data name="Error_ImportMapping" xml:space="preserve"><value>Ellenőrizd a számlák pénznemét, a láthatóságot és a kategóriapárosításokat, majd fogadd el az egyenlegekre és átfedésekre vonatkozó figyelmeztetést.</value></data>
+<data name="Error_ImportReviewChanged" xml:space="preserve"><value>Az import ellenőrzése megváltozott. Frissítsd, majd erősítsd meg újra a választásaidat.</value></data>
+<data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Az időszak túl sok tételt tartalmaz az ellenőrzéshez. Exportálj rövidebb időszakot.</value></data>
 </root>
+
 
 
 

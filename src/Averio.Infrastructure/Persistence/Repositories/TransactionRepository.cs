@@ -55,6 +55,9 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     Account = account
                 });
 
+        if (query.ImportedOnly)
+            filtered = filtered.Where(item => item.Transaction.ImportBatchId != null);
+
         if (!query.IncludeArchived)
             filtered = filtered.Where(item => !item.Transaction.IsArchived);
 
@@ -131,7 +134,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
                         owner.HouseholdMemberId == householdMemberId),
-                item.Transaction.IsArchived))
+                item.Transaction.IsArchived, item.Transaction.ImportBatchId != null,
+                item.Transaction.CreatedByHouseholdMemberId == householdMemberId ? item.Transaction.ImportBatchId : null))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > query.PageSize;
@@ -182,7 +186,8 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 item.Account.Scope == AccountScope.Household
                     || item.Account.Owners.Any(owner =>
                         owner.HouseholdMemberId == householdMemberId),
-                item.Transaction.IsArchived))
+                item.Transaction.IsArchived, item.Transaction.ImportBatchId != null,
+                item.Transaction.CreatedByHouseholdMemberId == householdMemberId ? item.Transaction.ImportBatchId : null))
             .ToListAsync(cancellationToken);
 
         return await LoadDetailsAsync(rows, householdId, householdMemberId, cancellationToken);
@@ -276,7 +281,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                 assignments.GetValueOrDefault(row.Id)?.ActivityId,
                 assignments.GetValueOrDefault(row.Id)?.Name,
                 assignments.GetValueOrDefault(row.Id)?.Version ?? Guid.Empty,
-                row.IsArchived))
+                row.IsArchived, row.IsImported, row.ImportBatchId))
             .ToArray();
     }
 
@@ -296,5 +301,5 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
         bool CanModify,
-        bool IsArchived);
+        bool IsArchived, bool IsImported, Guid? ImportBatchId);
 }

@@ -40,7 +40,7 @@ public sealed record TransactionQuery(
     DateTimeOffset? CursorCreatedAt,
     Guid? CursorId,
     Guid? ActivityId = null, IReadOnlyList<Guid>? LabelIds = null,
-    bool IncludeArchived = false);
+    bool IncludeArchived = false, bool ImportedOnly = false);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,
@@ -79,4 +79,4 @@ public sealed record TransactionReadModel(
     IReadOnlyList<TransactionItemReadModel> Items,
     IReadOnlyList<TransactionLabelReadModel> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null);

@@ -1,3 +1,4 @@
+import { ImportedBadge } from '../../imports/ImportedBadge';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { recurringApi, recurringQueries } from '../../recurring/recurringQueries';
 import { Link, useRouter } from '@tanstack/react-router';
@@ -59,6 +60,7 @@ export function TransactionsPage({
 
     const [search, setSearch] = useState('');
     const [personalMoneyOnly, setPersonalMoneyOnly] = useState(false);
+    const [importedOnly, setImportedOnly] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
     const router = useRouter();
     const openedFromList = useRef<string | null>(null);
@@ -75,7 +77,7 @@ export function TransactionsPage({
     const setPeriod = (value: DatePreset) => onUrlChange({ period: value, dates: undefined,
         from: value === 'custom' ? from : undefined, to: value === 'custom' ? to : undefined });
     const [selecting, setSelecting] = useState(false);
-    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search, personalMoneyOnly]);
+    const selectionScope = JSON.stringify([accountId, kind, from, to, activityId, labelIds, search, personalMoneyOnly, importedOnly]);
     const [selection, setSelection] = useState<{ scope: string; values: Record<string, string> }>({ scope: '', values: {} });
     const selected = selection.scope === selectionScope ? selection.values : {};
     const setSelected = (value: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) =>
@@ -109,7 +111,7 @@ export function TransactionsPage({
         ? accounts.data?.find(account => account.id === accountId)?.name
         : undefined;
 
-    const filterCount = Number(showArchived) + Number(personalMoneyOnly)
+    const filterCount = Number(importedOnly) + Number(showArchived) + Number(personalMoneyOnly)
         + Number(accountId !== '')
         + Number(kind !== '')
         + Number(period !== 'this-month') + Number(activityId !== '') + labelIds.length;
@@ -123,12 +125,12 @@ export function TransactionsPage({
             kind: kind || undefined,
             search: search.trim() || undefined,
             pageSize: 40,
-            includeArchived: showArchived,
+            includeArchived: showArchived, importedOnly,
             from, to, labelIds,
         };
 
         return result;
-    }, [accountId, kind, from, to, search, activityId, labelIds, showArchived]);
+    }, [accountId, kind, from, to, search, activityId, labelIds, showArchived, importedOnly]);
 
     const transactions = useInfiniteQuery({
         enabled: !invalidRange,
@@ -175,6 +177,7 @@ export function TransactionsPage({
     });
 
     function resetFilters() {
+        setImportedOnly(false);
         setSearch('');
         setPersonalMoneyOnly(false);
         setShowArchived(false);
@@ -239,6 +242,7 @@ export function TransactionsPage({
                     <h2 id="transactions-title" aria-label={t('transactionManagement.title')}>{t('transactionManagement.title')} <InfoPopover label={t('transactionManagement.title')}>{t('transactionManagement.description')}</InfoPopover></h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+            <Link to="/app/imports" className="inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus-visible:outline-2 dark:border-slate-700 dark:bg-slate-900">{t('imports.button')}</Link>
             <Link to="/app/receipts" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus-visible:outline-2 dark:border-slate-700 dark:bg-slate-900"><ConceptIcon name="receipt" />{t('receipts.capture')}</Link>
             <Link to="/app/transfers" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white px-3 py-2 text-xs font-semibold text-[#152033] hover:bg-[#F9FAFB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] dark:hover:bg-[#111C2F]"><ConceptIcon name="transfers" />{t('transfers.title')}</Link>
                 <button
@@ -320,6 +324,8 @@ export function TransactionsPage({
                         <AverioButton variant="primary" onClick={() => setFiltersOpen(false)}>{t('transactionManagement.showResults')}</AverioButton>
                     </>}>
                     <div className="grid items-start gap-4 sm:grid-cols-2">
+                        <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={importedOnly} onChange={event => setImportedOnly(event.target.checked)} className="size-4 accent-emerald-500" />{t('importHistory.importedOnly')}</label>
+
                         <AverioField className="sm:col-span-2">{t('savedViews.period')}
                             <AverioSelect aria-label={t('savedViews.period')} value={period} onChange={event => setPeriod(event.target.value as DatePreset)}>
                                 {datePresets.map(value => <option key={value} value={value}>{t('savedViews.' + value)}</option>)}
@@ -509,17 +515,14 @@ export function TransactionsPage({
                                             : 'expense'
                                     }`
                                 }>
-                                    <button
-                                        type="button"
-                                        className={
+                                    <div data-transaction-id={transaction.id} className={
                                             `av-tx-bubble ${
                                                 transaction.status === 'Voided'
                                                     ? 'voided'
                                                     : ''
                                             }`
-                                        }
-                                        
-                                        title={
+                                        } >
+                                    <button type="button" className="block w-full cursor-pointer text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-500" title={
                                             transaction.canModify && transaction.status !== 'Voided'
                                                 ? t('transactionManagement.editHint')
                                                 : t('transactionLinks.details')
@@ -602,6 +605,8 @@ export function TransactionsPage({
                                             </span>
                                         </span>
                                     </button>
+                                    {transaction.isImported && <ImportedBadge batchId={transaction.importBatchId} />}
+                                    </div>
 
                                     <span
                                         className="av-timeline-dot"
@@ -661,3 +666,4 @@ export function TransactionsPage({
         </section>
     );
 }
+

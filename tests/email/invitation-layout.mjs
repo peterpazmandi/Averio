@@ -104,15 +104,20 @@ try {
                 const file = path.join(directory, name + '.html');
                 fs.writeFileSync(file, html);
                 fixtures.set('/' + name + '.html', html);
-                const { stdout: output } = await runChrome(chrome, [
-                    '--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
-                    '--disable-background-networking', '--no-first-run', '--no-default-browser-check',
-                    '--user-data-dir=' + path.join(directory, 'chrome-profile'),
-                    '--dump-dom', '--virtual-time-budget=1000', '--window-size=' + width + ',1600',
-                    new URL('/' + name + '.html', logoFixtureUrl).href,
-                ], { encoding: 'utf8', timeout: 30000, maxBuffer: 4 * 1024 * 1024 });
-                const match = output.match(/<pre\b[^>]*id="averio-email-layout-result"[^>]*>([\s\S]*?)<\/pre>/);
-                assert.ok(match, name + ': browser must execute the measurement');
+                let output = '';
+                let match;
+                for (let attempt = 0; attempt < 2 && !match; attempt++) {
+                    const result = await runChrome(chrome, [
+                        '--headless', '--no-sandbox', '--no-proxy-server', '--disable-gpu', '--disable-dev-shm-usage',
+                        '--disable-background-networking', '--no-first-run', '--no-default-browser-check',
+                        '--user-data-dir=' + path.join(directory, 'chrome-profile-' + attempt),
+                        '--dump-dom', '--virtual-time-budget=1000', '--window-size=' + width + ',1600',
+                        new URL('/' + name + '.html', logoFixtureUrl).href,
+                    ], { encoding: 'utf8', timeout: 30000, maxBuffer: 4 * 1024 * 1024 });
+                    output = result.stdout;
+                    match = output.match(/<pre\b[^>]*id="averio-email-layout-result"[^>]*>([\s\S]*?)<\/pre>/);
+                }
+                assert.ok(match, name + ': browser must execute the measurement; output: ' + output.slice(0, 1000));
                 const result = JSON.parse(match[1].replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>'));
                 assert.ok(result.logo.complete, name + ': logo request has completed');
                 if (mode === 'images-blocked') assert.equal(result.logo.width, 0, name + ': blocked image keeps the readable wordmark');

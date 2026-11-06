@@ -641,6 +641,63 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Imports.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("member_id");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<string>("RecordLinks")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("record_links");
+
+                    b.Property<string>("SourceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source_name");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("summary");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "MemberId", "Fingerprint")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "MemberId", "CompletedAt", "Id");
+
+                    b.ToTable("import_batches", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Labels.Label", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1474,6 +1531,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
 
+                    b.Property<Guid?>("ImportBatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("import_batch_id");
+
                     b.Property<bool>("IsArchived")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1527,6 +1588,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasName("ak_transactions_household_id_id");
 
                     b.HasIndex("HouseholdId", "CreatedByHouseholdMemberId");
+
+                    b.HasIndex("HouseholdId", "ImportBatchId");
 
                     b.HasIndex("HouseholdId", "AccountId", "OccurredOn")
                         .HasDatabaseName("ix_transactions_household_account_date");
@@ -2159,6 +2222,16 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_household_members_users_user_id");
                 });
 
+            modelBuilder.Entity("Averio.Domain.Imports.ImportBatch", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "MemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Averio.Domain.Labels.Label", b =>
                 {
                     b.HasOne("Averio.Domain.Households.Household", null)
@@ -2370,6 +2443,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_transactions_household_members_creator");
+
+                    b.HasOne("Averio.Domain.Imports.ImportBatch", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "ImportBatchId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.TransactionAggregate", b =>
