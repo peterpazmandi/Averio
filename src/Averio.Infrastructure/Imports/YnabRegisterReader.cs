@@ -85,7 +85,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
 
     private static bool LooksLikeRegister(string text, char separator)
     {
-        var first = ParseDelimited(text, separator).FirstOrDefault();
+        var firstLine = text.Split('\n', 2)[0].TrimEnd('\r');
+        var first = ParseDelimited(firstLine, separator).FirstOrDefault();
         return first is not null && first.SequenceEqual(Columns);
     }
 
@@ -127,7 +128,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
                 throw Invalid();
             if (category.Equals("Split", StringComparison.OrdinalIgnoreCase)
                 || category.StartsWith("Split (", StringComparison.OrdinalIgnoreCase)
-                || cell[4].Trim().Equals("Split", StringComparison.OrdinalIgnoreCase))
+                || cell[4].Trim().Equals("Split", StringComparison.OrdinalIgnoreCase)
+                || cell[4].Trim().StartsWith("Split (", StringComparison.OrdinalIgnoreCase))
                 throw Invalid(); // Do not double-count split-parent and split-leg rows.
             var outflow = Money(Field(8, 60), currency, numberFormat);
             var inflow = Money(Field(9, 60), currency, numberFormat);
@@ -141,7 +143,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
             var other = transfer.Success ? transfer.Groups[1].Value.Trim() : null;
             if (other is not null && (other.Length is 0 or > 100 || other == account))
                 throw Invalid();
-            var sourceCategory = group.Length > 0 ? group + " / " + category : category;
+            var sourceCategory = group.Length > 0 ? group + " / " + category
+                : category.Length > 0 ? category : Field(4, 100);
             if (sourceCategory.Length > 100) throw Invalid();
             if (other is null && sourceCategory.Length == 0)
                 sourceCategory = kind == "Income" ? "Uncategorized income" : "Uncategorized expense";
