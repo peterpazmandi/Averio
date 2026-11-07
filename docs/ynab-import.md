@@ -52,6 +52,14 @@ exact decimal values with up to four fractional digits. Dates are date-only.
   YNAB fixture before extended support is considered safe.
 - Accounts must map one-to-one, visibility and write permissions are rechecked
   on confirmation, and balance anchors are not modified.
+- YNAB rows named **Starting Balance**, **Manual Balance Adjustment** or
+  **Reconciliation Balance Adjustment** are skipped. They represent account
+  equity/opening-balance corrections rather than income or spending. Set the
+  Averio account balance anchor separately; importing these rows as ledger
+  transactions would double-count the opening balance.
+- The register identifies accounts by their exported display name. Keep source
+  account names distinct when possible; YNAB exports do not provide a stable
+  account identifier that Averio can use for mapping.
 - Re-import and cross-file duplicate handling retain the existing Averio review
   semantics. Financial write operations are transactional; safe partial undo
   works the same way as for Money Manager imports.
@@ -62,7 +70,8 @@ Files have a 5 MiB upload limit, at most 10,000 source data rows and a
 32 MiB ZIP expanded-size limit. ZIPs must contain exactly one recognizable
 transaction register. Suspicious ZIP paths, invalid UTF-8, unknown headers,
 invalid amounts, malformed CSV, incomplete transfers and ambiguous split rows
-are rejected. No private fixtures are committed.
+are rejected. A file containing only skipped balance-adjustment rows is rejected
+because it contains no ledger transactions. No private fixtures are committed.
 
 Run the transaction regression suite:
 
