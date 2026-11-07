@@ -23,6 +23,13 @@ public sealed class YnabRegisterReader : IYnabImportReader
          "Category Group", "Category", "Memo", "Outflow", "Inflow", "Cleared"];
     private static readonly Regex TransferPayee = new(
         @"^Transfer\s*:\s*(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static bool IsBalanceAdjustment(string payee)
+    {
+        var normalized = Regex.Replace(payee.Trim(), @"\s+", " ");
+        return normalized.Equals("Starting Balance", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("Manual Balance Adjustment", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("Reconciliation Balance Adjustment", StringComparison.OrdinalIgnoreCase);
+    }
     private sealed record RegisterEntry(int Line, string Account, string? OtherAccount, DateOnly Date,
         string Kind, decimal Amount, string Category, string Payee, string Note);
     private static BusinessRuleException Invalid() => new("import_invalid", "Error_ImportInvalid");
@@ -159,6 +166,14 @@ public sealed class YnabRegisterReader : IYnabImportReader
                 note = note.Length > 0 ? note + " | " + meta : meta;
                 if (note.Length > 500) throw Invalid();
             }
+
+            // YNAB opening and reconciliation rows describe an account balance/equity,
+            // not household income or spending. Averio stores the opening balance on
+            // the destination account, so importing these rows as ledger transactions
+            // would double-count the balance and distort income statistics.
+            if (IsBalanceAdjustment(payee))
+                continue;
+
             rows.Add(new(i + 1, account, other, date, kind, amount, sourceCategory, payee, note));
         }
         if (rows.Count == 0) throw Invalid();
