@@ -12,7 +12,7 @@ import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decim
 import { accountsQueries } from '../accounts/api/accountsQueries';
 import { transactionQueries } from '../transactions/api/transactionQueries';
 import { getCategoryDisplayName } from '../transactions/categoryLocalization';
-import { importsApi } from './importApi';
+import { importsApi, uploadYnabRegister } from './importApi';
 import { ImportOverlapReview, ImportReconciliation, type ReviewDecision } from './ImportTools';
 import { ImportAccountDialog } from './ImportAccountDialog';
 
@@ -33,6 +33,10 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
     const [page, setPage] = useState(0);
     const [search, setSearch] = useState('');
     const [fileError, setFileError] = useState(false);
+    const [source, setSource] = useState<'moneyManager' | 'ynab'>('moneyManager');
+    const [ynabCurrency, setYnabCurrency] = useState('EUR');
+    const [ynabDateFormat, setYnabDateFormat] = useState('MDY');
+    const [ynabNumberFormat, setYnabNumberFormat] = useState('DotDecimal');
     const [creatingSource, setCreatingSource] = useState<string>();
     const key = (kind: string, name: string) => JSON.stringify([kind, name]);
     const writable = (accounts.data ?? []).filter(a => a.status === 'Active' && !a.cutoverAtUtc &&
@@ -44,7 +48,9 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
         return values.size === 1 ? [...values][0] : undefined;
     };
     const upload = useMutation({
-        mutationFn: (file: File) => importsApi.apiV1HouseholdsHouseholdIdImportsPost({ householdId, file }),
+        mutationFn: (file: File) => source === 'ynab'
+            ? uploadYnabRegister(householdId, file, ynabCurrency, ynabDateFormat, ynabNumberFormat)
+            : importsApi.apiV1HouseholdsHouseholdIdImportsPost({ householdId, file }),
         onSuccess: data => {
             setPreview(data); setPage(0); setAck(false); setStep(1); setSearch('');
             setMappings(Object.fromEntries(data.accounts.flatMap(source => {
@@ -103,10 +109,56 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 {['upload', 'accounts', 'categories', 'review'].map((s, i) => <li key={s} aria-current={step === i ? 'step' : undefined}
                     className={step === i ? 'font-bold text-primary-700 dark:text-primary-300' : 'text-slate-500 dark:text-slate-400'}>{i + 1}. {t('imports.' + s)}</li>)}
             </ol>
-            {step === 0 && <AverioCard><AverioField>{t('imports.file')}<AverioInput type="file" accept=".xlsx" disabled={!loaded || busy}
-                onChange={e => { const f = e.target.files?.[0]; setFileError(false); upload.reset(); confirm.reset();
-                    if (!f) return; if (!f.name.toLowerCase().endsWith('.xlsx') || f.size > 5 * 1024 * 1024) { setFileError(true); return; } upload.mutate(f); }} /></AverioField>
-                <p className="mt-3 text-sm">{t('imports.fileHelp')}</p>{fileError && <p role="alert" className="text-red-600">{t('imports.fileError')}</p>}</AverioCard>}
+            {step === 0 && <AverioCard>
+                <div className="grid gap-4">
+                    <AverioField>{t('imports.source')}
+                        <AverioSelect value={source} disabled={busy} onChange={e => {
+                            setSource(e.target.value as 'moneyManager' | 'ynab'); setFileError(false); upload.reset();
+                        }}>
+                            <option value="moneyManager">{t('imports.sourceMoneyManager')}</option>
+                            <option value="ynab">{t('imports.sourceYnab')}</option>
+                        </AverioSelect>
+                    </AverioField>
+                    {source === 'ynab' && <>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{t('imports.ynabSettingsHelp')}</p>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <AverioField>{t('imports.ynabCurrency')}
+                                <AverioSelect value={ynabCurrency} disabled={busy} onChange={e => setYnabCurrency(e.target.value)}>
+                                    <option value="EUR">EUR</option><option value="HUF">HUF</option><option value="USD">USD</option>
+                                </AverioSelect>
+                            </AverioField>
+                            <AverioField>{t('imports.ynabDateFormat')}
+                                <AverioSelect value={ynabDateFormat} disabled={busy} onChange={e => setYnabDateFormat(e.target.value)}>
+                                    <option value="MDY">{t('imports.ynabDateMdy')}</option>
+                                    <option value="DMY">{t('imports.ynabDateDmy')}</option>
+                                    <option value="YMD">{t('imports.ynabDateYmd')}</option>
+                                </AverioSelect>
+                            </AverioField>
+                            <AverioField>{t('imports.ynabDecimal')}
+                                <AverioSelect value={ynabNumberFormat} disabled={busy} onChange={e => setYnabNumberFormat(e.target.value)}>
+                                    <option value="DotDecimal">{t('imports.ynabDotDecimal')}</option>
+                                    <option value="CommaDecimal">{t('imports.ynabCommaDecimal')}</option>
+                                </AverioSelect>
+                            </AverioField>
+                        </div>
+                    </>}
+                    <AverioField>{t(source === 'ynab' ? 'imports.ynabFile' : 'imports.file')}
+                        <AverioInput key={source} type="file" accept={source === 'ynab' ? '.csv,.tsv,.zip' : '.xlsx'}
+                            disabled={!loaded || busy} onChange={e => {
+                                const file = e.target.files?.[0]; setFileError(false); upload.reset(); confirm.reset();
+                                if (!file) return;
+                                const ext = file.name.toLowerCase().split('.').pop();
+                                if (file.size > 5 * 1024 * 1024 || !ext ||
+                                    !(source === 'ynab' ? ['csv', 'tsv', 'zip'].includes(ext) : ext === 'xlsx')) {
+                                    setFileError(true); return;
+                                }
+                                upload.mutate(file);
+                            }} />
+                    </AverioField>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{t(source === 'ynab' ? 'imports.ynabFileHelp' : 'imports.fileHelp')}</p>
+                    {fileError && <p role="alert" className="text-red-600">{t(source === 'ynab' ? 'imports.ynabFileError' : 'imports.fileError')}</p>}
+                </div>
+            </AverioCard>}
             {preview && step === 1 && <AverioCard><h3 className="mb-3 font-bold">{t('imports.accounts')}</h3>
                 <p className="mb-4 text-sm">{t('imports.accountsHelp')}</p><p className="mb-3 text-sm">{t('importTools.remembered')}</p>
                 <AverioButton onClick={() => void accounts.refetch()}>{t('imports.refresh')}</AverioButton>
@@ -138,7 +190,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                     <div className="my-4 grid gap-3 sm:grid-cols-3">{includedTotals.map(total => <div key={total.kind + total.currency}>
                         <p className="text-sm">{t('imports.' + total.kind)} · {total.count}</p><strong>{money(total.amount, total.currency)}</strong></div>)}</div>
                     <p className="text-sm">{t('imports.repeated', { count: preview.repeatedRows })}</p>
-                    <p className="mt-3 text-sm">{t('imports.tagsHelp')}</p>
+                    <p className="mt-3 text-sm">{t(source === 'ynab' ? 'imports.ynabMerchantHelp' : 'imports.tagsHelp')}</p>
                     <p className="mt-3 text-sm">{t('imports.warning')}</p>
                     <label className="mt-4 flex items-start gap-3 text-sm font-semibold"><input className="mt-1 size-5 shrink-0 accent-emerald-500" type="checkbox" checked={ack} disabled={busy} onChange={e => setAck(e.target.checked)} />{t('imports.ack')}</label>
                 </AverioCard>
