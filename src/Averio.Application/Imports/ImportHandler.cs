@@ -17,14 +17,27 @@ namespace Averio.Application.Imports;
 
 public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepository households,
     IAccountRepository accounts, ICategoryRepository categories, ICategoryManagementRepository categoryManagement,
-    IIconCatalogRepository icons, IImportRepository imports, IXlsxImportReader reader,
+    IIconCatalogRepository icons, IImportRepository imports, IXlsxImportReader reader, IYnabImportReader ynabReader,
     ITransactionRepository transactions, Averio.Application.Transfers.ITransferRepository transfers,
     IUnitOfWork unitOfWork, TimeProvider clock, IAccountBalanceReader balances)
 {
     public async Task<ImportPreview> PreviewAsync(Guid householdId, Stream file, CancellationToken ct, string? sourceName = null)
     {
         await MemberAsync(householdId, ct);
-        var rows = reader.Read(file);
+        return await PreviewRowsAsync(householdId, reader.Read(file), ct, sourceName);
+    }
+
+    public async Task<ImportPreview> PreviewYnabAsync(Guid householdId, Stream file, string fileName,
+        string currency, string dateFormat, string numberFormat, CancellationToken ct)
+    {
+        await MemberAsync(householdId, ct);
+        return await PreviewRowsAsync(householdId,
+            ynabReader.Read(file, fileName, currency, dateFormat, numberFormat), ct, fileName);
+    }
+
+    private async Task<ImportPreview> PreviewRowsAsync(Guid householdId,
+        IReadOnlyList<ImportRow> rows, CancellationToken ct, string? sourceName)
+    {
         var canonical = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 })).Order(StringComparer.Ordinal);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', canonical))));
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
