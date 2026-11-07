@@ -209,21 +209,21 @@ export interface ApiV1HouseholdsHouseholdIdImportsYnabPostRequest {
      */
     householdId: string;
     /**
-     *
-     */
-    file?: Blob;
-    /**
-     *
+     * 
      */
     currency?: string;
     /**
-     *
+     * 
      */
     dateFormat?: string;
     /**
-     *
+     * 
      */
     numberFormat?: string;
+    /**
+     * 
+     */
+    file?: Blob;
 }
 
 /**
@@ -791,7 +791,6 @@ export class ImportsApi extends runtime.BaseAPI {
         const response = await this.apiV1HouseholdsHouseholdIdImportsPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
-
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdImportsYnabPost without sending the request
