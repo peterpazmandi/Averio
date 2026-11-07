@@ -22,10 +22,11 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
         return Ok(await handler.PreviewAsync(householdId, stream, ct, file.FileName));
     }
     [HttpPost("ynab")]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(YnabRegisterReader.MaxBytes + 65536)]
     [RequestFormLimits(MultipartBodyLengthLimit = YnabRegisterReader.MaxBytes + 65536)]
-    public async Task<ActionResult<ImportPreview>> PreviewYnab(Guid householdId, [FromForm] IFormFile file,
-        [FromForm] string currency, [FromForm] string dateFormat, [FromForm] string numberFormat,
+    public async Task<ActionResult<ImportPreview>> PreviewYnab(Guid householdId, IFormFile file,
+        [FromQuery] string currency, [FromQuery] string dateFormat, [FromQuery] string numberFormat,
         CancellationToken ct)
     {
         if (file.Length is <= 0 or > YnabRegisterReader.MaxBytes
