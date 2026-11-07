@@ -12,7 +12,7 @@ import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decim
 import { accountsQueries } from '../accounts/api/accountsQueries';
 import { transactionQueries } from '../transactions/api/transactionQueries';
 import { getCategoryDisplayName } from '../transactions/categoryLocalization';
-import { importsApi, uploadYnabRegister } from './importApi';
+import { importsApi } from './importApi';
 import { ImportOverlapReview, ImportReconciliation, type ReviewDecision } from './ImportTools';
 import { ImportAccountDialog } from './ImportAccountDialog';
 
@@ -49,7 +49,8 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
     };
     const upload = useMutation({
         mutationFn: (file: File) => source === 'ynab'
-            ? uploadYnabRegister(householdId, file, ynabCurrency, ynabDateFormat, ynabNumberFormat)
+            ? importsApi.apiV1HouseholdsHouseholdIdImportsYnabPost({ householdId, file, currency: ynabCurrency,
+                dateFormat: ynabDateFormat, numberFormat: ynabNumberFormat })
             : importsApi.apiV1HouseholdsHouseholdIdImportsPost({ householdId, file }),
         onSuccess: data => {
             setPreview(data); setPage(0); setAck(false); setStep(1); setSearch('');
