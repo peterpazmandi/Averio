@@ -117,6 +117,55 @@ try {
         assert.doesNotMatch(await page.locator('body').innerText(), /imports\.[a-zA-Z]/);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         await page.close();
+
+        if (language === 'en' && width === 1440) {
+            const ynabPage = await browser.newPage({ viewport: { width, height: 900 } });
+            ynabPage.setDefaultTimeout(15000);
+            const ynabErrors = [];
+            ynabPage.on('pageerror', e => ynabErrors.push(e.message));
+            const ynabPreview = {
+                id: 'ynab-batch', status: 'Draft', defaults: { accounts: [], categories: [] },
+                count: 1, from: '2026-09-14', to: '2026-09-14', accounts: ['Checking'],
+                categories: [{ kind: 'Expense', name: 'Food / Groceries' }],
+                totals: [{ kind: 'Expense', currency: 'EUR', amount: '12.50', count: 1 }],
+                repeatedRows: 0,
+                rows: [{ sheet: 'YNAB Register', rowNumber: 2, kind: 'Expense', date: '2026-09-14',
+                    account: 'Checking', destination: null, category: 'Food / Groceries', amount: '12.50',
+                    currency: 'EUR', receivedAmount: null, receivedCurrency: null, tags: 'Tesco',
+                    note: 'YNAB status: Cleared' }]
+            };
+            await ynabPage.route('**/api/v1/**', async route => {
+                const req = route.request(), pathname = new URL(req.url()).pathname;
+                const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+                if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
+                if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
+                if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
+                if (pathname.endsWith('/accounts')) return json([
+                    { id: 'checking', name: 'Checking', currency: 'EUR', scope: 'Household', visibility: 'Household',
+                        status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' }
+                ]);
+                if (pathname.endsWith('/categories')) return json([]);
+                if (pathname.endsWith('/imports/ynab')) {
+                    const requestUrl = new URL(req.url());
+                    assert.equal(requestUrl.searchParams.get('currency'), 'EUR');
+                    assert.equal(requestUrl.searchParams.get('dateFormat'), 'MDY');
+                    assert.equal(requestUrl.searchParams.get('numberFormat'), 'DotDecimal');
+                    assert.match(req.postDataBuffer().toString(), /register\.csv/);
+                    return json(ynabPreview);
+                }
+                throw new Error(`Unexpected YNAB request ${pathname}`);
+            });
+            await ynabPage.goto(url);
+            await ynabPage.locator('select').first().selectOption('ynab');
+            await ynabPage.locator('input[type=file]').setInputFiles({
+                name: 'register.csv', mimeType: 'text/csv', buffer: Buffer.from('synthetic YNAB register')
+            });
+            await ynabPage.getByText(copy.ynabFileHelp, { exact: true }).waitFor({ state: 'hidden' });
+            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor();
+            assert.equal(await ynabPage.getByText(copy.ynabFile, { exact: true }).count(), 0);
+            assert.deepEqual(ynabErrors, []);
+            await ynabPage.close();
+        }
     }
-    console.log('PASS inline account creation, cancellation, validation, mapping, import review and retry browser flows');
+    console.log('PASS inline account creation, cancellation, validation, mapping, import review, retry and YNAB source flows');
 } finally { await browser?.close(); server.kill(); }
