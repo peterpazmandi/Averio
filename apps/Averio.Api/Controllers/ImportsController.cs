@@ -21,6 +21,25 @@ public sealed class ImportsController(ImportHandler handler) : ControllerBase
         await file.CopyToAsync(stream, ct); stream.Position = 0;
         return Ok(await handler.PreviewAsync(householdId, stream, ct, file.FileName));
     }
+    [HttpPost("ynab")]
+    [RequestSizeLimit(YnabRegisterReader.MaxBytes + 65536)]
+    [RequestFormLimits(MultipartBodyLengthLimit = YnabRegisterReader.MaxBytes + 65536)]
+    public async Task<ActionResult<ImportPreview>> PreviewYnab(Guid householdId, [FromForm] IFormFile file,
+        [FromForm] string currency, [FromForm] string dateFormat, [FromForm] string numberFormat,
+        CancellationToken ct)
+    {
+        if (file.Length is <= 0 or > YnabRegisterReader.MaxBytes
+            || !(file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)
+                || file.FileName.EndsWith(".tsv", StringComparison.OrdinalIgnoreCase)
+                || file.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)))
+            throw new BusinessRuleException("import_invalid", "Error_ImportInvalid");
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream, ct);
+        stream.Position = 0;
+        return Ok(await handler.PreviewYnabAsync(householdId, stream, file.FileName,
+            currency, dateFormat, numberFormat, ct));
+    }
+
     [HttpPost("{id:guid}/review")]
     public async Task<ActionResult<ImportReview>> Review(Guid householdId, Guid id, ImportReviewRequest request, CancellationToken ct)
         => Ok(await handler.ReviewAsync(householdId, id, request, ct));
