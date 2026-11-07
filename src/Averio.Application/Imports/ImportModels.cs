@@ -18,6 +18,10 @@ public sealed record ImportPreview(Guid Id, string Status, int Count, DateOnly F
     IReadOnlyList<ImportTotal> Totals, int RepeatedRows, IReadOnlyList<ImportPreviewRow> Rows, ImportMappingDefaults? Defaults = null, ImportResult? Completion = null);
 public sealed record ImportResult(Guid Id, string Status, int Transactions, int Transfers, int Accounts = 0, int Skipped = 0);
 public interface IXlsxImportReader { IReadOnlyList<ImportRow> Read(Stream stream); }
+public interface IYnabImportReader
+{
+    IReadOnlyList<ImportRow> Read(Stream stream, string fileName, string currency, string dateFormat, string numberFormat);
+}
 public interface IImportRepository
 {
     Task<IReadOnlyList<ImportHistoryStored>> ListCompletedAsync(Guid householdId, Guid memberId, int page, CancellationToken ct);
