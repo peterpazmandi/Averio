@@ -203,6 +203,30 @@ export interface ApiV1HouseholdsHouseholdIdImportsPostRequest {
     file?: Blob;
 }
 
+
+export interface ApiV1HouseholdsHouseholdIdImportsYnabPostRequest {
+    /**
+     *
+     */
+    householdId: string;
+    /**
+     *
+     */
+    file?: Blob;
+    /**
+     *
+     */
+    currency?: string;
+    /**
+     *
+     */
+    dateFormat?: string;
+    /**
+     *
+     */
+    numberFormat?: string;
+}
+
 /**
  * 
  */
@@ -766,6 +790,83 @@ export class ImportsApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdImportsPost(requestParameters: ApiV1HouseholdsHouseholdIdImportsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportPreview> {
         const response = await this.apiV1HouseholdsHouseholdIdImportsPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdImportsYnabPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdImportsYnabPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdImportsYnabPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdImportsYnabPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+        if (requestParameters['currency'] != null) {
+            formParams.append('currency', requestParameters['currency'] as any);
+        }
+
+        if (requestParameters['dateFormat'] != null) {
+            formParams.append('dateFormat', requestParameters['dateFormat'] as any);
+        }
+
+        if (requestParameters['numberFormat'] != null) {
+            formParams.append('numberFormat', requestParameters['numberFormat'] as any);
+        }
+
+
+        let urlPath = `/api/v1/households/{householdId}/imports/ynab`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsYnabPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdImportsYnabPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportPreview>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdImportsYnabPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImportPreviewFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdImportsYnabPost(requestParameters: ApiV1HouseholdsHouseholdIdImportsYnabPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportPreview> {
+        const response = await this.apiV1HouseholdsHouseholdIdImportsYnabPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
