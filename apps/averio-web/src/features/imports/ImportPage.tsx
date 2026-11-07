@@ -53,7 +53,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 dateFormat: ynabDateFormat, numberFormat: ynabNumberFormat })
             : importsApi.apiV1HouseholdsHouseholdIdImportsPost({ householdId, file }),
         onSuccess: data => {
-            setPreview(data); setPage(0); setAck(false); setStep(1); setSearch('');
+            setPreview(data); setPage(0); setAck(false); setStep(1); setSearch(''); setReview(null);
             setMappings(Object.fromEntries(data.accounts.flatMap(source => {
                 const remembered = data.defaults?.accounts.find(m => m.source === source);
                 const saved = writable.find(a => a.id === remembered?.accountId && a.currency === currencyFor(source, data));
@@ -90,6 +90,16 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
         const m = mappings[source];
         return m && writable.some(a => a.id === m.accountId && a.currency === currencyFor(source));
     }) && new Set(Object.values(mappings).map(m => m.accountId)).size === preview?.accounts.length;
+    const clearImportDraft = () => {
+        setPreview(undefined);
+        setMappings({});
+        setCategoryMap({});
+        setReview(null);
+        setAck(false);
+        setPage(0);
+        setSearch('');
+        confirm.reset();
+    };
     const failure = upload.error ?? confirm.error;
     const completed = preview?.status === 'Completed';
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? 'en');
@@ -114,7 +124,12 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 <div className="grid gap-4">
                     <AverioField>{t('imports.source')}
                         <AverioSelect value={source} disabled={busy} onChange={e => {
-                            setSource(e.target.value as 'moneyManager' | 'ynab'); setFileError(false); upload.reset();
+                            const nextSource = e.target.value as 'moneyManager' | 'ynab';
+                            if (nextSource === source) return;
+                            setSource(nextSource);
+                            setFileError(false);
+                            upload.reset();
+                            clearImportDraft();
                         }}>
                             <option value="moneyManager">{t('imports.sourceMoneyManager')}</option>
                             <option value="ynab">{t('imports.sourceYnab')}</option>
