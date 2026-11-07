@@ -24,6 +24,7 @@ internal static class YnabImportChecks
     public static void Run()
     {
         var data = string.Join("\r\n", new[] {
+            "Checking,,09/01/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,1000.00,0,Cleared",
             "Checking,,09/14/2026,Tesco,Food/Groceries,Food,Groceries,weekly shop,84.20,0,Cleared",
             "Checking,,09/15/2026,Salary,Income/Salary,Income,Salary,,0,1500.00,Reconciled",
             "Checking,,09/14/2026,Tesco,Food/Groceries,Food,Groceries,weekly shop,84.20,0,Cleared",
@@ -70,6 +71,7 @@ internal static class YnabImportChecks
         }
 
         Reject("Checking,,09/16/2026,Transfer : Savings,,,,moving,200.00,0,Cleared\n");
+        Reject("Checking,,09/16/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,1000.00,0,Cleared\n");
         Reject("Checking,,09/16/2026,Tesco,Food/Split,Food,Split,,100.00,0,Cleared\n");
         Reject("Checking,,09/16/2026,Tesco,Split (Multiple Categories),,,,100.00,0,Cleared\\n");
         Reject("Checking,,09/16/2026,Tesco,Food/Groceries,Food,Groceries,,10.00,10.00,Cleared\n");
