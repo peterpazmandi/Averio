@@ -44,7 +44,7 @@ internal static class YnabImportChecks
         }
 
         var germanHeader = Header.Replace(',', '\t');
-        var germanBody = "Giro\t\t14/09/2026\tBäckerei\tEssen/Brot\tEssen\tBrot\tFrühstück\t12,50\t0\tCleared\r\n";
+        var germanBody = "Giro\t\t14.09.2026\tBäckerei\tEssen/Brot\tEssen\tBrot\tFrühstück\t12,50€\t0\tCleared\r\n";
         using (var file = new MemoryStream(Encoding.UTF8.GetBytes(germanHeader + "\r\n" + germanBody)))
         {
             var result = new YnabRegisterReader().Read(file, "Register.tsv", "EUR", "DMY", "CommaDecimal");
