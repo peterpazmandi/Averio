@@ -203,10 +203,9 @@ export interface ApiV1HouseholdsHouseholdIdImportsPostRequest {
     file?: Blob;
 }
 
-
 export interface ApiV1HouseholdsHouseholdIdImportsYnabPostRequest {
     /**
-     *
+     * 
      */
     householdId: string;
     /**
@@ -807,6 +806,18 @@ export class ImportsApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['currency'] != null) {
+            queryParameters['currency'] = requestParameters['currency'];
+        }
+
+        if (requestParameters['dateFormat'] != null) {
+            queryParameters['dateFormat'] = requestParameters['dateFormat'];
+        }
+
+        if (requestParameters['numberFormat'] != null) {
+            queryParameters['numberFormat'] = requestParameters['numberFormat'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         const consumes: runtime.Consume[] = [
@@ -827,18 +838,6 @@ export class ImportsApi extends runtime.BaseAPI {
 
         if (requestParameters['file'] != null) {
             formParams.append('file', requestParameters['file'] as any);
-        }
-
-        if (requestParameters['currency'] != null) {
-            formParams.append('currency', requestParameters['currency'] as any);
-        }
-
-        if (requestParameters['dateFormat'] != null) {
-            formParams.append('dateFormat', requestParameters['dateFormat'] as any);
-        }
-
-        if (requestParameters['numberFormat'] != null) {
-            formParams.append('numberFormat', requestParameters['numberFormat'] as any);
         }
 
 
