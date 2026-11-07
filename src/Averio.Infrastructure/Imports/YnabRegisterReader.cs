@@ -103,8 +103,10 @@ public sealed class YnabRegisterReader : IYnabImportReader
         if (table.Count < 2 || !table[0].SequenceEqual(Columns) || table.Count - 1 > MaxRows)
             throw Invalid();
         var rows = new List<RegisterEntry>(table.Count - 1);
-        var format = dateFormat switch {
-            "MDY" => "M/d/yyyy", "DMY" => "d/M/yyyy", _ => "yyyy-M-d"
+        string[] formats = dateFormat switch {
+            "MDY" => ["M/d/yyyy", "M-d-yyyy"],
+            "DMY" => ["d/M/yyyy", "d.M.yyyy", "d-M-yyyy"],
+            _ => ["yyyy-M-d", "yyyy/M/d", "yyyy.M.d"]
         };
         for (var i = 1; i < table.Count; i++)
         {
@@ -123,7 +125,7 @@ public sealed class YnabRegisterReader : IYnabImportReader
             var note = Field(7, 500);
             var flag = Field(1, 40);
             var cleared = Field(10, 40);
-            if (account.Length == 0 || !DateOnly.TryParseExact(Field(2, 30), format,
+            if (account.Length == 0 || !DateOnly.TryParseExact(Field(2, 30), formats,
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 throw Invalid();
             if (category.Equals("Split", StringComparison.OrdinalIgnoreCase)
