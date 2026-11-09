@@ -4,11 +4,13 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '../features/authentication/context/AuthProvider';
 import { queryClient } from '../shared/query/queryClient';
 import { ThemeProvider } from '../shared/theme/ThemeProvider';
+import { IntegrationEnvironmentBanner } from '../shared/components/IntegrationEnvironmentBanner';
 
 export function AppProviders({ children }: PropsWithChildren) {
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
+                <IntegrationEnvironmentBanner />
                 <AuthProvider>
                     {children}
                 </AuthProvider>
