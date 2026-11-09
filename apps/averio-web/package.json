@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:integration": "tsc -b && vite build --mode integration && node scripts/write-integration-headers.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "api:generate": "openapi-generator-cli generate -i http://localhost:5180/openapi/v1.json -g typescript-fetch -o src/shared/api/generated --additional-properties=supportsES6=true,useSingleRequestParameter=true,dateLibrary=string --global-property=apiDocs=false,modelDocs=false,apiTests=false,modelTests=false",
