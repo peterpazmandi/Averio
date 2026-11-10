@@ -23,18 +23,20 @@ public sealed class YnabRegisterReader : IYnabImportReader
          "Category Group", "Category", "Memo", "Outflow", "Inflow", "Cleared"];
     private static readonly Regex TransferPayee = new(
         @"^Transfer\s*:\s*(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static bool IsBalanceAdjustment(string payee)
+    private static bool IsOpeningBalance(string payee)
     {
         var normalized = Regex.Replace(payee.Trim(), @"\s+", " ");
-        return normalized.Equals("Starting Balance", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("Manual Balance Adjustment", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("Reconciliation Balance Adjustment", StringComparison.OrdinalIgnoreCase);
+        return normalized.Equals("Starting Balance", StringComparison.OrdinalIgnoreCase);
     }
+    private static bool IsBalanceAdjustment(string payee)
+        => IsOpeningBalance(payee)
+            || Regex.Replace(payee.Trim(), @"\s+", " ").Equals("Manual Balance Adjustment", StringComparison.OrdinalIgnoreCase)
+            || Regex.Replace(payee.Trim(), @"\s+", " ").Equals("Reconciliation Balance Adjustment", StringComparison.OrdinalIgnoreCase);
     private sealed record RegisterEntry(int Line, string Account, string? OtherAccount, DateOnly Date,
-        string Kind, decimal Amount, string Category, string Payee, string Note);
+        string Kind, decimal Amount, decimal SignedAmount, string Category, string Payee, string Note);
     private static BusinessRuleException Invalid() => new("import_invalid", "Error_ImportInvalid");
 
-    public IReadOnlyList<ImportRow> Read(Stream stream, string fileName, string currency,
+    public YnabImportReadResult Read(Stream stream, string fileName, string currency,
         string dateFormat, string numberFormat)
     {
         try
@@ -48,7 +50,9 @@ public sealed class YnabRegisterReader : IYnabImportReader
             if (ext is not (".csv" or ".tsv" or ".zip")) throw Invalid();
             var text = ext == ".zip" ? ReadArchive(stream) : ReadText(stream, MaxBytes);
             var records = Parse(text, ext == ".tsv" ? '\t' : GuessDelimiter(text), currency, dateFormat, numberFormat);
-            return Normalize(records, currency);
+            var rows = Normalize(records, currency);
+            if (rows.Count == 0) throw Invalid();
+            return new(rows, BuildSourceAccounts(records, currency));
         }
         catch (Exception e) when (e is InvalidDataException or DecoderFallbackException
             or FormatException or OverflowException or ArgumentException or IOException)
@@ -167,14 +171,7 @@ public sealed class YnabRegisterReader : IYnabImportReader
                 if (note.Length > 500) throw Invalid();
             }
 
-            // YNAB opening and reconciliation rows describe an account balance/equity,
-            // not household income or spending. Averio stores the opening balance on
-            // the destination account, so importing these rows as ledger transactions
-            // would double-count the balance and distort income statistics.
-            if (IsBalanceAdjustment(payee))
-                continue;
-
-            rows.Add(new(i + 1, account, other, date, kind, amount, sourceCategory, payee, note));
+            rows.Add(new(i + 1, account, other, date, kind, amount, signed, sourceCategory, payee, note));
         }
         if (rows.Count == 0) throw Invalid();
         return rows;
@@ -243,6 +240,22 @@ public sealed class YnabRegisterReader : IYnabImportReader
         return rows;
     }
 
+    private static IReadOnlyList<ImportSourceAccount> BuildSourceAccounts(
+        IReadOnlyList<RegisterEntry> records, string currency)
+    {
+        return records.GroupBy(r => r.Account, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var openings = group.Where(r => IsOpeningBalance(r.Payee)).ToArray();
+                if (openings.Length > 1) throw Invalid();
+                var opening = openings.SingleOrDefault();
+                return new ImportSourceAccount(group.Key, currency,
+                    opening?.SignedAmount.ToString(CultureInfo.InvariantCulture), opening?.Date);
+            })
+            .OrderBy(account => account.Source, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static IReadOnlyList<ImportRow> Normalize(IReadOnlyList<RegisterEntry> records, string currency)
     {
         var output = new List<ImportRow>();
@@ -250,6 +263,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
         for (var i = 0; i < records.Count; i++)
         {
             var r = records[i];
+            // Balance adjustment rows are account metadata, not ledger activity.
+            if (IsBalanceAdjustment(r.Payee)) continue;
             if (r.OtherAccount is null)
             {
                 output.Add(new("YNAB Register", r.Line, r.Kind, r.Date, r.Account, null,
