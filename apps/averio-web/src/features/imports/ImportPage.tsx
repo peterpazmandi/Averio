@@ -110,8 +110,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? 'en');
     return <section className="grid min-w-0 gap-5 text-[#152033] dark:text-[#F3F6FA]" aria-labelledby="import-title">
         <header className="flex flex-wrap items-center justify-between gap-3"><div>
-            <h2 id="import-title" className="text-2xl font-bold">{t('imports.title')}</h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t('imports.intro')}</p>
+            <h2 id="import-title" className="text-2xl font-bold" aria-label={t('imports.title')}>{t('imports.title')} <InfoPopover label={t('imports.title')}>{t('imports.intro')}</InfoPopover></h2>
         </div><Link to="/app/import-history" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('importHistory.title')}</Link><Link to="/app/transactions" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></header>
         {!loaded && <AverioCard><p role="status">{t(accounts.isError || owners.isError || categories.isError ? 'imports.loadError' : 'imports.loading')}</p>
             <AverioButton onClick={() => { void accounts.refetch(); void owners.refetch(); void categories.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>}
@@ -176,12 +175,11 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                                 upload.mutate(file);
                             }} />
                     </AverioField>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{t(source === 'ynab' ? 'imports.ynabFileHelp' : 'imports.fileHelp')}</p>
                     {fileError && <p role="alert" className="text-red-600">{t(source === 'ynab' ? 'imports.ynabFileError' : 'imports.fileError')}</p>}
                 </div>
             </AverioCard>}
-            {preview && step === 1 && <AverioCard><h3 className="mb-3 font-bold">{t('imports.accounts')}</h3>
-                <p className="mb-4 text-sm">{t('imports.accountsHelp')}</p><p className="mb-3 text-sm">{t('importTools.remembered')}</p>
+            {preview && step === 1 && <AverioCard><h3 className="mb-3 font-bold" aria-label={t('imports.accounts')}>{t('imports.accounts')} <InfoPopover label={t('imports.accounts')}><span className="block">{t('imports.accountsHelp')}</span><span className="mt-2 block">{t('imports.mappingHelp')}</span></InfoPopover></h3>
+                 <p className="mb-3 text-sm"><InfoPopover label={t('importTools.remembered')}>{t('importTools.remembered')}</InfoPopover></p>
                 <AverioButton onClick={() => void accounts.refetch()}>{t('imports.refresh')}</AverioButton>
                 <div className="mt-4 grid gap-4">{preview.accounts.map(source => {
                     const m = mappings[source]; const a = writable.find(a => a.id === m?.accountId);
@@ -215,9 +213,6 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 <AverioCard><h3 className="font-bold" aria-label={t('imports.ready', { count: includedRows.length })}>{t('imports.ready', { count: includedRows.length })} <InfoPopover label={t('imports.ready', { count: includedRows.length })}><span className="block">{t('imports.repeated', { count: preview.repeatedRows })}</span><span className="mt-2 block">{t(source === 'ynab' ? 'imports.ynabMerchantHelp' : 'imports.tagsHelp')}</span><span className="mt-2 block">{t('imports.warning')}</span></InfoPopover></h3><p>{preview.from} – {preview.to}</p>
                     <div className="my-4 grid gap-3 sm:grid-cols-3">{includedTotals.map(total => <div key={total.kind + total.currency}>
                         <p className="text-sm">{t('imports.' + total.kind)} · {total.count}</p><strong>{money(total.amount, total.currency)}</strong></div>)}</div>
-                    <p className="text-sm">{t('imports.repeated', { count: preview.repeatedRows })}</p>
-                    <p className="mt-3 text-sm">{t(source === 'ynab' ? 'imports.ynabMerchantHelp' : 'imports.tagsHelp')}</p>
-                    <p className="mt-3 text-sm">{t('imports.warning')}</p>
                     <label className="mt-4 flex items-start gap-3 text-sm font-semibold"><input className="mt-1 size-5 shrink-0 accent-emerald-500" type="checkbox" checked={ack} disabled={busy} onChange={e => setAck(e.target.checked)} />{t('imports.ack')}</label>
                 </AverioCard>
                 <AverioCard><div className="max-h-[28rem] overflow-auto" tabIndex={0} role="region" aria-label={t('imports.preview')}><table className="w-full text-left text-sm"><caption className="mb-3 text-left font-bold">{t('imports.preview')}</caption>
