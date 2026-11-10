@@ -15,6 +15,7 @@ import { getCategoryDisplayName } from '../transactions/categoryLocalization';
 import { importsApi } from './importApi';
 import { ImportOverlapReview, ImportReconciliation, type ReviewDecision } from './ImportTools';
 import { ImportAccountDialog } from './ImportAccountDialog';
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 
 export function ImportPage({ userId, householdId }: { userId: string; householdId: string }) {
     const { t, i18n } = useTranslation();
@@ -140,7 +141,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                         </AverioSelect>
                     </AverioField>
                     {source === 'ynab' && <>
-                        <p className="text-sm text-slate-600 dark:text-slate-300">{t('imports.ynabSettingsHelp')}</p>
+                        <div className="flex items-center text-sm font-semibold">{t('imports.sourceYnab')} <InfoPopover label={t('imports.sourceYnab')}>{t('imports.ynabSettingsHelp')}</InfoPopover></div>
                         <div className="grid gap-4 sm:grid-cols-3">
                             <AverioField>{t('imports.ynabCurrency')}
                                 <AverioSelect value={ynabCurrency} disabled={busy} onChange={e => setYnabCurrency(e.target.value)}>
@@ -162,7 +163,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                             </AverioField>
                         </div>
                     </>}
-                    <AverioField>{t(source === 'ynab' ? 'imports.ynabFile' : 'imports.file')}
+                    <AverioField><span className="inline-flex items-center">{t(source === 'ynab' ? 'imports.ynabFile' : 'imports.file')} <InfoPopover label={t(source === 'ynab' ? 'imports.ynabFile' : 'imports.file')}>{t(source === 'ynab' ? 'imports.ynabFileHelp' : 'imports.fileHelp')}</InfoPopover></span>
                         <AverioInput key={source} type="file" accept={source === 'ynab' ? '.csv,.tsv,.zip' : '.xlsx'}
                             disabled={!loaded || busy} onChange={e => {
                                 const file = e.target.files?.[0]; setFileError(false); upload.reset(); confirm.reset();
@@ -202,7 +203,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                             aria-label={t('imports.createFor', { name: source })} onClick={() => setCreatingSource(source)}>{t('imports.createAccount')}</AverioButton>
                     </div>;
                 })}</div>{!mappingsValid && <p className="mt-3 text-sm">{t('imports.mappingHelp')}</p>}</AverioCard>}
-            {preview && step === 2 && <AverioCard><h3 className="font-bold">{t('imports.categories')}</h3><p className="my-3 text-sm">{t('imports.categoriesHelp')}</p>
+            {preview && step === 2 && <AverioCard><h3 className="font-bold" aria-label={t('imports.categories')}>{t('imports.categories')} <InfoPopover label={t('imports.categories')}>{t('imports.categoriesHelp')}</InfoPopover></h3>
                 <AverioInput type="search" aria-label={t('imports.search')} placeholder={t('imports.search')} value={search} onChange={e => setSearch(e.target.value)} />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">{preview.categories.filter(c => c.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(c =>
                     <div key={key(c.kind, c.name)} className="min-w-0"><p className="mb-1 text-sm font-semibold">{c.name} · {t('imports.' + c.kind)}</p>
@@ -211,7 +212,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                         noneLabel={t('imports.createCategory', { name: c.name })} label={t('imports.mapCategory', { name: c.name })} disabled={busy} /></div>)}</div></AverioCard>}
             {preview && step === 3 && <>
                 <ImportOverlapReview userId={userId} householdId={householdId} batchId={preview.id} mappings={reviewMappings} rows={preview.rows} onChange={onReviewChange} />
-                <AverioCard><h3 className="font-bold">{t('imports.ready', { count: includedRows.length })}</h3><p>{preview.from} – {preview.to}</p>
+                <AverioCard><h3 className="font-bold" aria-label={t('imports.ready', { count: includedRows.length })}>{t('imports.ready', { count: includedRows.length })} <InfoPopover label={t('imports.ready', { count: includedRows.length })}><span className="block">{t('imports.repeated', { count: preview.repeatedRows })}</span><span className="mt-2 block">{t(source === 'ynab' ? 'imports.ynabMerchantHelp' : 'imports.tagsHelp')}</span><span className="mt-2 block">{t('imports.warning')}</span></InfoPopover></h3><p>{preview.from} – {preview.to}</p>
                     <div className="my-4 grid gap-3 sm:grid-cols-3">{includedTotals.map(total => <div key={total.kind + total.currency}>
                         <p className="text-sm">{t('imports.' + total.kind)} · {total.count}</p><strong>{money(total.amount, total.currency)}</strong></div>)}</div>
                     <p className="text-sm">{t('imports.repeated', { count: preview.repeatedRows })}</p>
