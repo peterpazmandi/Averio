@@ -24,8 +24,8 @@ try {
         const toolsCopy = copyModule.exports['importTools' + language.toUpperCase()];
         const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];
         const openInfo = async (subject, text) => {
-            const escaped = subject.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\        const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];');
-            await page.getByRole('button', { name: new RegExp(escaped, 'i') }).first().click();
+            const button = page.locator('button[aria-label*="' + subject + '"]').first();
+            await button.click();
             await page.getByText(text, { exact: true }).waitFor({ state: 'visible' });
             await page.keyboard.press('Escape');
         };
@@ -174,8 +174,7 @@ try {
             await ynabPage.locator('input[type=file]').setInputFiles({
                 name: 'register.csv', mimeType: 'text/csv', buffer: Buffer.from('synthetic YNAB register')
             });
-            const accountInfo = ynabPage.getByRole('button', { name: new RegExp(copy.accounts.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\            await ynabPage.getByText(copy.ynabFileHelp, { exact: true }).waitFor({ state: 'hidden' });
-            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor();'), 'i') }).first();
+            const accountInfo = ynabPage.locator('button[aria-label*="' + copy.accounts + '"]').first();
             await accountInfo.click();
             await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor({ state: 'visible' });
             await ynabPage.keyboard.press('Escape');
