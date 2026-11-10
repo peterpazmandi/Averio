@@ -27,6 +27,13 @@ import {
     ImportMappingDefaultsToJSON,
     ImportMappingDefaultsToJSONTyped,
 } from './ImportMappingDefaults';
+import type { ImportSourceAccount } from './ImportSourceAccount';
+import {
+    ImportSourceAccountFromJSON,
+    ImportSourceAccountFromJSONTyped,
+    ImportSourceAccountToJSON,
+    ImportSourceAccountToJSONTyped,
+} from './ImportSourceAccount';
 import type { ImportResult } from './ImportResult';
 import {
     ImportResultFromJSON,
@@ -80,6 +87,10 @@ export interface ImportPreview {
      */
     accounts: Array<string>;
     /**
+     * Source-account metadata, including optional opening balances.
+     */
+    sourceAccounts: Array<ImportSourceAccount>;
+    /**
      * 
      */
     categories: Array<ImportCategorySource>;
@@ -115,6 +126,7 @@ export function instanceOfImportPreview(value: object): value is ImportPreview {
     if (!('from' in value) || value['from'] === undefined) return false;
     if (!('to' in value) || value['to'] === undefined) return false;
     if (!('accounts' in value) || value['accounts'] === undefined) return false;
+    if (!('sourceAccounts' in value) || value['sourceAccounts'] === undefined) return false;
     if (!('categories' in value) || value['categories'] === undefined) return false;
     if (!('totals' in value) || value['totals'] === undefined) return false;
     if (!('repeatedRows' in value) || value['repeatedRows'] === undefined) return false;
@@ -138,6 +150,7 @@ export function ImportPreviewFromJSONTyped(json: any, ignoreDiscriminator: boole
         'from': json['from'],
         'to': json['to'],
         'accounts': json['accounts'],
+        'sourceAccounts': ((json['sourceAccounts'] as Array<any>).map(ImportSourceAccountFromJSON)),
         'categories': ((json['categories'] as Array<any>).map(ImportCategorySourceFromJSON)),
         'totals': ((json['totals'] as Array<any>).map(ImportTotalFromJSON)),
         'repeatedRows': json['repeatedRows'],
@@ -164,6 +177,7 @@ export function ImportPreviewToJSONTyped(value?: ImportPreview | null, ignoreDis
         'from': value['from'],
         'to': value['to'],
         'accounts': value['accounts'],
+        'sourceAccounts': ((value['sourceAccounts'] as Array<any>).map(ImportSourceAccountToJSON)),
         'categories': ((value['categories'] as Array<any>).map(ImportCategorySourceToJSON)),
         'totals': ((value['totals'] as Array<any>).map(ImportTotalToJSON)),
         'repeatedRows': value['repeatedRows'],
