@@ -10,7 +10,6 @@ import { useAccountMutations } from '../accounts/api/useAccountMutations';
 
 export function ImportAccountDialog({ userId, householdId, memberId, source, currency, firstDate, openingBalance, openingBalanceDate, onCreated, onClose }: {
     userId: string; householdId: string; memberId: string; source: string; currency: string; firstDate: string; openingBalance?: string | null; openingBalanceDate?: string | null;
-    openingBalance?: string | null; openingBalanceDate?: string | null;
     onCreated: (id: string, visibility: string) => void; onClose: () => void;
 }) {
     const { t } = useTranslation();
