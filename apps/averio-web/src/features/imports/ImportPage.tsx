@@ -184,7 +184,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 <AverioButton onClick={() => void accounts.refetch()}>{t('imports.refresh')}</AverioButton>
                 <div className="mt-4 grid gap-4">{preview.accounts.map(source => {
                     const m = mappings[source]; const a = writable.find(a => a.id === m?.accountId);
-                    const metadata = sourceAccountFor(source); const currency = currencyFor(source); const metadata = sourceInfo(source);
+                    const metadata = sourceAccountFor(source); const currency = currencyFor(source);
                     return <div key={source} className="grid gap-3 border-t border-slate-200 pt-4 dark:border-slate-700 sm:grid-cols-2">
                         <AverioField>{source} · {currency ?? t('imports.currencyConflict')}<AverioSelect value={m?.accountId ?? ''} disabled={busy} onChange={e => {
                             const a = writable.find(a => a.id === e.target.value); setAck(false);
@@ -194,8 +194,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                             date: metadata.openingBalanceDate ?? preview.from,
                             amount: money(metadata.openingBalance, metadata.currency)
                         })}</span>}</AverioField>
-                        {metadata?.openingBalance && <p className="text-xs text-slate-600 dark:text-slate-300">{t('imports.openingBalanceDetected', { amount: money(metadata.openingBalance, metadata.currency), date: metadata.openingBalanceDate })}</p>}
-                         {a && <AverioField>{t('imports.visibility')}<AverioSelect value={m.visibility} disabled={busy || a.scope === 'Household' || a.visibility === 'Private'}
+                        {a && <AverioField>{t('imports.visibility')}<AverioSelect value={m.visibility} disabled={busy || a.scope === 'Household' || a.visibility === 'Private'}
                             onChange={e => setMappings(old => ({ ...old, [source]: { ...m, visibility: e.target.value } }))}>
                             <option value="Private">{t('imports.private')}</option><option value="Household">{t('imports.household')}</option></AverioSelect>
                             <span className="text-xs font-normal">{t('imports.anchor', { date: a.balanceAnchorDate, amount: money(a.balanceAnchorAmount, a.currency) })}</span></AverioField>}
