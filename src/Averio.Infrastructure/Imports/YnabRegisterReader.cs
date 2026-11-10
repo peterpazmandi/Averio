@@ -116,7 +116,7 @@ public sealed class YnabRegisterReader : IYnabImportReader
             throw Invalid();
         var rows = new List<RegisterEntry>(table.Count - 1);
         string[] formats = dateFormat switch {
-            "MDY" => ["M/d/yyyy", "M/d/ yyyy".Replace(" ", ""), "MM/dd/yyyy", "M-d-yyyy", "MM-dd-yyyy"],
+            "MDY" => ["M/d/yyyy", "M/d/yyyy", "MM/dd/yyyy", "M-d-yyyy", "MM-dd-yyyy"],
             "DMY" => ["d/M/yyyy", "d.M.yyyy", "d-M-yyyy", "dd/MM/yyyy", "dd.MM.yyyy", "dd-MM-yyyy"],
             _ => ["yyyy-M-d", "yyyy/M/d", "yyyy.M.d"]
         };
