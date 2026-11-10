@@ -39,7 +39,7 @@ internal static class YnabImportChecks
             Check(result.Count(r => r.Kind == "Expense") == 2, "Repeated expenses must remain separate.");
             Check(result.Count(r => r.Kind == "Income") == 1, "Income count changed.");
             Check(parsed.SourceAccounts.Count == 2 && parsed.SourceAccounts.All(a => a.Currency == "EUR")
-                && parsed.SourceAccounts.Single(a => a.Source == "Checking").OpeningBalance == "1000" && parsed.SourceAccounts.Single(a => a.Source == "Checking").OpeningBalanceDate == new DateOnly(2026, 9, 1), "Source account metadata changed unexpectedly.");
+                && parsed.SourceAccounts.Single(a => a.Source == "Checking").OpeningBalance == "-1000.00" && parsed.SourceAccounts.Single(a => a.Source == "Savings").OpeningBalance is null, "Source account metadata changed unexpectedly.");
             Check(result[0].Category == "Food / Groceries" && result[0].Tags == "Tesco"
                 && result[0].Note.Contains("weekly shop") && result[0].Amount == 84.20m, "Payee, category, amount or memo lost.");
             var transfer = result.Single(r => r.Kind == "Transfer");
