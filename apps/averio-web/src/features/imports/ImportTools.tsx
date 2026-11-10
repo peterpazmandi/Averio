@@ -6,6 +6,7 @@ import type { ImportAccountMapping, ImportPreviewRow } from '../../shared/api/ge
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../shared/money/decimalAmount';
 import { importsApi } from './importApi';
 
@@ -26,7 +27,7 @@ export function ImportOverlapReview({ userId, householdId, batchId, mappings, ro
     }, [query.data, query.isFetching, query.isError, selection]);
     useEffect(() => { onChange(decisions); }, [onChange, decisions]);
     const choose = (index: number, value: string) => setSelection(old => ({ token: query.data!.token, choices: { ...(old.token === query.data!.token ? old.choices : {}), [index]: value } }));
-    return <AverioCard><h3 className="font-bold">{t('importTools.overlap')}</h3><p className="my-3 text-sm">{t('importTools.overlapHelp')}</p>
+    return <AverioCard><h3 className="font-bold" aria-label={t('importTools.overlap')}>{t('importTools.overlap')} <InfoPopover label={t('importTools.overlap')}>{t('importTools.overlapHelp')}</InfoPopover></h3>
         {query.isPending || query.isFetching ? <p role="status">{t('importTools.checking')}</p> : query.isError ? <p role="alert">{t('importTools.reviewError')}</p>
             : <><p role="status">{t('importTools.matches', { count: query.data.overlaps.length })}</p>
                 {query.data.overlaps.length > 0 && <div className="my-3 flex flex-wrap gap-2">
@@ -57,7 +58,7 @@ export function ImportReconciliation({ userId, householdId, batchId }: { userId:
     const query = useQuery({ queryKey: ['imports', userId, householdId, batchId, 'balances', asOf], enabled: validDate,
         queryFn: ({ signal }) => importsApi.apiV1HouseholdsHouseholdIdImportsIdBalancesGet({ householdId, id: batchId, asOf }, { signal }) });
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? 'en');
-    return <AverioCard><h3 className="text-lg font-bold">{t('importTools.balances')}</h3><p className="my-3 text-sm">{t('importTools.balanceHelp')}</p>
+    return <AverioCard><h3 className="text-lg font-bold" aria-label={t('importTools.balances')}>{t('importTools.balances')} <InfoPopover label={t('importTools.balances')}>{t('importTools.balanceHelp')}</InfoPopover></h3>
         <AverioField>{t('importTools.asOf')}<AverioInput type="date" value={asOf} onChange={e => { setAsOf(e.target.value); setExpected({}); }} /></AverioField>
         {query.isError ? <p role="alert">{t('importTools.reviewError')}</p> : query.isPending || query.isFetching ? <p role="status">{t('importTools.checking')}</p>
             : query.data.map(a => {
@@ -89,7 +90,7 @@ export function ImportUndo({ userId, householdId, batchId }: { userId: string; h
         onSuccess: async () => { setAcceptedToken(undefined); await cache.invalidateQueries({ predicate: q => q.queryKey.includes(userId) && q.queryKey.includes(householdId) }); },
         onError: () => { setAcceptedToken(undefined); void plan.refetch(); } });
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? 'en');
-    return <AverioCard><h3 className="text-lg font-bold">{t('importTools.undo')}</h3><p className="my-3 text-sm">{t('importTools.undoHelp')}</p>
+    return <AverioCard><h3 className="text-lg font-bold" aria-label={t('importTools.undo')}>{t('importTools.undo')} <InfoPopover label={t('importTools.undo')}>{t('importTools.undoHelp')}</InfoPopover></h3>
         {undo.isError && <p role="alert">{t('importTools.undoError')}</p>}
         {undo.isSuccess && <p role="status">{t('importTools.undone', { count: undo.data.voided })}</p>}
         {plan.isPending || plan.isFetching ? <p role="status">{t('importTools.checking')}</p> : plan.isError ? <p role="alert">{t('importTools.reviewError')}</p> : <>
