@@ -48,9 +48,9 @@ internal static class YnabImportChecks
         }
 
         var openingData = string.Join("\r\n", new[] {
-            "Otp,,11/09/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,100000,Cleared",
-            "Otp,,11/09/2026,Salary,Income/Salary,Income,Salary,,0,830000,Uncleared",
-            "Prémium EP,,11/10/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,250000,Cleared"
+            "Otp,,2026.11.09,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,100000,Cleared",
+            "Otp,,2026.11.09,Salary,Income/Salary,Income,Salary,,0,830000,Uncleared",
+            "Prémium EP,,2026.11.10,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,250000,Cleared"
         }) + "\r\n";
         using (var file = Csv(openingData))
         {
