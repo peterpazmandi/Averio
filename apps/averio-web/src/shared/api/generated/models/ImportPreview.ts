@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ImportSourceAccount } from './ImportSourceAccount';
+import {
+    ImportSourceAccountFromJSON,
+    ImportSourceAccountFromJSONTyped,
+    ImportSourceAccountToJSON,
+    ImportSourceAccountToJSONTyped,
+} from './ImportSourceAccount';
 import type { ImportCategorySource } from './ImportCategorySource';
 import {
     ImportCategorySourceFromJSON,
@@ -27,13 +34,6 @@ import {
     ImportMappingDefaultsToJSON,
     ImportMappingDefaultsToJSONTyped,
 } from './ImportMappingDefaults';
-import type { ImportSourceAccount } from './ImportSourceAccount';
-import {
-    ImportSourceAccountFromJSON,
-    ImportSourceAccountFromJSONTyped,
-    ImportSourceAccountToJSON,
-    ImportSourceAccountToJSONTyped,
-} from './ImportSourceAccount';
 import type { ImportResult } from './ImportResult';
 import {
     ImportResultFromJSON,
@@ -87,7 +87,7 @@ export interface ImportPreview {
      */
     accounts: Array<string>;
     /**
-     * Source-account metadata, including optional opening balances.
+     * 
      */
     sourceAccounts: Array<ImportSourceAccount>;
     /**
