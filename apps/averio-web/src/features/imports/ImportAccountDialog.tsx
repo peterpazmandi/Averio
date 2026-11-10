@@ -67,9 +67,8 @@ export function ImportAccountDialog({ userId, householdId, memberId, source, cur
                 <AverioField>{t('imports.accountOwnership')}<AverioSelect value={scope} onChange={e => setScope(e.target.value)}>
                     <option value="Personal">{t('imports.personalAccount')}</option><option value="Household">{t('imports.householdAccount')}</option>
                 </AverioSelect></AverioField>
-                <span className="inline-flex items-center">{t('app.accounts.recordedBalance')} <InfoPopover label={t('app.accounts.recordedBalance')}>{openingBalance ? t('imports.openingBalanceDetectedHelp') : t('imports.openingBalanceHelp')}</InfoPopover></span>
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <AverioField>{t('app.accounts.recordedBalance')}<AverioInput required inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></AverioField>
+                    <AverioField><span className="inline-flex items-center">{t('app.accounts.recordedBalance')} <InfoPopover label={t('app.accounts.recordedBalance')}>{openingBalance ? t('imports.openingBalanceDetectedHelp') : t('imports.openingBalanceHelp')}</InfoPopover></span><AverioInput required inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></AverioField>
                     <AverioField>{t('accountManagement.balanceDate')}<AverioInput required type="date" value={date} onChange={e => setDate(e.target.value)} /></AverioField>
                 </div>
                 {error && <p role="alert" className="text-red-700 dark:text-red-300">{error}</p>}
