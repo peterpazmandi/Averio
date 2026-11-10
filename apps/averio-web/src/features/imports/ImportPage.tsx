@@ -200,7 +200,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                         <AverioButton className="justify-self-start sm:col-span-2" disabled={busy || !currency || !owners.data}
                             aria-label={t('imports.createFor', { name: source })} onClick={() => setCreatingSource(source)}>{t('imports.createAccount')}</AverioButton>
                     </div>;
-                })}</div>{!mappingsValid && <p className="mt-3 text-sm">{t('imports.mappingHelp')}</p>}</AverioCard>}
+                })}</div></AverioCard>}
             {preview && step === 2 && <AverioCard><h3 className="font-bold" aria-label={t('imports.categories')}>{t('imports.categories')} <InfoPopover label={t('imports.categories')}>{t('imports.categoriesHelp')}</InfoPopover></h3>
                 <AverioInput type="search" aria-label={t('imports.search')} placeholder={t('imports.search')} value={search} onChange={e => setSearch(e.target.value)} />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">{preview.categories.filter(c => c.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(c =>
