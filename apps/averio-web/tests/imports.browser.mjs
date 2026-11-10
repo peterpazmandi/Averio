@@ -128,8 +128,11 @@ try {
             ynabPage.on('pageerror', e => ynabErrors.push(e.message));
             const ynabPreview = {
                 id: 'ynab-batch', status: 'Draft', defaults: { accounts: [], categories: [] },
-                count: 1, from: '2026-09-14', to: '2026-09-14', accounts: ['Checking'],
-                sourceAccounts: [{ source: 'Checking', currency: 'EUR', openingBalance: '1000', openingBalanceDate: '2026-09-01' }],
+                count: 1, from: '2026-09-14', to: '2026-09-14', accounts: ['Checking', 'Prémium EP'],
+                sourceAccounts: [
+                    { source: 'Checking', currency: 'EUR', openingBalance: '1000', openingBalanceDate: '2026-09-01' },
+                    { source: 'Prémium EP', currency: 'EUR', openingBalance: '250000', openingBalanceDate: '2026-09-10' }
+                ],
                 categories: [{ kind: 'Expense', name: 'Food / Groceries' }],
                 totals: [{ kind: 'Expense', currency: 'EUR', amount: '12.50', count: 1 }],
                 repeatedRows: 0,
@@ -144,6 +147,7 @@ try {
                 if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
                 if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
                 if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
+                if (pathname.endsWith('/accounts') && req.method() === 'POST') return json({ id: 'premium' });
                 if (pathname.endsWith('/accounts')) return json([
                     { id: 'checking', name: 'Checking', currency: 'EUR', scope: 'Household', visibility: 'Household',
                         status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' }
@@ -167,6 +171,13 @@ try {
             await ynabPage.getByText(copy.ynabFileHelp, { exact: true }).waitFor({ state: 'hidden' });
             await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor();
             assert.equal(await ynabPage.getByText(copy.ynabFile, { exact: true }).count(), 0);
+            const premiumCreate = ynabPage.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Prémium EP'), exact: true });
+            await premiumCreate.click();
+            const premiumDialog = ynabPage.locator('dialog[open]');
+            assert.equal(await premiumDialog.locator('input[inputmode=decimal]').inputValue(), '250000');
+            assert.equal(await premiumDialog.locator('input[type=date]').inputValue(), '2026-09-10');
+            await ynabPage.keyboard.press('Escape');
+            assert.equal(await ynabPage.locator('dialog[open]').count(), 0);
             assert.deepEqual(ynabErrors, []);
             await ynabPage.close();
         }
