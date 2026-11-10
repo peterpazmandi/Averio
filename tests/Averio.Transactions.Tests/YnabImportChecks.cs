@@ -33,10 +33,13 @@ internal static class YnabImportChecks
         }) + "\r\n";
         using (var file = Csv(data))
         {
-            var result = new YnabRegisterReader().Read(file, "YNAB Register.csv", "EUR", "MDY", "DotDecimal");
+            var parsed = new YnabRegisterReader().Read(file, "YNAB Register.csv", "EUR", "MDY", "DotDecimal");
+            var result = parsed.Rows;
             Check(result.Count == 4, "Transfers must collapse to one operation.");
             Check(result.Count(r => r.Kind == "Expense") == 2, "Repeated expenses must remain separate.");
             Check(result.Count(r => r.Kind == "Income") == 1, "Income count changed.");
+            Check(parsed.SourceAccounts.Count == 2 && parsed.SourceAccounts.All(a => a.Currency == "EUR")
+                && parsed.SourceAccounts.All(a => a.OpeningBalance is null), "Source account metadata changed unexpectedly.");
             Check(result[0].Category == "Food / Groceries" && result[0].Tags == "Tesco"
                 && result[0].Note.Contains("weekly shop") && result[0].Amount == 84.20m, "Payee, category, amount or memo lost.");
             var transfer = result.Single(r => r.Kind == "Transfer");
@@ -44,11 +47,28 @@ internal static class YnabImportChecks
                 && transfer.Amount == 200 && transfer.ReceivedAmount == 200, "Transfer legs not reconciled.");
         }
 
+        var openingData = string.Join("\r\n", new[] {
+            "Otp,,11/09/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,100000,Cleared",
+            "Otp,,11/09/2026,Salary,Income/Salary,Income,Salary,,0,830000,Uncleared",
+            "Prémium EP,,11/10/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,250000,Cleared"
+        }) + "\r\n";
+        using (var file = Csv(openingData))
+        {
+            var parsed = new YnabRegisterReader().Read(file, "YNAB Register.csv", "HUF", "MDY", "DotDecimal");
+            Check(parsed.Rows.Count == 1, "Opening balance rows must not become transactions.");
+            Check(parsed.SourceAccounts.Count == 2, "Zero-transaction source accounts must be retained.");
+            var otp = parsed.SourceAccounts.Single(a => a.Source == "Otp");
+            var premium = parsed.SourceAccounts.Single(a => a.Source == "Prémium EP");
+            Check(otp.OpeningBalance == "100000" && otp.OpeningBalanceDate == new DateOnly(2026, 11, 9)
+                && premium.OpeningBalance == "250000" && premium.OpeningBalanceDate == new DateOnly(2026, 11, 10),
+                "Opening balances were not preserved as source-account metadata.");
+        }
+
         var germanHeader = Header.Replace(',', '\t');
         var germanBody = "Giro\t\t14.09.2026\tBäckerei\tEssen/Brot\tEssen\tBrot\tFrühstück\t12,50€\t0\tCleared\r\n";
         using (var file = new MemoryStream(Encoding.UTF8.GetBytes(germanHeader + "\r\n" + germanBody)))
         {
-            var result = new YnabRegisterReader().Read(file, "Register.tsv", "EUR", "DMY", "CommaDecimal");
+            var result = new YnabRegisterReader().Read(file, "Register.tsv", "EUR", "DMY", "CommaDecimal").Rows;
             Check(result.Single().Amount == 12.50m && result.Single().Date == new DateOnly(2026, 9, 14),
                 "TSV or day-first format parsed incorrectly.");
         }
@@ -66,7 +86,7 @@ internal static class YnabImportChecks
                 Write("YNAB Export - Plan Register.csv", Header + "\nChecking,,09/14/2026,Tesco,Food/Groceries,Food,Groceries,,10.00,0,Cleared\n");
             }
             zip.Position = 0;
-            var result = new YnabRegisterReader().Read(zip, "YNAB Export.zip", "EUR", "MDY", "DotDecimal");
+            var result = new YnabRegisterReader().Read(zip, "YNAB Export.zip", "EUR", "MDY", "DotDecimal").Rows;
             Check(result.Count == 1 && result.Single().Amount == 10m, "ZIP register selection failed.");
         }
 
