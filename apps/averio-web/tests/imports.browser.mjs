@@ -23,6 +23,12 @@ try {
         const copy = copyModule.exports['imports' + language.toUpperCase()];
         const toolsCopy = copyModule.exports['importTools' + language.toUpperCase()];
         const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];
+        const openInfo = async (subject, text) => {
+            const escaped = subject.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\        const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];');
+            await page.getByRole('button', { name: new RegExp(escaped, 'i') }).first().click();
+            await page.getByText(text, { exact: true }).waitFor({ state: 'visible' });
+            await page.keyboard.press('Escape');
+        };
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -64,7 +70,7 @@ try {
         });
         await page.goto(url);
         await page.locator('input[type=file]').setInputFiles({ name: 'fixture.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('synthetic; API is mocked') });
-        await page.getByText(copy.accountsHelp, { exact: true }).waitFor();
+        await openInfo(copy.accounts, copy.accountsHelp);
         assert.equal(await page.locator('select option[value="other-private"]').count(), 0);
         assert.equal(confirmations.length, 0, 'Preview must not commit');
         const createButton = page.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Savings'), exact: true });
@@ -97,7 +103,7 @@ try {
         assert.equal(page.url(), url, 'Creating an account must stay on the import page');
         assert.equal(confirmations.length, 0, 'Creating an account must not commit the import');
         await page.locator('footer button').last().click();
-        await page.getByText(copy.categoriesHelp, { exact: true }).waitFor();
+        await openInfo(copy.categories, copy.categoriesHelp);
         await page.locator('footer button').last().click();
         await page.getByRole('table').waitFor();
         assert.equal(await page.locator('tbody tr').count(), 50);
@@ -168,8 +174,11 @@ try {
             await ynabPage.locator('input[type=file]').setInputFiles({
                 name: 'register.csv', mimeType: 'text/csv', buffer: Buffer.from('synthetic YNAB register')
             });
-            await ynabPage.getByText(copy.ynabFileHelp, { exact: true }).waitFor({ state: 'hidden' });
-            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor();
+            const accountInfo = ynabPage.getByRole('button', { name: new RegExp(copy.accounts.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\            await ynabPage.getByText(copy.ynabFileHelp, { exact: true }).waitFor({ state: 'hidden' });
+            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor();'), 'i') }).first();
+            await accountInfo.click();
+            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor({ state: 'visible' });
+            await ynabPage.keyboard.press('Escape');
             assert.equal(await ynabPage.getByText(copy.ynabFile, { exact: true }).count(), 0);
             const premiumCreate = ynabPage.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Prémium EP'), exact: true });
             await premiumCreate.click();
