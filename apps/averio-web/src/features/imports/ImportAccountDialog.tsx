@@ -8,8 +8,9 @@ import { AverioField, AverioInput, AverioSelect } from '../../shared/components/
 import { normalizeBalanceInput } from '../../shared/money/decimalAmount';
 import { useAccountMutations } from '../accounts/api/useAccountMutations';
 
-export function ImportAccountDialog({ userId, householdId, memberId, source, currency, firstDate, onCreated, onClose }: {
+export function ImportAccountDialog({ userId, householdId, memberId, source, currency, firstDate, openingBalance, openingBalanceDate, onCreated, onClose }: {
     userId: string; householdId: string; memberId: string; source: string; currency: string; firstDate: string;
+    openingBalance?: string | null; openingBalanceDate?: string | null;
     onCreated: (id: string, visibility: string) => void; onClose: () => void;
 }) {
     const { t } = useTranslation();
@@ -20,11 +21,13 @@ export function ImportAccountDialog({ userId, householdId, memberId, source, cur
     const [name, setName] = useState(source);
     const [type, setType] = useState('Checking');
     const [scope, setScope] = useState('Personal');
-    const [amount, setAmount] = useState('');
-    const [date, setDate] = useState(firstDate);
+    const initialAmount = openingBalance ?? '';
+    const initialDate = openingBalanceDate ?? firstDate;
+    const [amount, setAmount] = useState(initialAmount);
+    const [date, setDate] = useState(initialDate);
     const [error, setError] = useState<string>();
     const [discard, setDiscard] = useState(false);
-    const dirty = name !== source || type !== 'Checking' || scope !== 'Personal' || amount !== '' || date !== firstDate;
+    const dirty = name !== source || type !== 'Checking' || scope !== 'Personal' || amount !== initialAmount || date !== initialDate;
     const dismiss = () => { if (!submitting.current) { if (dirty) setDiscard(true); else onClose(); } };
     async function submit(event: FormEvent) {
         event.preventDefault();
