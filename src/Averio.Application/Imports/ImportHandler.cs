@@ -31,7 +31,6 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         string currency, string dateFormat, string numberFormat, CancellationToken ct)
     {
         await MemberAsync(householdId, ct);
-        return await PreviewRowsAsync(householdId,
         var result = ynabReader.Read(file, fileName, currency, dateFormat, numberFormat);
         return await PreviewRowsAsync(householdId, result.Rows, ct, fileName, result.SourceAccounts);
     }
@@ -220,7 +219,8 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         var rows = payload.Rows;
         var sourceAccounts = SourceAccounts(batch);
         return new(batch.Id, batch.CompletedAt is null ? "Draft" : "Completed", rows.Length,
-            rows.Min(r => r.Date), rows.Max(r => r.Date),
+            (rows.Length > 0 ? rows.Min(r => r.Date) : sourceAccounts.Min(a => a.OpeningBalanceDate!.Value)),
+            (rows.Length > 0 ? rows.Max(r => r.Date) : sourceAccounts.Max(a => a.OpeningBalanceDate!.Value)),
             sourceAccounts.Select(a => a.Source).ToArray(), sourceAccounts,
             rows.Where(r => r.Kind != "Transfer").Select(r => new ImportCategorySource(r.Kind, r.Category)).Distinct().OrderBy(c => c.Kind).ThenBy(c => c.Name).ToArray(),
             rows.GroupBy(r => (r.Kind, r.Currency)).Select(g => new ImportTotal(g.Key.Kind, g.Key.Currency,
