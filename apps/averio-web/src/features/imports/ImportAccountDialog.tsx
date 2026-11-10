@@ -9,7 +9,7 @@ import { normalizeBalanceInput } from '../../shared/money/decimalAmount';
 import { useAccountMutations } from '../accounts/api/useAccountMutations';
 
 export function ImportAccountDialog({ userId, householdId, memberId, source, currency, firstDate, openingBalance, openingBalanceDate, onCreated, onClose }: {
-    userId: string; householdId: string; memberId: string; source: string; currency: string; firstDate: string;
+    userId: string; householdId: string; memberId: string; source: string; currency: string; firstDate: string; openingBalance?: string | null; openingBalanceDate?: string | null;
     openingBalance?: string | null; openingBalanceDate?: string | null;
     onCreated: (id: string, visibility: string) => void; onClose: () => void;
 }) {
@@ -67,7 +67,7 @@ export function ImportAccountDialog({ userId, householdId, memberId, source, cur
                 <AverioField>{t('imports.accountOwnership')}<AverioSelect value={scope} onChange={e => setScope(e.target.value)}>
                     <option value="Personal">{t('imports.personalAccount')}</option><option value="Household">{t('imports.householdAccount')}</option>
                 </AverioSelect></AverioField>
-                <p>{t('imports.openingBalanceHelp')}</p>
+                <p>{openingBalance ? t('imports.openingBalanceDetectedHelp') : t('imports.openingBalanceHelp')}</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <AverioField>{t('app.accounts.recordedBalance')}<AverioInput required inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></AverioField>
                     <AverioField>{t('accountManagement.balanceDate')}<AverioInput required type="date" value={date} onChange={e => setDate(e.target.value)} /></AverioField>
