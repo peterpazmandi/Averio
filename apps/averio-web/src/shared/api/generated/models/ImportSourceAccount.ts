@@ -13,7 +13,6 @@
  */
 
 import { mapValues } from '../runtime';
-
 /**
  * 
  * @export
@@ -83,3 +82,4 @@ export function ImportSourceAccountToJSONTyped(value?: ImportSourceAccount | nul
         'openingBalanceDate': value['openingBalanceDate'],
     };
 }
+
