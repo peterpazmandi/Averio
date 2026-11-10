@@ -41,7 +41,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
     {
         sourceAccounts ??= BuildSourceAccounts(rows);
         var canonical = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 }))
-            .Concat(sourceAccounts.Select(JsonSerializer.Serialize)).Order(StringComparer.Ordinal);
+            .Concat(sourceAccounts.Select(account => JsonSerializer.Serialize(account))).Order(StringComparer.Ordinal);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', canonical))));
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var member = await MemberAsync(householdId, ct);
