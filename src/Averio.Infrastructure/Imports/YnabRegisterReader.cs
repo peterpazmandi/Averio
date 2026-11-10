@@ -137,7 +137,11 @@ public sealed class YnabRegisterReader : IYnabImportReader
             var note = Field(7, 500);
             var flag = Field(1, 40);
             var cleared = Field(10, 40);
-            if (account.Length == 0 || !DateOnly.TryParseExact(Field(2, 30), formats,
+            var dateText = Field(2, 30);
+            var dateFormats = dateText.Length >= 4 && dateText[..4].All(char.IsDigit)
+                ? new[] { "yyyy-M-d", "yyyy/M/d", "yyyy.M.d" }
+                : formats;
+            if (account.Length == 0 || !DateOnly.TryParseExact(dateText, dateFormats,
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 throw Invalid();
             if (category.Equals("Split", StringComparison.OrdinalIgnoreCase)
