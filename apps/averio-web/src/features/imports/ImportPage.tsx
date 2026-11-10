@@ -42,7 +42,11 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
     const writable = (accounts.data ?? []).filter(a => a.status === 'Active' && !a.cutoverAtUtc &&
         (a.scope === 'Household' || a.owners.some(o => o.householdMemberId === owners.data?.currentMemberId)));
     const defaultVisibility = (a: AccountResponse) => a.scope === 'Household' ? 'Household' : 'Private';
+    const sourceAccountFor = (source: string, data = preview) =>
+        data?.sourceAccounts?.find(account => account.source === source);
     const currencyFor = (source: string, data = preview) => {
+        const metadata = sourceAccountFor(source, data);
+        if (metadata) return metadata.currency;
         const values = new Set((data?.rows ?? []).flatMap(r => r.account === source ? [r.currency]
             : r.destination === source ? [r.receivedCurrency ?? r.currency] : []));
         return values.size === 1 ? [...values][0] : undefined;
@@ -179,12 +183,17 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 <p className="mb-4 text-sm">{t('imports.accountsHelp')}</p><p className="mb-3 text-sm">{t('importTools.remembered')}</p>
                 <AverioButton onClick={() => void accounts.refetch()}>{t('imports.refresh')}</AverioButton>
                 <div className="mt-4 grid gap-4">{preview.accounts.map(source => {
-                    const m = mappings[source]; const a = writable.find(a => a.id === m?.accountId); const currency = currencyFor(source);
+                    const m = mappings[source]; const a = writable.find(a => a.id === m?.accountId);
+                    const metadata = sourceAccountFor(source); const currency = currencyFor(source);
                     return <div key={source} className="grid gap-3 border-t border-slate-200 pt-4 dark:border-slate-700 sm:grid-cols-2">
                         <AverioField>{source} · {currency ?? t('imports.currencyConflict')}<AverioSelect value={m?.accountId ?? ''} disabled={busy} onChange={e => {
                             const a = writable.find(a => a.id === e.target.value); setAck(false);
                             setMappings(old => { const next = { ...old }; if (a) next[source] = { source, accountId: a.id, visibility: defaultVisibility(a) }; else delete next[source]; return next; });
-                        }}><option value="">{t('imports.choose')}</option>{writable.filter(a => a.currency === currency).map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</AverioSelect></AverioField>
+                        }}><option value="">{t('imports.choose')}</option>{writable.filter(a => a.currency === currency).map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</AverioSelect>
+                        {metadata?.openingBalance !== undefined && metadata.openingBalance !== null && <span className="text-xs font-normal">{t('imports.anchor', {
+                            date: metadata.openingBalanceDate ?? preview.from,
+                            amount: money(metadata.openingBalance, metadata.currency)
+                        })}</span>}</AverioField>
                         {a && <AverioField>{t('imports.visibility')}<AverioSelect value={m.visibility} disabled={busy || a.scope === 'Household' || a.visibility === 'Private'}
                             onChange={e => setMappings(old => ({ ...old, [source]: { ...m, visibility: e.target.value } }))}>
                             <option value="Private">{t('imports.private')}</option><option value="Household">{t('imports.household')}</option></AverioSelect>
@@ -224,10 +233,12 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                 {step < 3 ? <AverioButton variant="primary" disabled={busy || !loaded || (step === 1 && !mappingsValid)} onClick={() => setStep(s => s + 1)}>{t('common.actions.continue')}</AverioButton>
                     : <AverioButton variant="primary" disabled={busy || !ack || !review?.ready || !mappingsValid || !loaded} onClick={() => confirm.mutate()}>{t('imports.confirm', { count: preview.count - (review?.skippedRows.length ?? 0) })}</AverioButton>}</footer>}
         </>}
-        {creatingSource && owners.data && preview && currencyFor(creatingSource) && <ImportAccountDialog
+        {creatingSource && owners.data && preview && (sourceAccountFor(creatingSource) || currencyFor(creatingSource)) && <ImportAccountDialog
             key={creatingSource} userId={userId} householdId={householdId} memberId={owners.data.currentMemberId}
-            source={creatingSource} currency={currencyFor(creatingSource)!}
-            firstDate={preview.rows.filter(r => r.account === creatingSource || r.destination === creatingSource).map(r => r.date).sort()[0]}
+            source={creatingSource} currency={sourceAccountFor(creatingSource)?.currency ?? currencyFor(creatingSource)!}
+            openingBalance={sourceAccountFor(creatingSource)?.openingBalance}
+            openingBalanceDate={sourceAccountFor(creatingSource)?.openingBalanceDate}
+            firstDate={sourceAccountFor(creatingSource)?.openingBalanceDate ?? preview.rows.filter(r => r.account === creatingSource || r.destination === creatingSource).map(r => r.date).sort()[0] ?? preview.from}
             onClose={() => setCreatingSource(undefined)}
             onCreated={(id, visibility) => {
                 setMappings(old => ({ ...old, [creatingSource]: { source: creatingSource, accountId: id, visibility } }));
