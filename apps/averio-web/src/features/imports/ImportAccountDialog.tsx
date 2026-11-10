@@ -7,6 +7,7 @@ import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
 import { normalizeBalanceInput } from '../../shared/money/decimalAmount';
 import { useAccountMutations } from '../accounts/api/useAccountMutations';
+import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 
 export function ImportAccountDialog({ userId, householdId, memberId, source, currency, firstDate, openingBalance, openingBalanceDate, onCreated, onClose }: {
     userId: string; householdId: string; memberId: string; source: string; currency: string; firstDate: string; openingBalance?: string | null; openingBalanceDate?: string | null;
@@ -55,7 +56,7 @@ export function ImportAccountDialog({ userId, householdId, memberId, source, cur
         </>}>
         {discard ? <p>{t('accountManagement.unsavedDescription')}</p> : <form id={formId} onSubmit={submit}>
             <fieldset disabled={create.isPending} className="grid gap-4">
-                <p>{t('imports.createAccountHelp')}</p>
+                <p className="text-sm"><InfoPopover label={t('imports.createAccount')}>{t('imports.createAccountHelp')}</InfoPopover></p>
                 <AverioField>{t('onboarding.account.name')}<AverioInput ref={nameRef} required maxLength={100} value={name} onChange={e => setName(e.target.value)} /></AverioField>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <AverioField>{t('onboarding.account.type')}<AverioSelect value={type} onChange={e => setType(e.target.value)}>
@@ -66,7 +67,7 @@ export function ImportAccountDialog({ userId, householdId, memberId, source, cur
                 <AverioField>{t('imports.accountOwnership')}<AverioSelect value={scope} onChange={e => setScope(e.target.value)}>
                     <option value="Personal">{t('imports.personalAccount')}</option><option value="Household">{t('imports.householdAccount')}</option>
                 </AverioSelect></AverioField>
-                <p>{openingBalance ? t('imports.openingBalanceDetectedHelp') : t('imports.openingBalanceHelp')}</p>
+                <span className="inline-flex items-center">{t('app.accounts.recordedBalance')} <InfoPopover label={t('app.accounts.recordedBalance')}>{openingBalance ? t('imports.openingBalanceDetectedHelp') : t('imports.openingBalanceHelp')}</InfoPopover></span>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <AverioField>{t('app.accounts.recordedBalance')}<AverioInput required inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></AverioField>
                     <AverioField>{t('accountManagement.balanceDate')}<AverioInput required type="date" value={date} onChange={e => setDate(e.target.value)} /></AverioField>
