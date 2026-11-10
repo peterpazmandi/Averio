@@ -30,7 +30,10 @@ try {
         }, { language, dark: width === 375 });
         const rows = Array.from({ length: 52 }, (_, i) => ({ sheet: 'Kiad�sok', rowNumber: i + 3, kind: 'Expense', date: '2026-09-21', account: 'Main', destination: null, category: 'Food', amount: '12.3456', currency: 'EUR', receivedAmount: null, receivedCurrency: null, tags: '<script>shop</script>', note: 'Original note' }));
         rows.push({ ...rows[0], sheet: '�tutal�s', kind: 'Transfer', destination: 'Savings', category: '', amount: '10' });
-        const preview = { id: 'batch', status: 'Draft', defaults: { accounts: [{ source: 'Main', accountId: 'main', visibility: 'Household' }], categories: [] }, count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
+        const preview = { id: 'batch', status: 'Draft', defaults: { accounts: [{ source: 'Main', accountId: 'main', visibility: 'Household' }], categories: [] }, count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], sourceAccounts: [
+            { source: 'Main', currency: 'EUR', openingBalance: null, openingBalanceDate: null },
+            { source: 'Savings', currency: 'EUR', openingBalance: null, openingBalanceDate: null }
+        ], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
         await page.route('**/api/v1/**', async route => {
             const req = route.request(), pathname = new URL(req.url()).pathname;
             const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
@@ -126,6 +129,7 @@ try {
             const ynabPreview = {
                 id: 'ynab-batch', status: 'Draft', defaults: { accounts: [], categories: [] },
                 count: 1, from: '2026-09-14', to: '2026-09-14', accounts: ['Checking'],
+                sourceAccounts: [{ source: 'Checking', currency: 'EUR', openingBalance: '1000', openingBalanceDate: '2026-09-01' }],
                 categories: [{ kind: 'Expense', name: 'Food / Groceries' }],
                 totals: [{ kind: 'Expense', currency: 'EUR', amount: '12.50', count: 1 }],
                 repeatedRows: 0,
