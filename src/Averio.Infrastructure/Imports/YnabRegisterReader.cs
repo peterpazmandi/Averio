@@ -51,8 +51,9 @@ public sealed class YnabRegisterReader : IYnabImportReader
             var text = ext == ".zip" ? ReadArchive(stream) : ReadText(stream, MaxBytes);
             var records = Parse(text, ext == ".tsv" ? '\t' : GuessDelimiter(text), currency, dateFormat, numberFormat);
             var rows = Normalize(records, currency);
-            if (rows.Count == 0) throw Invalid();
-            return new(rows, BuildSourceAccounts(records, currency));
+            var sourceAccounts = BuildSourceAccounts(records, currency);
+            if (rows.Count == 0 && sourceAccounts.Count == 0) throw Invalid();
+            return new(rows, sourceAccounts);
         }
         catch (Exception e) when (e is InvalidDataException or DecoderFallbackException
             or FormatException or OverflowException or ArgumentException or IOException)
