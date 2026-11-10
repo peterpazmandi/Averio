@@ -80,6 +80,7 @@ export * from './ImportOverlap';
 export * from './ImportOverlapMatch';
 export * from './ImportPreview';
 export * from './ImportPreviewRow';
+export * from './ImportSourceAccount';
 export * from './ImportResult';
 export * from './ImportReview';
 export * from './ImportReviewRequest';
