@@ -32,20 +32,26 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
     {
         await MemberAsync(householdId, ct);
         return await PreviewRowsAsync(householdId,
-            ynabReader.Read(file, fileName, currency, dateFormat, numberFormat), ct, fileName);
+        var result = ynabReader.Read(file, fileName, currency, dateFormat, numberFormat);
+        return await PreviewRowsAsync(householdId, result.Rows, ct, fileName, result.SourceAccounts);
     }
 
     private async Task<ImportPreview> PreviewRowsAsync(Guid householdId,
-        IReadOnlyList<ImportRow> rows, CancellationToken ct, string? sourceName)
+        IReadOnlyList<ImportRow> rows, CancellationToken ct, string? sourceName,
+        IReadOnlyList<ImportSourceAccount>? sourceAccounts = null)
     {
-        var canonical = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 })).Order(StringComparer.Ordinal);
+        sourceAccounts ??= BuildSourceAccounts(rows);
+        var canonical = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 }))
+            .Concat(sourceAccounts.Select(JsonSerializer.Serialize)).Order(StringComparer.Ordinal);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', canonical))));
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var member = await MemberAsync(householdId, ct);
         var batch = await imports.FindAsync(householdId, member.Id, fingerprint, ct);
         if (batch is null)
         {
-            batch = ImportBatch.Create(householdId, member.Id, fingerprint, JsonSerializer.Serialize(rows), clock.GetUtcNow(), CleanSourceName(sourceName));
+            batch = ImportBatch.Create(householdId, member.Id, fingerprint,
+                JsonSerializer.Serialize(new StoredImportPayload(rows.ToArray(), sourceAccounts.ToArray())),
+                clock.GetUtcNow(), CleanSourceName(sourceName));
             imports.Add(batch);
             await unitOfWork.SaveChangesAsync(ct);
         }
@@ -66,11 +72,12 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         var member = await MemberAsync(householdId, ct);
         var batch = await imports.GetAsync(householdId, member.Id, id, ct) ?? throw new NotFoundException("import", id);
         var rows = Rows(batch);
-        if (batch.CompletedAt is not null) return Result(batch, rows);
+        var sourceAccounts = SourceAccounts(batch);
+        if (batch.CompletedAt is not null) return Result(batch, rows, sourceAccounts);
         if (!request.AcknowledgeBalancesAndOverlap || request.Accounts is null || request.Categories is null
             || request.Accounts.Count > 100 || request.Categories.Count > 1000
             || request.Accounts.Any(a => a is null) || request.Categories.Any(c => c is null)) throw MappingError();
-        var sources = rows.SelectMany(r => r.Destination is null ? new[] { r.Account } : new[] { r.Account, r.Destination }).Distinct().ToArray();
+        var sources = sourceAccounts.Select(a => a.Source).ToArray();
         if (request.Accounts.Count != sources.Length || request.Accounts.Select(a => a.Source).Distinct().Count() != sources.Length
             || request.Accounts.Any(a => !sources.Contains(a.Source))
             || request.Accounts.Select(a => a.AccountId).Distinct().Count() != sources.Length) throw MappingError();
@@ -81,6 +88,8 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 ?? throw new NotFoundException("account", mapping.AccountId);
             if (!TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
             if (account.Status != AccountStatus.Active) throw new ConflictException("account_archived", "Error_AccountArchived");
+            var sourceCurrency = sourceAccounts.Single(a => a.Source == mapping.Source).Currency;
+            if (account.Currency.Value != sourceCurrency) throw MappingError();
             if (!Enum.TryParse<TransactionVisibility>(mapping.Visibility, out var visibility) || !Enum.IsDefined(visibility)
                 || !TransactionAccess.IsVisibilityAllowed(account, visibility)) throw MappingError();
             accountMap.Add(mapping.Source, (account, visibility));
@@ -159,7 +168,7 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         await unitOfWork.SaveChangesAsync(ct);
         await imports.ApplyAggregatesAsync(transactionIds.ToArray(), ct);
         await tx.CommitAsync(ct);
-        return Result(batch, rows);
+        return Result(batch, rows, sourceAccounts);
     }
     private async Task<HouseholdMember> MemberAsync(Guid householdId, CancellationToken ct)
     {
@@ -169,25 +178,55 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         return household.Members.Single(m => m.UserId == userId && m.LeftAtUtc is null);
     }
     private static BusinessRuleException MappingError() => new("import_mapping_invalid", "Error_ImportMapping");
-    private static ImportRow[] Rows(ImportBatch batch) => JsonSerializer.Deserialize<ImportRow[]>(batch.Payload)!;
-    private static ImportResult Result(ImportBatch batch, IReadOnlyList<ImportRow> rows)
+    private sealed record StoredImportPayload(ImportRow[] Rows, ImportSourceAccount[] SourceAccounts);
+
+    private static StoredImportPayload Payload(ImportBatch batch)
+    {
+        var payload = batch.Payload.TrimStart();
+        if (payload.StartsWith("[", StringComparison.Ordinal))
+            return new(JsonSerializer.Deserialize<ImportRow[]>(payload)!, []);
+        return JsonSerializer.Deserialize<StoredImportPayload>(payload)!;
+    }
+
+    private static ImportRow[] Rows(ImportBatch batch) => Payload(batch).Rows;
+
+    private static ImportSourceAccount[] SourceAccounts(ImportBatch batch)
+    {
+        var payload = Payload(batch);
+        return payload.SourceAccounts.Length > 0 ? payload.SourceAccounts : BuildSourceAccounts(payload.Rows);
+    }
+
+    private static ImportSourceAccount[] BuildSourceAccounts(IReadOnlyList<ImportRow> rows)
+        => rows.SelectMany(r => r.Destination is null
+                ? new[] { (Source: r.Account, Currency: r.Currency) }
+                : new[] { (Source: r.Account, Currency: r.Currency),
+                    (Source: r.Destination, Currency: r.ReceivedCurrency ?? r.Currency) })
+            .GroupBy(x => x.Source, StringComparer.Ordinal)
+            .Select(g => new ImportSourceAccount(g.Key, g.Select(x => x.Currency).Distinct().Single(), null, null))
+            .OrderBy(x => x.Source, StringComparer.Ordinal)
+            .ToArray();
+
+    private static ImportResult Result(ImportBatch batch, IReadOnlyList<ImportRow> rows,
+        IReadOnlyList<ImportSourceAccount> sourceAccounts)
         {
         var links = Links(batch);
         var included = rows.Where((_, i) => links.Length != rows.Count || !links[i].Skipped).ToArray();
         return new(batch.Id, "Completed", included.Count(r => r.Kind != "Transfer"), included.Count(r => r.Kind == "Transfer"),
-            included.SelectMany(r => r.Destination is null ? new[] { r.Account } : new[] { r.Account, r.Destination }).Distinct().Count(), rows.Count - included.Length);
+            sourceAccounts.Count, rows.Count - included.Length);
     }
     private static ImportPreview Preview(ImportBatch batch)
     {
-        var rows = Rows(batch);
+        var payload = Payload(batch);
+        var rows = payload.Rows;
+        var sourceAccounts = SourceAccounts(batch);
         return new(batch.Id, batch.CompletedAt is null ? "Draft" : "Completed", rows.Length,
             rows.Min(r => r.Date), rows.Max(r => r.Date),
-            rows.SelectMany(r => r.Destination is null ? new[] { r.Account } : new[] { r.Account, r.Destination }).Distinct().Order().ToArray(),
+            sourceAccounts.Select(a => a.Source).ToArray(), sourceAccounts,
             rows.Where(r => r.Kind != "Transfer").Select(r => new ImportCategorySource(r.Kind, r.Category)).Distinct().OrderBy(c => c.Kind).ThenBy(c => c.Name).ToArray(),
             rows.GroupBy(r => (r.Kind, r.Currency)).Select(g => new ImportTotal(g.Key.Kind, g.Key.Currency,
                 g.Sum(r => r.Amount).ToString(CultureInfo.InvariantCulture), g.Count())).ToArray(),
             rows.GroupBy(r => r with { Sheet = "", RowNumber = 0 }).Sum(g => g.Count() - 1), rows.Select(r => new ImportPreviewRow(r.Sheet, r.RowNumber, r.Kind, r.Date,
                 r.Account, r.Destination, r.Category, r.Amount.ToString(CultureInfo.InvariantCulture), r.Currency,
-                r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray(), Completion: batch.CompletedAt is null ? null : Result(batch, rows));
+                r.ReceivedAmount?.ToString(CultureInfo.InvariantCulture), r.ReceivedCurrency, r.Tags, r.Note)).ToArray(), Completion: batch.CompletedAt is null ? null : Result(batch, rows, sourceAccounts));
     }
 }
