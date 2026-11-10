@@ -116,8 +116,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
             throw Invalid();
         var rows = new List<RegisterEntry>(table.Count - 1);
         string[] formats = dateFormat switch {
-            "MDY" => ["M/d/yyyy", "M-d-yyyy"],
-            "DMY" => ["d/M/yyyy", "d.M.yyyy", "d-M-yyyy"],
+            "MDY" => ["M/d/yyyy", "M/d/ yyyy".Replace(" ", ""), "MM/dd/yyyy", "M-d-yyyy", "MM-dd-yyyy"],
+            "DMY" => ["d/M/yyyy", "d.M.yyyy", "d-M-yyyy", "dd/MM/yyyy", "dd.MM.yyyy", "dd-MM-yyyy"],
             _ => ["yyyy-M-d", "yyyy/M/d", "yyyy.M.d"]
         };
         for (var i = 1; i < table.Count; i++)
@@ -139,7 +139,7 @@ public sealed class YnabRegisterReader : IYnabImportReader
             var cleared = Field(10, 40);
             var dateText = Field(2, 30);
             var dateFormats = dateText.Length >= 4 && dateText[..4].All(char.IsDigit)
-                ? new[] { "yyyy-M-d", "yyyy/M/d", "yyyy.M.d" }
+                ? new[] { "yyyy-M-d", "yyyy/M/d", "yyyy.M.d", "yyyy-MM-dd", "yyyy/MM/dd", "yyyy.MM.dd" }
                 : formats;
             if (account.Length == 0 || !DateOnly.TryParseExact(dateText, dateFormats,
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
