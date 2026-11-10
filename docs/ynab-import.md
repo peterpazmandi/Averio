@@ -53,10 +53,13 @@ exact decimal values with up to four fractional digits. Dates are date-only.
 - Accounts must map one-to-one, visibility and write permissions are rechecked
   on confirmation, and balance anchors are not modified.
 - YNAB rows named **Starting Balance**, **Manual Balance Adjustment** or
-  **Reconciliation Balance Adjustment** are skipped. They represent account
-  equity/opening-balance corrections rather than income or spending. Set the
-  Averio account balance anchor separately; importing these rows as ledger
-  transactions would double-count the opening balance.
+  **Reconciliation Balance Adjustment** are not imported as ledger transactions.
+  Starting Balance rows are preserved as source-account metadata and prefill the
+  opening balance and date when a new Averio account is created. This also keeps
+  zero-transaction accounts visible in account mapping. Manual and reconciliation
+  adjustments are retained only as account presence metadata. A source account
+  with no starting-balance row has no inferred opening balance and must be entered
+  manually when creating a new account.
 - The register identifies accounts by their exported display name. Keep source
   account names distinct when possible; YNAB exports do not provide a stable
   account identifier that Averio can use for mapping.
