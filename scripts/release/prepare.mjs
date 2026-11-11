@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { verifyFrontendArchiveHash } from './frontend-archive.mjs';
 import { affectedComponents, components, nextVersions } from './version.mjs';
 
 const run = (command, args) => execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
@@ -49,4 +50,8 @@ for (const [key, value] of Object.entries({ tag, sha, ...Object.fromEntries(comp
 ])) })) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 if (!manifest.components.frontend.rebuild) {
   run('gh', ['release', 'download', prior.tag_name, '--repo', repo, '--pattern', 'frontend.tar.gz', '--dir', 'release']);
+  verifyFrontendArchiveHash(
+    readFileSync('release/frontend.tar.gz'),
+    previous.components?.frontend?.sha256,
+  );
 }
