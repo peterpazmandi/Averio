@@ -114,7 +114,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
         </div><Link to="/app/import-history" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('importHistory.title')}</Link><Link to="/app/transactions" className="text-sm font-semibold text-primary-700 dark:text-primary-300">{t('imports.back')}</Link></header>
         {!loaded && <AverioCard><p role="status">{t(accounts.isError || owners.isError || categories.isError ? 'imports.loadError' : 'imports.loading')}</p>
             <AverioButton onClick={() => { void accounts.refetch(); void owners.refetch(); void categories.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>}
-        {failure && <p role="alert" className="rounded-xl border border-red-300 p-4 text-red-700 dark:text-red-300">{failure instanceof ApiError ? failure.message : t('errors.genericDescription')}
+        {failure && <p role="alert" className="rounded-xl border border-red-300 p-4 text-red-700 dark:text-red-300">{failure instanceof ApiError && failure.code === 'import_ynab_adjustment_unsupported' ? t('imports.ynabAdjustmentUnsupported') : failure instanceof ApiError ? failure.message : t('errors.genericDescription')}
             {confirm.isError && <span className="block">{t('imports.retrySafe')}</span>}</p>}
         {busy && <div role="status" className="grid gap-2"><p>{t(upload.isPending ? 'imports.reading' : 'imports.saving')}</p>
             <progress aria-label={t(upload.isPending ? 'imports.reading' : 'imports.saving')} className="h-2 w-full accent-emerald-500" /></div>}
@@ -215,7 +215,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                         <p className="text-sm">{t('imports.' + total.kind)} · {total.count}</p><strong>{money(total.amount, total.currency)}</strong></div>)}</div>
                     <label className="mt-4 flex items-start gap-3 text-sm font-semibold"><input className="mt-1 size-5 shrink-0 accent-emerald-500" type="checkbox" checked={ack} disabled={busy} onChange={e => setAck(e.target.checked)} />{t('imports.ack')}</label>
                 </AverioCard>
-                <AverioCard><div className="max-h-[28rem] overflow-auto" tabIndex={0} role="region" aria-label={t('imports.preview')}><table className="w-full text-left text-sm"><caption className="mb-3 text-left font-bold">{t('imports.preview')}</caption>
+                {preview.count > 0 && <AverioCard><div className="max-h-[28rem] overflow-auto" tabIndex={0} role="region" aria-label={t('imports.preview')}><table className="w-full text-left text-sm"><caption className="mb-3 text-left font-bold">{t('imports.preview')}</caption>
                     <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900"><tr>{['date', 'kind', 'account', 'category', 'amount', 'merchant', 'note'].map(c => <th key={c} className="p-2">{t('imports.' + c)}</th>)}</tr></thead>
                     <tbody>{preview.rows.slice(page * 50, (page + 1) * 50).map((r, i) => <tr key={r.sheet + r.rowNumber} className="border-t border-slate-200 dark:border-slate-700">
                         <td className="whitespace-nowrap p-2">{r.date}</td><td className="p-2">{t('imports.' + r.kind)}{review?.skippedRows.includes(page * 50 + i) && <span className="block text-xs font-bold">{t('importTools.Skipped')}</span>}</td><td className="p-2">{r.account}{r.destination && ` → ${r.destination}`}</td>
@@ -223,7 +223,7 @@ export function ImportPage({ userId, householdId }: { userId: string; householdI
                     <div className="mt-3 flex items-center justify-between gap-2"><AverioButton disabled={page === 0} onClick={() => setPage(p => p - 1)}>{t('common.actions.back')}</AverioButton>
                         <span className="text-sm">{t('imports.page', { page: page + 1, pages: Math.ceil(preview.count / 50) })}</span>
                         <AverioButton disabled={(page + 1) * 50 >= preview.count} onClick={() => setPage(p => p + 1)}>{t('common.actions.next')}</AverioButton></div>
-                </AverioCard>
+                </AverioCard>}
             </>}
             {preview && <footer className="flex justify-between gap-3"><AverioButton disabled={busy} onClick={() => { setStep(s => Math.max(0, s - 1)); setReview(null); setAck(false); confirm.reset(); }}>{t('common.actions.back')}</AverioButton>
                 {step < 3 ? <AverioButton variant="primary" disabled={busy || !loaded || (step === 1 && !mappingsValid)} onClick={() => setStep(s => s + 1)}>{t('common.actions.continue')}</AverioButton>
