@@ -31,6 +31,49 @@ jobs:
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
           "$(go env GOPATH)/bin/actionlint" -shellcheck=
 
+  migration_bundle:
+    name: Migration image and upgrade checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: averio_migrations
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d averio_migrations"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build runnable migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.migrator
+          platforms: linux/amd64
+          load: true
+          tags: averio-migrator:verify
+      - name: Apply full migration chain and prove rerun is safe
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            docker run --rm --network host \
+              -e 'AVERIO_MIGRATION_CONNECTION_STRING=Host=localhost;Port=5432;Database=averio_migrations;Username=postgres;Password=postgres' \
+              averio-migrator:verify
+          done
+      - name: Verify ARM64 migration image builds
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.migrator
+          platforms: linux/arm64
+          push: false
+
   backend:
     name: Backend checks
     runs-on: ubuntu-latest

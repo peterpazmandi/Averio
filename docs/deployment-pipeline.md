@@ -188,6 +188,10 @@ they do not prove successful execution of every recurring/receipt background job
 PR business regression tests remain required. No real ledger test data is created by
 the deployment smoke checks.
 
+PR verification also builds the migration image, applies the complete migration
+chain twice against a disposable PostgreSQL database, and checks the ARM64 build.
+This checks the exact migration delivery mechanism before it can reach Neon.
+
 References: [GitHub workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
 [Cloudflare Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/),
 [Pages CI uploads](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/).
