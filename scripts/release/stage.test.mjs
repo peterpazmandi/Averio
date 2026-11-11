@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-const script = resolve('scripts/release/stage.mjs');
+const script = fileURLToPath(new URL('./stage.mjs', import.meta.url));
 const registry = '123456789012.dkr.ecr.eu-north-1.amazonaws.com';
 function fixture() {
   const cwd = mkdtempSync(join(tmpdir(), 'averio-release-'));

@@ -70,6 +70,10 @@ For production use its actual host, Compose project/files and Pages project, plu
 `https://api.averioapp.com` and `https://averioapp.com`. Do not copy integration paths
 blindly: the workflow operates on the exact Compose project you name.
 
+Use the working custom frontend domain under `averioapp.com` for integration,
+not its `pages.dev` address. Frontend and API must remain on the same site for the
+existing SameSite cookie policy, and the frontend origin must be in API CORS settings.
+
 Add these environment secrets:
 
 | Secret | Purpose |
