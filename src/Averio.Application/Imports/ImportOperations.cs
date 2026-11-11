@@ -79,7 +79,8 @@ public sealed partial class ImportHandler
                 || (account.Scope != AccountScope.Household && !account.Owners.Any(o => o.HouseholdMemberId == memberId))) throw new ForbiddenException();
         }
         var map = mappings.ToDictionary(m => m.Source, m => m.AccountId);
-        var candidates = await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
+        IReadOnlyList<ImportExistingRecord> candidates = rows.Length == 0 ? []
+            : await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
         var lookup = candidates.GroupBy(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Matches: g.OrderBy(c => c.Id).Take(3)
                 .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount),
