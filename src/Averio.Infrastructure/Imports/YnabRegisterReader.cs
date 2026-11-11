@@ -35,6 +35,7 @@ public sealed class YnabRegisterReader : IYnabImportReader
     private sealed record RegisterEntry(int Line, string Account, string? OtherAccount, DateOnly Date,
         string Kind, decimal Amount, decimal SignedAmount, string Category, string Payee, string Note);
     private static BusinessRuleException Invalid() => new("import_invalid", "Error_ImportInvalid");
+    private static BusinessRuleException UnsupportedAdjustment() => new("import_ynab_adjustment_unsupported", "Error_ImportInvalid");
 
     public YnabImportReadResult Read(Stream stream, string fileName, string currency,
         string dateFormat, string numberFormat)
@@ -132,6 +133,10 @@ public sealed class YnabRegisterReader : IYnabImportReader
             }
             var account = Field(0, 100);
             var payee = Field(3, 160);
+            // Adjustment rows change the YNAB balance without a normal transaction.
+            // Until they can be represented explicitly, reject the export instead of
+            // silently importing a financially incorrect account history.
+            if (IsBalanceAdjustment(payee) && !IsOpeningBalance(payee)) throw UnsupportedAdjustment();
             var group = Field(5, 100);
             var category = Field(6, 100);
             var note = Field(7, 500);
@@ -151,12 +156,13 @@ public sealed class YnabRegisterReader : IYnabImportReader
                 throw Invalid(); // Do not double-count split-parent and split-leg rows.
             var outflow = Money(Field(8, 60), currency, numberFormat);
             var inflow = Money(Field(9, 60), currency, numberFormat);
-            if ((outflow == 0 && inflow == 0) || (outflow != 0 && inflow != 0))
+            if ((outflow == 0 && inflow == 0 && !IsOpeningBalance(payee))
+                || (outflow != 0 && inflow != 0))
                 throw Invalid();
             var signed = inflow - outflow;
             var kind = signed > 0 ? "Income" : "Expense";
             var amount = decimal.Abs(signed);
-            if (!Transfer.IsValidAmount(amount)) throw Invalid();
+            if ((amount != 0 && !Transfer.IsValidAmount(amount)) || (amount == 0 && !IsOpeningBalance(payee))) throw Invalid();
             var transfer = TransferPayee.Match(payee);
             var other = transfer.Success ? transfer.Groups[1].Value.Trim() : null;
             if (other is not null && (other.Length is 0 or > 100 || other == account))
@@ -268,8 +274,8 @@ public sealed class YnabRegisterReader : IYnabImportReader
         for (var i = 0; i < records.Count; i++)
         {
             var r = records[i];
-            // Balance adjustment rows are account metadata, not ledger activity.
-            if (IsBalanceAdjustment(r.Payee)) continue;
+            // Opening balances prefill newly created accounts; they are not ledger activity.
+            if (IsOpeningBalance(r.Payee)) continue;
             if (r.OtherAccount is null)
             {
                 output.Add(new("YNAB Register", r.Line, r.Kind, r.Date, r.Account, null,
