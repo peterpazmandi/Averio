@@ -68,7 +68,8 @@ public sealed partial class ImportHandler
     private async Task<ImportReview> ReviewCoreAsync(Guid householdId, Guid memberId, ImportBatch batch, IReadOnlyList<ImportAccountMapping> mappings, CancellationToken ct)
     {
         var rows = Rows(batch);
-        var sources = rows.SelectMany(r => r.Destination is null ? new[] { r.Account } : new[] { r.Account, r.Destination }).Distinct().ToArray();
+        var sourceAccounts = SourceAccounts(batch);
+        var sources = sourceAccounts.Select(a => a.Source).ToArray();
         if (mappings is null || mappings.Count != sources.Length || mappings.Any(m => m is null || !sources.Contains(m.Source))
             || mappings.Select(m => m.Source).Distinct().Count() != sources.Length || mappings.Select(m => m.AccountId).Distinct().Count() != sources.Length) throw MappingError();
         foreach (var mapping in mappings)
@@ -78,7 +79,8 @@ public sealed partial class ImportHandler
                 || (account.Scope != AccountScope.Household && !account.Owners.Any(o => o.HouseholdMemberId == memberId))) throw new ForbiddenException();
         }
         var map = mappings.ToDictionary(m => m.Source, m => m.AccountId);
-        var candidates = await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
+        IReadOnlyList<ImportExistingRecord> candidates = rows.Length == 0 ? []
+            : await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
         var lookup = candidates.GroupBy(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Matches: g.OrderBy(c => c.Id).Take(3)
                 .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount),

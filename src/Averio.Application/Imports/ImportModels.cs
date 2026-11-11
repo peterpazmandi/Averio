@@ -4,6 +4,8 @@ namespace Averio.Application.Imports;
 public sealed record ImportRow(string Sheet, int RowNumber, string Kind, DateOnly Date,
     string Account, string? Destination, string Category, decimal Amount, string Currency,
     decimal? ReceivedAmount, string? ReceivedCurrency, string Tags, string Note);
+public sealed record ImportSourceAccount(string Source, string Currency, string? OpeningBalance, DateOnly? OpeningBalanceDate);
+public sealed record YnabImportReadResult(IReadOnlyList<ImportRow> Rows, IReadOnlyList<ImportSourceAccount> SourceAccounts);
 public sealed record ImportAccountMapping(string Source, Guid AccountId, string Visibility);
 public sealed record ImportCategoryMapping(string Kind, string Source, Guid? CategoryId);
 public sealed record ConfirmImportRequest(IReadOnlyList<ImportAccountMapping> Accounts,
@@ -14,10 +16,14 @@ public sealed record ImportPreviewRow(string Sheet, int RowNumber, string Kind, 
     string Account, string? Destination, string Category, string Amount, string Currency,
     string? ReceivedAmount, string? ReceivedCurrency, string Tags, string Note);
 public sealed record ImportPreview(Guid Id, string Status, int Count, DateOnly From, DateOnly To,
-    IReadOnlyList<string> Accounts, IReadOnlyList<ImportCategorySource> Categories,
+    IReadOnlyList<string> Accounts, IReadOnlyList<ImportSourceAccount> SourceAccounts, IReadOnlyList<ImportCategorySource> Categories,
     IReadOnlyList<ImportTotal> Totals, int RepeatedRows, IReadOnlyList<ImportPreviewRow> Rows, ImportMappingDefaults? Defaults = null, ImportResult? Completion = null);
 public sealed record ImportResult(Guid Id, string Status, int Transactions, int Transfers, int Accounts = 0, int Skipped = 0);
 public interface IXlsxImportReader { IReadOnlyList<ImportRow> Read(Stream stream); }
+public interface IYnabImportReader
+{
+    YnabImportReadResult Read(Stream stream, string fileName, string currency, string dateFormat, string numberFormat);
+}
 public interface IImportRepository
 {
     Task<IReadOnlyList<ImportHistoryStored>> ListCompletedAsync(Guid householdId, Guid memberId, int page, CancellationToken ct);

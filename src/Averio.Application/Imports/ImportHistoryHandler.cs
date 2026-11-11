@@ -10,10 +10,16 @@ public sealed partial class ImportHandler
         => new(value.UtcTicks - value.UtcTicks % 10, TimeSpan.Zero);
     private static string? CleanSourceName(string? name)
         => name is null ? null : new string(name.Replace('\\', '/').Split('/').Last().Where(c => !char.IsControl(c)).Take(200).ToArray());
-    private static ImportHistorySummary Summarize(IReadOnlyList<ImportRow> rows, IReadOnlyList<ImportRow>? original = null)
-        => new(rows.Count, (rows.Count > 0 ? rows : original!).Min(r => r.Date), (rows.Count > 0 ? rows : original!).Max(r => r.Date),
+    private static ImportHistorySummary Summarize(IReadOnlyList<ImportRow> rows, IReadOnlyList<ImportRow>? original = null,
+        IReadOnlyList<ImportSourceAccount>? sourceAccounts = null)
+    {
+        var dates = rows.Count > 0 ? rows.Select(r => r.Date).ToArray()
+            : original is { Count: > 0 } ? original.Select(r => r.Date).ToArray()
+            : sourceAccounts?.Where(a => a.OpeningBalanceDate is not null).Select(a => a.OpeningBalanceDate!.Value).ToArray() ?? [];
+        return new(rows.Count, dates.Min(), dates.Max(),
             rows.GroupBy(r => (r.Kind, r.Currency)).Select(g => new ImportTotal(g.Key.Kind, g.Key.Currency,
                 g.Sum(r => r.Amount).ToString(CultureInfo.InvariantCulture), g.Count())).ToArray());
+    }
     public async Task<ImportHistoryPage> HistoryAsync(Guid householdId, int page, CancellationToken ct)
     {
         var member = await MemberAsync(householdId, ct);

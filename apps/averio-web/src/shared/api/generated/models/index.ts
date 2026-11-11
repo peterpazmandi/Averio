@@ -83,6 +83,7 @@ export * from './ImportPreviewRow';
 export * from './ImportResult';
 export * from './ImportReview';
 export * from './ImportReviewRequest';
+export * from './ImportSourceAccount';
 export * from './ImportTotal';
 export * from './ImportUndoPlan';
 export * from './ImportUndoRecord';

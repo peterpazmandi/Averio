@@ -23,6 +23,12 @@ try {
         const copy = copyModule.exports['imports' + language.toUpperCase()];
         const toolsCopy = copyModule.exports['importTools' + language.toUpperCase()];
         const errors = [], confirmations = [], accountRequests = [], createdAccounts = [];
+        const openInfo = async (subject, text) => {
+            const button = page.locator('button[aria-label*="' + subject + '"]').first();
+            await button.click();
+            await page.getByText(text, { exact: true }).waitFor({ state: 'visible' });
+            await page.keyboard.press('Escape');
+        };
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
@@ -30,7 +36,10 @@ try {
         }, { language, dark: width === 375 });
         const rows = Array.from({ length: 52 }, (_, i) => ({ sheet: 'Kiad�sok', rowNumber: i + 3, kind: 'Expense', date: '2026-09-21', account: 'Main', destination: null, category: 'Food', amount: '12.3456', currency: 'EUR', receivedAmount: null, receivedCurrency: null, tags: '<script>shop</script>', note: 'Original note' }));
         rows.push({ ...rows[0], sheet: '�tutal�s', kind: 'Transfer', destination: 'Savings', category: '', amount: '10' });
-        const preview = { id: 'batch', status: 'Draft', defaults: { accounts: [{ source: 'Main', accountId: 'main', visibility: 'Household' }], categories: [] }, count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
+        const preview = { id: 'batch', status: 'Draft', defaults: { accounts: [{ source: 'Main', accountId: 'main', visibility: 'Household' }], categories: [] }, count: rows.length, from: '2026-09-21', to: '2026-09-21', accounts: ['Main', 'Savings'], sourceAccounts: [
+            { source: 'Main', currency: 'EUR', openingBalance: null, openingBalanceDate: null },
+            { source: 'Savings', currency: 'EUR', openingBalance: null, openingBalanceDate: null }
+        ], categories: [{ kind: 'Expense', name: 'Food' }], totals: [{ kind: 'Expense', currency: 'EUR', amount: '641.9712', count: 52 }], repeatedRows: 51, rows };
         await page.route('**/api/v1/**', async route => {
             const req = route.request(), pathname = new URL(req.url()).pathname;
             const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
@@ -61,7 +70,7 @@ try {
         });
         await page.goto(url);
         await page.locator('input[type=file]').setInputFiles({ name: 'fixture.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('synthetic; API is mocked') });
-        await page.getByText(copy.accountsHelp, { exact: true }).waitFor();
+        await openInfo(copy.accounts, copy.accountsHelp);
         assert.equal(await page.locator('select option[value="other-private"]').count(), 0);
         assert.equal(confirmations.length, 0, 'Preview must not commit');
         const createButton = page.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Savings'), exact: true });
@@ -94,7 +103,7 @@ try {
         assert.equal(page.url(), url, 'Creating an account must stay on the import page');
         assert.equal(confirmations.length, 0, 'Creating an account must not commit the import');
         await page.locator('footer button').last().click();
-        await page.getByText(copy.categoriesHelp, { exact: true }).waitFor();
+        await openInfo(copy.categories, copy.categoriesHelp);
         await page.locator('footer button').last().click();
         await page.getByRole('table').waitFor();
         assert.equal(await page.locator('tbody tr').count(), 50);
@@ -117,6 +126,69 @@ try {
         assert.doesNotMatch(await page.locator('body').innerText(), /imports\.[a-zA-Z]/);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         await page.close();
+
+        if (language === 'en' && width === 1440) {
+            const ynabPage = await browser.newPage({ viewport: { width, height: 900 } });
+            ynabPage.setDefaultTimeout(15000);
+            const ynabErrors = [];
+            ynabPage.on('pageerror', e => ynabErrors.push(e.message));
+            const ynabPreview = {
+                id: 'ynab-batch', status: 'Draft', defaults: { accounts: [], categories: [] },
+                count: 1, from: '2026-09-14', to: '2026-09-14', accounts: ['Checking', 'Prémium EP'],
+                sourceAccounts: [
+                    { source: 'Checking', currency: 'EUR', openingBalance: '1000', openingBalanceDate: '2026-09-01' },
+                    { source: 'Prémium EP', currency: 'EUR', openingBalance: '250000', openingBalanceDate: '2026-09-10' }
+                ],
+                categories: [{ kind: 'Expense', name: 'Food / Groceries' }],
+                totals: [{ kind: 'Expense', currency: 'EUR', amount: '12.50', count: 1 }],
+                repeatedRows: 0,
+                rows: [{ sheet: 'YNAB Register', rowNumber: 2, kind: 'Expense', date: '2026-09-14',
+                    account: 'Checking', destination: null, category: 'Food / Groceries', amount: '12.50',
+                    currency: 'EUR', receivedAmount: null, receivedCurrency: null, tags: 'Tesco',
+                    note: 'YNAB status: Cleared' }]
+            };
+            await ynabPage.route('**/api/v1/**', async route => {
+                const req = route.request(), pathname = new URL(req.url()).pathname;
+                const json = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+                if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
+                if (pathname.endsWith('/security/csrf')) return json({ token: 'csrf' });
+                if (pathname.endsWith('/account-owner-options')) return json({ currentMemberId: 'member', members: [] });
+                if (pathname.endsWith('/accounts') && req.method() === 'POST') return json({ id: 'premium' });
+                if (pathname.endsWith('/accounts')) return json([
+                    { id: 'checking', name: 'Checking', currency: 'EUR', scope: 'Household', visibility: 'Household',
+                        status: 'Active', owners: [], balanceAnchorDate: '2026-09-01', balanceAnchorAmount: '1000' }
+                ]);
+                if (pathname.endsWith('/categories')) return json([]);
+                if (pathname.endsWith('/imports/ynab')) {
+                    const requestUrl = new URL(req.url());
+                    assert.equal(requestUrl.searchParams.get('currency'), 'EUR');
+                    assert.equal(requestUrl.searchParams.get('dateFormat'), 'MDY');
+                    assert.equal(requestUrl.searchParams.get('numberFormat'), 'DotDecimal');
+                    assert.match(req.postDataBuffer().toString(), /register\.csv/);
+                    return json(ynabPreview);
+                }
+                throw new Error(`Unexpected YNAB request ${pathname}`);
+            });
+            await ynabPage.goto(url);
+            await ynabPage.locator('select').first().selectOption('ynab');
+            await ynabPage.locator('input[type=file]').setInputFiles({
+                name: 'register.csv', mimeType: 'text/csv', buffer: Buffer.from('synthetic YNAB register')
+            });
+            const accountInfo = ynabPage.locator('button[aria-label*="' + copy.accounts + '"]').first();
+            await accountInfo.click();
+            await ynabPage.getByText(copy.accountsHelp, { exact: true }).waitFor({ state: 'visible' });
+            await ynabPage.keyboard.press('Escape');
+            assert.equal(await ynabPage.getByText(copy.ynabFile, { exact: true }).count(), 0);
+            const premiumCreate = ynabPage.getByRole('button', { name: copy.createFor.replace('{{name}}', 'Prémium EP'), exact: true });
+            await premiumCreate.click();
+            const premiumDialog = ynabPage.locator('dialog[open]');
+            assert.equal(await premiumDialog.locator('input[inputmode=decimal]').inputValue(), '250000');
+            assert.equal(await premiumDialog.locator('input[type=date]').inputValue(), '2026-09-10');
+            await ynabPage.keyboard.press('Escape');
+            assert.equal(await ynabPage.locator('dialog[open]').count(), 0);
+            assert.deepEqual(ynabErrors, []);
+            await ynabPage.close();
+        }
     }
-    console.log('PASS inline account creation, cancellation, validation, mapping, import review and retry browser flows');
+    console.log('PASS inline account creation, cancellation, validation, mapping, import review, retry and YNAB source flows');
 } finally { await browser?.close(); server.kill(); }

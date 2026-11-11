@@ -112,6 +112,7 @@ public static class DependencyInjection
         ConfigureEmail(services, configuration);
 
         services.AddScoped<Averio.Application.Imports.IXlsxImportReader, Imports.MoneyManagerXlsxReader>();
+        services.AddScoped<Averio.Application.Imports.IYnabImportReader, Imports.YnabRegisterReader>();
         services.AddScoped<Averio.Application.Imports.IImportRepository, Imports.ImportRepository>();
         return services;
     }

@@ -22,6 +22,7 @@ if (args.Length == 2 && args[0] == "--import-workbook")
 var checks = new (string Name, Action Run)[]
 {
     ("Money manager XLSX import validation", ImportChecks.Run),
+    ("YNAB register import validation", YnabImportChecks.Run),
     ("receipt quotas, UTC resets, retention and metrics", ReceiptRolloutChecks.Run),
     ("receipt benchmark and production timeout parity", () => ReceiptTimeoutChecks.RunAsync().GetAwaiter().GetResult()),
     ("receipt images, amounts and provider contract", () => ReceiptChecks.RunAsync().GetAwaiter().GetResult()),
