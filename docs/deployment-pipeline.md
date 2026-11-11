@@ -1,0 +1,193 @@
+# Release and deployment pipeline
+
+## What changes
+
+PR checks → merge to develop → successful Verify push run → Create release →
+integration migration → API/Worker/frontend deployment → deployed integration checks →
+production migration → deployment of the same artifacts → production smoke checks.
+
+Create release is manual so several merged PRs can form one release. Version numbers
+are automatic. Feature releases align all components at the next minor, starting
+with 0.1.0. A hotfix release requires every first-parent change since the preceding
+automated release to come from a merged `hotfix/` PR. Example: frontend 0.1.1,
+API 0.1.0, Worker 0.1.0. Shared `src/` changes bump API and Worker. Unknown build
+inputs bump all components conservatively. Docs-only hotfix releases are rejected.
+Use a feature release when changing deployment tooling to rebuild all artifacts.
+
+Release tags identify the whole manifest (`release-<run-number>-<attempt>`), while
+component semantic versions describe each app. Rerunning a failed creation uses a
+new attempt tag. Draft/incomplete releases are never a baseline. Do not overwrite
+published assets or delete ECR images referenced by retained releases.
+
+## 1. Create GitHub Environments
+
+Open repository Settings → Environments → New environment. Create `release`,
+`integration`, and `production`. Restrict deployment branches to `develop`.
+Optionally add yourself as a required reviewer on production if you want a pause
+after integration succeeds. Without that protection, production proceeds automatically.
+
+Under Settings → Secrets and variables → Actions, define repository variables:
+
+| Variable | Value/purpose |
+| --- | --- |
+| `AWS_REGION` | `eu-north-1` |
+| `ECR_REGISTRY` | `678745735110.dkr.ecr.eu-north-1.amazonaws.com` |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+
+In the `release` environment add variable `AWS_ROLE_ARN` for a GitHub OIDC role.
+The role trust must restrict `aud` to `sts.amazonaws.com` and `sub` to
+`repo:peterpazmandi/Averio:environment:release`. Give it ECR authorization-token
+permission and push/pull permissions only for `averio-api`, `averio-worker`, and
+`averio-migrator`. Create all three repositories first; the workflow does not create them.
+
+From local PowerShell, the new repository can be created with:
+
+```powershell
+aws ecr create-repository --repository-name averio-migrator --image-tag-mutability IMMUTABLE --region eu-north-1 --profile averio
+```
+
+Existing API/Worker repositories can stay in place. Retain images for your supported
+recovery window; a frontend-only hotfix continues referencing older backend digests.
+
+## 2. Configure each deployment environment
+
+Add these variables separately under integration and production:
+
+| Variable | Integration example / meaning |
+| --- | --- |
+| `DEPLOY_HOST` | Reachable EC2 DNS/IP; SSH port 22 |
+| `DEPLOY_USER` | `ubuntu` (dedicated deployment account also supported) |
+| `COMPOSE_PROJECT` | `averio-integration`; production must match its existing project name |
+| `COMPOSE_FILE` | `/etc/averio/compose.integration.yml` |
+| `ENV_FILE` | `/etc/averio/.env.integration` |
+| `MIGRATION_ENV_FILE` | `/etc/averio/migration.integration.env` |
+| `API_URL` | `https://integration-api.averioapp.com` |
+| `FRONTEND_URL` | Your actual integration frontend HTTPS origin |
+| `CLOUDFLARE_PAGES_PROJECT` | Existing integration Pages project name |
+| `CLOUDFLARE_PAGES_BRANCH` | That Pages project's configured production branch |
+
+For production use its actual host, Compose project/files and Pages project, plus
+`https://api.averioapp.com` and `https://averioapp.com`. Do not copy integration paths
+blindly: the workflow operates on the exact Compose project you name.
+
+Add these environment secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `DEPLOY_SSH_KEY` | Private key for the deployment account |
+| `DEPLOY_KNOWN_HOSTS` | Verified SSH known_hosts line for DEPLOY_HOST |
+| `CLOUDFLARE_API_TOKEN` | Token with Account → Cloudflare Pages → Edit for this account |
+| `SMOKE_EMAIL` | Integration only: dedicated verified Averio test account |
+| `SMOKE_PASSWORD` | Integration only: password for that account |
+
+Verify the SSH host key through your existing trusted EC2 session; do not blindly
+trust `ssh-keyscan` output. The workflow requires strict host-key checking.
+The runner must be able to reach SSH; if your host is private or restricted to your
+home IP, use an approved runner/network route before enabling deployments. Do not
+open unrestricted SSH solely to make the workflow pass. Deployment currently uses
+SSH, not SSM or a Cloudflare Access SSH tunnel.
+
+## 3. Prepare EC2 once
+
+Keep the working API/Worker Compose configuration and Cloudflare tunnel. The service
+names must be `webapi` and `worker`; deployment only replaces their image references.
+The chosen account must support `sudo -n bash` (the workflow is effectively root
+deployment access). Docker Compose v2, AWS CLI, Bash, and `flock` must be installed.
+Give the EC2 instance role ECR read permissions for all three repositories.
+
+Create a separate migration env file on each host using the configured path:
+
+```bash
+sudo install -m 600 /dev/null /etc/averio/migration.integration.env
+sudo nano /etc/averio/migration.integration.env
+```
+
+Insert the entire following file, replacing the example with that environment's
+direct Neon connection string and migration role credentials:
+
+```dotenv
+AVERIO_MIGRATION_CONNECTION_STRING=Host=YOUR_DIRECT_NEON_HOST;Database=YOUR_DATABASE;Username=YOUR_MIGRATION_ROLE;Password=YOUR_PASSWORD;SSL Mode=Require
+```
+
+Use the production file/path/credentials separately for production. No quotes around
+the value: Docker `--env-file` passes them literally. This is for the EF design-time
+factory; application runtime credentials remain in the existing application env file.
+Never commit either file. Confirm Neon recovery/backup retention before the first release.
+
+Migrations execute in a short-lived, architecture-matched image before containers
+are replaced. A failure prevents application deployment. Existing apps continue
+running during migration, so migrations must be backward compatible. Destructive
+changes require a separate planned maintenance procedure.
+
+The workflow preserves `/etc/averio/deploy-<environment>/current.yml` and
+`previous.yml`. Use the current overlay in later manual Compose commands, otherwise
+the old image in your original Compose file could be started again:
+
+```bash
+sudo docker compose --project-name averio-integration \
+  --env-file /etc/averio/.env.integration \
+  -f /etc/averio/compose.integration.yml \
+  -f /etc/averio/deploy-integration/current.yml ps
+```
+
+## 4. Make Cloudflare follow the release pipeline
+
+Open Workers & Pages → each Averio Pages project → Settings → Builds & deployments
+→ Branch control. Disable automatic production and preview Git deployments for the
+projects controlled by this pipeline. Keep existing custom domains. Wrangler can
+upload prebuilt files to an existing Git-integrated Pages project.
+
+Set `CLOUDFLARE_PAGES_BRANCH` to the project's production branch so the custom domain
+receives the upload. Use separate integration and production projects. Ensure existing
+Cloudflare cache rules do not override no-store on `/runtime-config.js` and `/version.json`.
+Integration still receives its banner and `X-Robots-Tag: noindex`; noindex is not access control.
+
+The frontend archive is built once. Deployment changes only public `runtime-config.js`
+and hosting `_headers`; JS/CSS assets and `version.json` are promoted unchanged.
+Runtime settings contain no secrets. Existing local Vite `.env` behavior remains supported.
+
+## 5. Create and deploy the first release
+
+1. Merge this PR and wait for all Verify jobs on the develop push to pass.
+2. Open Actions → Create release → Run workflow; select branch develop.
+3. Choose `feature` and keep `deploy` checked. Click Run workflow.
+4. The workflow checks the exact source commit, builds multi-architecture images and
+   frontend, and publishes a complete GitHub Release with manifest and archive.
+5. Deploy release runs separately. Watch integration first: migration, containers,
+   frontend, health/version checks, then real browser login/me/logout.
+6. If configured, approve the production environment after reviewing integration.
+   Production migration/deployment and anonymous smoke checks then run.
+
+Creating a release with `deploy` unchecked only builds/publishes it. To deploy later,
+open Actions → Deploy release → Run workflow on develop and paste its exact tag.
+The tag must be the latest published automated release. Finish or recover the active
+deployment before creating another release; a newer release blocks promotion of older ones.
+GitHub concurrency keeps one active deployment and may replace an older pending run;
+it is not a FIFO release queue. Running migrations are not automatically canceled.
+
+## Failure and recovery
+
+- Verification failure: fix the PR/commit; no release can be created from it.
+- Build/upload failure: no complete published release is promoted. Fix the cause and
+  rerun Create release. A draft tag may remain for diagnosis.
+- Integration failure: production never starts. Fix configuration and rerun the full
+  Deploy release workflow for the same latest tag; EF applies only pending migrations.
+- Production failure: stop and inspect which step failed. API, Worker and frontend
+  deployment is not a single transaction. The release may be partially deployed.
+- Prefer forward fixes. Do not roll back database migrations automatically. If older
+  binaries are verified compatible with the current schema, an operator may use the
+  recorded previous image overlay and restore the matching Cloudflare deployment.
+  Otherwise follow the Neon recovery/maintenance procedure. A first automated release
+  has no previous overlay: record the existing image digests and Pages deployment first.
+
+Public checks verify DB connectivity, API version/source identity, frontend identity,
+and anonymous rejection by `/auth/me`. Integration additionally verifies React renders
+and real cross-origin secure cookies/CSRF/login/logout using the dedicated account.
+Worker checks verify the requested image, running state and no immediate restarts;
+they do not prove successful execution of every recurring/receipt background job.
+PR business regression tests remain required. No real ledger test data is created by
+the deployment smoke checks.
+
+References: [GitHub workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
+[Cloudflare Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/),
+[Pages CI uploads](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/).

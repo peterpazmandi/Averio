@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import { runtimeConfiguration } from '../runtimeConfiguration';
 
 export function IntegrationEnvironmentBanner() {
     const { t } = useTranslation();
 
-    if (import.meta.env.MODE !== 'integration') {
+    if (runtimeConfiguration.environment !== 'integration') {
         return null;
     }
 
@@ -17,3 +18,4 @@ export function IntegrationEnvironmentBanner() {
         </div>
     );
 }
+

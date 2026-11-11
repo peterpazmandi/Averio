@@ -4,6 +4,8 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 ARG TARGETARCH
+ARG VERSION=0.0.0
+ARG VCS_REF=unknown
 
 WORKDIR /src
 
@@ -20,12 +22,18 @@ RUN dotnet publish \
     --self-contained false \
     --no-restore \
     --output /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:Version="$VERSION" \
+    /p:InformationalVersion="$VERSION+$VCS_REF"
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.revision="${VCS_REF}"
 
 WORKDIR /app
 
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "Averio.Worker.dll"]
+

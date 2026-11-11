@@ -1,0 +1,121 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: Feature aligns versions; hotfix bumps affected components
+        type: choice
+        options: [feature, hotfix]
+        required: true
+      deploy:
+        description: Deploy through integration and then production
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+  id-token: write
+
+concurrency:
+  group: averio-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_KIND: ${{ inputs.kind }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Verify source and calculate component versions
+        id: plan
+        run: node scripts/release/prepare.mjs
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API once for AMD64 and ARM64
+        if: steps.plan.outputs.api_build == 'true'
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.api
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/averio-api:${{ steps.plan.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.plan.outputs.api_version }}
+            VCS_REF=${{ steps.plan.outputs.sha }}
+      - name: Build Worker once for AMD64 and ARM64
+        if: steps.plan.outputs.worker_build == 'true'
+        id: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.worker
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/averio-worker:${{ steps.plan.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.plan.outputs.worker_version }}
+            VCS_REF=${{ steps.plan.outputs.sha }}
+      - name: Build explicit migration runner
+        id: migrator
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.migrator
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/averio-migrator:${{ steps.plan.outputs.tag }}
+      - name: Build environment-independent frontend
+        if: steps.plan.outputs.frontend_build == 'true'
+        working-directory: apps/averio-web
+        env:
+          VITE_API_URL: ''
+          RELEASE_VERSION: ${{ steps.plan.outputs.frontend_version }}
+          RELEASE_COMMIT: ${{ steps.plan.outputs.sha }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          node -e 'require("fs").writeFileSync("dist/version.json", JSON.stringify({ version: process.env.RELEASE_VERSION, commit: process.env.RELEASE_COMMIT }))'
+          tar -czf ../../release/frontend.tar.gz -C dist .
+      - name: Record immutable image references and archive hash
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WORKER_DIGEST: ${{ steps.worker.outputs.digest }}
+          MIGRATION_DIGEST: ${{ steps.migrator.outputs.digest }}
+        run: node scripts/release/finalize.mjs
+      - name: Publish complete release
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          SOURCE_SHA: ${{ steps.plan.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" --target "$SOURCE_SHA" --draft --title "$TAG" --notes-file release/notes.md
+          gh release upload "$TAG" release/manifest.json release/frontend.tar.gz
+          gh release edit "$TAG" --draft=false
+      - name: Start separate deployment workflow
+        if: inputs.deploy
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: gh workflow run deploy.yml --ref develop -f release="$TAG"

@@ -1,0 +1,128 @@
+name: Deploy one environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      release:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.release }}
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+      API_URL: ${{ vars.API_URL }}
+      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Validate and download published release
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^release-[0-9]+-[0-9]+$ ]]
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease | jq -e '.isDraft == false and .isPrerelease == false'
+          # Reject an older release accidentally started after a newer one was published.
+          latest=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -r '[.[][] | select(.draft == false and .prerelease == false) | select(.tag_name | test("^release-[0-9]+-[0-9]+$"))][0].tag_name')
+          [[ "$latest" == "$RELEASE_TAG" ]]
+          mkdir -p release dist
+          gh release download "$RELEASE_TAG" --pattern manifest.json --pattern frontend.tar.gz --dir release
+      - name: Validate artifacts and prepare public environment settings
+        id: stage
+        run: node scripts/release/stage.mjs
+      - name: Validate environment configuration before deployment
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          PROJECT: ${{ vars.COMPOSE_PROJECT }}
+          COMPOSE: ${{ vars.COMPOSE_FILE }}
+          ENV_FILE: ${{ vars.ENV_FILE }}
+          MIGRATION_ENV: ${{ vars.MIGRATION_ENV_FILE }}
+          REGION: ${{ vars.AWS_REGION }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$HOST" =~ ^[a-zA-Z0-9.-]+$ && "$USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$PROJECT" =~ ^[a-z0-9_-]+$ && "$REGION" =~ ^[a-z0-9-]+$ ]]
+          for file in "$COMPOSE" "$ENV_FILE" "$MIGRATION_ENV"; do
+            [[ "$file" =~ ^/etc/averio/[a-zA-Z0-9._/-]+$ && "$file" != *..* ]]
+          done
+          [[ -n "$PAGES_PROJECT" && -n "$PAGES_BRANCH" && -n "$CF_TOKEN" && -n "$CF_ACCOUNT" ]]
+          [[ "$FRONTEND_URL" == https://* ]]
+          if [[ "$DEPLOY_ENVIRONMENT" == integration ]]; then
+            [[ -n "$SMOKE_EMAIL" && -n "$SMOKE_PASSWORD" ]]
+          fi
+      - name: Configure verified SSH connection
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SSH_KEY" && -n "$KNOWN_HOSTS" ]]
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Migrate database and deploy immutable backend images
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          PROJECT: ${{ vars.COMPOSE_PROJECT }}
+          COMPOSE: ${{ vars.COMPOSE_FILE }}
+          ENV_FILE: ${{ vars.ENV_FILE }}
+          MIGRATION_ENV: ${{ vars.MIGRATION_ENV_FILE }}
+          REGION: ${{ vars.AWS_REGION }}
+          API_IMAGE: ${{ steps.stage.outputs.api }}
+          WORKER_IMAGE: ${{ steps.stage.outputs.worker }}
+          MIGRATOR_IMAGE: ${{ steps.stage.outputs.migrator }}
+        run: |
+          set -euo pipefail
+          # Values are validated above; printf %q also quotes each remote argument.
+          printf -v command 'sudo -n bash -s -- %q %q %q %q %q %q %q %q %q %q' \
+            "$DEPLOY_ENVIRONMENT" "$PROJECT" "$COMPOSE" "$ENV_FILE" "$MIGRATION_ENV" "$REGION" "$ECR_REGISTRY" "$API_IMAGE" "$WORKER_IMAGE" "$MIGRATOR_IMAGE"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$USER@$HOST" "$command" < scripts/release/deploy-host.sh
+      - name: Deploy the release frontend to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name "$PAGES_PROJECT" --branch "$PAGES_BRANCH" --commit-dirty=true
+      - name: Verify public release and database health
+        run: node scripts/release/smoke.mjs
+      - name: Install browser verification dependencies
+        if: inputs.environment == 'integration'
+        working-directory: apps/averio-web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify deployed browser authentication
+        if: inputs.environment == 'integration'
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: node scripts/release/browser-smoke.mjs
+      - name: Write deployment summary
+        run: |
+          printf '### %s deployed\n\nRelease: `%s`\n\nFrontend: %s\n\nAPI: %s\n' "$DEPLOY_ENVIRONMENT" "$RELEASE_TAG" "$FRONTEND_URL" "$API_URL" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519 ~/.ssh/known_hosts

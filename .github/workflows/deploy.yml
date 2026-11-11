@@ -1,0 +1,33 @@
+name: Deploy release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Published release tag (release-N-attempt)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# One pipeline owns integration through production. Do not cancel migrations.
+concurrency:
+  group: averio-deploy
+  cancel-in-progress: false
+
+jobs:
+  integration:
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: integration
+      release: ${{ inputs.release }}
+    secrets: inherit
+  production:
+    needs: integration
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: production
+      release: ${{ inputs.release }}
+    secrets: inherit

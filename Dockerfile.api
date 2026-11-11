@@ -6,6 +6,8 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 ARG TARGETARCH
+ARG VERSION=0.0.0
+ARG VCS_REF=unknown
 
 WORKDIR /src
 
@@ -24,7 +26,9 @@ RUN dotnet publish \
     --self-contained false \
     --no-restore \
     --output /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:Version="$VERSION" \
+    /p:InformationalVersion="$VERSION+$VCS_REF"
 
 # The runtime image follows the target architecture.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
@@ -42,3 +46,4 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Averio.Api.dll"]
+

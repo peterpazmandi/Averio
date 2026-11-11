@@ -1,5 +1,13 @@
 # Averio Current State
 
+## Deployment pipeline — 2026-11-11
+
+Release creation, per-component versioning, AMD64/ARM64 image publication, explicit
+migration bundles, integration-to-production promotion and deployed smoke checks
+are implemented in the deployment pipeline PR. Activation requires the external
+configuration in [deployment-pipeline.md](deployment-pipeline.md). No live release
+or infrastructure configuration is implied by merging the workflow files.
+
 **Status date:** 2026-10-28
 **Scope:** restarted implementation on the `develop` branch
 
@@ -284,3 +292,4 @@ Household UTC monthly receipt allowances, time-bounded operator-managed paid ent
 ## XLSX import review and recovery
 
 Import now includes explicit cross-file overlap decisions, remembered account/category mappings, a completion summary with actual counts, balance reconciliation and partial safe undo. Undo voids eligible records atomically, preserving edited or dependent records and balance references. Batch privacy and exact decimals are maintained. See [XLSX import](xlsx-import.md) and [ADR-038](decisions/ADR-038-import-review-and-safe-undo.md).
+
