@@ -4,9 +4,11 @@ ARG TARGETARCH
 WORKDIR /src
 COPY . .
 RUN dotnet tool install --tool-path /tools dotnet-ef --version 10.0.11
+RUN dotnet restore apps/Averio.Api/Averio.Api.csproj
 # The design-time factory requires an explicit value; bundling does not connect.
 ENV AVERIO_MIGRATION_CONNECTION_STRING="Host=localhost;Database=build;Username=build;Password=build"
 RUN case "$TARGETARCH" in amd64) rid=linux-x64 ;; arm64) rid=linux-arm64 ;; *) exit 1 ;; esac \
+    && mkdir -p /out \
     && /tools/dotnet-ef migrations bundle \
       --project src/Averio.Infrastructure \
       --startup-project apps/Averio.Api \
