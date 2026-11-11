@@ -30,6 +30,11 @@ A separate serialized deployment workflow migrates integration, deploys it, and
 tests public health, release identity and real browser cookie/CORS/CSRF authentication.
 Only success permits production migration/deployment and public smoke tests.
 The production GitHub Environment can require approval, without changes to workflows.
+Promotion carries the exact integration manifest SHA-256 into production, which
+rejects any different manifest before staging. Archive validation binds frontend
+bytes to that manifest. Cloudflare preflight binds the upload project to the expected
+frontend domain. Both environments exercise the real rendered application; integration
+authenticates through its login/logout controls, while production remains anonymous.
 No migrations occur during normal API startup. Use a dedicated EF bundle image and
 a host-local migration credential file. Credentials never enter release assets.
 
@@ -37,6 +42,9 @@ SSH uses a pinned host key and the host's AWS instance role for ECR pulls. Exist
 Compose files, networking, proxy and environment settings remain authoritative;
 generated persistent overlays select exact images. Host and workflow locks prevent
 overlapping deployment commands. Only the latest published automated release may deploy.
+Compose retains services whose images and effective configuration are unchanged.
+Backend recovery references rotate only after successful startup validation, and
+content-addressed historical overlays remain available after failed attempts.
 
 ## Consequences
 

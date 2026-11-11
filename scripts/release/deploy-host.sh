@@ -26,6 +26,8 @@ flock -w 900 9
 state="/etc/averio/deploy-${environment}"
 mkdir -p "$state"
 chmod 700 "$state"
+mkdir -p "$state/history"
+chmod 700 "$state/history"
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$registry"
 docker pull "$api_image"
 docker pull "$worker_image"
@@ -35,12 +37,15 @@ printf 'services:\n  webapi:\n    image: %s\n  worker:\n    image: %s\n' "$api_i
 compose=(docker compose --project-name "$project" --env-file "$env_file" -f "$compose_file")
 # Validate before touching the database or running services. Do not print expanded secrets.
 "${compose[@]}" -f "$candidate" config --quiet
-if [[ -f "$state/current.yml" ]] && ! cmp -s "$state/current.yml" "$candidate"; then
-  cp "$state/current.yml" "$state/previous.yml"
+if [[ -f "$state/current.yml" ]]; then
+  snapshot=$(sha256sum "$state/current.yml" | cut -d ' ' -f 1)
+  if [[ ! -f "$state/history/$snapshot.yml" ]]; then cp "$state/current.yml" "$state/history/$snapshot.yml"; fi
 fi
 # Explicit migration failure stops deployment. Never automatically downgrade the database.
 docker run --rm --env-file "$migration_env" "$migrator_image"
-"${compose[@]}" -f "$candidate" up -d --no-build --no-deps --force-recreate webapi worker
+# Compose compares its effective configuration hash and image with running containers.
+# Retain unchanged services; changed images/configuration are recreated normally.
+"${compose[@]}" -f "$candidate" up -d --no-build --no-deps webapi worker
 for service in webapi worker; do
   container=$("${compose[@]}" -f "$candidate" ps -q "$service")
   [[ -n "$container" ]]
@@ -48,9 +53,17 @@ for service in webapi worker; do
   [[ "$service" == webapi ]] || expected="$worker_image"
   [[ "$(docker inspect --format '{{.Config.Image}}' "$container")" == "$expected" ]]
   # Check again after startup so an immediate worker crash is not mistaken for success.
+  restart_count=$(docker inspect --format '{{.RestartCount}}' "$container")
   sleep 10
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
-  [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]]
+  [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == "$restart_count" ]]
 done
+# Do not discard the recovery reference on migration, Compose or startup failure.
+if [[ -f "$state/current.yml" ]] && ! cmp -s "$state/current.yml" "$candidate"; then
+  cp "$state/current.yml" "$state/previous.next.yml"
+  mv "$state/previous.next.yml" "$state/previous.yml"
+fi
+snapshot=$(sha256sum "$candidate" | cut -d ' ' -f 1)
+if [[ ! -f "$state/history/$snapshot.yml" ]]; then cp "$candidate" "$state/history/$snapshot.yml"; fi
 mv "$candidate" "$state/current.yml"
 echo 'Backend deployment completed; public smoke checks run next.'

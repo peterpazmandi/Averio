@@ -81,7 +81,7 @@ Add these environment secrets:
 | `DEPLOY_SSH_KEY` | Private key for the deployment account |
 | `DEPLOY_KNOWN_HOSTS` | Verified SSH known_hosts line for DEPLOY_HOST |
 | `CLOUDFLARE_API_TOKEN` | Token with Account → Cloudflare Pages → Edit for this account |
-| `SMOKE_EMAIL` | Integration only: dedicated verified Averio test account |
+| `SMOKE_EMAIL` | Integration only: dedicated verified Averio test account with onboarding completed |
 | `SMOKE_PASSWORD` | Integration only: password for that account |
 
 Verify the SSH host key through your existing trusted EC2 session; do not blindly
@@ -124,7 +124,16 @@ running during migration, so migrations must be backward compatible. Destructive
 changes require a separate planned maintenance procedure.
 
 The workflow preserves `/etc/averio/deploy-<environment>/current.yml` and
-`previous.yml`. Use the current overlay in later manual Compose commands, otherwise
+`previous.yml`. It also retains content-addressed overlays under `history/`.
+Migration, Compose and startup failures leave both references untouched; rotation
+happens only after backend startup checks succeed. An unchanged retry preserves the
+previous reference. These are backend rollout records, not evidence that public
+frontend checks passed. Failed candidates remain available for diagnosis.
+
+Compose compares the desired images and effective service configuration with the
+running containers. Unchanged API/Worker containers remain running during a
+frontend-only hotfix; changed backend configuration still triggers recreation.
+Use the current overlay in later manual Compose commands, otherwise
 the old image in your original Compose file could be started again:
 
 ```bash
@@ -144,6 +153,9 @@ upload prebuilt files to an existing Git-integrated Pages project.
 Set `CLOUDFLARE_PAGES_BRANCH` to the project's production branch so the custom domain
 receives the upload. Use separate integration and production projects. Ensure existing
 Cloudflare cache rules do not override no-store on `/runtime-config.js` and `/version.json`.
+Preflight verifies that the project's associated domains contain the exact hostname
+in `FRONTEND_URL`, as well as checking its name and branch. A mismatched target stops
+the job before database migrations or uploads.
 Integration still receives its banner and `X-Robots-Tag: noindex`; noindex is not access control.
 
 The frontend archive is built once. Deployment changes only public `runtime-config.js`
@@ -158,7 +170,7 @@ Runtime settings contain no secrets. Existing local Vite `.env` behavior remains
 4. The workflow checks the exact source commit, builds multi-architecture images and
    frontend, and publishes a complete GitHub Release with manifest and archive.
 5. Deploy release runs separately. Watch integration first: migration, containers,
-   frontend, health/version checks, then real browser login/me/logout.
+   frontend, health/version/asset checks, then login and logout through the real UI.
 6. If configured, approve the production environment after reviewing integration.
    Production migration/deployment and anonymous smoke checks then run.
 
@@ -166,6 +178,11 @@ Creating a release with `deploy` unchecked only builds/publishes it. To deploy l
 open Actions → Deploy release → Run workflow on develop and paste its exact tag.
 The tag must be the latest published automated release. Finish or recover the active
 deployment before creating another release; a newer release blocks promotion of older ones.
+Integration returns the SHA-256 of the exact manifest it validated. Production must
+match that digest before staging anything, including on a failed-job retry. Replacing
+the same release tag's manifest or archive between environments stops promotion.
+Do not bypass this by rerunning production with a different digest: restart the full
+pipeline to verify a different artifact set in integration.
 GitHub concurrency keeps one active deployment and may replace an older pending run;
 it is not a FIFO release queue. Running migrations are not automatically canceled.
 
@@ -185,8 +202,14 @@ it is not a FIFO release queue. Running migrations are not automatically cancele
   has no previous overlay: record the existing image digests and Pages deployment first.
 
 Public checks verify DB connectivity, API version/source identity, frontend identity,
-and anonymous rejection by `/auth/me`. Integration additionally verifies React renders
-and real cross-origin secure cookies/CSRF/login/logout using the dedicated account.
+the served HTML, runtime API/environment settings, and the entry JS/CSS against the
+staged release. Both environments load the real login page in a browser and verify
+that the application itself calls the expected API and receives an anonymous 401.
+Integration additionally submits the actual login form, reaches `/app`, uses the
+Sign out button, and verifies that a reload is anonymous. It therefore exercises the
+application's own API configuration, secure cookies and CSRF handling. The dedicated
+smoke account must be verified and have completed onboarding; use an empty test
+household. Production never submits credentials or performs ledger mutations.
 Worker checks verify the requested image, running state and no immediate restarts;
 they do not prove successful execution of every recurring/receipt background job.
 PR business regression tests remain required. No real ledger test data is created by
@@ -195,6 +218,10 @@ the deployment smoke checks.
 PR verification also builds the migration image, applies the complete migration
 chain twice against a disposable PostgreSQL database, and checks the ARM64 build.
 This checks the exact migration delivery mechanism before it can reach Neon.
+Deployment regression tests cover broken HTML/runtime/assets, incorrect Pages domains,
+manifest replacement after integration, and preservation of recovery overlays across
+migration/Compose/startup failures. Browser tests exercise the same production smoke
+implementation against compiled assets, including negative runtime and asset cases.
 
 References: [GitHub workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
 [Cloudflare Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/),

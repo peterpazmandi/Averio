@@ -8,6 +8,12 @@ are implemented in the deployment pipeline PR. Activation requires the external
 configuration in [deployment-pipeline.md](deployment-pipeline.md). No live release
 or infrastructure configuration is implied by merging the workflow files.
 
+Deployment review follow-up: production now requires the manifest digest verified
+in integration; Pages preflight verifies the target hostname; public checks cover
+HTML/runtime/entry assets and real browser API routing. Integration login/logout uses
+the actual UI. Recovery references survive failed migrations/startup and unchanged
+backend containers are retained during frontend-only releases.
+
 **Status date:** 2026-10-28
 **Scope:** restarted implementation on the `develop` branch
 

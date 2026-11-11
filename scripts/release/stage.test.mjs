@@ -33,7 +33,8 @@ test('promotion preserves compiled assets and switches only public settings', ()
     let result = f.run(); assert.equal(result.status, 0, result.stderr);
     const app = readFileSync(join(f.cwd, 'dist/app.js'), 'utf8');
     assert.match(readFileSync(join(f.cwd, 'dist/_headers'), 'utf8'), /X-Robots-Tag: noindex/);
-    result = f.run({ DEPLOY_ENVIRONMENT: 'production', API_URL: 'https://api.averioapp.com' });
+    const expectedHash = createHash('sha256').update(readFileSync(join(f.cwd, 'release/manifest.json'))).digest('hex');
+    result = f.run({ DEPLOY_ENVIRONMENT: 'production', API_URL: 'https://api.averioapp.com', EXPECTED_MANIFEST_SHA256: expectedHash });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(readFileSync(join(f.cwd, 'dist/app.js'), 'utf8'), app);
     assert.doesNotMatch(readFileSync(join(f.cwd, 'dist/_headers'), 'utf8'), /noindex/);
@@ -45,6 +46,20 @@ test('corrupt frontend archive fails before extraction', () => {
   try {
     writeFileSync(join(f.cwd, 'release/frontend.tar.gz'), 'corrupted');
     assert.notEqual(f.run().status, 0);
+  } finally { f.cleanup(); }
+});
+test('production rejects missing attestation and same-tag manifest replacement after integration', () => {
+  const f = fixture();
+  try {
+    const integration = f.run(); assert.equal(integration.status, 0, integration.stderr);
+    const output = readFileSync(join(f.cwd, 'output'), 'utf8');
+    const expectedHash = output.match(/^manifest_sha256=([a-f0-9]{64})$/m)[1];
+    assert.notEqual(f.run({ DEPLOY_ENVIRONMENT: 'production' }).status, 0);
+    f.manifest.components.api.image = `${registry}/averio-api@sha256:${'c'.repeat(64)}`;
+    f.save();
+    const production = f.run({ DEPLOY_ENVIRONMENT: 'production', EXPECTED_MANIFEST_SHA256: expectedHash });
+    assert.notEqual(production.status, 0);
+    assert.match(production.stderr, /manifest changed after integration/);
   } finally { f.cleanup(); }
 });
 test('unexpected registry, tag and insecure API origin are rejected', () => {

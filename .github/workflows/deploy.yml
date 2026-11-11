@@ -30,4 +30,5 @@ jobs:
     with:
       environment: production
       release: ${{ inputs.release }}
+      manifest_sha256: ${{ needs.integration.outputs.manifest_sha256 }}
     secrets: inherit
