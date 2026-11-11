@@ -52,14 +52,17 @@ exact decimal values with up to four fractional digits. Dates are date-only.
   YNAB fixture before extended support is considered safe.
 - Accounts must map one-to-one, visibility and write permissions are rechecked
   on confirmation, and balance anchors are not modified.
-- YNAB rows named **Starting Balance**, **Manual Balance Adjustment** or
-  **Reconciliation Balance Adjustment** are not imported as ledger transactions.
-  Starting Balance rows are preserved as source-account metadata and prefill the
-  opening balance and date when a new Averio account is created. This also keeps
-  zero-transaction accounts visible in account mapping. Manual and reconciliation
-  adjustments are retained only as account presence metadata. A source account
-  with no starting-balance row has no inferred opening balance and must be entered
-  manually when creating a new account.
+- **Starting Balance** rows are preserved as source-account metadata and
+  prefill the opening balance and date when a new Averio account is created.
+  They are not imported as income or expenses. Accounts without any transactions
+  remain available for mapping; an export with only opening balances can complete
+  with zero imported records. For an existing destination account, verify its
+  balance anchor manually; importing does not change it. A source account without
+  a starting-balance row has no inferred opening balance.
+- Exports containing **Manual Balance Adjustment** or **Reconciliation Balance
+  Adjustment** rows are rejected. These rows change YNAB's account balance; silently
+  dropping them would make Averio's balance wrong. Set and verify the destination
+  account balance before removing such rows from a source copy for import.
 - The register identifies accounts by their exported display name. Keep source
   account names distinct when possible; YNAB exports do not provide a stable
   account identifier that Averio can use for mapping.
@@ -73,8 +76,9 @@ Files have a 5 MiB upload limit, at most 10,000 source data rows and a
 32 MiB ZIP expanded-size limit. ZIPs must contain exactly one recognizable
 transaction register. Suspicious ZIP paths, invalid UTF-8, unknown headers,
 invalid amounts, malformed CSV, incomplete transfers and ambiguous split rows
-are rejected. A file containing only skipped balance-adjustment rows is rejected
-because it contains no ledger transactions. No private fixtures are committed.
+are rejected. Account-only exports with starting balances are supported;
+manual and reconciliation balance adjustments are rejected even when the same
+file also contains transactions. No private fixtures are committed.
 
 Run the transaction regression suite:
 
