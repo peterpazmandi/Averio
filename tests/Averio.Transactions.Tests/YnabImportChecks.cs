@@ -64,6 +64,16 @@ internal static class YnabImportChecks
                 "Opening balances were not preserved as source-account metadata.");
         }
 
+        using (var file = Csv("Empty,,09/01/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,0,Cleared\r\n"
+            + "Savings,,09/02/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,250.00,Cleared\r\n"))
+        {
+            var parsed = new YnabRegisterReader().Read(file, "Register.csv", "EUR", "MDY", "DotDecimal");
+            Check(parsed.Rows.Count == 0 && parsed.SourceAccounts.Count == 2
+                && parsed.SourceAccounts.Single(a => a.Source == "Empty").OpeningBalance == "0"
+                && parsed.SourceAccounts.Single(a => a.Source == "Savings").OpeningBalance == "250.00",
+                "An account-only export must preserve zero and positive opening balances.");
+        }
+
         var germanHeader = Header.Replace(',', '\t');
         var germanBody = "Giro\t\t14.09.2026\tBäckerei\tEssen/Brot\tEssen\tBrot\tFrühstück\t12,50€\t0\tCleared\r\n";
         using (var file = new MemoryStream(Encoding.UTF8.GetBytes(germanHeader + "\r\n" + germanBody)))
@@ -91,6 +101,10 @@ internal static class YnabImportChecks
         }
 
         Reject("Checking,,09/16/2026,Transfer : Savings,,,,moving,200.00,0,Cleared\n");
+        Reject("Checking,,09/16/2026,Manual Balance Adjustment,,,,,20.00,0,Cleared\n");
+        Reject("Checking,,09/16/2026,Reconciliation Balance Adjustment,,,,,0,20.00,Cleared\n");
+        Reject("Checking,,09/01/2026,Starting Balance,Inflow: Ready to Assign,Inflow,Ready to Assign,,0,100.00,Cleared\n"
+            + "Checking,,09/16/2026,Manual Balance Adjustment,,,,,0,20.00,Cleared\n");
         Reject("Checking,,09/16/2026,Tesco,Food/Split,Food,Split,,100.00,0,Cleared\n");
         Reject("Checking,,09/16/2026,Tesco,Split (Multiple Categories),,,,100.00,0,Cleared\\n");
         Reject("Checking,,09/16/2026,Tesco,Food/Groceries,Food,Groceries,,10.00,10.00,Cleared\n");
