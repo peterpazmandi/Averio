@@ -35,7 +35,9 @@ printf 'services:\n  webapi:\n    image: %s\n  worker:\n    image: %s\n' "$api_i
 compose=(docker compose --project-name "$project" --env-file "$env_file" -f "$compose_file")
 # Validate before touching the database or running services. Do not print expanded secrets.
 "${compose[@]}" -f "$candidate" config --quiet
-if [[ -f "$state/current.yml" ]]; then cp "$state/current.yml" "$state/previous.yml"; fi
+if [[ -f "$state/current.yml" ]] && ! cmp -s "$state/current.yml" "$candidate"; then
+  cp "$state/current.yml" "$state/previous.yml"
+fi
 # Explicit migration failure stops deployment. Never automatically downgrade the database.
 docker run --rm --env-file "$migration_env" "$migrator_image"
 "${compose[@]}" -f "$candidate" up -d --no-build --no-deps --force-recreate webapi worker

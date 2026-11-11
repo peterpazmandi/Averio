@@ -246,6 +246,7 @@ jobs:
         timeout-minutes: 5
         working-directory: apps/averio-web
         run: |
+          node tests/runtime-config.browser.mjs
           node tests/info-popover.browser.mjs
           node tests/helper-pages.browser.mjs
 
