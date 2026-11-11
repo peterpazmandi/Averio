@@ -39,9 +39,14 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         IReadOnlyList<ImportRow> rows, CancellationToken ct, string? sourceName,
         IReadOnlyList<ImportSourceAccount>? sourceAccounts = null)
     {
+        // Keep the pre-YNAB XLSX fingerprint stable so uploading an already completed
+        // Money Manager file resolves to its original batch instead of a new draft.
+        var isYnab = sourceAccounts is not null;
         sourceAccounts ??= BuildSourceAccounts(rows);
-        var canonical = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 }))
-            .Concat(sourceAccounts.Select(account => JsonSerializer.Serialize(account))).Order(StringComparer.Ordinal);
+        var canonicalRows = rows.Select(r => JsonSerializer.Serialize(r with { Sheet = "", RowNumber = 0 }));
+        var canonical = (isYnab
+            ? canonicalRows.Concat(sourceAccounts.Select(account => JsonSerializer.Serialize(account)))
+            : canonicalRows).Order(StringComparer.Ordinal);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', canonical))));
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         var member = await MemberAsync(householdId, ct);
@@ -163,9 +168,9 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
                 links.Add(new(transaction.Id, row.Kind, StoredVersion(transaction.UpdatedAt), account.Name, null, category.NameReference, category.IsBase, account.Id, null, category.Id, visibility.ToString()));
             }
         }
-        batch.Complete(clock.GetUtcNow(), JsonSerializer.Serialize(links), JsonSerializer.Serialize(Summarize(rows.Where((_, i) => !skip.Contains(i)).ToArray(), rows)));
+        batch.Complete(clock.GetUtcNow(), JsonSerializer.Serialize(links), JsonSerializer.Serialize(Summarize(rows.Where((_, i) => !skip.Contains(i)).ToArray(), rows, sourceAccounts)));
         await unitOfWork.SaveChangesAsync(ct);
-        await imports.ApplyAggregatesAsync(transactionIds.ToArray(), ct);
+        if (transactionIds.Count > 0) await imports.ApplyAggregatesAsync(transactionIds.ToArray(), ct);
         await tx.CommitAsync(ct);
         return Result(batch, rows, sourceAccounts);
     }
@@ -218,9 +223,10 @@ public sealed partial class ImportHandler(ICurrentUser user, IHouseholdRepositor
         var payload = Payload(batch);
         var rows = payload.Rows;
         var sourceAccounts = SourceAccounts(batch);
+        var dates = rows.Length > 0 ? rows.Select(r => r.Date).ToArray()
+            : sourceAccounts.Where(a => a.OpeningBalanceDate is not null).Select(a => a.OpeningBalanceDate!.Value).ToArray();
         return new(batch.Id, batch.CompletedAt is null ? "Draft" : "Completed", rows.Length,
-            (rows.Length > 0 ? rows.Min(r => r.Date) : sourceAccounts.Min(a => a.OpeningBalanceDate!.Value)),
-            (rows.Length > 0 ? rows.Max(r => r.Date) : sourceAccounts.Max(a => a.OpeningBalanceDate!.Value)),
+            dates.Min(), dates.Max(),
             sourceAccounts.Select(a => a.Source).ToArray(), sourceAccounts,
             rows.Where(r => r.Kind != "Transfer").Select(r => new ImportCategorySource(r.Kind, r.Category)).Distinct().OrderBy(c => c.Kind).ThenBy(c => c.Name).ToArray(),
             rows.GroupBy(r => (r.Kind, r.Currency)).Select(g => new ImportTotal(g.Key.Kind, g.Key.Currency,
