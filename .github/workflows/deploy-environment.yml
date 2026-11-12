@@ -47,9 +47,6 @@ jobs:
           set -euo pipefail
           [[ "$RELEASE_TAG" =~ ^release-[0-9]+-[0-9]+$ ]]
           gh release view "$RELEASE_TAG" --json isDraft,isPrerelease | jq -e '.isDraft == false and .isPrerelease == false'
-          # Reject an older release accidentally started after a newer one was published.
-          latest=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -r '[.[][] | select(.draft == false and .prerelease == false) | select(.tag_name | test("^release-[0-9]+-[0-9]+$"))][0].tag_name')
-          [[ "$latest" == "$RELEASE_TAG" ]]
           mkdir -p release dist
           gh release download "$RELEASE_TAG" --pattern manifest.json --pattern frontend.tar.gz --dir release
       - name: Validate artifacts and prepare public environment settings
@@ -137,6 +134,19 @@ jobs:
           SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: node scripts/release/browser-smoke.mjs
+      - name: Record successful integration verification
+        if: inputs.environment == 'integration'
+        env:
+          MANIFEST_SHA256: ${{ steps.stage.outputs.manifest_sha256 }}
+        run: node scripts/release/integration-proof.mjs record
+      - name: Save integration verification for later production deployment
+        if: inputs.environment == 'integration'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-verification-${{ github.run_attempt }}
+          path: integration-verification.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Write deployment summary
         run: |
           printf '### %s deployed\n\nRelease: `%s`\n\nFrontend: %s\n\nAPI: %s\n' "$DEPLOY_ENVIRONMENT" "$RELEASE_TAG" "$FRONTEND_URL" "$API_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -2,9 +2,13 @@
 
 ## What changes
 
-PR checks → merge to develop → successful Verify push run → Create release →
-integration migration → API/Worker/frontend deployment → deployed integration checks →
-production migration → deployment of the same artifacts → production smoke checks.
+PR checks → merge to develop → successful Verify push run → manually Create release.
+Later: manually Deploy release to integration → migration/deployment → integration checks → stop.
+When ready: manually Deploy release to production → validate saved integration evidence →
+production migration/deployment of the same artifacts → production smoke checks.
+
+Creating a release never starts a deployment. A deployment targets exactly one environment.
+Successful integration never starts or queues production.
 
 Create release is manual so several merged PRs can form one release. Version numbers
 are automatic. Feature releases align all components at the next minor, starting
@@ -23,8 +27,8 @@ published assets or delete ECR images referenced by retained releases.
 
 Open repository Settings → Environments → New environment. Create `release`,
 `integration`, and `production`. Restrict deployment branches to `develop`.
-Optionally add yourself as a required reviewer on production if you want a pause
-after integration succeeds. Without that protection, production proceeds automatically.
+Production always requires a separate manual workflow dispatch. Optionally add a required
+reviewer as an additional approval after that dispatch; it is not needed to prevent automatic promotion.
 
 Under Settings → Secrets and variables → Actions, define repository variables:
 
@@ -162,38 +166,48 @@ The frontend archive is built once. Deployment changes only public `runtime-conf
 and hosting `_headers`; JS/CSS assets and `version.json` are promoted unchanged.
 Runtime settings contain no secrets. Existing local Vite `.env` behavior remains supported.
 
-## 5. Create and deploy the first release
+## 5. Create a release, then deploy each environment separately
 
 1. Merge this PR and wait for all Verify jobs on the develop push to pass.
-2. Open Actions → Create release → Run workflow; select branch develop.
-3. Choose `feature` and keep `deploy` checked. Click Run workflow.
-4. The workflow checks the exact source commit, builds multi-architecture images and
-   frontend, and publishes a complete GitHub Release with manifest and archive.
-5. Deploy release runs separately. Watch integration first: migration, containers,
-   frontend, health/version/asset checks, then login and logout through the real UI.
-6. If configured, approve the production environment after reviewing integration.
-   Production migration/deployment and anonymous smoke checks then run.
+2. Open Actions → Create release → Run workflow; select branch `develop` and kind
+   `feature` (or `hotfix` when applicable). This only builds and publishes the release.
+3. Copy the published release tag, for example `release-12-1`.
+4. When ready for integration, open Actions → Deploy release → Run workflow on `develop`.
+   Enter the tag, choose `integration`, and leave `integration_run_id` empty.
+5. Wait for migration, backend/frontend deployment, public checks and real login/logout
+   checks. The successful run saves an integration verification artifact and prints its
+   **Integration verification run ID** in the summary. Production remains untouched.
+6. Test integration manually for as long as needed. Other releases may be created or
+   tested meanwhile; the selected release does not have to be the latest published one.
+7. When ready for production, start **a new** Deploy release workflow on `develop`.
+   Enter the same release tag, choose `production`, and paste the successful integration
+   run ID from step 5 into `integration_run_id`. This does not redeploy integration.
+8. The workflow verifies the source run and saved evidence, then migrates/deploys only
+   production and runs its smoke checks. Any configured environment approval still applies.
 
-Creating a release with `deploy` unchecked only builds/publishes it. To deploy later,
-open Actions → Deploy release → Run workflow on develop and paste its exact tag.
-The tag must be the latest published automated release. Finish or recover the active
-deployment before creating another release; a newer release blocks promotion of older ones.
-Integration returns the SHA-256 of the exact manifest it validated. Production must
-match that digest before staging anything, including on a failed-job retry. Replacing
-the same release tag's manifest or archive between environments stops promotion.
-Do not bypass this by rerunning production with a different digest: restart the full
-pipeline to verify a different artifact set in integration.
-GitHub concurrency keeps one active deployment and may replace an older pending run;
-it is not a FIFO release queue. Running migrations are not automatically canceled.
+The evidence binds the release tag and exact manifest SHA-256 to a successful manual
+Deploy release run from this repository's develop branch. Production checks the latest
+attempt of the supplied run and rejects failed/incomplete runs, foreign workflows,
+wrong releases, earlier-attempt evidence and missing/deleted/expired artifacts. Evidence
+is retained for 90 days (subject to repository policy). If unavailable, run integration
+again for the same release and use the new successful run ID.
+
+Production compares its downloaded manifest against this saved digest before staging
+or migrations. Replacing the manifest/archive after integration therefore blocks deployment.
+An older selected release must still be compatible with the target database schema;
+manual selection is not an automatic database rollback. Prefer forward releases.
+GitHub concurrency serializes individual deployments and may replace an older pending
+run; it is not a FIFO queue. Running migrations are not automatically canceled.
 
 ## Failure and recovery
 
 - Verification failure: fix the PR/commit; no release can be created from it.
 - Build/upload failure: no complete published release is promoted. Fix the cause and
   rerun Create release. A draft tag may remain for diagnosis.
-- Integration failure: production never starts. Fix configuration and rerun the full
-  Deploy release workflow for the same latest tag; EF applies only pending migrations.
-- Production failure: stop and inspect which step failed. API, Worker and frontend
+- Integration failure: no usable verification is recorded. Fix configuration and rerun
+  Deploy release with environment `integration` and the same tag; EF applies only pending migrations.
+- Production failure: stop and inspect which step failed. Retry production explicitly with
+  the same release and successful integration run ID; integration need not run again. API, Worker and frontend
   deployment is not a single transaction. The release may be partially deployed.
 - Prefer forward fixes. Do not roll back database migrations automatically. If older
   binaries are verified compatible with the current schema, an operator may use the

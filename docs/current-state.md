@@ -299,3 +299,11 @@ Household UTC monthly receipt allowances, time-bounded operator-managed paid ent
 
 Import now includes explicit cross-file overlap decisions, remembered account/category mappings, a completion summary with actual counts, balance reconciliation and partial safe undo. Undo voids eligible records atomically, preserving edited or dependent records and balance references. Batch privacy and exact decimals are maintained. See [XLSX import](xlsx-import.md) and [ADR-038](decisions/ADR-038-import-review-and-safe-undo.md).
 
+
+## Independent manual deployment control — 2026-11-12
+
+Create release publishes artifacts only. Deploy release selects one environment and a
+release tag; successful integration never triggers production. A separate manual production
+run validates saved evidence from the supplied successful integration run ID and deploys
+the exact tested manifest. See [ADR-040](decisions/ADR-040-independent-manual-deployments.md)
+and [deployment instructions](deployment-pipeline.md).

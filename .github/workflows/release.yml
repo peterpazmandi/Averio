@@ -8,14 +8,10 @@ on:
         type: choice
         options: [feature, hotfix]
         required: true
-      deploy:
-        description: Deploy through integration and then production
-        type: boolean
-        default: true
 
 permissions:
   contents: write
-  actions: write
+  actions: read
   id-token: write
 
 concurrency:
@@ -114,8 +110,7 @@ jobs:
           gh release create "$TAG" --target "$SOURCE_SHA" --draft --title "$TAG" --notes-file release/notes.md
           gh release upload "$TAG" release/manifest.json release/frontend.tar.gz
           gh release edit "$TAG" --draft=false
-      - name: Start separate deployment workflow
-        if: inputs.deploy
+      - name: Write release summary
         env:
           TAG: ${{ steps.plan.outputs.tag }}
-        run: gh workflow run deploy.yml --ref develop -f release="$TAG"
+        run: printf 'Release `%s` published. Deploy it separately using Actions → Deploy release.\n' "$TAG" >> "$GITHUB_STEP_SUMMARY"

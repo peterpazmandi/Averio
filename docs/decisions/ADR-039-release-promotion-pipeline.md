@@ -1,6 +1,6 @@
 # ADR-039 — Versioned releases and integration-to-production promotion
 
-Status: Accepted  
+Status: Superseded by [ADR-040](ADR-040-independent-manual-deployments.md)  
 Date: 2026-11-11
 
 ## Context
