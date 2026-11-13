@@ -1,5 +1,19 @@
 # Averio Current State
 
+## Deployment pipeline — 2026-11-11
+
+Release creation, per-component versioning, AMD64/ARM64 image publication, explicit
+migration bundles, integration-to-production promotion and deployed smoke checks
+are implemented in the deployment pipeline PR. Activation requires the external
+configuration in [deployment-pipeline.md](deployment-pipeline.md). No live release
+or infrastructure configuration is implied by merging the workflow files.
+
+Deployment review follow-up: production now requires the manifest digest verified
+in integration; Pages preflight verifies the target hostname; public checks cover
+HTML/runtime/entry assets and real browser API routing. Integration login/logout uses
+the actual UI. Recovery references survive failed migrations/startup and unchanged
+backend containers are retained during frontend-only releases.
+
 **Status date:** 2026-10-28
 **Scope:** restarted implementation on the `develop` branch
 
@@ -284,3 +298,22 @@ Household UTC monthly receipt allowances, time-bounded operator-managed paid ent
 ## XLSX import review and recovery
 
 Import now includes explicit cross-file overlap decisions, remembered account/category mappings, a completion summary with actual counts, balance reconciliation and partial safe undo. Undo voids eligible records atomically, preserving edited or dependent records and balance references. Batch privacy and exact decimals are maintained. See [XLSX import](xlsx-import.md) and [ADR-038](decisions/ADR-038-import-review-and-safe-undo.md).
+
+
+## Independent manual deployment control — 2026-11-12
+
+Create release publishes artifacts only. Deploy release selects one environment and a
+release tag; successful integration never triggers production. A separate manual production
+run validates saved evidence from the supplied successful integration run ID and deploys
+the exact tested manifest. See [ADR-040](decisions/ADR-040-independent-manual-deployments.md)
+and [deployment instructions](deployment-pipeline.md).
+
+
+## SSM deployment transport — 2026-11-13
+
+The pipeline PR uses AWS Systems Manager Run Command with separate environment-scoped
+GitHub OIDC roles and exact instance IDs. SSH may remain restricted to the operator's
+home IP. Manual release creation and independent integration/production dispatches,
+including required integration evidence for production, remain unchanged.
+Activation requires [SSM setup](deployment-ssm-setup.md); no live deployment or IAM
+change is implied. See [ADR-041](decisions/ADR-041-ssm-manual-deployments.md).

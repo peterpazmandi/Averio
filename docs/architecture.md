@@ -271,6 +271,12 @@ Do not introduce Kubernetes/Helm for the current stage.
 
 ## Infrastructure constraints
 
+Release automation follows [ADR-039](decisions/ADR-039-release-promotion-pipeline.md).
+The release manifest pins multi-architecture API/Worker/migration images and the
+frontend archive. Runtime public frontend configuration allows promotion without
+rebuilding. Explicit migrations precede each environment deployment; integration
+checks gate production. See [setup and operations](deployment-pipeline.md).
+
 Averio is operated by one developer with a low infrastructure budget. Prefer one API, one Worker when needed, managed PostgreSQL, simple Docker deployment, Cloudflare edge/DNS, and vertical scaling before orchestration complexity.
 
 ## Observability direction
@@ -319,3 +325,4 @@ The Activities vertical slice uses an explicit `ActivityHandler`, a privacy-filt
 ## Private receipt scanning foundation
 
 Receipt uploads create uploader-only expiring drafts, processed by a leased background worker. The feature is disabled by default and never writes ledger transactions. See [receipt scanning](receipt-scanning.md) for the three-PR plan, API contract, configuration and rollout gates.
+

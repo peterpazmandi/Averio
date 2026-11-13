@@ -225,6 +225,17 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Operational identity without changing the generated API contract.
+var buildIdentity = typeof(Program).Assembly
+    .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+    .Cast<System.Reflection.AssemblyInformationalVersionAttribute>()
+    .Single().InformationalVersion;
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Averio-Version"] = buildIdentity;
+    await next(context);
+});
+
 /*
  * Trust HTTPS scheme forwarding only from the configured
  * immediate reverse proxy.
@@ -300,4 +311,5 @@ app.MapControllers();
 app.Run();
 
 public partial class Program;
+
 

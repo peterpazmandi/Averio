@@ -1,0 +1,144 @@
+name: Deploy one environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      release:
+        required: true
+        type: string
+      manifest_sha256:
+        description: Exact manifest digest from the successful integration job
+        required: false
+        default: ''
+        type: string
+    outputs:
+      manifest_sha256:
+        description: Manifest digest validated and deployed by this environment
+        value: ${{ jobs.deploy.outputs.manifest_sha256 }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.environment }}
+    outputs:
+      manifest_sha256: ${{ steps.stage.outputs.manifest_sha256 }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.release }}
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+      API_URL: ${{ vars.API_URL }}
+      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+      EXPECTED_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Validate and download published release
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^release-[0-9]+-[0-9]+$ ]]
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease | jq -e '.isDraft == false and .isPrerelease == false'
+          mkdir -p release dist
+          gh release download "$RELEASE_TAG" --pattern manifest.json --pattern frontend.tar.gz --dir release
+      - name: Validate artifacts and prepare public environment settings
+        id: stage
+        run: node scripts/release/stage.mjs
+      - name: Validate environment configuration before deployment
+        env:
+          INSTANCE: ${{ vars.DEPLOY_INSTANCE_ID }}
+          ROLE: ${{ vars.AWS_ROLE_ARN }}
+          PROJECT: ${{ vars.COMPOSE_PROJECT }}
+          COMPOSE: ${{ vars.COMPOSE_FILE }}
+          ENV_FILE: ${{ vars.ENV_FILE }}
+          MIGRATION_ENV: ${{ vars.MIGRATION_ENV_FILE }}
+          REGION: ${{ vars.AWS_REGION }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$INSTANCE" =~ ^i-([a-f0-9]{8}|[a-f0-9]{17})$ ]]
+          [[ "$ROLE" =~ ^arn:aws:iam::[0-9]{12}:role/[a-zA-Z0-9+=,.@_/-]+$ ]]
+          [[ "$PROJECT" =~ ^[a-z0-9_-]+$ && "$REGION" =~ ^[a-z0-9-]+$ ]]
+          for file in "$COMPOSE" "$ENV_FILE" "$MIGRATION_ENV"; do
+            [[ "$file" =~ ^/etc/averio/[a-zA-Z0-9._/-]+$ && "$file" != *..* ]]
+          done
+          [[ -n "$PAGES_PROJECT" && -n "$PAGES_BRANCH" && -n "$CF_TOKEN" && -n "$CF_ACCOUNT" ]]
+          [[ "$FRONTEND_URL" == https://* ]]
+          if [[ "$DEPLOY_ENVIRONMENT" == integration ]]; then
+            [[ -n "$SMOKE_EMAIL" && -n "$SMOKE_PASSWORD" ]]
+          fi
+      - name: Verify Cloudflare target before migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+        run: node scripts/release/cloudflare-preflight.mjs
+      - name: Authenticate deployment to AWS with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: averio-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Migrate database and deploy immutable backend images through SSM
+        env:
+          DEPLOY_INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          COMPOSE_PROJECT: ${{ vars.COMPOSE_PROJECT }}
+          COMPOSE_FILE: ${{ vars.COMPOSE_FILE }}
+          ENV_FILE: ${{ vars.ENV_FILE }}
+          MIGRATION_ENV_FILE: ${{ vars.MIGRATION_ENV_FILE }}
+          API_IMAGE: ${{ steps.stage.outputs.api }}
+          WORKER_IMAGE: ${{ steps.stage.outputs.worker }}
+          MIGRATOR_IMAGE: ${{ steps.stage.outputs.migrator }}
+        run: node scripts/release/deploy-ssm.mjs
+      - name: Deploy the release frontend to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name "$PAGES_PROJECT" --branch "$PAGES_BRANCH" --commit-dirty=true
+      - name: Verify public release and database health
+        run: node scripts/release/smoke.mjs
+      - name: Install browser verification dependencies
+        working-directory: apps/averio-web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify deployed application and integration login UI
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: node scripts/release/browser-smoke.mjs
+      - name: Record successful integration verification
+        if: inputs.environment == 'integration'
+        env:
+          MANIFEST_SHA256: ${{ steps.stage.outputs.manifest_sha256 }}
+        run: node scripts/release/integration-proof.mjs record
+      - name: Save integration verification for later production deployment
+        if: inputs.environment == 'integration'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-verification-${{ github.run_attempt }}
+          path: integration-verification.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Write deployment summary
+        run: |
+          printf '### %s deployed\n\nRelease: `%s`\n\nFrontend: %s\n\nAPI: %s\n' "$DEPLOY_ENVIRONMENT" "$RELEASE_TAG" "$FRONTEND_URL" "$API_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,5 @@
 import i18n from '../../i18n';
+import { runtimeConfiguration } from '../runtimeConfiguration';
 
 const cultureMapping: Record<string, string> = {
     en: 'en-US',
@@ -7,7 +8,7 @@ const cultureMapping: Record<string, string> = {
 };
 
 export const API_BASE_URL =
-    (import.meta.env.VITE_API_URL || 'http://localhost:5180')
+    (runtimeConfiguration.apiUrl || 'http://localhost:5180')
         .replace(/\/$/, '');
 
 export const getApiCulture = (): string => {

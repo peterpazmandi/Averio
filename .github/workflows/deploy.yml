@@ -1,0 +1,62 @@
+name: Deploy release
+run-name: Deploy ${{ inputs.release }} to ${{ inputs.environment }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Published release tag (release-N-attempt)
+        required: true
+        type: string
+      environment:
+        description: Deploy only to this environment
+        required: true
+        type: choice
+        options: [integration, production]
+        default: integration
+      integration_run_id:
+        description: Production only - successful integration run ID from its summary
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+# Serialize individual deployments; never cancel an active migration.
+concurrency:
+  group: averio-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      manifest_sha256: ${{ steps.proof.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Validate selection and prior integration evidence
+        id: proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+        run: node scripts/release/integration-proof.mjs
+  deploy:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    needs: validate
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: ${{ inputs.environment }}
+      release: ${{ inputs.release }}
+      manifest_sha256: ${{ needs.validate.outputs.manifest_sha256 }}
+    secrets: inherit
