@@ -59,8 +59,8 @@ Add these variables separately under integration and production:
 
 | Variable | Integration example / meaning |
 | --- | --- |
-| `DEPLOY_HOST` | Reachable EC2 DNS/IP; SSH port 22 |
-| `DEPLOY_USER` | `ubuntu` (dedicated deployment account also supported) |
+| `AWS_ROLE_ARN` | Environment-specific GitHub OIDC deployment role |
+| `DEPLOY_INSTANCE_ID` | Exact EC2 instance ID registered as an online SSM managed node |
 | `COMPOSE_PROJECT` | `averio-integration`; production must match its existing project name |
 | `COMPOSE_FILE` | `/etc/averio/compose.integration.yml` |
 | `ENV_FILE` | `/etc/averio/.env.integration` |
@@ -70,7 +70,7 @@ Add these variables separately under integration and production:
 | `CLOUDFLARE_PAGES_PROJECT` | Existing integration Pages project name |
 | `CLOUDFLARE_PAGES_BRANCH` | That Pages project's configured production branch |
 
-For production use its actual host, Compose project/files and Pages project, plus
+For production use its actual instance ID, deployment role, Compose project/files and Pages project, plus
 `https://api.averioapp.com` and `https://averioapp.com`. Do not copy integration paths
 blindly: the workflow operates on the exact Compose project you name.
 
@@ -82,25 +82,22 @@ Add these environment secrets:
 
 | Secret | Purpose |
 | --- | --- |
-| `DEPLOY_SSH_KEY` | Private key for the deployment account |
-| `DEPLOY_KNOWN_HOSTS` | Verified SSH known_hosts line for DEPLOY_HOST |
 | `CLOUDFLARE_API_TOKEN` | Token with Account → Cloudflare Pages → Edit for this account |
 | `SMOKE_EMAIL` | Integration only: dedicated verified Averio test account with onboarding completed |
 | `SMOKE_PASSWORD` | Integration only: password for that account |
 
-Verify the SSH host key through your existing trusted EC2 session; do not blindly
-trust `ssh-keyscan` output. The workflow requires strict host-key checking.
-The runner must be able to reach SSH; if your host is private or restricted to your
-home IP, use an approved runner/network route before enabling deployments. Do not
-open unrestricted SSH solely to make the workflow pass. Deployment currently uses
-SSH, not SSM or a Cloudflare Access SSH tunnel.
+Follow [the SSM setup guide](deployment-ssm-setup.md) to configure the EC2 agent,
+instance permissions and separate GitHub OIDC roles. GitHub submits the host script
+through AWS Systems Manager Run Command and waits for success before frontend upload.
+Keep SSH restricted to your home IP. The workflow needs no SSH keys or inbound SSH
+access from GitHub runners. SSM uses outbound HTTPS from the host.
 
 ## 3. Prepare EC2 once
 
 Keep the working API/Worker Compose configuration and Cloudflare tunnel. The service
 names must be `webapi` and `worker`; deployment only replaces their image references.
-The chosen account must support `sudo -n bash` (the workflow is effectively root
-deployment access). Docker Compose v2, AWS CLI, Bash, and `flock` must be installed.
+SSM Agent runs the deployment script as root (the deployment role is effectively root
+deployment access on its selected instance). Docker Compose v2, AWS CLI, Bash, and `flock` must be installed.
 Give the EC2 instance role ECR read permissions for all three repositories.
 
 Create a separate migration env file on each host using the configured path:
@@ -200,6 +197,12 @@ GitHub concurrency serializes individual deployments and may replace an older pe
 run; it is not a FIFO queue. Running migrations are not automatically canceled.
 
 ## Failure and recovery
+
+SSM command IDs are recorded in the job summary. If submission or monitoring fails,
+or the workflow is canceled, inspect AWS Systems Manager Run Command before retrying:
+the remote deployment may still be running. No automatic cancellation is sent. Remote
+execution has a 30-minute timeout; this can terminate execution, not roll back a database.
+See [SSM recovery details](deployment-ssm-setup.md#interrupted-commands-and-recovery).
 
 - Verification failure: fix the PR/commit; no release can be created from it.
 - Build/upload failure: no complete published release is promoted. Fix the cause and

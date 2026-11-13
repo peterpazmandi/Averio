@@ -1,6 +1,6 @@
 # ADR-040 — Independent manual release deployments
 
-Status: Accepted  
+Status: Superseded by [ADR-041](ADR-041-ssm-manual-deployments.md) (manual orchestration retained; transport changed to SSM)  
 Date: 2026-11-12
 
 ## Context

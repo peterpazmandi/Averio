@@ -307,3 +307,13 @@ release tag; successful integration never triggers production. A separate manual
 run validates saved evidence from the supplied successful integration run ID and deploys
 the exact tested manifest. See [ADR-040](decisions/ADR-040-independent-manual-deployments.md)
 and [deployment instructions](deployment-pipeline.md).
+
+
+## SSM deployment transport — 2026-11-13
+
+The pipeline PR uses AWS Systems Manager Run Command with separate environment-scoped
+GitHub OIDC roles and exact instance IDs. SSH may remain restricted to the operator's
+home IP. Manual release creation and independent integration/production dispatches,
+including required integration evidence for production, remain unchanged.
+Activation requires [SSM setup](deployment-ssm-setup.md); no live deployment or IAM
+change is implied. See [ADR-041](decisions/ADR-041-ssm-manual-deployments.md).

@@ -49,6 +49,10 @@ jobs:
           INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
         run: node scripts/release/integration-proof.mjs
   deploy:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs: validate
     uses: ./.github/workflows/deploy-environment.yml
     with:

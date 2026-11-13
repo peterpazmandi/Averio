@@ -21,11 +21,12 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     environment: ${{ inputs.environment }}
     outputs:
       manifest_sha256: ${{ steps.stage.outputs.manifest_sha256 }}
@@ -54,8 +55,8 @@ jobs:
         run: node scripts/release/stage.mjs
       - name: Validate environment configuration before deployment
         env:
-          HOST: ${{ vars.DEPLOY_HOST }}
-          USER: ${{ vars.DEPLOY_USER }}
+          INSTANCE: ${{ vars.DEPLOY_INSTANCE_ID }}
+          ROLE: ${{ vars.AWS_ROLE_ARN }}
           PROJECT: ${{ vars.COMPOSE_PROJECT }}
           COMPOSE: ${{ vars.COMPOSE_FILE }}
           ENV_FILE: ${{ vars.ENV_FILE }}
@@ -69,7 +70,8 @@ jobs:
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
-          [[ "$HOST" =~ ^[a-zA-Z0-9.-]+$ && "$USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$INSTANCE" =~ ^i-([a-f0-9]{8}|[a-f0-9]{17})$ ]]
+          [[ "$ROLE" =~ ^arn:aws:iam::[0-9]{12}:role/[a-zA-Z0-9+=,.@_/-]+$ ]]
           [[ "$PROJECT" =~ ^[a-z0-9_-]+$ && "$REGION" =~ ^[a-z0-9-]+$ ]]
           for file in "$COMPOSE" "$ENV_FILE" "$MIGRATION_ENV"; do
             [[ "$file" =~ ^/etc/averio/[a-zA-Z0-9._/-]+$ && "$file" != *..* ]]
@@ -86,35 +88,25 @@ jobs:
           PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
         run: node scripts/release/cloudflare-preflight.mjs
-      - name: Configure verified SSH connection
+      - name: Authenticate deployment to AWS with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: averio-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Migrate database and deploy immutable backend images through SSM
         env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          [[ -n "$SSH_KEY" && -n "$KNOWN_HOSTS" ]]
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
-      - name: Migrate database and deploy immutable backend images
-        env:
-          HOST: ${{ vars.DEPLOY_HOST }}
-          USER: ${{ vars.DEPLOY_USER }}
-          PROJECT: ${{ vars.COMPOSE_PROJECT }}
-          COMPOSE: ${{ vars.COMPOSE_FILE }}
+          DEPLOY_INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          COMPOSE_PROJECT: ${{ vars.COMPOSE_PROJECT }}
+          COMPOSE_FILE: ${{ vars.COMPOSE_FILE }}
           ENV_FILE: ${{ vars.ENV_FILE }}
-          MIGRATION_ENV: ${{ vars.MIGRATION_ENV_FILE }}
-          REGION: ${{ vars.AWS_REGION }}
+          MIGRATION_ENV_FILE: ${{ vars.MIGRATION_ENV_FILE }}
           API_IMAGE: ${{ steps.stage.outputs.api }}
           WORKER_IMAGE: ${{ steps.stage.outputs.worker }}
           MIGRATOR_IMAGE: ${{ steps.stage.outputs.migrator }}
-        run: |
-          set -euo pipefail
-          # Values are validated above; printf %q also quotes each remote argument.
-          printf -v command 'sudo -n bash -s -- %q %q %q %q %q %q %q %q %q %q' \
-            "$DEPLOY_ENVIRONMENT" "$PROJECT" "$COMPOSE" "$ENV_FILE" "$MIGRATION_ENV" "$REGION" "$ECR_REGISTRY" "$API_IMAGE" "$WORKER_IMAGE" "$MIGRATOR_IMAGE"
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$USER@$HOST" "$command" < scripts/release/deploy-host.sh
+        run: node scripts/release/deploy-ssm.mjs
       - name: Deploy the release frontend to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -150,6 +142,3 @@ jobs:
       - name: Write deployment summary
         run: |
           printf '### %s deployed\n\nRelease: `%s`\n\nFrontend: %s\n\nAPI: %s\n' "$DEPLOY_ENVIRONMENT" "$RELEASE_TAG" "$FRONTEND_URL" "$API_URL" >> "$GITHUB_STEP_SUMMARY"
-      - name: Remove SSH credentials
-        if: always()
-        run: rm -f ~/.ssh/id_ed25519 ~/.ssh/known_hosts
