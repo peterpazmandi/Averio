@@ -104,7 +104,8 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
         using (var canvas = new SKCanvas(destination))
         {
             canvas.Clear(SKColors.White);
-            canvas.DrawBitmap(source, sourceRect, new SKRect(0, 0, 256, 256));
+            canvas.DrawBitmap(source, sourceRect, new SKRect(0, 0, 256, 256),
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
         }
         using var image = SKImage.FromBitmap(destination);
         using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 84);
@@ -217,7 +218,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
         _ => "en-US"
     };
 
-    private IActionResult IdentityError(IdentityResult result) => Problem(
+    private ObjectResult IdentityError(IdentityResult result) => Problem(
         title: "The profile change could not be saved.",
         statusCode: StatusCodes.Status400BadRequest,
         extensions: new Dictionary<string, object?> { ["code"] = "profile_update_failed" });
