@@ -68,3 +68,4 @@ export function DisableAuthenticatorRequestToJSONTyped(value?: DisableAuthentica
         'code': value['code'],
     };
 }
+
