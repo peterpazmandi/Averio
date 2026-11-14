@@ -30,6 +30,7 @@ public sealed class PasskeysController(
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimiterPolicies.PasskeyAttempts)]
     [HttpPost("api/v1/profile/passkeys/options")]
     [Produces("application/json")]
     public async Task<IActionResult> CreationOptions(PasskeyCreationOptionsRequest request)
@@ -87,6 +88,7 @@ public sealed class PasskeysController(
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimiterPolicies.PasskeyAttempts)]
     [HttpDelete("api/v1/profile/passkeys/{credentialId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Remove(string credentialId, RemovePasskeyRequest request)
