@@ -75,3 +75,4 @@ export function LoginTwoFactorRequestToJSONTyped(value?: LoginTwoFactorRequest |
         'rememberMe': value['rememberMe'],
     };
 }
+
