@@ -1,0 +1,66 @@
+name: Generate passkey schema and client
+
+on:
+  push:
+    branches: [feat/passkey-sign-in]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ConnectionStrings__AverioDatabase: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: dotnet restore Averio.slnx
+      - run: dotnet build Averio.slnx --configuration Release --no-restore
+      - run: dotnet tool restore
+      - run: dotnet ef migrations add AddUserPasskeys --project src/Averio.Infrastructure --startup-project apps/Averio.Api --output-dir Persistence/Migrations
+      - run: npm ci
+        working-directory: apps/averio-web
+      - name: Generate client
+        working-directory: apps/averio-web
+        run: |
+          dotnet run --project ../../apps/Averio.Api --configuration Release --no-build --no-launch-profile >/tmp/averio-api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:5180/openapi/v1.json >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:5180/openapi/v1.json >/dev/null || (cat /tmp/averio-api.log && exit 1)
+          npm run api:generate
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/Averio.Infrastructure/Persistence/Migrations apps/averio-web/src/shared/api/generated
+          git commit -m "chore(passkeys): generate schema and client"
+          git push origin HEAD:feat/passkey-sign-in

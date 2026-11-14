@@ -4,6 +4,7 @@ import { profileApi } from './profileApi';
 export const profileKeys = {
     detail: (userId: string) => ['user-profile', userId] as const,
     picture: (userId: string) => ['user-profile-picture', userId] as const,
+    passkeys: (userId: string) => ['user-profile-passkeys', userId] as const,
 };
 
 export const profileQueries = {

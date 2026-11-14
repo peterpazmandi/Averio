@@ -39,6 +39,8 @@ import {
 } from '../shared/components/PrimaryButton';
 import { PasswordField } from '../shared/components/PasswordField';
 import { pendingInvitation } from '../features/household/invitationContext';
+import { passkeysSupported, signInWithPasskey } from '../features/authentication/api/passkeyApi';
+import { AverioButton } from '../shared/components/ui/AverioButton';
 
 export const Route =
     createFileRoute('/_guest/login')({
@@ -138,6 +140,22 @@ function LoginPage() {
         }
         catch (error) {
             setSubmitError(error);
+        }
+        finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    async function submitPasskey() {
+        if (isSubmitting) return;
+        setSubmitError(null);
+        setIsSubmitting(true);
+        try {
+            await signInWithPasskey(rememberMe);
+            await finishSignIn();
+        }
+        catch (error) {
+            if (!(error instanceof DOMException && error.name === 'NotAllowedError')) setSubmitError(error);
         }
         finally {
             setIsSubmitting(false);
@@ -293,6 +311,12 @@ function LoginPage() {
                 {requiresTwoFactor && <button type="button" className="w-full text-sm font-semibold text-slate-600 underline"
                     onClick={() => { setRequiresTwoFactor(false); setSubmitError(null); setTwoFactorCode(''); }}>{t('profile.backToPassword')}</button>}
             </form>
+
+            {!requiresTwoFactor && passkeysSupported() && <div className="mt-5 border-t border-slate-200 pt-5 dark:border-slate-700">
+                <AverioButton className="w-full" onClick={() => void submitPasskey()} disabled={isSubmitting}>
+                    {t('profile.passkeySignIn')}
+                </AverioButton>
+            </div>}
 
             <p
                 className="

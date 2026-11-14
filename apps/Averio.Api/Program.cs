@@ -67,6 +67,24 @@ builder.Services.AddApplication();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// The browser runs on the frontend origin while Identity's WebAuthn endpoints
+// run on the API origin. Bind credentials to the frontend and accept only the
+// origins already permitted to send authenticated API requests.
+var passkeyFrontendUrl = builder.Configuration["Email:FrontendBaseUrl"];
+if (!Uri.TryCreate(passkeyFrontendUrl, UriKind.Absolute, out var passkeyFrontendOrigin))
+    throw new InvalidOperationException("Email:FrontendBaseUrl must be an absolute URL for passkeys.");
+var passkeyAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+builder.Services.Configure<IdentityPasskeyOptions>(options =>
+{
+    options.ServerDomain = passkeyFrontendOrigin.Host;
+    options.UserVerificationRequirement = "required";
+    options.ValidateOrigin = context => ValueTask.FromResult(
+        !context.CrossOrigin && string.IsNullOrEmpty(context.TopOrigin) &&
+        passkeyAllowedOrigins.Contains(context.Origin, StringComparer.Ordinal) &&
+        string.Equals(context.HttpContext.Request.Headers.Origin.ToString(), context.Origin, StringComparison.Ordinal));
+});
+
 /*
  * Identity cookie authentication.
  */
