@@ -119,6 +119,11 @@ builder.Services.ConfigureApplicationCookie(
             };
     });
 
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromMinutes(5);
+});
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddRateLimiter(options =>

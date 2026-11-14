@@ -68,7 +68,10 @@ export function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
                 <ConceptIcon name="household" />{t('householdSettings.title')}
             </Link>
-            {unavailable('profile')}
+            <Link to="/app/profile" className="av-nav-item"
+                activeProps={{ className: 'active', 'aria-current': 'page' }} onClick={onNavigate}>
+                <ConceptIcon name="profile" />{t('concept.nav.profile')}
+            </Link>
         </nav>
     );
 }

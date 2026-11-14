@@ -12,6 +12,7 @@ import { AverioBrand } from './branding/AverioBrand';
 import { ConceptIcon } from './concept/ConceptIcon';
 import { ConceptPreferences } from './concept/ConceptPreferences';
 import '../styles/concept.css';
+import { ProfileAvatar } from '../../features/profile/ProfileAvatar';
 
 export function AppShell({ children }: PropsWithChildren) {
     const auth = useAuth();
@@ -54,7 +55,7 @@ export function AppShell({ children }: PropsWithChildren) {
         .map((part) => part[0]).join('').toLocaleUpperCase();
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
-    const title = pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
+    const title = pathname.startsWith('/app/profile') ? t('profile.title') : pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
         ? t('householdSettings.title')
         : pathname.startsWith('/app/accounts')
         ? t('app.navigation.accounts')
@@ -140,7 +141,7 @@ export function AppShell({ children }: PropsWithChildren) {
                         </button>
                         <ConceptPreferences />
                         <div className="av-profile">
-                            <span className="av-avatar" aria-hidden="true">{initials}</span>
+                            <ProfileAvatar userId={userId} initials={initials} className="av-avatar" />
                             <div className="av-profile-copy">
                                 <strong>{displayName}</strong>
                                 <small>{t('concept.household')}</small>
