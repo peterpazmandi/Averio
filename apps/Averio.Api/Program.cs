@@ -79,6 +79,7 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 {
     options.ServerDomain = passkeyFrontendOrigin.Host;
     options.UserVerificationRequirement = "required";
+    options.ResidentKeyRequirement = "required";
     options.ValidateOrigin = context => ValueTask.FromResult(
         !context.CrossOrigin && string.IsNullOrEmpty(context.TopOrigin) &&
         passkeyAllowedOrigins.Contains(context.Origin, StringComparer.Ordinal) &&

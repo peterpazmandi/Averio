@@ -80,7 +80,7 @@ public sealed class PasskeysController(
             return Created("/api/v1/profile/passkeys", new PasskeyResponse(
                 WebEncoders.Base64UrlEncode(passkey.CredentialId), passkey.Name, passkey.CreatedAt));
         }
-        catch (PasskeyAuthenticationStateException)
+        catch (InvalidOperationException)
         {
             return BadRequest(new { code = "passkey_expired" });
         }
@@ -149,7 +149,7 @@ public sealed class PasskeysController(
             await signInManager.SignInAsync(user, isPersistent: request.RememberMe);
             return NoContent();
         }
-        catch (PasskeyAuthenticationStateException)
+        catch (InvalidOperationException)
         {
             return Unauthorized();
         }
