@@ -59,10 +59,13 @@ export function ProfilePage({ userId }: { userId: string }) {
     });
     const setupMutation = useMutation({ mutationFn: profileApi.setupAuthenticator, onSuccess: result => { setSetup(result); setPassword(''); setError(''); }, onError: () => setError(t('profile.securityFailed')) });
     const enableMutation = useMutation({ mutationFn: profileApi.enableAuthenticator, onSuccess: async result => { setRecoveryCodes(result.recoveryCodes); setSetup(undefined); setCode(''); await client.invalidateQueries({ queryKey: profileKeys.detail(userId) }); setError(''); }, onError: () => setError(t('profile.codeInvalid')) });
-    const securityMutation = useMutation({
-        mutationFn: () => securityAction === 'disable' ? profileApi.disableAuthenticator(password, code) : profileApi.regenerateRecoveryCodes(password, code),
+    const securityMutation = useMutation<{ recoveryCodes: string[] } | void>({
+        mutationFn: async () => {
+            if (securityAction === 'disable') { await profileApi.disableAuthenticator(password, code); return undefined; }
+            return await profileApi.regenerateRecoveryCodes(password, code);
+        },
         onSuccess: async result => {
-            if (securityAction === 'regenerate') setRecoveryCodes((result as { recoveryCodes: string[] }).recoveryCodes);
+            if (securityAction === 'regenerate' && result) setRecoveryCodes(result.recoveryCodes);
             else await client.invalidateQueries({ queryKey: profileKeys.detail(userId) });
             setPassword(''); setCode(''); setSecurityAction(undefined); setError('');
         },
