@@ -103,3 +103,4 @@ export function ProfileResponseToJSONTyped(value?: ProfileResponse | null, ignor
         'hasProfilePicture': value['hasProfilePicture'],
     };
 }
+
