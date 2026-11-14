@@ -61,3 +61,4 @@ export function PasswordConfirmationRequestToJSONTyped(value?: PasswordConfirmat
         'password': value['password'],
     };
 }
+
