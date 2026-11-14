@@ -68,3 +68,4 @@ export function AuthenticatorSetupResponseToJSONTyped(value?: AuthenticatorSetup
         'authenticatorUri': value['authenticatorUri'],
     };
 }
+
