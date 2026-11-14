@@ -1,13 +1,25 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../authentication/context/AuthProvider';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
+import { AverioSectionSelect } from '../../shared/components/ui/AverioSectionSelect';
+import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
+import { PasswordField } from '../../shared/components/PasswordField';
 import { profileApi, type UserProfile } from './profileApi';
 import { profileKeys, profileQueries } from './profileQueries';
 import { ProfileAvatar } from './ProfileAvatar';
+
+type ProfileSection = 'personal' | 'password' | 'mfa' | 'sessions';
+const sections: ProfileSection[] = ['personal', 'password', 'mfa', 'sessions'];
+const menuIcons = { personal: 'profile', password: 'lock', mfa: 'check', sessions: 'accounts' } as const;
+function decodeSection(hash: string): ProfileSection {
+    const section = hash.replace(/^#?profile-/, '');
+    return sections.find(item => item === section) ?? 'personal';
+}
 
 export function ProfilePage({ userId }: { userId: string }) {
     const { t } = useTranslation();
@@ -19,14 +31,23 @@ export function ProfilePage({ userId }: { userId: string }) {
 
 function ProfileSettingsPage({ userId, profile }: { userId: string; profile: UserProfile }) {
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
+    const hash = useLocation({ select: location => location.hash });
+    const activeSection = decodeSection(hash);
+    const selectSection = (section: ProfileSection) => {
+        setMessage(''); setError(''); setPasswordError('');
+        void navigate({ hash: 'profile-' + section, resetScroll: false, hashScrollIntoView: false });
+    };
     const auth = useAuth();
     const client = useQueryClient();
     const [name, setName] = useState(profile.displayName);
     const [culture, setCulture] = useState<UserProfile['preferredCulture']>(profile.preferredCulture);
     const [password, setPassword] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
+    const [sessionPassword, setSessionPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const [code, setCode] = useState('');
     const [setup, setSetup] = useState<{ sharedKey: string; authenticatorUri: string }>();
     const [setupRequested, setSetupRequested] = useState(false);
@@ -74,12 +95,12 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
     });
     const passwordMutation = useMutation({
         mutationFn: () => profileApi.changePassword(currentPassword, newPassword),
-        onSuccess: () => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setMessage(t('profile.passwordChanged')); setError(''); },
-        onError: () => setError(t('profile.saveError')),
+        onSuccess: () => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); setMessage(t('profile.passwordChanged')); },
+        onError: () => setPasswordError(t('profile.saveError')),
     });
     const sessionsMutation = useMutation({
-        mutationFn: () => profileApi.revokeOtherDevices(currentPassword),
-        onSuccess: () => { setCurrentPassword(''); setRevokeSessionsRequested(false); setMessage(t('profile.sessionsRevoked')); setError(''); },
+        mutationFn: () => profileApi.revokeOtherDevices(sessionPassword),
+        onSuccess: () => { setSessionPassword(''); setRevokeSessionsRequested(false); setMessage(t('profile.sessionsRevoked')); setError(''); },
         onError: () => setError(t('profile.securityFailed')),
     });
 
@@ -88,16 +109,38 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
     const displayName = profile.displayName || profile.email;
     const initials = displayName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
 
-    return <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <AverioCard className="h-fit text-center lg:sticky lg:top-24">
-            <ProfileAvatar userId={userId} initials={initials} className="mx-auto mb-3 grid size-20 place-items-center rounded-[24px] bg-slate-800 text-2xl font-black text-white" />
-            <h2 className="text-base font-bold">{displayName}</h2>
-            <p className="mt-1 break-all text-xs text-slate-500">{profile.email}</p>
-            <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${profile.emailVerified ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-amber-100 text-amber-800'}`}>{t(profile.emailVerified ? 'profile.verified' : 'profile.notVerified')}</span>
+    return <div className="mx-auto max-w-6xl space-y-5 text-[#152033] dark:text-[#F3F6FA]">
+        <header><h2 className="text-2xl font-bold tracking-tight">{t('profile.title')}</h2><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('profile.description')}</p></header>
+        <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <AverioCard role="navigation" aria-label={t('profile.sections')} className="p-3 lg:sticky lg:top-24">
+            <div className="flex items-center gap-3 border-b border-slate-200 px-2 pb-4 dark:border-slate-700">
+                <ProfileAvatar userId={userId} initials={initials} className="grid size-12 shrink-0 place-items-center rounded-xl bg-slate-800 text-sm font-bold text-white" />
+                <div className="min-w-0"><p className="truncate text-sm font-bold">{displayName}</p><p className="truncate text-xs text-slate-500 dark:text-slate-400">{profile.email}</p></div>
+            </div>
+            <div className="px-2 py-3"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${profile.emailVerified ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-amber-100 text-amber-800'}`}>{t(profile.emailVerified ? 'profile.verified' : 'profile.notVerified')}</span></div>
+            <div className="lg:hidden"><AverioSectionSelect label={t('profile.sections')} value={activeSection}
+                items={sections.map(section => ({ value: section, label: t('profile.nav.' + section), icon: menuIcons[section] }))}
+                onChange={selectSection} /></div>
+            <div className="hidden gap-2 lg:grid">
+                {sections.map(section => {
+                    const selected = activeSection === section;
+                    return <a key={section} href={'#profile-' + section} aria-current={selected ? 'page' : undefined}
+                        onClick={event => {
+                            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                            event.preventDefault(); selectSection(section);
+                        }}
+                        className={`group flex min-h-12 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 ${selected
+                            ? 'border-l-emerald-500 bg-emerald-100 font-bold text-emerald-900 shadow-sm ring-1 ring-emerald-300/60 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-800'
+                            : 'border-l-transparent font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`}>
+                        <span className={selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}><ConceptIcon name={menuIcons[section]} /></span>
+                        <span className="min-w-0 text-left"><span className="block">{t('profile.nav.' + section)}</span><span className="mt-0.5 block text-[11px] font-normal leading-snug text-slate-600 dark:text-slate-300">{t('profile.navHelp.' + section)}</span></span>
+                    </a>;
+                })}
+            </div>
         </AverioCard>
 
-        <div className="space-y-4">
-            <AverioCard>
+        <div className="min-w-0 space-y-4">
+            {activeSection === 'personal' && <AverioCard id="profile-personal" className="scroll-mt-24">
                 <div className="mb-5"><h3 className="text-base font-bold">{t('profile.personal')}</h3><p className="mt-1 text-sm text-slate-500">{t('profile.personalHelp')}</p></div>
                 <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
                     <AverioField>{t('profile.name')}<AverioInput autoComplete="name" maxLength={80} required value={name} onChange={event => setName(event.target.value)} /></AverioField>
@@ -116,17 +159,37 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
                         {profile.hasProfilePicture && <AverioButton onClick={() => removePicture.mutate()} disabled={isBusy}>{t('profile.removePicture')}</AverioButton>}
                     </div>
                 </div>
-            </AverioCard>
+            </AverioCard>}
 
-            <AverioCard>
-                <div className="mb-3"><h3 className="text-base font-bold">{t('profile.security')}</h3><p className="mt-1 text-sm text-slate-500">{t('profile.securityHelp')}</p></div>
-                <form onSubmit={event => { event.preventDefault(); if (newPassword !== confirmPassword) { setError(t('profile.passwordsDoNotMatch')); return; } setError(''); passwordMutation.mutate(); }} className="grid gap-3 border-t border-slate-200 py-4 dark:border-slate-700 sm:grid-cols-2">
-                    <AverioField>{t('profile.currentPassword')}<AverioInput type="password" autoComplete="current-password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} /></AverioField>
-                    <AverioField>{t('profile.newPassword')}<AverioInput type="password" autoComplete="new-password" required minLength={12} value={newPassword} onChange={event => setNewPassword(event.target.value)} /></AverioField>
-                    <AverioField>{t('profile.confirmNewPassword')}<AverioInput type="password" autoComplete="new-password" required minLength={12} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} /></AverioField>
-                    <div className="flex items-end"><AverioButton type="submit" disabled={passwordMutation.isPending}>{t('profile.changePassword')}</AverioButton></div>
+            {activeSection === 'password' && <AverioCard id="profile-password" className="scroll-mt-24">
+                <h3 className="text-lg font-semibold">{t('profile.changePassword')}</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('profile.passwordHelp')}</p>
+                <form onSubmit={event => {
+                    event.preventDefault();
+                    if (newPassword !== confirmPassword) { setPasswordError(t('profile.passwordsDoNotMatch')); return; }
+                    setPasswordError(''); setMessage(''); passwordMutation.mutate();
+                }} className="mt-6 space-y-5">
+                    <div className="grid gap-5 lg:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+                            <h4 className="mb-3 text-sm font-semibold">{t('profile.currentPassword')}</h4>
+                            <PasswordField label={t('profile.currentPassword')} autoComplete="current-password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} />
+                        </div>
+                        <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
+                            <h4 className="text-sm font-semibold">{t('profile.newPassword')}</h4>
+                            <PasswordField label={t('profile.newPassword')} autoComplete="new-password" required minLength={12} maxLength={256} value={newPassword} onChange={event => { setNewPassword(event.target.value); setPasswordError(''); }} />
+                            <PasswordField label={t('profile.confirmNewPassword')} autoComplete="new-password" required minLength={12} maxLength={256} value={confirmPassword} onChange={event => { setConfirmPassword(event.target.value); setPasswordError(''); }} />
+                            <p className="text-xs text-slate-600 dark:text-slate-300">{t('profile.passwordLengthHelp')}</p>
+                        </div>
+                    </div>
+                    {passwordError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{passwordError}</p>}
+                    <div className="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-700"><AverioButton type="submit" variant="primary" disabled={passwordMutation.isPending}>{t('profile.changePassword')}</AverioButton></div>
                 </form>
-                <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 py-4 dark:border-slate-700">
+            </AverioCard>}
+
+            {activeSection === 'mfa' && <AverioCard id="profile-mfa" className="scroll-mt-24">
+                <h3 className="text-lg font-semibold">{t('profile.mfa')}</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('profile.securityHelp')}</p>
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200 py-4 dark:border-slate-700">
                     <div className="min-w-0 flex-1"><h4 className="text-sm font-semibold">{t('profile.mfa')}</h4><p className="mt-1 text-sm text-slate-500">{t(profile.twoFactorEnabled ? 'profile.mfaOn' : 'profile.mfaOff')}</p></div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold dark:bg-slate-800">{t(profile.twoFactorEnabled ? 'profile.enabled' : 'profile.disabled')}</span>
                     <AverioButton onClick={() => { if (profile.twoFactorEnabled) setSecurityAction('disable'); else setSetupRequested(true); setError(''); setPassword(''); setCode(''); }}>{t(profile.twoFactorEnabled ? 'profile.disable' : 'profile.setup')}</AverioButton>
@@ -153,21 +216,23 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
                 </form>}
 
                 {profile.twoFactorEnabled && !securityAction && <AverioButton className="mt-2" onClick={() => { setSecurityAction('regenerate'); setPassword(''); setCode(''); }}>{t('profile.regenerate')}</AverioButton>}
-                <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
-                    <h4 className="text-sm font-semibold">{t('profile.sessions')}</h4><p className="mt-1 text-sm text-slate-500">{t('profile.sessionsHelp')}</p>
-                    {!revokeSessionsRequested ? <AverioButton className="mt-3" onClick={() => { setRevokeSessionsRequested(true); setCurrentPassword(''); setError(''); }}>{t('profile.revokeSessions')}</AverioButton> :
-                        <form onSubmit={event => { event.preventDefault(); sessionsMutation.mutate(); }} className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-                            <AverioField>{t('profile.passwordConfirm')}<AverioInput type="password" autoComplete="current-password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} /></AverioField>
-                            <div className="flex gap-2 self-end"><AverioButton type="submit" variant="danger" disabled={sessionsMutation.isPending}>{t('profile.revokeSessions')}</AverioButton><AverioButton onClick={() => setRevokeSessionsRequested(false)}>{t('profile.cancel')}</AverioButton></div>
-                        </form>}
-                </div>
                 {recoveryCodes && <div className="mt-4 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
                     <h4 className="font-semibold">{t('profile.recoveryTitle')}</h4><p className="text-sm">{t('profile.recoveryHelp')}</p>
                     <code className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-white p-3 font-mono text-sm dark:bg-slate-900">{recoveryCodes.map(item => <span key={item}>{item}</span>)}</code>
                     <div className="flex flex-wrap gap-2"><AverioButton onClick={() => void navigator.clipboard.writeText(recoveryCodes.join('\n'))}>{t('profile.copyCodes')}</AverioButton><AverioButton onClick={() => setRecoveryCodes(undefined)}>{t('profile.done')}</AverioButton></div>
                 </div>}
-            </AverioCard>
+            </AverioCard>}
+            {activeSection === 'sessions' && <AverioCard id="profile-sessions" className="scroll-mt-24">
+                <h3 className="text-lg font-semibold">{t('profile.sessions')}</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('profile.sessionsHelp')}</p>
+                {!revokeSessionsRequested ? <AverioButton className="mt-5" onClick={() => { setRevokeSessionsRequested(true); setSessionPassword(''); setError(''); }}>{t('profile.revokeSessions')}</AverioButton> :
+                    <form onSubmit={event => { event.preventDefault(); sessionsMutation.mutate(); }} className="mt-5 max-w-md space-y-4">
+                        <PasswordField label={t('profile.passwordConfirm')} autoComplete="current-password" required value={sessionPassword} onChange={event => setSessionPassword(event.target.value)} />
+                        <div className="flex flex-wrap gap-2"><AverioButton type="submit" variant="danger" disabled={sessionsMutation.isPending}>{t('profile.revokeSessions')}</AverioButton><AverioButton onClick={() => { setRevokeSessionsRequested(false); setSessionPassword(''); }}>{t('profile.cancel')}</AverioButton></div>
+                    </form>}
+            </AverioCard>}
             {(message || error) && <p role={error ? 'alert' : 'status'} className={`text-sm ${error ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{error || message}</p>}
+        </div>
         </div>
     </div>;
 }
