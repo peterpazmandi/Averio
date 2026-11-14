@@ -68,3 +68,4 @@ export function ChangePasswordRequestToJSONTyped(value?: ChangePasswordRequest |
         'newPassword': value['newPassword'],
     };
 }
+
