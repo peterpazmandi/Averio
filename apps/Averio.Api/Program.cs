@@ -168,6 +168,16 @@ builder.Services.AddRateLimiter(options =>
                         SegmentsPerWindow = 3,
                         QueueLimit = 0
                     }));
+        options.AddPolicy(RateLimiterPolicies.PasskeyAttempts,
+            context => RateLimitPartition.GetSlidingWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new SlidingWindowRateLimiterOptions
+                {
+                    PermitLimit = 15,
+                    Window = TimeSpan.FromMinutes(15),
+                    SegmentsPerWindow = 3,
+                    QueueLimit = 0
+                }));
     });
 
 builder.Services.AddAntiforgery(options =>
