@@ -68,3 +68,4 @@ export function UpdateProfileRequestToJSONTyped(value?: UpdateProfileRequest | n
         'preferredCulture': value['preferredCulture'],
     };
 }
+
