@@ -61,3 +61,4 @@ export function RecoveryCodesResponseToJSONTyped(value?: RecoveryCodesResponse |
         'recoveryCodes': value['recoveryCodes'],
     };
 }
+
