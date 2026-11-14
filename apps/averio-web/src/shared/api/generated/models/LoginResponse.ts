@@ -61,3 +61,4 @@ export function LoginResponseToJSONTyped(value?: LoginResponse | null, ignoreDis
         'requiresTwoFactor': value['requiresTwoFactor'],
     };
 }
+
