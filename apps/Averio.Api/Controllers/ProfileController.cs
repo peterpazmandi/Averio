@@ -20,6 +20,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     [ProducesResponseType<ProfileResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<ProfileResponse>> Get(CancellationToken ct)
     {
+        PreventResponseCaching();
         var user = await GetUserAsync(ct);
         return Ok(new ProfileResponse(user.Id, user.DisplayName ?? string.Empty, user.Email ?? string.Empty,
             user.EmailConfirmed, NormalizeCulture(user.PreferredCulture), user.TwoFactorEnabled, user.ProfilePicture is not null));
@@ -74,6 +75,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     [Produces("image/jpeg")]
     public async Task<IActionResult> GetPicture(CancellationToken ct)
     {
+        PreventResponseCaching();
         var user = await GetUserAsync(ct);
         return user.ProfilePicture is null ? NotFound() : File(user.ProfilePicture, "image/jpeg", enableRangeProcessing: false);
     }
@@ -132,6 +134,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     [ProducesResponseType<AuthenticatorSetupResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<AuthenticatorSetupResponse>> StartAuthenticatorSetup(PasswordConfirmationRequest request, CancellationToken ct)
     {
+        PreventResponseCaching();
         var user = await GetUserAsync(ct);
         if (user.TwoFactorEnabled)
             return Conflict(new { code = "mfa_already_enabled" });
@@ -152,6 +155,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     [ProducesResponseType<RecoveryCodesResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RecoveryCodesResponse>> EnableAuthenticator(EnableAuthenticatorRequest request, CancellationToken ct)
     {
+        PreventResponseCaching();
         var user = await GetUserAsync(ct);
         if (user.TwoFactorEnabled)
             return Conflict(new { code = "mfa_already_enabled" });
@@ -190,6 +194,7 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     [ProducesResponseType<RecoveryCodesResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RecoveryCodesResponse>> RegenerateRecoveryCodes(DisableAuthenticatorRequest request, CancellationToken ct)
     {
+        PreventResponseCaching();
         var user = await GetUserAsync(ct);
         if (!user.TwoFactorEnabled)
             return Conflict(new { code = "mfa_not_enabled" });
@@ -210,6 +215,8 @@ public sealed class ProfileController(UserManager<ApplicationUser> users, SignIn
     }
 
     private static string NormalizeCode(string? code) => (code ?? string.Empty).Replace(" ", "").Replace("-", "");
+
+    private void PreventResponseCaching() => Response.Headers.CacheControl = "private, no-store";
 
     private static string NormalizeCulture(string? culture) => culture?.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.ToLowerInvariant() switch
     {
