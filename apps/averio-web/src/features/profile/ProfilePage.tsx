@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../authentication/context/AuthProvider';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
@@ -202,8 +203,20 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
 
                 {setup && <form onSubmit={event => { event.preventDefault(); enableMutation.mutate(code); }} className="space-y-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-900/60">
                     <h4 className="text-sm font-semibold">{t('profile.setupTitle')}</h4><p className="text-sm text-slate-500">{t('profile.setupHelp')}</p>
-                    <a href={setup.authenticatorUri} className="inline-flex min-h-11 items-center rounded-[11px] border border-[#E4E7EC] px-3 text-sm font-semibold text-primary-700 underline dark:border-[#233044] dark:text-primary-300">{t('profile.openAuthenticator')}</a>
-                    <AverioField>{t('profile.sharedKey')}<AverioInput readOnly value={setup.sharedKey} onFocus={event => event.currentTarget.select()} /></AverioField>
+                    <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                        <div className="space-y-2">
+                            <div className="w-fit rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                                <QRCodeSVG value={setup.authenticatorUri} size={192} marginSize={4} level="M"
+                                    title={t('profile.scanQr')} role="img" aria-label={t('profile.scanQr')} />
+                            </div>
+                            <p className="max-w-56 text-xs text-slate-600 dark:text-slate-300">{t('profile.scanQr')}</p>
+                        </div>
+                        <div className="min-w-0 space-y-3">
+                            <p className="text-sm font-semibold">{t('profile.manualSetup')}</p>
+                            <AverioField>{t('profile.sharedKey')}<AverioInput readOnly value={setup.sharedKey} onFocus={event => event.currentTarget.select()} /></AverioField>
+                            <a href={setup.authenticatorUri} className="inline-flex min-h-11 items-center rounded-[11px] border border-[#E4E7EC] px-3 text-sm font-semibold text-primary-700 underline dark:border-[#233044] dark:text-primary-300">{t('profile.openAuthenticator')}</a>
+                        </div>
+                    </div>
                     <AverioField>{t('profile.code')}<AverioInput inputMode="numeric" autoComplete="one-time-code" maxLength={9} required value={code} onChange={event => setCode(event.target.value)} /></AverioField>
                     <div className="flex flex-wrap gap-2"><AverioButton type="submit" variant="primary" disabled={enableMutation.isPending}>{t('profile.verifyEnable')}</AverioButton><AverioButton onClick={() => { setSetup(undefined); setSetupRequested(false); setPassword(''); setCode(''); }}>{t('profile.cancel')}</AverioButton></div>
                 </form>}
