@@ -1889,6 +1889,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(80)")
                         .HasColumnName("display_name");
 
+                    b.Property<byte[]>("ProfilePicture")
+                        .HasColumnType("bytea")
+                        .HasColumnName("profile_picture");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(320)

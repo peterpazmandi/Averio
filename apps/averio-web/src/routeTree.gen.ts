@@ -27,6 +27,7 @@ import { Route as AuthenticatedAppAccountsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppActivitiesRouteImport } from './routes/_authenticated.app.activities'
 import { Route as AuthenticatedAppCategoriesRouteImport } from './routes/_authenticated.app.categories'
 import { Route as AuthenticatedAppHouseholdRouteImport } from './routes/_authenticated.app.household'
+import { Route as AuthenticatedAppProfileRouteImport } from './routes/_authenticated.app.profile'
 import { Route as AuthenticatedAppImportHistoryRouteImport } from './routes/_authenticated.app.import-history'
 import { Route as AuthenticatedAppImportsRouteImport } from './routes/_authenticated.app.imports'
 import { Route as AuthenticatedAppReceiptsRouteImport } from './routes/_authenticated.app.receipts'
@@ -130,6 +131,11 @@ const AuthenticatedAppHouseholdRoute =
     path: '/household',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppProfileRoute = AuthenticatedAppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppImportHistoryRoute =
   AuthenticatedAppImportHistoryRouteImport.update({
     id: '/import-history',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/app/activities': typeof AuthenticatedAppActivitiesRoute
   '/_authenticated/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/_authenticated/app/household': typeof AuthenticatedAppHouseholdRoute
+  '/_authenticated/app/profile': typeof AuthenticatedAppProfileRoute
   '/_authenticated/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/_authenticated/app/imports': typeof AuthenticatedAppImportsRoute
   '/_authenticated/app/receipts': typeof AuthenticatedAppReceiptsRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/app/activities'
     | '/app/categories'
     | '/app/household'
+    | '/app/profile'
     | '/app/import-history'
     | '/app/imports'
     | '/app/receipts'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/app/activities'
     | '/app/categories'
     | '/app/household'
+    | '/app/profile'
     | '/app/import-history'
     | '/app/imports'
     | '/app/receipts'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/activities'
     | '/_authenticated/app/categories'
     | '/_authenticated/app/household'
+    | '/_authenticated/app/profile'
     | '/_authenticated/app/import-history'
     | '/_authenticated/app/imports'
     | '/_authenticated/app/receipts'
@@ -497,6 +509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHouseholdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/profile': {
+      id: '/_authenticated/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AuthenticatedAppProfileRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/import-history': {
       id: '/_authenticated/app/import-history'
       path: '/import-history'
@@ -594,6 +613,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppActivitiesRoute: typeof AuthenticatedAppActivitiesRoute
   AuthenticatedAppCategoriesRoute: typeof AuthenticatedAppCategoriesRoute
   AuthenticatedAppHouseholdRoute: typeof AuthenticatedAppHouseholdRoute
+  AuthenticatedAppProfileRoute: typeof AuthenticatedAppProfileRoute
   AuthenticatedAppImportHistoryRoute: typeof AuthenticatedAppImportHistoryRoute
   AuthenticatedAppImportsRoute: typeof AuthenticatedAppImportsRoute
   AuthenticatedAppReceiptsRoute: typeof AuthenticatedAppReceiptsRoute
@@ -609,6 +629,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppActivitiesRoute: AuthenticatedAppActivitiesRoute,
   AuthenticatedAppCategoriesRoute: AuthenticatedAppCategoriesRoute,
   AuthenticatedAppHouseholdRoute: AuthenticatedAppHouseholdRoute,
+  AuthenticatedAppProfileRoute: AuthenticatedAppProfileRoute,
   AuthenticatedAppImportHistoryRoute: AuthenticatedAppImportHistoryRoute,
   AuthenticatedAppImportsRoute: AuthenticatedAppImportsRoute,
   AuthenticatedAppReceiptsRoute: AuthenticatedAppReceiptsRoute,

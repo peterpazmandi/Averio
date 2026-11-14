@@ -19,6 +19,16 @@ import {
     CurrentUserResponseToJSON,
 } from '../models/CurrentUserResponse';
 import {
+    type LoginResponse,
+    LoginResponseFromJSON,
+    LoginResponseToJSON,
+} from '../models/LoginResponse';
+import {
+    type LoginTwoFactorRequest,
+    LoginTwoFactorRequestFromJSON,
+    LoginTwoFactorRequestToJSON,
+} from '../models/LoginTwoFactorRequest';
+import {
     type LoginUserRequest,
     LoginUserRequestFromJSON,
     LoginUserRequestToJSON,
@@ -73,6 +83,13 @@ export interface ApiV1AuthLoginPostRequest {
      * 
      */
     loginUserRequest: LoginUserRequest;
+}
+
+export interface ApiV1AuthLoginTwoFactorPostRequest {
+    /**
+     * 
+     */
+    loginTwoFactorRequest: LoginTwoFactorRequest;
 }
 
 export interface ApiV1AuthPasswordResetRequestsPostRequest {
@@ -220,8 +237,60 @@ export class AuthApi extends runtime.BaseAPI {
 
     /**
      */
-    async apiV1AuthLoginPostRaw(requestParameters: ApiV1AuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async apiV1AuthLoginPostRaw(requestParameters: ApiV1AuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LoginResponse>> {
         const requestOptions = await this.apiV1AuthLoginPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => LoginResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1AuthLoginPost(requestParameters: ApiV1AuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LoginResponse | null | undefined > {
+        const response = await this.apiV1AuthLoginPostRaw(requestParameters, initOverrides);
+        switch (response.raw.status) {
+            case 202:
+                return await response.value();
+            case 204:
+                return null;
+            default:
+                return await response.value();
+        }
+    }
+
+    /**
+     * Creates request options for apiV1AuthLoginTwoFactorPost without sending the request
+     */
+    async apiV1AuthLoginTwoFactorPostRequestOpts(requestParameters: ApiV1AuthLoginTwoFactorPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['loginTwoFactorRequest'] == null) {
+            throw new runtime.RequiredError(
+                'loginTwoFactorRequest',
+                'Required parameter "loginTwoFactorRequest" was null or undefined when calling apiV1AuthLoginTwoFactorPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/login/two-factor`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: LoginTwoFactorRequestToJSON(requestParameters['loginTwoFactorRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1AuthLoginTwoFactorPostRaw(requestParameters: ApiV1AuthLoginTwoFactorPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1AuthLoginTwoFactorPostRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -229,8 +298,8 @@ export class AuthApi extends runtime.BaseAPI {
 
     /**
      */
-    async apiV1AuthLoginPost(requestParameters: ApiV1AuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.apiV1AuthLoginPostRaw(requestParameters, initOverrides);
+    async apiV1AuthLoginTwoFactorPost(requestParameters: ApiV1AuthLoginTwoFactorPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1AuthLoginTwoFactorPostRaw(requestParameters, initOverrides);
     }
 
     /**
