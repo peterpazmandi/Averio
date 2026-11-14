@@ -61,3 +61,4 @@ export function EnableAuthenticatorRequestToJSONTyped(value?: EnableAuthenticato
         'code': value['code'],
     };
 }
+
