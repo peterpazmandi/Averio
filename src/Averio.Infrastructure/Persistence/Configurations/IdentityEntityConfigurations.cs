@@ -130,7 +130,6 @@ internal sealed class IdentityUserPasskeyConfiguration : IEntityTypeConfiguratio
         builder.HasKey(x => x.CredentialId).HasName("pk_user_passkeys");
         builder.Property(x => x.CredentialId).HasColumnName("credential_id").HasMaxLength(1024);
         builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.ComplexProperty(x => x.Data).ToJson("data");
         builder.HasIndex(x => x.UserId).HasDatabaseName("ix_user_passkeys_user_id");
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade).HasConstraintName("fk_user_passkeys_users_user_id");
