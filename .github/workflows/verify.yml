@@ -410,6 +410,7 @@ jobs:
 
           node tests/receipt-openapi.mjs
           npm run api:generate
+          find src/shared/api/generated -type f -not -path '*/.openapi-generator/*' -print -exec cat {} \;
 
           if [ -n "$(git status --porcelain -- src/shared/api/generated)" ]; then
             git diff -- src/shared/api/generated
