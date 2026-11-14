@@ -19,6 +19,7 @@ import {
 
 import {
     loginUser,
+    loginWithTwoFactor,
 } from '../features/authentication/api/authApi';
 
 import {
@@ -68,6 +69,9 @@ function LoginPage() {
     const [rememberMe, setRememberMe] = useState(true);
     const [submitError, setSubmitError] = useState<unknown>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
     const mutation =
         useMutation({
@@ -86,32 +90,51 @@ function LoginPage() {
         setIsSubmitting(true);
 
         try {
-            await mutation.mutateAsync({
+            const result = await mutation.mutateAsync({
                 email,
                 password,
                 rememberMe,
             });
-
-            await auth.clear();
-
-            const user = await auth.refresh();
-
-            if (pendingInvitation()) {
-                await navigate({ to: '/invitation' });
+            if (result.requiresTwoFactor) {
+                setRequiresTwoFactor(true);
                 return;
             }
+            await finishSignIn();
+        }
+        catch (error) {
+            setSubmitError(error);
+        }
+        finally {
+            setIsSubmitting(false);
+        }
+    }
 
-            if (user.onboardingRequired) {
-                await navigate({ to: '/onboarding' });
-                return;
-            }
+    async function finishSignIn() {
+        await auth.clear();
+        const user = await auth.refresh();
+        if (pendingInvitation()) {
+            await navigate({ to: '/invitation' });
+            return;
+        }
+        if (user.onboardingRequired) {
+            await navigate({ to: '/onboarding' });
+            return;
+        }
+        const redirect = search.redirect?.startsWith('/') ? search.redirect : '/app';
+        await navigate({ to: redirect });
+    }
 
-            const redirect =
-                search.redirect?.startsWith('/')
-                    ? search.redirect
-                    : '/app';
-
-            await navigate({ to: redirect });
+    async function submitTwoFactor(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (isSubmitting) return;
+        setSubmitError(null);
+        setIsSubmitting(true);
+        try {
+            await loginWithTwoFactor({
+                ...(useRecoveryCode ? { recoveryCode: twoFactorCode } : { code: twoFactorCode }),
+                rememberMe,
+            });
+            await finishSignIn();
         }
         catch (error) {
             setSubmitError(error);
@@ -163,12 +186,13 @@ function LoginPage() {
             </p>
 
             <form
-                onSubmit={submit}
+                onSubmit={requiresTwoFactor ? submitTwoFactor : submit}
                 className="
                     mt-8
                     space-y-5
                 "
             >
+                {!requiresTwoFactor && <>
                 <FormField
                     label={t('auth.email')}
                     type="email"
@@ -221,6 +245,18 @@ function LoginPage() {
 
                     {t('auth.login.rememberMe')}
                 </label>
+                </>}
+
+                {requiresTwoFactor && <>
+                    <p className="text-sm text-slate-600">{t('profile.loginMfaDescription')}</p>
+                    <FormField label={t(useRecoveryCode ? 'profile.loginRecoveryCode' : 'profile.loginAuthenticatorCode')}
+                        type="text" inputMode={useRecoveryCode ? 'text' : 'numeric'} autoComplete="one-time-code"
+                        required value={twoFactorCode} onChange={event => setTwoFactorCode(event.target.value)} />
+                    <button type="button" className="text-sm font-semibold text-primary-700 underline"
+                        onClick={() => { setUseRecoveryCode(value => !value); setTwoFactorCode(''); setSubmitError(null); }}>
+                        {t(useRecoveryCode ? 'profile.useAuthenticatorCode' : 'profile.useRecoveryCode')}
+                    </button>
+                </>}
 
                 {errorMessage && (
                     <div
@@ -252,8 +288,10 @@ function LoginPage() {
                     type="submit"
                     loading={isSubmitting}
                 >
-                    {t('auth.login.submit')}
+                    {t(requiresTwoFactor ? 'profile.verifyCode' : 'auth.login.submit')}
                 </PrimaryButton>
+                {requiresTwoFactor && <button type="button" className="w-full text-sm font-semibold text-slate-600 underline"
+                    onClick={() => { setRequiresTwoFactor(false); setSubmitError(null); setTwoFactorCode(''); }}>{t('profile.backToPassword')}</button>}
             </form>
 
             <p

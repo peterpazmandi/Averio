@@ -3,6 +3,8 @@ namespace Averio.Contracts.Authentication;
 public sealed record RegisterUserRequest(string Email, string Password);
 public sealed record RegisterUserResponse(Guid UserId, bool EmailVerificationRequired, bool VerificationEmailSent);
 public sealed record LoginUserRequest(string Email, string Password, bool RememberMe);
+public sealed record LoginResponse(bool RequiresTwoFactor);
+public sealed record LoginTwoFactorRequest(string? Code, string? RecoveryCode, bool RememberMe);
 public sealed record VerifyEmailRequest(Guid UserId, string Token);
 public sealed record ResendEmailVerificationRequest(string Email);
 public sealed record RequestPasswordResetRequest(string Email);

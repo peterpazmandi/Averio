@@ -60,7 +60,20 @@ internal sealed class UserSessionService(
                 user.Id);
         }
 
-        await signInManager.SignInAsync(user, isPersistent: rememberMe);
+        if (user.TwoFactorEnabled)
+        {
+            var result = await signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: true);
+            if (result.RequiresTwoFactor)
+                return SignInStatus.RequiresTwoFactor;
+            if (result.IsLockedOut)
+                return SignInStatus.LockedOut;
+            if (!result.Succeeded)
+                return SignInStatus.InvalidCredentials;
+        }
+        else
+        {
+            await signInManager.SignInAsync(user, isPersistent: rememberMe);
+        }
 
         return SignInStatus.Succeeded;
     }
@@ -69,5 +82,24 @@ internal sealed class UserSessionService(
     {
         cancellationToken.ThrowIfCancellationRequested();
         await signInManager.SignOutAsync();
+    }
+
+    public async Task<bool> CompleteTwoFactorSignInAsync(string code, bool rememberMe, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await signInManager.TwoFactorAuthenticatorSignInAsync(code.Replace(" ", "").Replace("-", ""), rememberMe, rememberClient: false);
+        return result.Succeeded;
+    }
+
+    public async Task<bool> CompleteRecoveryCodeSignInAsync(string code, bool rememberMe, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = await signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user is null)
+            return false;
+        var result = await signInManager.TwoFactorRecoveryCodeSignInAsync(code.Trim());
+        if (result.Succeeded)
+            await signInManager.SignInAsync(user, isPersistent: rememberMe);
+        return result.Succeeded;
     }
 }

@@ -14,6 +14,7 @@ export * from './InvitationsApi';
 export * from './LabelsApi';
 export * from './OnboardingApi';
 export * from './PersonalMoneyApi';
+export * from './ProfileApi';
 export * from './ReceiptsApi';
 export * from './RecurringApi';
 export * from './SavedTransactionViewsApi';

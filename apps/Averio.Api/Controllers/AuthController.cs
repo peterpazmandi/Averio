@@ -54,18 +54,32 @@ public sealed class AuthController(
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [ProducesResponseType<LoginResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Login(
         LoginUserRequest request,
         CancellationToken cancellationToken)
     {
-        await loginUserHandler.HandleAsync(
+        var requiresTwoFactor = await loginUserHandler.HandleAsync(
             new LoginUserCommand(
                 request.Email,
                 request.Password,
                 request.RememberMe),
             cancellationToken);
 
+        return requiresTwoFactor ? Accepted(new LoginResponse(true)) : NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("login/two-factor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> LoginWithTwoFactor(LoginTwoFactorRequest request, CancellationToken cancellationToken)
+    {
+        var succeeded = request.RecoveryCode is { Length: > 0 }
+            ? await userSessionService.CompleteRecoveryCodeSignInAsync(request.RecoveryCode, request.RememberMe, cancellationToken)
+            : await userSessionService.CompleteTwoFactorSignInAsync(request.Code ?? string.Empty, request.RememberMe, cancellationToken);
+        if (!succeeded)
+            return Unauthorized();
         return NoContent();
     }
 

@@ -8,6 +8,8 @@ public sealed class ApplicationUser
 {
     public string? DisplayName { get; set; }
 
+    public byte[]? ProfilePicture { get; set; }
+
     public string PreferredCulture { get; set; } =
         "en-US";
 

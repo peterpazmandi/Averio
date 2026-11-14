@@ -10,6 +10,7 @@ import type {
 } from '../../../shared/api/generated';
 import {
     apiFetch,
+    apiFetchResponse,
 } from '../../../shared/api/apiFetch';
 import {
     clearCsrfToken,
@@ -29,8 +30,8 @@ export async function registerUser(
 
 export async function loginUser(
     request: LoginUserRequest,
-): Promise<void> {
-    await apiFetch<void>(
+): Promise<{ requiresTwoFactor: boolean }> {
+    const response = await apiFetchResponse(
         '/api/v1/auth/login',
         {
             method: 'POST',
@@ -42,6 +43,12 @@ export async function loginUser(
      * Authentication identity changed.
      * Antiforgery request token should be refreshed.
      */
+    clearCsrfToken();
+    return response.status === 204 ? { requiresTwoFactor: false } : await response.json() as { requiresTwoFactor: boolean };
+}
+
+export async function loginWithTwoFactor(request: { code?: string; recoveryCode?: string; rememberMe: boolean }): Promise<void> {
+    await apiFetch<void>('/api/v1/auth/login/two-factor', { method: 'POST', body: JSON.stringify(request) });
     clearCsrfToken();
 }
 

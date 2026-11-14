@@ -18,6 +18,8 @@ public interface IUserSessionService
     Task<SignInStatus> SignInAsync(string email, string password, bool rememberMe, CancellationToken cancellationToken);
 
     Task SignOutAsync(CancellationToken cancellationToken);
+    Task<bool> CompleteTwoFactorSignInAsync(string code, bool rememberMe, CancellationToken cancellationToken);
+    Task<bool> CompleteRecoveryCodeSignInAsync(string code, bool rememberMe, CancellationToken cancellationToken);
 }
 
 public interface IEmailVerificationSender
@@ -49,6 +51,7 @@ public enum EmailConfirmationStatus
 public enum SignInStatus
 {
     Succeeded,
+    RequiresTwoFactor,
     InvalidCredentials,
     EmailNotConfirmed,
     LockedOut

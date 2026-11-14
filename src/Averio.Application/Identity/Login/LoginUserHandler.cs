@@ -7,7 +7,7 @@ public sealed class LoginUserHandler(
     IValidator<LoginUserCommand> validator,
     IUserSessionService userSessionService)
 {
-    public async Task HandleAsync(LoginUserCommand command, CancellationToken cancellationToken)
+    public async Task<bool> HandleAsync(LoginUserCommand command, CancellationToken cancellationToken)
     {
         await validator.ValidateAndThrowAsync(command,cancellationToken);
 
@@ -20,7 +20,10 @@ public sealed class LoginUserHandler(
         switch (result)
         {
             case SignInStatus.Succeeded:
-                return;
+                return false;
+
+            case SignInStatus.RequiresTwoFactor:
+                return true;
 
             case SignInStatus.EmailNotConfirmed:
                 throw new EmailNotVerifiedException();
