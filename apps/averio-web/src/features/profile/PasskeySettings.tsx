@@ -55,7 +55,7 @@ export function PasskeySettings({ userId }: { userId: string }) {
             {keys.data.map(key => <div key={key.credentialId} className="rounded-xl border-l-[3px] border-emerald-500 bg-slate-50 p-4 dark:bg-slate-900/60">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div><p className="font-semibold">{key.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('profile.passkeyCreated', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(key.createdAt)) })}</p></div>
-                    <AverioButton disabled={remove.isPending} onClick={() => { setRemoveId(key.credentialId); setRemovePassword(''); setError(''); }}>{t('profile.passkeyRemove')}</AverioButton>
+                    <AverioButton disabled={remove.isPending} onClick={() => { setRemoveId(key.credentialId); setRemovePassword(''); setPassword(''); setError(''); }}>{t('profile.passkeyRemove')}</AverioButton>
                 </div>
                 {removeId === key.credentialId && <form onSubmit={event => { event.preventDefault(); remove.mutate(); }} className="mt-4 max-w-md space-y-3">
                     <p className="text-sm">{t('profile.passkeyRemoveHelp')}</p>
@@ -65,12 +65,12 @@ export function PasskeySettings({ userId }: { userId: string }) {
             </div>)}
         </div>}
 
-        {passkeysSupported() ? <form onSubmit={submit} className="mt-6 max-w-lg space-y-4 border-t border-slate-200 pt-5 dark:border-slate-700">
+        {!removeId && (passkeysSupported() ? <form onSubmit={submit} className="mt-6 max-w-lg space-y-4 border-t border-slate-200 pt-5 dark:border-slate-700">
             <h4 className="font-semibold">{t('profile.passkeyAdd')}</h4>
             <AverioField>{t('profile.passkeyName')}<AverioInput required maxLength={64} value={name} placeholder={t('profile.passkeyNameExample')} onChange={event => setName(event.target.value)} /></AverioField>
             <PasswordField label={t('profile.passwordConfirm')} autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} />
             <AverioButton type="submit" variant="primary" disabled={add.isPending || (keys.data?.length ?? 0) >= 10}>{t('profile.passkeyAdd')}</AverioButton>
-        </form> : <p className="mt-5 text-sm text-amber-800 dark:text-amber-300">{t('profile.passkeyUnsupported')}</p>}
+        </form> : <p className="mt-5 text-sm text-amber-800 dark:text-amber-300">{t('profile.passkeyUnsupported')}</p>)}
         {(message || error) && <p role={error ? 'alert' : 'status'} className={`mt-4 text-sm ${error ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{error || message}</p>}
     </AverioCard>;
 }
