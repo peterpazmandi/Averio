@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export async function verifyPasskeys({ session, fixture, password, ok, ui }) {
+export async function verifyPasskeys({ session, fixture, otherFixture, password, api, ok, control, ui }) {
     const page = await session(fixture.email, password);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('WebAuthn.enable');
@@ -32,5 +32,23 @@ export async function verifyPasskeys({ session, fixture, password, ok, ui }) {
     await page.getByRole('button', { name: 'Remove', exact: true }).last().click();
     await page.getByText('Passkey removed.', { exact: true }).waitFor();
     assert.deepEqual(await ok(page, '/profile/passkeys'), []);
-    console.log('PASS passkey enrollment, passwordless sign-in and revocation');
+
+    // Removal changes the security stamp. The browser that removed the key
+    // must retain a fresh cookie after the stamp-validation interval.
+    await control('/advance', { seconds: 6 * 60 });
+    assert.equal((await ok(page, '/auth/me')).email, fixture.email);
+
+    // Authenticated accounts must not share the passkey request budget merely
+    // because their traffic arrives through the same proxy address.
+    const other = await session(otherFixture.email, password);
+    for (let attempt = 0; attempt < 6; attempt++)
+        await ok(page, '/profile/passkeys/options', { method: 'POST', body: { password } });
+    for (let attempt = 0; attempt < 8; attempt++)
+        await ok(other, '/profile/passkeys/options', { method: 'POST', body: { password } });
+
+    // Five bad confirmations lock this account even with a valid session.
+    for (let attempt = 0; attempt < 5; attempt++)
+        assert.equal((await api(page, '/profile/passkeys/options', { method: 'POST', body: { password: 'incorrect' } })).status, 401);
+    assert.equal((await api(page, '/profile/passkeys/options', { method: 'POST', body: { password } })).status, 401);
+    console.log('PASS passkey enrollment, sign-in, revocation, session refresh, account throttling and lockout');
 }

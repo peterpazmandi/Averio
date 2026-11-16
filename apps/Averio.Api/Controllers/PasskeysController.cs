@@ -38,7 +38,8 @@ public sealed class PasskeysController(
         NoStore();
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
-        if (!await users.CheckPasswordAsync(user, request.Password ?? string.Empty)) return Unauthorized();
+        if (!(await signInManager.CheckPasswordSignInAsync(user, request.Password ?? string.Empty, lockoutOnFailure: true)).Succeeded)
+            return Unauthorized();
         if ((await users.GetPasskeysAsync(user)).Count >= MaxPasskeys)
             return Conflict(new { code = "passkey_limit_reached" });
 
@@ -95,7 +96,8 @@ public sealed class PasskeysController(
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
-        if (!await users.CheckPasswordAsync(user, request.Password ?? string.Empty)) return Unauthorized();
+        if (!(await signInManager.CheckPasswordSignInAsync(user, request.Password ?? string.Empty, lockoutOnFailure: true)).Succeeded)
+            return Unauthorized();
 
         byte[] id;
         try { id = WebEncoders.Base64UrlDecode(credentialId); }
@@ -104,7 +106,11 @@ public sealed class PasskeysController(
             return NotFound();
 
         var result = await users.RemovePasskeyAsync(user, id);
-        return result.Succeeded ? NoContent() : BadRequest(new { code = "passkey_remove_failed" });
+        if (!result.Succeeded) return BadRequest(new { code = "passkey_remove_failed" });
+        // Identity rotates the security stamp when a passkey is removed. Keep
+        // this browser signed in while the old cookies on other devices expire.
+        await signInManager.RefreshSignInAsync(user);
+        return NoContent();
     }
 
     [AllowAnonymous]

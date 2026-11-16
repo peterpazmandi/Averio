@@ -306,7 +306,7 @@ try {
     await verifyCategoryDashboard({ fixture: fixture.dashboard, password, session, ok, poll, localeFile, artifacts, outsider: partner });
     await verifyTransactionLinks({ fixture: fixture.navigation, outsider: fixture.owner, password, session, ok, poll, artifacts, localeFile });
     await verifySavedViews({ fixture: fixture.savedViews, outsider: fixture.dashboard, password, session, api, ok, poll, artifacts, localeFile });
-    await verifyPasskeys({ session, fixture: f, password, ok, ui });
+    await verifyPasskeys({ session, fixture: f, otherFixture: fixture.dashboard, password, api, ok, control, ui });
     await verifyRefresh({ session, email: fixture.dashboard.email, password, development: false });
     // Production React omits StrictMode effect replay. Exercise the actual dev
     // entry point too, using the same API, cookies and allowed frontend origin.

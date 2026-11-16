@@ -171,7 +171,9 @@ builder.Services.AddRateLimiter(options =>
                     }));
         options.AddPolicy(RateLimiterPolicies.PasskeyAttempts,
             context => RateLimitPartition.GetSlidingWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } userId
+                    ? $"user:{userId}"
+                    : $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
                 _ => new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = 15,
@@ -295,7 +297,10 @@ if (isProductionLike)
 
     var forwardedHeadersOptions = new ForwardedHeadersOptions
     {
-        ForwardedHeaders = ForwardedHeaders.XForwardedProto,
+        // Cloudflare sets CF-Connecting-IP to the visitor address. Trust it only
+        // from our configured immediate proxy; never read it in the limiter.
+        ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor,
+        ForwardedForHeaderName = "CF-Connecting-IP",
         ForwardLimit = 1
     };
 
