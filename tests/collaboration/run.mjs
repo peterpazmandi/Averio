@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { verifyCategoryDashboard } from './category-dashboard.mjs';
 import { verifyTransactionLinks } from './transaction-links.mjs';
 import { verifyRefresh } from './refresh.mjs';
+import { verifyPasskeys } from './passkeys.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const web = path.join(root, 'apps/averio-web');
@@ -305,6 +306,7 @@ try {
     await verifyCategoryDashboard({ fixture: fixture.dashboard, password, session, ok, poll, localeFile, artifacts, outsider: partner });
     await verifyTransactionLinks({ fixture: fixture.navigation, outsider: fixture.owner, password, session, ok, poll, artifacts, localeFile });
     await verifySavedViews({ fixture: fixture.savedViews, outsider: fixture.dashboard, password, session, api, ok, poll, artifacts, localeFile });
+    await verifyPasskeys({ session, fixture: f, otherFixture: fixture.dashboard, password, api, ok, control, ui });
     await verifyRefresh({ session, email: fixture.dashboard.email, password, development: false });
     // Production React omits StrictMode effect replay. Exercise the actual dev
     // entry point too, using the same API, cookies and allowed frontend origin.

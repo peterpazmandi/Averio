@@ -51,7 +51,7 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 
                 options.Stores.MaxLengthForKeys = 128;
-                options.Stores.SchemaVersion = IdentitySchemaVersions.Version2;
+                options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
 
                 const string passwordResetProvider = "AverioPasswordReset";
 

@@ -121,3 +121,20 @@ internal sealed class IdentityUserTokenConfiguration : IEntityTypeConfiguration<
             .HasConstraintName("fk_user_tokens_users_user_id");
     }
 }
+
+internal sealed class IdentityUserPasskeyConfiguration : IEntityTypeConfiguration<IdentityUserPasskey<Guid>>
+{
+    public void Configure(EntityTypeBuilder<IdentityUserPasskey<Guid>> builder)
+    {
+        builder.ToTable("user_passkeys");
+        builder.HasKey(x => x.CredentialId).HasName("pk_user_passkeys");
+        builder.Property(x => x.CredentialId).HasColumnName("credential_id").HasMaxLength(1024);
+        builder.Property(x => x.UserId).HasColumnName("user_id");
+        // Some test contexts are built without Identity's service provider.
+        // Keep the JSON ownership explicit for those contexts as well as V3.
+        builder.OwnsOne(x => x.Data, owned => owned.ToJson());
+        builder.HasIndex(x => x.UserId).HasDatabaseName("ix_user_passkeys_user_id");
+        builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade).HasConstraintName("fk_user_passkeys_users_user_id");
+    }
+}

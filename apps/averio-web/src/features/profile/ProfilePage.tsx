@@ -13,10 +13,11 @@ import { PasswordField } from '../../shared/components/PasswordField';
 import { profileApi, type UserProfile } from './profileApi';
 import { profileKeys, profileQueries } from './profileQueries';
 import { ProfileAvatar } from './ProfileAvatar';
+import { PasskeySettings } from './PasskeySettings';
 
-type ProfileSection = 'personal' | 'password' | 'mfa' | 'sessions';
-const sections: ProfileSection[] = ['personal', 'password', 'mfa', 'sessions'];
-const menuIcons = { personal: 'profile', password: 'lock', mfa: 'check', sessions: 'accounts' } as const;
+type ProfileSection = 'personal' | 'password' | 'mfa' | 'passkeys' | 'sessions';
+const sections: ProfileSection[] = ['personal', 'password', 'mfa', 'passkeys', 'sessions'];
+const menuIcons = { personal: 'profile', password: 'lock', mfa: 'check', passkeys: 'lock', sessions: 'accounts' } as const;
 function decodeSection(hash: string): ProfileSection {
     const section = hash.replace(/^#?profile-/, '');
     return sections.find(item => item === section) ?? 'personal';
@@ -235,6 +236,7 @@ function ProfileSettingsPage({ userId, profile }: { userId: string; profile: Use
                     <div className="flex flex-wrap gap-2"><AverioButton onClick={() => void navigator.clipboard.writeText(recoveryCodes.join('\n'))}>{t('profile.copyCodes')}</AverioButton><AverioButton onClick={() => setRecoveryCodes(undefined)}>{t('profile.done')}</AverioButton></div>
                 </div>}
             </AverioCard>}
+            {activeSection === 'passkeys' && <PasskeySettings userId={userId} />}
             {activeSection === 'sessions' && <AverioCard id="profile-sessions" className="scroll-mt-24">
                 <h3 className="text-lg font-semibold">{t('profile.sessions')}</h3>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('profile.sessionsHelp')}</p>
