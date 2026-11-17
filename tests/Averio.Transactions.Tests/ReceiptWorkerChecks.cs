@@ -3,10 +3,8 @@ using Averio.Domain.Receipts;
 using Averio.Infrastructure.Receipts;
 using Averio.Worker;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Options;
 
 internal static class ReceiptWorkerChecks
 {
@@ -22,8 +20,12 @@ internal static class ReceiptWorkerChecks
             using var services = new ServiceCollection()
                 .AddScoped(_ => new ReceiptProcessor(repository, documents, new Extractor(), options, TimeProvider.System, logger: processingLog))
                 .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-            using var worker = new ReceiptWorker(services.GetRequiredService<IServiceScopeFactory>(),
-                options, Options.Create(new ReceiptStorageOptions { Bucket = "test" }), workerLog);
+            var processorScope = services.GetRequiredService<IServiceScopeFactory>();
+            using var worker = new ReceiptWorker(processorScope, options, workerLog);
+            using var cleanupCancellation = new CancellationTokenSource();
+            using var cleanupScope = processorScope.CreateScope();
+            var cleanup = cleanupScope.ServiceProvider.GetRequiredService<ReceiptProcessor>()
+                .CleanupAsync(cleanupCancellation.Token);
             await worker.StartAsync(default);
             try
             {
@@ -37,6 +39,14 @@ internal static class ReceiptWorkerChecks
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await worker.StopAsync(timeout.Token);
+                await cleanupCancellation.CancelAsync();
+                try
+                {
+                    await cleanup.WaitAsync(timeout.Token);
+                    throw new Exception("Expected the cleanup run to be canceled or fail.");
+                }
+                catch (OperationCanceledException) when (!failCleanupRead && cleanup.IsCanceled) { }
+                catch (IOException) when (failCleanupRead) { }
             }
             if (!processingLog.Messages.Any(x => x.Contains("Receipt claimed:"))
                 || !processingLog.Messages.Any(x => x.Contains("Outcome=ready"))
@@ -47,11 +57,10 @@ internal static class ReceiptWorkerChecks
         }
         using var disabledServices = new ServiceCollection().BuildServiceProvider();
         var disabledLog = new Capture<ReceiptWorker>();
-        using var disabledWorker = new ReceiptWorker(disabledServices.GetRequiredService<IServiceScopeFactory>(), new ReceiptOptions(),
-            Options.Create(new ReceiptStorageOptions()), disabledLog);
+        using var disabledWorker = new ReceiptWorker(disabledServices.GetRequiredService<IServiceScopeFactory>(), new ReceiptOptions(), disabledLog);
         await disabledWorker.StartAsync(default);
         await disabledWorker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(5));
-        if (!disabledLog.Messages.Any(x => x.Contains("processing is disabled")) || !disabledLog.Messages.Any(x => x.Contains("cleanup is also inactive")))
+        if (!disabledLog.Messages.Any(x => x.Contains("processing is disabled")))
             throw new Exception("Disabled worker must explain why queued receipts will not run.");
 
         var failureLog = new Capture<ReceiptProcessor>();

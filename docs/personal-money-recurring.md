@@ -10,9 +10,9 @@ A rule is defined by member, currency, positive amount, first date, optional inc
 
 ## Monthly behavior
 
-- All dates are UTC date-only, processed by `Averio.Worker` approximately once a minute, without an exact-time SLA.
+- Due dates are stored as dates. `Averio.Worker` processes them in the nightly window that starts at 03:00 `Europe/Budapest`.
 - Recurrence is anchored to the first date: Jan 31 → Feb 28 → Mar 31 → Apr 30. Leap years are handled by DateOnly.AddMonths.
-- The worker issues one grant per due date in chronological order. Backlogs after downtime run during subsequent batches; failed jobs do not starve later rules.
+- The worker issues one grant per due date in chronological order. Backlogs after downtime catch up in the next nightly run. Failed rules do not delay later rules.
 - Pausing freezes due processing, but does not skip anything. Resuming replays overdue months. Stopping is permanent; completed rules have no next due date.
 - Amount edits affect future **unposted** occurrences only; previously granted ledger entries never change.
 - Schedules never create bank transactions or transfers and never touch categorized cash-flow aggregates.

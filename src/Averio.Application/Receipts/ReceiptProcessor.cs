@@ -72,30 +72,39 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
     public async Task<int> CleanupAsync(CancellationToken ct)
     {
         var failures = 0;
-        foreach (var scan in await receipts.CleanupCandidatesAsync(clock.GetUtcNow(), ct))
+        // Include only work due at the start of this run. A failed deletion
+        // receives a later retry time, so it cannot be retried in the same run.
+        var cutoff = clock.GetUtcNow();
+        while (true)
         {
-            // Expire atomically reserves this cleanup attempt for two minutes.
-            if (!await receipts.ExpireAsync(scan.Id, clock.GetUtcNow(), ct)) continue;
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            try
+            ct.ThrowIfCancellationRequested();
+            var candidates = await receipts.CleanupCandidatesAsync(cutoff, ct);
+            if (candidates.Count == 0) return failures;
+
+            foreach (var scan in candidates)
             {
-                log.LogInformation("Receipt cleanup started: ScanId={ScanId}", scan.Id);
-                await documents.DeleteAsync(scan.ObjectKey, timeout.Token);
-                await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
-                ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "deleted"));
-                log.LogInformation("Receipt cleanup completed: ScanId={ScanId}", scan.Id);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception ex)
-            {
-                failures++;
-                log.LogWarning("Receipt cleanup failed: ScanId={ScanId}, ExceptionType={ExceptionType}, HResult={HResult}; retry deferred one minute", scan.Id, ex.GetType().Name, ex.HResult);
-                ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "retry"));
-                // A poisoned object must not monopolize the oldest-first batch.
-                await receipts.DeferCleanupAsync(scan.Id, clock.GetUtcNow().AddMinutes(1), ct);
+                // Expire atomically reserves this cleanup attempt for two minutes.
+                if (!await receipts.ExpireAsync(scan.Id, clock.GetUtcNow(), ct)) continue;
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(60));
+                try
+                {
+                    log.LogInformation("Receipt cleanup started: ScanId={ScanId}", scan.Id);
+                    await documents.DeleteAsync(scan.ObjectKey, timeout.Token);
+                    await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
+                    ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "deleted"));
+                    log.LogInformation("Receipt cleanup completed: ScanId={ScanId}", scan.Id);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                catch (Exception ex)
+                {
+                    failures++;
+                    log.LogWarning("Receipt cleanup failed: ScanId={ScanId}, ExceptionType={ExceptionType}, HResult={HResult}; retry deferred", scan.Id, ex.GetType().Name, ex.HResult);
+                    ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "retry"));
+                    // A poisoned object must not monopolize the oldest-first batch.
+                    await receipts.DeferCleanupAsync(scan.Id, clock.GetUtcNow().AddMinutes(1), ct);
+                }
             }
         }
-        return failures;
     }
 }

@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../apps/Averio.Worker/ReceiptWorker.cs" Link="ReceiptWorker.cs" />
+    <Compile Include="../../apps/Averio.Worker/NightlySchedule.cs" Link="NightlySchedule.cs" />
   </ItemGroup>
 </Project>

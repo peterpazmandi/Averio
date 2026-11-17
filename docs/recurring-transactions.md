@@ -13,7 +13,7 @@ Schedules repeat all transaction details: up to 100 ordered items with their own
 1. Back up the intended database and review the generated SQL. EF tooling now requires an explicit **AVERIO_MIGRATION_CONNECTION_STRING**; it never falls back to application user secrets. For scaffold/script-only commands use a localhost placeholder. For applying migrations set it deliberately to the intended target.
 2. Generate/review the script from AddSavedTransactionViews to SnapshotRecurringOccurrenceAmounts, then apply AddRecurringTransactions, ExtendRecurringTemplates, AddDailyRecurringFrequency and SnapshotRecurringOccurrenceAmounts before running the new API or worker. ExtendRecurringTemplates preserves existing schedules by backfilling their single item; do not remove or reapply the earlier migration. AddDailyRecurringFrequency permits the new daily option without altering existing schedules. There are no startup migrations.
 3. Deploy the API and frontend together, then run the separate **apps/Averio.Worker** executable with **ConnectionStrings__AverioDatabase** configured to the same database. The worker needs no web listener. Use a process supervisor to restart it after failure.
-4. Check one manual confirmation and one opt-in automatic schedule in staging. Confirm a single transaction, correct balance/report changes and advancement. Stop the worker and verify manual review still works; restart and verify missed automatic dates catch up.
+4. Check one manual confirmation and one opt-in automatic schedule in staging. Confirm a single transaction, correct balance/report changes and advancement. Stop the worker and verify manual review still works; restart and verify missed automatic dates catch up in the next nightly run.
 
 Example PowerShell for generating SQL without a live database:
 
@@ -24,9 +24,9 @@ dotnet ef migrations script 20261013210249_AddSavedTransactionViews 202610162200
 
 Publish the worker with `dotnet publish apps/Averio.Worker -c Release -o artifacts/worker`, then run `dotnet artifacts/worker/Averio.Worker.dll` in a supervised service with runtime configuration injected. Do not put connection strings in the repository or command history.
 
-The worker checks at startup and approximately every minute, up to 100 candidate rules per pass and one due occurrence per rule. Larger backlogs drain over subsequent passes. Multiple worker instances and simultaneous manual confirmation are serialized by the existing household lock and receipt key. With the worker offline, automatic dates remain pending until it returns. No exact-time delivery guarantee is made.
+The Worker starts the automatic recurring transaction run daily at 03:00 `Europe/Budapest`, including through clock changes. It checks up to 100 candidate rules per page and processes overdue occurrences in the same run. If the Worker is offline at 03:00, the next nightly run catches up. Multiple worker instances and simultaneous manual confirmation are serialized by the existing household lock and receipt key.
 
-Expected validation/access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account/category, edit and save the schedule to clear the blocked state. Infrastructure failures are retried on a later traversal. The worker keeps an in-memory cursor across batches, moves past failed rules and wraps after reaching the end; restarting resets the cursor. This prevents a permanently failing first batch from starving later schedules. Monitor worker errors and process availability. All amounts stay in account currency; no conversion is introduced.
+Expected validation or access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account or category, then edit and save the schedule to clear the blocked state. The Worker moves past failed rules so later schedules can still run and retries infrastructure failures the following night. Amounts stay in the account currency.
 
 ## Verification
 

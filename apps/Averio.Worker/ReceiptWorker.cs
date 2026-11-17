@@ -7,43 +7,26 @@ using Microsoft.Extensions.Options;
 namespace Averio.Worker;
 
 internal sealed class ReceiptWorker(IServiceScopeFactory scopes, ReceiptOptions options,
-    IOptions<ReceiptStorageOptions> storage, ILogger<ReceiptWorker> logger,
+    ILogger<ReceiptWorker> logger,
     IOptions<GeminiReceiptOptions>? provider = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var storageConfigured = !string.IsNullOrWhiteSpace(storage.Value.Bucket);
-        logger.LogInformation("Receipt worker starting: ProcessingEnabled={ProcessingEnabled}, StorageConfigured={StorageConfigured}, ProviderKeyConfigured={ProviderKeyConfigured}, ProviderModelConfigured={ProviderModelConfigured}, PollSeconds={PollSeconds}",
-            options.Enabled, storageConfigured, !string.IsNullOrWhiteSpace(provider?.Value.ApiKey), !string.IsNullOrWhiteSpace(provider?.Value.Model), 10);
+        logger.LogInformation("Receipt worker starting: ProcessingEnabled={ProcessingEnabled}, ProviderKeyConfigured={ProviderKeyConfigured}, ProviderModelConfigured={ProviderModelConfigured}, PollSeconds={PollSeconds}",
+            options.Enabled, !string.IsNullOrWhiteSpace(provider?.Value.ApiKey), !string.IsNullOrWhiteSpace(provider?.Value.Model), 10);
         if (!options.Enabled)
-            logger.LogWarning("Receipt processing is disabled in this Worker process. Queued receipts will not be claimed. API and Worker configuration are independent; set Receipts__Enabled=true on the Worker and restart it");
-        if (!options.Enabled && !storageConfigured)
         {
-            logger.LogWarning("Receipt worker stopped: processing disabled and storage not configured; cleanup is also inactive");
+            logger.LogWarning("Receipt processing is disabled in this Worker process. Queued receipts will not be claimed. API and Worker configuration are independent; set Receipts__Enabled=true on the Worker and restart it");
             return;
         }
-        try { await Task.WhenAll(CleanupLoopAsync(stoppingToken), ProcessingLoopAsync(stoppingToken)); }
+
+        try { await ProcessingLoopAsync(stoppingToken); }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
         finally { logger.LogInformation("Receipt worker stopped"); }
     }
-    private async Task CleanupLoopAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                using var scope = scopes.CreateScope();
-                var failures = await scope.ServiceProvider.GetRequiredService<ReceiptProcessor>().CleanupAsync(stoppingToken);
-                if (failures > 0) logger.LogWarning("Receipt cleanup deferred {Count} failed deletions", failures);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception ex) { logger.LogError("Receipt cleanup poll failed: ExceptionType={ExceptionType}, HResult={HResult}; retrying next poll", ex.GetType().Name, ex.HResult); }
-            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-        }
-    }
+
     private async Task ProcessingLoopAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enabled) return;
         var heartbeat = System.Diagnostics.Stopwatch.StartNew();
         var processed = 0;
         var first = true;
