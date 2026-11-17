@@ -6,9 +6,11 @@ using System.Net.Sockets;
 using System.Threading.RateLimiting;
 using Averio.Api.Authentication;
 using Averio.Api.ErrorHandling;
+using Averio.Api.Receipts;
 using Averio.Api.Security;
 using Averio.Application;
 using Averio.Application.Common.Abstractions;
+using Averio.Application.Receipts;
 using Averio.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -66,6 +68,9 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 builder.Services.AddApplication();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<ReceiptProcessingSignal>();
+builder.Services.AddSingleton<IReceiptProcessingSignal>(sp => sp.GetRequiredService<ReceiptProcessingSignal>());
+builder.Services.AddHostedService<ReceiptProcessingService>();
 
 // The browser runs on the frontend origin while Identity's WebAuthn endpoints
 // run on the API origin. Bind credentials to the frontend and accept only the

@@ -17,11 +17,12 @@ internal static class ReceiptVerification
         var options = new ReceiptOptions { Enabled = true, DailyUploadLimit = 20, FreeMonthlyLimit = 100 };
         var store = new Documents();
         var extract = new Extractor();
+        var signals = new ProcessingSignal();
         using var bitmap = new SKBitmap(64, 48); bitmap.Erase(SKColors.White);
         using var png = bitmap.Encode(SKEncodedImageFormat.Png, 100);
         var image = png.ToArray();
         ReceiptHandler Handler(IServiceProvider s) => new(user, s.GetRequiredService<IHouseholdRepository>(),
-            s.GetRequiredService<IReceiptRepository>(), new ReceiptImageNormalizer(), store, s.GetRequiredService<IUnitOfWork>(), options, clock);
+            s.GetRequiredService<IReceiptRepository>(), new ReceiptImageNormalizer(), store, s.GetRequiredService<IUnitOfWork>(), options, clock, processing: signals);
         ReceiptProcessor Processor(IServiceProvider s) => new(s.GetRequiredService<IReceiptRepository>(), store, extract, options, clock);
         async Task<ReceiptScanResult> Upload(Guid operation)
         { using var s = provider.CreateScope(); return await Handler(s.ServiceProvider).UploadAsync(f.HouseholdId, operation, new MemoryStream(image), default); }
@@ -31,6 +32,8 @@ internal static class ReceiptVerification
         { using var s = provider.CreateScope(); await Handler(s.ServiceProvider).DiscardAsync(f.HouseholdId, scan.Id, scan.Version, default); }
         async Task<ReceiptScan?> Claim(DateTimeOffset at)
         { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().ClaimAsync(at, default); }
+        async Task<DateTimeOffset?> NextProcessingAt(DateTimeOffset at)
+        { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().NextProcessingAtAsync(at, default); }
         async Task<bool> Finish(ReceiptScan scan, DateTimeOffset at, bool transient)
         { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().FinishAsync(scan.Id, scan.LeaseToken!.Value, at, null, "timeout", transient, default); }
         int before;
@@ -42,7 +45,8 @@ internal static class ReceiptVerification
         }
         var op = Guid.NewGuid();
         var first = await Upload(op);
-        Check((await Upload(op)).Id == first.Id && store.Puts == 1, "idempotent upload");
+        Check(signals.Count == 1 && await NextProcessingAt(now) == now, "upload signals durable queued work");
+        Check((await Upload(op)).Id == first.Id && store.Puts == 1 && signals.Count == 2, "idempotent upload wakes pending work");
         var raceOp = Guid.NewGuid();
         var race = await Task.WhenAll(Upload(raceOp), Upload(raceOp));
         Check(race[0].Id == race[1].Id && store.Puts == 2, "concurrent idempotent admission");
@@ -61,13 +65,17 @@ internal static class ReceiptVerification
         var claims = await Task.WhenAll(Claim(now), Claim(now));
         Check(claims.Count(x => x != null) == 1, "one concurrent claimant");
         var initial = claims.Single(x => x != null)!;
+        Check(await NextProcessingAt(now) == now.AddMinutes(2), "startup recovery sees the unexpired lease");
         var reclaimed = (await Claim(now.AddMinutes(3)))!;
         Check(reclaimed.Id == first.Id && reclaimed.Attempts == 2, "expired lease reclaimed");
         Check(!await Finish(initial, now.AddMinutes(3), true), "old lease fenced");
         Check(await Finish(reclaimed, now.AddMinutes(3), true), "retry queued");
         Check(await Claim(now.AddMinutes(3)) == null, "backoff respected");
+        Check(await NextProcessingAt(now.AddMinutes(3)) == now.AddMinutes(4), "recovery sees the durable retry deadline");
         Check((await Claim(now.AddMinutes(5)))!.Attempts == 3, "retry budget");
+        Check(await NextProcessingAt(now.AddMinutes(5)) == now.AddMinutes(7), "final attempt still has a recovery deadline");
         Check(await Claim(now.AddMinutes(8)) == null && (await Get(first.Id)).Status == "Failed", "final crash terminal");
+        Check(await NextProcessingAt(now.AddMinutes(8)) is null, "terminal scans do not schedule database checks");
         var ready = await Upload(Guid.NewGuid());
         using (var scope = provider.CreateScope()) Check(await Processor(scope.ServiceProvider).ProcessNextAsync(default), "worker processed");
         var result = await Get(ready.Id);
@@ -224,6 +232,13 @@ internal static class ReceiptVerification
     private static void Check(bool ok, string label) { if (!ok) throw new Exception(label); }
     private static async Task Reject<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
+    private sealed class ProcessingSignal : IReceiptProcessingSignal
+    {
+        private int count;
+        public int Count => Volatile.Read(ref count);
+        public void Notify() => Interlocked.Increment(ref count);
+    }
+
     private sealed class Documents : IReceiptDocumentStore
     {
         public readonly ConcurrentDictionary<string, byte[]> Files = new(); public int Puts;

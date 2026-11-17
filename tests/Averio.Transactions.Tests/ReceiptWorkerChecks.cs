@@ -1,9 +1,9 @@
 using Averio.Application.Receipts;
 using Averio.Domain.Receipts;
-using Averio.Infrastructure.Receipts;
-using Averio.Worker;
+using Averio.Api.Receipts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
 
 internal static class ReceiptWorkerChecks
@@ -16,12 +16,13 @@ internal static class ReceiptWorkerChecks
             var documents = new Documents();
             var options = new ReceiptOptions { Enabled = true };
             var processingLog = new Capture<ReceiptProcessor>();
-            var workerLog = new Capture<ReceiptWorker>();
+            var workerLog = new Capture<ReceiptProcessingService>();
             using var services = new ServiceCollection()
+                .AddSingleton<IReceiptRepository>(repository)
                 .AddScoped(_ => new ReceiptProcessor(repository, documents, new Extractor(), options, TimeProvider.System, logger: processingLog))
                 .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
             var processorScope = services.GetRequiredService<IServiceScopeFactory>();
-            using var worker = new ReceiptWorker(processorScope, options, workerLog);
+            using var worker = new ReceiptProcessingService(processorScope, options, new ReceiptProcessingSignal(), TimeProvider.System, workerLog);
             using var cleanupCancellation = new CancellationTokenSource();
             using var cleanupScope = processorScope.CreateScope();
             var cleanup = cleanupScope.ServiceProvider.GetRequiredService<ReceiptProcessor>()
@@ -50,17 +51,18 @@ internal static class ReceiptWorkerChecks
             }
             if (!processingLog.Messages.Any(x => x.Contains("Receipt claimed:"))
                 || !processingLog.Messages.Any(x => x.Contains("Outcome=ready"))
-                || !workerLog.Messages.Any(x => x.Contains("Receipt worker starting:")))
+                || !workerLog.Messages.Any(x => x.Contains("Receipt extraction started in the API")))
                 throw new Exception("Receipt lifecycle diagnostics missing.");
             if (string.Join("\n", processingLog.Messages).Contains("PRIVATE_RECEIPT"))
                 throw new Exception("Receipt contents leaked into logs.");
         }
         using var disabledServices = new ServiceCollection().BuildServiceProvider();
-        var disabledLog = new Capture<ReceiptWorker>();
-        using var disabledWorker = new ReceiptWorker(disabledServices.GetRequiredService<IServiceScopeFactory>(), new ReceiptOptions(), disabledLog);
+        var disabledLog = new Capture<ReceiptProcessingService>();
+        using var disabledWorker = new ReceiptProcessingService(disabledServices.GetRequiredService<IServiceScopeFactory>(),
+            new ReceiptOptions(), new ReceiptProcessingSignal(), TimeProvider.System, disabledLog);
         await disabledWorker.StartAsync(default);
         await disabledWorker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(5));
-        if (!disabledLog.Messages.Any(x => x.Contains("processing is disabled")))
+        if (!disabledLog.Messages.Any(x => x.Contains("extraction is disabled")))
             throw new Exception("Disabled worker must explain why queued receipts will not run.");
 
         var failureLog = new Capture<ReceiptProcessor>();
@@ -70,6 +72,82 @@ internal static class ReceiptWorkerChecks
         var failureText = string.Join("\n", failureLog.Messages);
         if (!failureText.Contains("Stage=provider") || !failureText.Contains("Outcome=retry") || !failureText.Contains("InvalidOperationException") || failureText.Contains("PRIVATE_RECEIPT"))
             throw new Exception("Failure diagnostics must identify stage/retry without leaking exception contents.");
+
+        await IdleAndUploadAsync();
+        await RecoverAtDeadlineAsync();
+    }
+
+    private static async Task IdleAndUploadAsync()
+    {
+        var clock = new TestClock();
+        var repository = new Repository(false, initiallyReady: false);
+        var signal = new ReceiptProcessingSignal();
+        using var services = BuildProcessorServices(repository, clock);
+        using var recovery = new ReceiptProcessingService(services.GetRequiredService<IServiceScopeFactory>(),
+            new ReceiptOptions { Enabled = true }, signal, clock, NullLogger<ReceiptProcessingService>.Instance);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await recovery.StartAsync(timeout.Token);
+        try
+        {
+            await repository.NoPendingWork.Task.WaitAsync(timeout.Token);
+            if (repository.ClaimChecks != 1 || clock.TimerStarted.Task.IsCompleted)
+                throw new Exception("Idle recovery must wait for an upload signal without a polling timer.");
+
+            repository.AddJob();
+            signal.Notify();
+            await repository.Processed.Task.WaitAsync(timeout.Token);
+            if (clock.TimerStarted.Task.IsCompleted)
+                throw new Exception("A completed scan must not start a polling timer.");
+        }
+        finally { await recovery.StopAsync(timeout.Token); }
+    }
+
+    private static async Task RecoverAtDeadlineAsync()
+    {
+        var clock = new TestClock();
+        var retryAt = clock.GetUtcNow().AddMinutes(2);
+        var repository = new Repository(false, dueAt: retryAt);
+        using var services = BuildProcessorServices(repository, clock);
+        using var recovery = new ReceiptProcessingService(services.GetRequiredService<IServiceScopeFactory>(),
+            new ReceiptOptions { Enabled = true }, new ReceiptProcessingSignal(), clock, NullLogger<ReceiptProcessingService>.Instance);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await recovery.StartAsync(timeout.Token);
+        try
+        {
+            var timer = await clock.TimerStarted.Task.WaitAsync(timeout.Token);
+            if (timer.Delay != TimeSpan.FromMinutes(2) || repository.Processed.Task.IsCompleted)
+                throw new Exception("Startup recovery must wait for the stored retry or lease deadline.");
+
+            clock.Now = retryAt;
+            timer.Callback(timer.State);
+            await repository.Processed.Task.WaitAsync(timeout.Token);
+            await repository.NoPendingWork.Task.WaitAsync(timeout.Token);
+            if (clock.TimerCount != 1)
+                throw new Exception("Recovery must return to idle after processing the outstanding scan.");
+        }
+        finally { await recovery.StopAsync(timeout.Token); }
+    }
+
+    private static ServiceProvider BuildProcessorServices(Repository repository, TimeProvider clock)
+        => new ServiceCollection()
+            .AddSingleton<IReceiptRepository>(repository)
+            .AddScoped(_ => new ReceiptProcessor(repository, new Documents(), new Extractor(), new ReceiptOptions { Enabled = true }, clock))
+            .BuildServiceProvider();
+
+    private sealed class TestClock : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = new(2026, 1, 10, 0, 0, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => Now;
+        public TaskCompletionSource<(TimeSpan Delay, TimerCallback Callback, object? State)> TimerStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int TimerCount { get; private set; }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            TimerCount++;
+            TimerStarted.TrySetResult((dueTime, callback, state));
+            return System.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        }
     }
     private sealed class Capture<T> : ILogger<T>
     {
@@ -104,11 +182,15 @@ internal static class ReceiptWorkerChecks
         public Task<ReceiptDraft> ExtractAsync(byte[] bytes, CancellationToken ct)
             => Task.FromResult(new ReceiptDraft("PRIVATE_RECEIPT", "2026-10-26", "EUR", "1", [new("PRIVATE_RECEIPT", "1", "Item")], []));
     }
-    private sealed class Repository(bool failCleanupRead, bool expectFailure = false) : IReceiptRepository
+    private sealed class Repository(bool failCleanupRead, bool expectFailure = false,
+        bool initiallyReady = true, DateTimeOffset? dueAt = null) : IReceiptRepository
     {
         public TaskCompletionSource CleanupStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int claimed;
+        public TaskCompletionSource NoPendingWork = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int available = initiallyReady ? 1 : 0;
+        public int ClaimChecks { get; private set; }
+        public void AddJob() => Interlocked.Exchange(ref available, 1);
         private readonly ReceiptScan scan = ReceiptScan.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new string('a', 64), 1, DateTimeOffset.UtcNow.AddMinutes(-10));
         public Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct)
         {
@@ -121,10 +203,19 @@ internal static class ReceiptWorkerChecks
         public Task MarkDocumentDeletedAsync(Guid id, DateTimeOffset now, CancellationToken ct) => Task.CompletedTask;
         public Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct)
         {
-            if (Interlocked.Increment(ref claimed) != 1) return Task.FromResult<ReceiptScan?>(null);
+            ClaimChecks++;
+            if (dueAt > now || Interlocked.Exchange(ref available, 0) == 0)
+                return Task.FromResult<ReceiptScan?>(null);
             typeof(ReceiptScan).GetProperty(nameof(ReceiptScan.LeaseToken))!.SetValue(scan, Guid.NewGuid());
             return Task.FromResult<ReceiptScan?>(scan);
         }
+        public Task<DateTimeOffset?> NextProcessingAtAsync(DateTimeOffset now, CancellationToken ct)
+        {
+            if (Volatile.Read(ref available) == 1) return Task.FromResult<DateTimeOffset?>(dueAt ?? now);
+            NoPendingWork.TrySetResult();
+            return Task.FromResult<DateTimeOffset?>(null);
+        }
+
         public Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct)
         {
             if (expectFailure ? draft is not null || failure != "processing_failed" || !transient : draft is null || failure is not null)

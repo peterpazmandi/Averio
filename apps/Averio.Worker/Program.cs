@@ -15,7 +15,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, WorkerCurrentUser>();
 builder.Services.AddSingleton<RecurringBatch>();
 builder.Services.AddSingleton<RecurringAllowanceBatch>();
-builder.Services.AddHostedService<ReceiptWorker>();
 builder.Services.AddHostedService<NightlyMaintenanceWorker>();
 builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }));
 using var host = builder.Build();
