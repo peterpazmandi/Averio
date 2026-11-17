@@ -34,7 +34,7 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
     public void Add(ReceiptScan scan) => db.Add(scan);
     public async Task<bool> QueueAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Uploading
-            && x.CreatedAt > now.AddMinutes(-5) && x.DocumentDeletedAt == null)
+            && x.CreatedAt > now - ReceiptOptions.UploadSettlementWindow && x.DocumentDeletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Queued)
                 .SetProperty(x => x.UpdatedAt, now).SetProperty(x => x.Version, Guid.NewGuid()), ct) == 1;
     public async Task<IReadOnlyList<ReceiptScan>> ListAsync(Guid h, Guid m, int skip, CancellationToken ct)
@@ -76,7 +76,7 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
                 SELECT s.id FROM receipt_scans s
                 WHERE ((s.status = 'Queued' AND s.next_attempt_at <= {now})
                     OR (s.status = 'Processing' AND s.lease_until <= {now}))
-                    AND s.attempts < 3 AND s.expires_at > {now}
+                    AND s.attempts < {ReceiptOptions.MaxAttempts} AND s.expires_at > {now}
                     AND EXISTS (SELECT 1 FROM household_members m JOIN households h ON h.id = m.household_id
                         WHERE m.id = s.household_member_id AND m.household_id = s.household_id
                         AND m.left_at_utc IS NULL AND h.archived_at_utc IS NULL)
@@ -85,6 +85,19 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
             """).AsNoTracking().ToListAsync(ct);
         return result.SingleOrDefault();
     }
+    public Task<DateTimeOffset?> NextProcessingAtAsync(DateTimeOffset now, CancellationToken ct)
+        => db.Set<ReceiptScan>().Where(scan =>
+                // Final-attempt crashes still need to transition to Failed.
+                (scan.Status == ReceiptScanStatus.Processing && scan.LeaseUntil != null
+                    && scan.Attempts >= ReceiptOptions.MaxAttempts)
+                || (scan.ExpiresAt > now && scan.Attempts < ReceiptOptions.MaxAttempts
+                    && ((scan.Status == ReceiptScanStatus.Queued && scan.NextAttemptAt < scan.ExpiresAt)
+                        || (scan.Status == ReceiptScanStatus.Processing && scan.LeaseUntil < scan.ExpiresAt))
+                    && db.HouseholdMembers.Any(member => member.Id == scan.HouseholdMemberId
+                        && member.HouseholdId == scan.HouseholdId && member.LeftAtUtc == null)
+                    && db.Households.Any(household => household.Id == scan.HouseholdId && household.ArchivedAtUtc == null)))
+            .MinAsync(scan => scan.Status == ReceiptScanStatus.Queued ? (DateTimeOffset?)scan.NextAttemptAt : scan.LeaseUntil, ct);
+
     public async Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft,
         string? failure, bool transient, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Processing
@@ -100,9 +113,9 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
         // Even a discarded/departed upload may still be writing its object.
         // Its one-minute write deadline is anchored to CreatedAt; allow a settling
         // interval before recording physical deletion, including after API crashes.
-        && x.CreatedAt <= now.AddMinutes(-5) && x.NextAttemptAt <= now &&
+        && x.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow && x.NextAttemptAt <= now &&
         (x.Status == ReceiptScanStatus.Discarded || x.ExpiresAt <= now
-            || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now.AddMinutes(-5))
+            || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow)
             || !db.HouseholdMembers.Any(m => m.Id == x.HouseholdMemberId && m.HouseholdId == x.HouseholdId && m.LeftAtUtc == null)));
     public async Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct)
         => await Expired(now).AsNoTracking().OrderBy(x => x.NextAttemptAt).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(50).ToListAsync(ct);

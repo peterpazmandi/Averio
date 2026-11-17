@@ -10,7 +10,8 @@ namespace Averio.Application.Receipts;
 
 public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository households,
     IReceiptRepository receipts, IReceiptImageNormalizer images, IReceiptDocumentStore documents,
-    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null, ILogger<ReceiptHandler>? logger = null)
+    IUnitOfWork uow, ReceiptOptions options, TimeProvider clock, ReceiptCategorization? categorization = null,
+    ILogger<ReceiptHandler>? logger = null, IReceiptProcessingSignal? processing = null)
 {
     private readonly ILogger<ReceiptHandler> log = logger ?? NullLogger<ReceiptHandler>.Instance;
     public async Task<ReceiptCapabilities> CapabilitiesAsync(Guid household, CancellationToken ct)
@@ -62,6 +63,8 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
             {
                 if (previous.ContentHash != hash) throw Conflict();
                 log.LogInformation("Receipt upload replay: OperationId={OperationId}, ScanId={ScanId}, Status={Status}; no new scan charged", operation, previous.Id, previous.Status);
+                if (previous.Status is ReceiptScanStatus.Queued or ReceiptScanStatus.Processing)
+                    processing?.Notify();
                 return Map(previous);
             }
             if (!options.Enabled)
@@ -105,13 +108,19 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
             log.LogWarning("Receipt storage write failed: ScanId={ScanId}, ExceptionType={ExceptionType}, HResult={HResult}", scan.Id, ex.GetType().Name, ex.HResult);
             throw new BusinessRuleException("receipt_storage_unavailable", "Error_ReceiptStorage");
         }
-        await using (var tx = await uow.BeginTransactionAsync(ct))
+        try
         {
+            await using var tx = await uow.BeginTransactionAsync(ct);
             _ = await Authorize(household, ct);
             if (!await receipts.QueueAsync(scan.Id, clock.GetUtcNow(), ct)) throw Conflict();
             await tx.CommitAsync(ct);
         }
-        log.LogInformation("Receipt queued: ScanId={ScanId}, OperationId={OperationId}; a separately running enabled Worker must claim it", scan.Id, operation);
+        finally
+        {
+            // Signal after the transaction is disposed, including if its commit result is unknown.
+            processing?.Notify();
+        }
+        log.LogInformation("Receipt queued: ScanId={ScanId}, OperationId={OperationId}", scan.Id, operation);
         return await GetAsync(household, scan.Id, ct);
     }
     public async Task<IReadOnlyList<ReceiptScanResult>> ListAsync(Guid household, int skip, CancellationToken ct)
@@ -177,9 +186,15 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     }
     private ReceiptScanResult Map(ReceiptScan scan)
     {
-        var expired = scan.ExpiresAt <= clock.GetUtcNow();
-        return new(scan.Id, expired && scan.Status != ReceiptScanStatus.Posted ? "Expired" : scan.Status.ToString(), scan.Version, scan.Attempts,
-            scan.CreatedAt, scan.ExpiresAt, scan.FailureCode,
+        var now = clock.GetUtcNow();
+        var expired = scan.ExpiresAt <= now;
+        // Once this deadline passes QueueAsync can no longer accept the upload.
+        var interrupted = !expired && scan.Status == ReceiptScanStatus.Uploading
+            && scan.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow;
+        var status = expired && scan.Status != ReceiptScanStatus.Posted ? "Expired"
+            : interrupted ? "Failed" : scan.Status.ToString();
+        return new(scan.Id, status, scan.Version, scan.Attempts,
+            scan.CreatedAt, scan.ExpiresAt, interrupted ? "upload_interrupted" : scan.FailureCode,
             !expired && scan.Status == ReceiptScanStatus.Ready && scan.DraftJson is not null
                 ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null, scan.PostedTransactionId,
             !expired && scan.DocumentDeletedAt is null && scan.Status is not (ReceiptScanStatus.Discarded or ReceiptScanStatus.Uploading));

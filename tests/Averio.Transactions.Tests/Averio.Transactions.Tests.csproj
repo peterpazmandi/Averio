@@ -7,6 +7,9 @@
     <ProjectReference Include="../../src/Averio.Infrastructure/Averio.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="../../apps/Averio.Worker/ReceiptWorker.cs" Link="ReceiptWorker.cs" />
+    <Compile Include="../../apps/Averio.Api/Receipts/ReceiptProcessingService.cs" Link="ReceiptProcessingService.cs" />
+    <Compile Include="../../apps/Averio.Api/Receipts/ReceiptProcessingSignal.cs" Link="ReceiptProcessingSignal.cs" />
+    <Compile Include="../../apps/Averio.Worker/NightlySchedule.cs" Link="NightlySchedule.cs" />
+    <Compile Include="../../apps/Averio.Worker/NightlyJobRetry.cs" Link="NightlyJobRetry.cs" />
   </ItemGroup>
 </Project>

@@ -17,11 +17,12 @@ internal static class ReceiptVerification
         var options = new ReceiptOptions { Enabled = true, DailyUploadLimit = 20, FreeMonthlyLimit = 100 };
         var store = new Documents();
         var extract = new Extractor();
+        var signals = new ProcessingSignal();
         using var bitmap = new SKBitmap(64, 48); bitmap.Erase(SKColors.White);
         using var png = bitmap.Encode(SKEncodedImageFormat.Png, 100);
         var image = png.ToArray();
         ReceiptHandler Handler(IServiceProvider s) => new(user, s.GetRequiredService<IHouseholdRepository>(),
-            s.GetRequiredService<IReceiptRepository>(), new ReceiptImageNormalizer(), store, s.GetRequiredService<IUnitOfWork>(), options, clock);
+            s.GetRequiredService<IReceiptRepository>(), new ReceiptImageNormalizer(), store, s.GetRequiredService<IUnitOfWork>(), options, clock, processing: signals);
         ReceiptProcessor Processor(IServiceProvider s) => new(s.GetRequiredService<IReceiptRepository>(), store, extract, options, clock);
         async Task<ReceiptScanResult> Upload(Guid operation)
         { using var s = provider.CreateScope(); return await Handler(s.ServiceProvider).UploadAsync(f.HouseholdId, operation, new MemoryStream(image), default); }
@@ -31,6 +32,8 @@ internal static class ReceiptVerification
         { using var s = provider.CreateScope(); await Handler(s.ServiceProvider).DiscardAsync(f.HouseholdId, scan.Id, scan.Version, default); }
         async Task<ReceiptScan?> Claim(DateTimeOffset at)
         { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().ClaimAsync(at, default); }
+        async Task<DateTimeOffset?> NextProcessingAt(DateTimeOffset at)
+        { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().NextProcessingAtAsync(at, default); }
         async Task<bool> Finish(ReceiptScan scan, DateTimeOffset at, bool transient)
         { using var s = provider.CreateScope(); return await s.ServiceProvider.GetRequiredService<IReceiptRepository>().FinishAsync(scan.Id, scan.LeaseToken!.Value, at, null, "timeout", transient, default); }
         int before;
@@ -42,7 +45,8 @@ internal static class ReceiptVerification
         }
         var op = Guid.NewGuid();
         var first = await Upload(op);
-        Check((await Upload(op)).Id == first.Id && store.Puts == 1, "idempotent upload");
+        Check(signals.Count == 1 && await NextProcessingAt(now) == now, "upload signals durable queued work");
+        Check((await Upload(op)).Id == first.Id && store.Puts == 1 && signals.Count == 2, "idempotent upload wakes pending work");
         var raceOp = Guid.NewGuid();
         var race = await Task.WhenAll(Upload(raceOp), Upload(raceOp));
         Check(race[0].Id == race[1].Id && store.Puts == 2, "concurrent idempotent admission");
@@ -61,13 +65,17 @@ internal static class ReceiptVerification
         var claims = await Task.WhenAll(Claim(now), Claim(now));
         Check(claims.Count(x => x != null) == 1, "one concurrent claimant");
         var initial = claims.Single(x => x != null)!;
+        Check(await NextProcessingAt(now) == now.AddMinutes(2), "startup recovery sees the unexpired lease");
         var reclaimed = (await Claim(now.AddMinutes(3)))!;
         Check(reclaimed.Id == first.Id && reclaimed.Attempts == 2, "expired lease reclaimed");
         Check(!await Finish(initial, now.AddMinutes(3), true), "old lease fenced");
         Check(await Finish(reclaimed, now.AddMinutes(3), true), "retry queued");
         Check(await Claim(now.AddMinutes(3)) == null, "backoff respected");
+        Check(await NextProcessingAt(now.AddMinutes(3)) == now.AddMinutes(4), "recovery sees the durable retry deadline");
         Check((await Claim(now.AddMinutes(5)))!.Attempts == 3, "retry budget");
+        Check(await NextProcessingAt(now.AddMinutes(5)) == now.AddMinutes(7), "final attempt still has a recovery deadline");
         Check(await Claim(now.AddMinutes(8)) == null && (await Get(first.Id)).Status == "Failed", "final crash terminal");
+        Check(await NextProcessingAt(now.AddMinutes(8)) is null, "terminal scans do not schedule database checks");
         var ready = await Upload(Guid.NewGuid());
         using (var scope = provider.CreateScope()) Check(await Processor(scope.ServiceProvider).ProcessNextAsync(default), "worker processed");
         var result = await Get(ready.Id);
@@ -123,18 +131,32 @@ internal static class ReceiptVerification
 
         // Simulate an API crash after the storage write: no QueueAsync or handler
         // completion/finally runs. Cleanup must recover using persisted state only.
-        var abandoned = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), new string('b', 64), image.Length, clock.GetUtcNow());
+        var normalized = await new ReceiptImageNormalizer().NormalizeAsync(new MemoryStream(image), default);
+        var uploadHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(normalized));
+        var abandoned = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), uploadHash, normalized.Length, clock.GetUtcNow());
         using (var scope = provider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             db.Add(abandoned); await db.SaveChangesAsync();
         }
         await store.PutAsync(abandoned.ObjectKey, image, default);
-        await Discard(await Get(abandoned.Id));
+        Check((await Get(abandoned.Id)).Status == "Uploading", "live uploads have time to finish");
+        clock.Advance(ReceiptOptions.UploadSettlementWindow);
+        var interrupted = await Get(abandoned.Id);
+        Check(interrupted.Status == "Failed" && interrupted.FailureCode == "upload_interrupted" && !interrupted.ImageAvailable,
+            "crashed uploads become actionable before nightly physical cleanup");
         using (var scope = provider.CreateScope())
-            await Processor(scope.ServiceProvider).CleanupAsync(default);
-        Check(store.Files.ContainsKey(abandoned.ObjectKey), "crashed upload respects settling interval");
-        clock.Advance(TimeSpan.FromMinutes(5));
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IReceiptRepository>();
+            Check(!await repository.QueueAsync(abandoned.Id, clock.GetUtcNow(), default), "interrupted uploads cannot be queued");
+            var inbox = await Handler(scope.ServiceProvider).ListAsync(f.HouseholdId, 0, default);
+            Check(inbox.Single(scan => scan.Id == abandoned.Id).FailureCode == "upload_interrupted", "inbox stops polling the interrupted upload");
+        }
+        var beforeReplay = store.Puts;
+        var replay = await Upload(abandoned.OperationId);
+        Check(replay.Id == abandoned.Id && replay.FailureCode == "upload_interrupted" && store.Puts == beforeReplay,
+            "retrying the same interrupted upload returns recovery guidance without another quota charge");
+        Check(store.Files.ContainsKey(abandoned.ObjectKey), "interrupted status leaves physical deletion to cleanup");
         using (var scope = provider.CreateScope())
             await Processor(scope.ServiceProvider).CleanupAsync(default);
         Check(!store.Files.ContainsKey(abandoned.ObjectKey), "crashed upload is durably cleaned");
@@ -224,6 +246,13 @@ internal static class ReceiptVerification
     private static void Check(bool ok, string label) { if (!ok) throw new Exception(label); }
     private static async Task Reject<T>(Func<Task> action) where T : Exception
     { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
+    private sealed class ProcessingSignal : IReceiptProcessingSignal
+    {
+        private int count;
+        public int Count => Volatile.Read(ref count);
+        public void Notify() => Interlocked.Increment(ref count);
+    }
+
     private sealed class Documents : IReceiptDocumentStore
     {
         public readonly ConcurrentDictionary<string, byte[]> Files = new(); public int Puts;

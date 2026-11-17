@@ -34,9 +34,13 @@ Uploads accept decoded JPEG/PNG only, up to 10 MiB, 24 million pixels, dimension
 
 ## Processing and privacy
 
-`Uploading  Queued  Processing  Ready / Failed`. Transient failures requeue after one minute, up to three attempts. Atomic `SKIP LOCKED` claims use a two-minute lease; completion requires the live lease token. Worker timeouts are shorter than leases. Crashed final attempts become Failed. Discard, expiry and departed membership fence completion.
+`Uploading  Queued  Processing  Ready / Failed`. Transient failures requeue after one minute, up to three attempts. Atomic `SKIP LOCKED` claims use a two-minute lease; completion requires the live lease token. Extraction timeouts are shorter than leases. Crashed final attempts become Failed. Discard, expiry and departed membership fence completion.
 
-Uploads abandoned for five minutes and drafts older than seven days are cleared and deleted by the worker. Status and idempotency metadata remain; extracted JSON is cleared on discard. Physical deletion waits until at least five minutes after upload creation, including when a user discards an upload immediately. Storage writes have a one-minute deadline anchored to that persisted creation time; the remaining interval lets in-flight writes settle even if the API process exits. A discarded image becomes inaccessible immediately. Cleanup claims use the existing next-attempt timestamp as a two-minute reservation and retry failed deletions after one minute. Each object failure is isolated. Cleanup orders by next attempt before creation time so previously failed objects cannot starve unattempted deletions. Cleanup and extraction run in independent loops and scopes, so slow storage or provider requests do not block the other workload. Keep the worker and storage configuration active when disabling new scans so cleanup continues.
+An upload that never reaches the queue appears as interrupted after five minutes. Select the photo again to start a fresh scan or enter the expense manually. Nightly cleanup handles physical deletion.
+
+The API signals its background service after the upload transaction finishes. The service claims pending scans in PostgreSQL at startup and after an upload. It sets a timer for the next retry or lease expiry, then waits for a new upload when the queue is empty. The Receipts page refreshes quota on normal query refreshes, including after an upload or a manual refresh. It polls scan status only while scans are pending. See [ADR-044](decisions/ADR-044-receipt-extraction-wakeups.md).
+
+Receipt cleanup runs daily at 03:00 `Europe/Budapest`, in the same maintenance window as automatic transactions and allowances. It deletes eligible abandoned uploads, expired drafts, and expired or explicitly deleted saved photos. A discarded or expired image becomes inaccessible immediately. Physical deletion normally happens on the next eligible nightly run, at least five minutes after creation, so in-flight uploads have time to settle. Cleanup claims use a two-minute reservation and retry failed deletions on a later nightly run. One failed deletion cannot block the rest of the batch. Cleanup and extraction use independent scopes, so slow storage does not block extraction. Keep the Worker and storage configured when disabling new scans so cleanup continues.
 
 Amounts are nullable invariant decimal strings with at most two decimal places. Original item descriptions, discounts, deposits, tax, subtotal and payment lines are preserved separately. A printed payment line is not a ledger transaction. Uncertain dates/currencies/totals require review; warnings are stable codes, not confidence scores. Provider text cannot select a household, owner or account, or assign a ledger category. Validated category IDs are suggestions only. Raw provider responses, image content and keys must not be logged.
 
@@ -44,13 +48,15 @@ Amounts are nullable invariant decimal strings with at most two decimal places. 
 
 Apply the EF migration before enabling the API/worker. Existing installations need no new credentials while disabled.
 
-Set on API and worker:
+Set on the API:
 
 - `Receipts__Enabled=true`
 - `Receipts__DailyUploadLimit=20`
 - `Receipts__Storage__Bucket` and `Receipts__Storage__Region`
 - `Receipts__Gemini__ApiKey` through secret configuration
-- `Receipts__Gemini__Model`: explicit model selection; no implicit production default
+- `Receipts__Gemini__Model` with an explicit model selection
+
+Configure the same S3 bucket and region on the Worker for nightly cleanup. A cleanup-only Worker can use `Receipts__Enabled=false` and omit the Gemini settings. Deploy the new API before updating the Worker to the version that removes extraction polling.
 
 Use standard AWS role credentials. Configure a private S3 bucket with Block Public Access, encryption and least-privilege GetObject/PutObject/DeleteObject access to `receipt-drafts/*`. Uploads request AES256 server-side encryption. Set an eight-day lifecycle expiration for that prefix as an outage safety net. Use an unversioned bucket or configure noncurrent-version deletion too. Do not reuse this draft prefix for future posted attachments.
 

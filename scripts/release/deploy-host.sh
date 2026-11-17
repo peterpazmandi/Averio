@@ -21,6 +21,7 @@ done
 [[ "$api_image" =~ ^${registry//./\.}/averio-api@sha256:[a-f0-9]{64}$ ]]
 [[ "$worker_image" =~ ^${registry//./\.}/averio-worker@sha256:[a-f0-9]{64}$ ]]
 [[ "$migrator_image" =~ ^${registry//./\.}/averio-migrator@sha256:[a-f0-9]{64}$ ]]
+command -v curl >/dev/null
 exec 9>"/var/lock/averio-${environment}-deploy.lock"
 flock -w 900 9
 state="/etc/averio/deploy-${environment}"
@@ -43,21 +44,47 @@ if [[ -f "$state/current.yml" ]]; then
 fi
 # Explicit migration failure stops deployment. Never automatically downgrade the database.
 docker run --rm --env-file "$migration_env" "$migrator_image"
-# Compose compares its effective configuration hash and image with running containers.
-# Retain unchanged services; changed images/configuration are recreated normally.
-"${compose[@]}" -f "$candidate" up -d --no-build --no-deps webapi worker
-for service in webapi worker; do
-  container=$("${compose[@]}" -f "$candidate" ps -q "$service")
-  [[ -n "$container" ]]
-  expected="$api_image"
-  [[ "$service" == webapi ]] || expected="$worker_image"
-  [[ "$(docker inspect --format '{{.Config.Image}}' "$container")" == "$expected" ]]
-  # Check again after startup so an immediate worker crash is not mistaken for success.
-  restart_count=$(docker inspect --format '{{.RestartCount}}' "$container")
+# Compose retains unchanged services. Start and verify the API with the old Worker
+# still available before removing its receipt extraction loop.
+start_service() {
+  local overlay=$1 service=$2 expected=$3 container restart_count binding attempt status
+  "${compose[@]}" -f "$overlay" up -d --no-build --no-deps "$service" || return 1
+  container=$("${compose[@]}" -f "$overlay" ps -q "$service") || return 1
+  [[ -n "$container" && "$(docker inspect --format '{{.Config.Image}}' "$container")" == "$expected" ]] || return 1
+  restart_count=$(docker inspect --format '{{.RestartCount}}' "$container") || return 1
+  if [[ "$service" == webapi ]]; then
+    if ! binding=$("${compose[@]}" -f "$overlay" port webapi 8080 2>/dev/null) || [[ -z "$binding" ]]; then
+      binding=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{if .IPAddress}}{{println .IPAddress}}{{end}}{{end}}' "$container") || return 1
+      read -r binding <<< "$binding" || return 1
+      [[ -n "$binding" ]] || return 1
+      binding="$binding:8080"
+    fi
+    for ((attempt = 1; attempt <= 12; attempt++)); do
+      if status=$(curl --noproxy '*' --silent --max-time 5 --output /dev/null --write-out '%{http_code}' \
+        "http://$binding/api/v1/system/health") && [[ "$status" == 200 ]]; then
+        break
+      fi
+      sleep 5
+    done
+    ((attempt <= 12)) || return 1
+  fi
   sleep 10
-  [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
-  [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == "$restart_count" ]]
-done
+  [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true &&
+    "$(docker inspect --format '{{.RestartCount}}' "$container")" == "$restart_count" ]]
+}
+
+if ! start_service "$candidate" webapi "$api_image" || ! start_service "$candidate" worker "$worker_image"; then
+  echo 'Backend startup failed.' >&2
+  if [[ -f "$state/current.yml" ]]; then
+    # Restore the last deployed backend pair together. Migrations stay applied.
+    if "${compose[@]}" -f "$state/current.yml" up -d --no-build --no-deps webapi worker; then
+      echo 'Requested restoration of both backend containers from current.yml.' >&2
+    else
+      echo 'Restore both backend containers from current.yml before retrying.' >&2
+    fi
+  fi
+  exit 1
+fi
 # Do not discard the recovery reference on migration, Compose or startup failure.
 if [[ -f "$state/current.yml" ]] && ! cmp -s "$state/current.yml" "$candidate"; then
   cp "$state/current.yml" "$state/previous.next.yml"

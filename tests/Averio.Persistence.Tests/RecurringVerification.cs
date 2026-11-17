@@ -302,11 +302,10 @@ internal static class RecurringVerification
                     f.HouseholdId, poisonAccount, TransactionKind.Expense, TransactionVisibility.Household, null, null, due,
                     [new TransactionItemInput("Capacity", TestIds.Groceries, 999999999999999.9999m)], []), Ct);
             var batch = new RecurringBatch(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<RecurringBatch>.Instance, clock);
-            await batch.RunAsync(Ct); // All 100 postings overflow the persisted numeric aggregate and roll back.
+            await batch.RunAsync(Ct);
             await using (var scope = provider.CreateAsyncScope())
                 Check(!await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Set<RecurringOccurrence>()
-                    .AnyAsync(x => poisonRules.Contains(x.RuleId) || x.RuleId == healthyRule), "Failed batch consumed dates");
-            await batch.RunAsync(Ct);
+                    .AnyAsync(x => poisonRules.Contains(x.RuleId)), "Failed postings consumed dates");
             await using (var scope = provider.CreateAsyncScope())
             {
                 var db=scope.ServiceProvider.GetRequiredService<AverioDbContext>();
@@ -314,10 +313,10 @@ internal static class RecurringVerification
                 var tx = await db.Transactions.SingleAsync(x => x.Id == overflow);
                 await scope.ServiceProvider.GetRequiredService<VoidTransactionHandler>().HandleAsync(f.HouseholdId, overflow, tx.UpdatedAt, Ct);
             }
-            await batch.RunAsync(Ct); // Wrap to the repaired earlier rules.
+            await batch.RunAsync(Ct); // The next nightly run retries earlier failures.
             await using (var scope = provider.CreateAsyncScope())
                 Check(await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Set<RecurringOccurrence>()
-                    .CountAsync(x => poisonRules.Contains(x.RuleId)) == 100, "Earlier failures were never retried after cursor wrap");
+                    .CountAsync(x => poisonRules.Contains(x.RuleId)) == 100, "Earlier failures were never retried on the next run");
         }
 
         async Task<T> Call<T>(Func<RecurringHandler, Task<T>> action) { await using var scope = provider.CreateAsyncScope(); return await action(scope.ServiceProvider.GetRequiredService<RecurringHandler>()); }

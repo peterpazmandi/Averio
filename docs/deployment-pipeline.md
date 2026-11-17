@@ -97,7 +97,7 @@ access from GitHub runners. SSM uses outbound HTTPS from the host.
 Keep the working API/Worker Compose configuration and Cloudflare tunnel. The service
 names must be `webapi` and `worker`; deployment only replaces their image references.
 SSM Agent runs the deployment script as root (the deployment role is effectively root
-deployment access on its selected instance). Docker Compose v2, AWS CLI, Bash, and `flock` must be installed.
+deployment access on its selected instance). Install Docker Compose v2, AWS CLI, Bash, `flock`, and `curl`.
 Give the EC2 instance role ECR read permissions for all three repositories.
 
 Create a separate migration env file on each host using the configured path:
@@ -127,9 +127,11 @@ changes require a separate planned maintenance procedure.
 The workflow preserves `/etc/averio/deploy-<environment>/current.yml` and
 `previous.yml`. It also retains content-addressed overlays under `history/`.
 Migration, Compose and startup failures leave both references untouched; rotation
-happens only after backend startup checks succeed. An unchanged retry preserves the
-previous reference. These are backend rollout records, not evidence that public
-frontend checks passed. Failed candidates remain available for diagnosis.
+happens only after backend startup checks succeed. The host checks the new API's
+database health before replacing the Worker. On backend rollout failure, the host
+requests restoration of both images from `current.yml` when available. Failed
+candidates remain available for diagnosis. An unchanged retry preserves the previous
+reference. Public frontend checks run separately.
 
 Compose compares the desired images and effective service configuration with the
 running containers. Unchanged API/Worker containers remain running during a
@@ -214,7 +216,8 @@ See [SSM recovery details](deployment-ssm-setup.md#interrupted-commands-and-reco
   deployment is not a single transaction. The release may be partially deployed.
 - Prefer forward fixes. Do not roll back database migrations automatically. If older
   binaries are verified compatible with the current schema, an operator may use the
-  recorded previous image overlay and restore the matching Cloudflare deployment.
+  recorded previous image overlay to restore the API and Worker together, then restore
+  the matching Cloudflare deployment.
   Otherwise follow the Neon recovery/maintenance procedure. A first automated release
   has no previous overlay: record the existing image digests and Pages deployment first.
 

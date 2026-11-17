@@ -17,6 +17,7 @@ public sealed class ReceiptOptions
         => new(now.UtcDateTime.Year, now.UtcDateTime.Month, 1, 0, 0, 0, TimeSpan.Zero);
     public const int MaxUploadBytes = 10 * 1024 * 1024;
     public const int MaxAttempts = 3;
+    public static readonly TimeSpan UploadSettlementWindow = TimeSpan.FromMinutes(5);
 }
 // Exact decimal strings. Observations, not trusted ledger inputs.
 public sealed record ReceiptLine(string Description, string? Amount, string Kind, string? SuggestedDescription = null,
@@ -46,6 +47,11 @@ public sealed class ReceiptExtractionException(string code, bool transient) : Ex
     public string Code { get; } = code;
     public bool Transient { get; } = transient;
 }
+public interface IReceiptProcessingSignal
+{
+    void Notify();
+}
+
 public interface IReceiptRepository
 {
     Task<ReceiptScan?> FindOperationAsync(Guid household, Guid member, Guid operation, CancellationToken ct);
@@ -61,6 +67,7 @@ public interface IReceiptRepository
     Task<bool> DiscardAsync(Guid id, Guid version, DateTimeOffset now, CancellationToken ct);
     Task<bool> PostAsync(Guid id, Guid version, Guid transactionId, string confirmationFingerprint, DateTimeOffset now, CancellationToken ct);
     Task<ReceiptScan?> ClaimAsync(DateTimeOffset now, CancellationToken ct);
+    Task<DateTimeOffset?> NextProcessingAtAsync(DateTimeOffset now, CancellationToken ct);
     Task<bool> FinishAsync(Guid id, Guid token, DateTimeOffset now, string? draft, string? failure, bool transient, CancellationToken ct);
     Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct);
     Task<bool> ExpireAsync(Guid id, DateTimeOffset now, CancellationToken ct);
