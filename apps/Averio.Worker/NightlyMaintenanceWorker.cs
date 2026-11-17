@@ -25,10 +25,10 @@ internal sealed class NightlyMaintenanceWorker(
             logger.LogInformation("Next nightly maintenance run: {RunAt} Europe/Budapest", runAt);
             await Task.Delay(runAt - now, clock, stoppingToken);
 
-            await RunJobAsync("Recurring transactions", recurring.RunAsync, stoppingToken);
-            await RunJobAsync("Recurring allowances", allowance.RunAsync, stoppingToken);
+            await NightlyJobRetry.RunAsync("Recurring transactions", recurring.RunAsync, clock, logger, stoppingToken);
+            await NightlyJobRetry.RunAsync("Recurring allowances", allowance.RunAsync, clock, logger, stoppingToken);
             if (receipts.Enabled || !string.IsNullOrWhiteSpace(storage.Value.Bucket))
-                await RunJobAsync("Receipt cleanup", CleanupReceiptsAsync, stoppingToken);
+                await NightlyJobRetry.RunAsync("Receipt cleanup", CleanupReceiptsAsync, clock, logger, stoppingToken);
         }
     }
 
@@ -38,22 +38,5 @@ internal sealed class NightlyMaintenanceWorker(
         var failures = await scope.ServiceProvider.GetRequiredService<ReceiptProcessor>().CleanupAsync(ct);
         if (failures > 0)
             logger.LogWarning("Receipt cleanup deferred {Count} failed deletions to a later run", failures);
-    }
-
-    private async Task RunJobAsync(string job, Func<CancellationToken, Task> run, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        try
-        {
-            await run(ct);
-            logger.LogInformation("Nightly job completed: {Job}", job);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception ex)
-        {
-            // Receipt cleanup errors can contain provider details. Log only the type.
-            logger.LogError("Nightly job failed: {Job}, ExceptionType={ExceptionType}, HResult={HResult}",
-                job, ex.GetType().Name, ex.HResult);
-        }
     }
 }

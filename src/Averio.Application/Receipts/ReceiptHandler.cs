@@ -186,9 +186,15 @@ public sealed class ReceiptHandler(ICurrentUser user, IHouseholdRepository house
     }
     private ReceiptScanResult Map(ReceiptScan scan)
     {
-        var expired = scan.ExpiresAt <= clock.GetUtcNow();
-        return new(scan.Id, expired && scan.Status != ReceiptScanStatus.Posted ? "Expired" : scan.Status.ToString(), scan.Version, scan.Attempts,
-            scan.CreatedAt, scan.ExpiresAt, scan.FailureCode,
+        var now = clock.GetUtcNow();
+        var expired = scan.ExpiresAt <= now;
+        // Once this deadline passes QueueAsync can no longer accept the upload.
+        var interrupted = !expired && scan.Status == ReceiptScanStatus.Uploading
+            && scan.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow;
+        var status = expired && scan.Status != ReceiptScanStatus.Posted ? "Expired"
+            : interrupted ? "Failed" : scan.Status.ToString();
+        return new(scan.Id, status, scan.Version, scan.Attempts,
+            scan.CreatedAt, scan.ExpiresAt, interrupted ? "upload_interrupted" : scan.FailureCode,
             !expired && scan.Status == ReceiptScanStatus.Ready && scan.DraftJson is not null
                 ? JsonSerializer.Deserialize<ReceiptDraft>(scan.DraftJson) : null, scan.PostedTransactionId,
             !expired && scan.DocumentDeletedAt is null && scan.Status is not (ReceiptScanStatus.Discarded or ReceiptScanStatus.Uploading));

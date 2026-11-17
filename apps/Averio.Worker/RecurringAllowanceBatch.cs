@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.PersonalMoney;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public sealed class RecurringAllowanceBatch(
         const int pageSize = 100;
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         var unsuccessful = new HashSet<Guid>();
+        ExceptionDispatchInfo? transientFailure = null;
         bool advanced;
         do
         {
@@ -31,10 +33,19 @@ public sealed class RecurringAllowanceBatch(
                     ct.ThrowIfCancellationRequested();
                     if (unsuccessful.Contains(candidate.RuleId)) continue;
 
-                    if (await RunCandidateAsync(candidate, ct))
-                        advanced = true;
-                    else
+                    try
+                    {
+                        if (await RunCandidateAsync(candidate, ct))
+                            advanced = true;
+                        else
+                            unsuccessful.Add(candidate.RuleId);
+                    }
+                    catch (Exception ex) when (NightlyJobRetry.IsTransient(ex))
+                    {
+                        // Let other due rules run, then retry this batch in the same window.
                         unsuccessful.Add(candidate.RuleId);
+                        transientFailure ??= ExceptionDispatchInfo.Capture(ex);
+                    }
                 }
 
                 if (candidates.Count < pageSize) break;
@@ -42,6 +53,8 @@ public sealed class RecurringAllowanceBatch(
             }
             // A rule may still have overdue occurrences after advancing its due date.
         } while (advanced);
+
+        transientFailure?.Throw();
     }
 
     private async Task<bool> RunCandidateAsync(RecurringAllowanceCandidate candidate, CancellationToken ct)
@@ -65,12 +78,12 @@ public sealed class RecurringAllowanceBatch(
             }
             catch (NotFoundException) { /* Recipient left. Old membership stays historical. */ }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception failure)
+            catch (Exception failure) when (!NightlyJobRetry.IsTransient(failure))
             {
                 logger.LogError(failure, "Could not mark recurring allowance rule {RuleId}", candidate.RuleId);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!NightlyJobRetry.IsTransient(ex))
         {
             logger.LogError(ex, "Recurring allowance rule {RuleId} failed; will retry", candidate.RuleId);
         }

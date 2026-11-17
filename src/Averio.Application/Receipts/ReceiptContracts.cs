@@ -17,6 +17,7 @@ public sealed class ReceiptOptions
         => new(now.UtcDateTime.Year, now.UtcDateTime.Month, 1, 0, 0, 0, TimeSpan.Zero);
     public const int MaxUploadBytes = 10 * 1024 * 1024;
     public const int MaxAttempts = 3;
+    public static readonly TimeSpan UploadSettlementWindow = TimeSpan.FromMinutes(5);
 }
 // Exact decimal strings. Observations, not trusted ledger inputs.
 public sealed record ReceiptLine(string Description, string? Amount, string Kind, string? SuggestedDescription = null,

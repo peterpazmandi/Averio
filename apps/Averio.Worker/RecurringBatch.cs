@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.Recurring;
 using FluentValidation;
@@ -13,6 +14,7 @@ public sealed class RecurringBatch(IServiceScopeFactory scopes, ILogger<Recurrin
         const int pageSize = 100;
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         var unsuccessful = new HashSet<Guid>();
+        ExceptionDispatchInfo? transientFailure = null;
         bool advanced;
         do
         {
@@ -31,10 +33,19 @@ public sealed class RecurringBatch(IServiceScopeFactory scopes, ILogger<Recurrin
                     ct.ThrowIfCancellationRequested();
                     if (unsuccessful.Contains(candidate.RuleId)) continue;
 
-                    if (await RunCandidateAsync(candidate, ct))
-                        advanced = true;
-                    else
+                    try
+                    {
+                        if (await RunCandidateAsync(candidate, ct))
+                            advanced = true;
+                        else
+                            unsuccessful.Add(candidate.RuleId);
+                    }
+                    catch (Exception ex) when (NightlyJobRetry.IsTransient(ex))
+                    {
+                        // Let other due rules run, then retry this batch in the same window.
                         unsuccessful.Add(candidate.RuleId);
+                        transientFailure ??= ExceptionDispatchInfo.Capture(ex);
+                    }
                 }
 
                 if (candidates.Count < pageSize) break;
@@ -42,6 +53,8 @@ public sealed class RecurringBatch(IServiceScopeFactory scopes, ILogger<Recurrin
             }
             // A rule may still have overdue occurrences after advancing its due date.
         } while (advanced);
+
+        transientFailure?.Throw();
     }
 
     private async Task<bool> RunCandidateAsync(RecurringCandidate candidate, CancellationToken ct)
@@ -61,10 +74,10 @@ public sealed class RecurringBatch(IServiceScopeFactory scopes, ILogger<Recurrin
             }
             catch (NotFoundException) { /* Departed membership: never execute again. */ }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception failure) { logger.LogError(failure, "Could not mark recurring rule {RuleId}; continuing batch", candidate.RuleId); }
+            catch (Exception failure) when (!NightlyJobRetry.IsTransient(failure)) { logger.LogError(failure, "Could not mark recurring rule {RuleId}; continuing batch", candidate.RuleId); }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception ex) { logger.LogError(ex, "Recurring rule {RuleId} failed; retrying later", candidate.RuleId); }
+        catch (Exception ex) when (!NightlyJobRetry.IsTransient(ex)) { logger.LogError(ex, "Recurring rule {RuleId} failed; retrying later", candidate.RuleId); }
         return false;
     }
 }

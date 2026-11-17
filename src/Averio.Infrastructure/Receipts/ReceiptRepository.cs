@@ -34,7 +34,7 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
     public void Add(ReceiptScan scan) => db.Add(scan);
     public async Task<bool> QueueAsync(Guid id, DateTimeOffset now, CancellationToken ct)
         => await db.Set<ReceiptScan>().Where(x => x.Id == id && x.Status == ReceiptScanStatus.Uploading
-            && x.CreatedAt > now.AddMinutes(-5) && x.DocumentDeletedAt == null)
+            && x.CreatedAt > now - ReceiptOptions.UploadSettlementWindow && x.DocumentDeletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, ReceiptScanStatus.Queued)
                 .SetProperty(x => x.UpdatedAt, now).SetProperty(x => x.Version, Guid.NewGuid()), ct) == 1;
     public async Task<IReadOnlyList<ReceiptScan>> ListAsync(Guid h, Guid m, int skip, CancellationToken ct)
@@ -113,9 +113,9 @@ public sealed class ReceiptRepository(AverioDbContext db, ReceiptOptions? option
         // Even a discarded/departed upload may still be writing its object.
         // Its one-minute write deadline is anchored to CreatedAt; allow a settling
         // interval before recording physical deletion, including after API crashes.
-        && x.CreatedAt <= now.AddMinutes(-5) && x.NextAttemptAt <= now &&
+        && x.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow && x.NextAttemptAt <= now &&
         (x.Status == ReceiptScanStatus.Discarded || x.ExpiresAt <= now
-            || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now.AddMinutes(-5))
+            || (x.Status == ReceiptScanStatus.Uploading && x.CreatedAt <= now - ReceiptOptions.UploadSettlementWindow)
             || !db.HouseholdMembers.Any(m => m.Id == x.HouseholdMemberId && m.HouseholdId == x.HouseholdId && m.LeftAtUtc == null)));
     public async Task<IReadOnlyList<ReceiptScan>> CleanupCandidatesAsync(DateTimeOffset now, CancellationToken ct)
         => await Expired(now).AsNoTracking().OrderBy(x => x.NextAttemptAt).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(50).ToListAsync(ct);

@@ -25,6 +25,10 @@ function fixture() {
   const executable = (name, body) => writeFileSync(join(bin, name), '#!/bin/bash\nset -eu\n' + body, { mode: 0o755 });
   executable('aws', 'echo fake-token\n');
   executable('sleep', ':\n');
+  executable('curl', `
+printf 'curl %s\\n' "$*" >> "$FIXTURE_ROOT/calls"
+if [[ "$FAIL_AT" == readiness ]]; then echo 503; else echo 200; fi
+`);
   executable('docker', `
 printf '%s\\n' "$*" >> "$FIXTURE_ROOT/calls"
 case "$1" in
@@ -32,8 +36,12 @@ case "$1" in
   pull) : ;;
   run) [[ "$FAIL_AT" != migration ]] ;;
   compose)
-    if [[ " $* " == *" up "* ]]; then [[ "$FAIL_AT" != compose ]]; fi
+    if [[ " $* " == *"candidate.yml up "* ]]; then
+      [[ "$FAIL_AT" != compose ]]
+      if [[ "\${@: -1}" == worker ]]; then [[ "$FAIL_AT" != worker ]]; fi
+    fi
     if [[ " $* " == *" ps -q "* ]]; then echo "container-\${@: -1}"; fi
+    if [[ " $* " == *" port webapi 8080 "* ]]; then echo "127.0.0.1:8080"; fi
     ;;
   inspect)
     case "$3" in
@@ -50,14 +58,20 @@ esac
     API_IMAGE: image('api', api), WORKER_IMAGE: image('worker', worker), FAIL_AT: fail } });
   return { root, state, overlay, run, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
-for (const phase of ['migration', 'compose', 'startup']) {
+for (const phase of ['migration', 'compose', 'startup', 'readiness', 'worker']) {
   test(`${phase} failure preserves both recovery references`, { skip: !linux }, () => {
     const f = fixture();
     try {
       const result = f.run('c', 'b', phase); assert.notEqual(result.status, 0);
       assert.equal(readFileSync(join(f.state, 'current.yml'), 'utf8'), f.overlay('b', 'b'));
       assert.equal(readFileSync(join(f.state, 'previous.yml'), 'utf8'), f.overlay('a', 'a'));
-      if (phase === 'migration') assert.doesNotMatch(readFileSync(join(f.root, 'calls'), 'utf8'), / up /);
+      const calls = readFileSync(join(f.root, 'calls'), 'utf8');
+      if (phase === 'migration') assert.doesNotMatch(calls, / up /);
+      else assert.match(calls, /current\.yml up -d --no-build --no-deps webapi worker/);
+      if (phase === 'readiness') {
+        assert.match(calls, /curl .*system\/health/);
+        assert.doesNotMatch(calls, /candidate\.yml up -d --no-build --no-deps worker/);
+      }
     } finally { f.cleanup(); }
   });
 }
@@ -76,7 +90,7 @@ test('frontend-only rollout allows Compose to retain unchanged backends', { skip
   try {
     const result = f.run('b', 'b'); assert.equal(result.status, 0, result.stderr);
     const calls = readFileSync(join(f.root, 'calls'), 'utf8');
-    assert.match(calls, /up -d --no-build --no-deps webapi worker/);
+    assert.match(calls, /up -d --no-build --no-deps webapi\n[\s\S]*curl .*system\/health\n[\s\S]*up -d --no-build --no-deps worker/);
     assert.doesNotMatch(calls, /--force-recreate/);
     assert.equal(readFileSync(join(f.state, 'previous.yml'), 'utf8'), f.overlay('a', 'a'));
   } finally { f.cleanup(); }

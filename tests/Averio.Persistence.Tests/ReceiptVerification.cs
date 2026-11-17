@@ -131,18 +131,32 @@ internal static class ReceiptVerification
 
         // Simulate an API crash after the storage write: no QueueAsync or handler
         // completion/finally runs. Cleanup must recover using persisted state only.
-        var abandoned = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), new string('b', 64), image.Length, clock.GetUtcNow());
+        var normalized = await new ReceiptImageNormalizer().NormalizeAsync(new MemoryStream(image), default);
+        var uploadHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(normalized));
+        var abandoned = ReceiptScan.Create(f.HouseholdId, f.OwnerMemberId, Guid.NewGuid(), uploadHash, normalized.Length, clock.GetUtcNow());
         using (var scope = provider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             db.Add(abandoned); await db.SaveChangesAsync();
         }
         await store.PutAsync(abandoned.ObjectKey, image, default);
-        await Discard(await Get(abandoned.Id));
+        Check((await Get(abandoned.Id)).Status == "Uploading", "live uploads have time to finish");
+        clock.Advance(ReceiptOptions.UploadSettlementWindow);
+        var interrupted = await Get(abandoned.Id);
+        Check(interrupted.Status == "Failed" && interrupted.FailureCode == "upload_interrupted" && !interrupted.ImageAvailable,
+            "crashed uploads become actionable before nightly physical cleanup");
         using (var scope = provider.CreateScope())
-            await Processor(scope.ServiceProvider).CleanupAsync(default);
-        Check(store.Files.ContainsKey(abandoned.ObjectKey), "crashed upload respects settling interval");
-        clock.Advance(TimeSpan.FromMinutes(5));
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IReceiptRepository>();
+            Check(!await repository.QueueAsync(abandoned.Id, clock.GetUtcNow(), default), "interrupted uploads cannot be queued");
+            var inbox = await Handler(scope.ServiceProvider).ListAsync(f.HouseholdId, 0, default);
+            Check(inbox.Single(scan => scan.Id == abandoned.Id).FailureCode == "upload_interrupted", "inbox stops polling the interrupted upload");
+        }
+        var beforeReplay = store.Puts;
+        var replay = await Upload(abandoned.OperationId);
+        Check(replay.Id == abandoned.Id && replay.FailureCode == "upload_interrupted" && store.Puts == beforeReplay,
+            "retrying the same interrupted upload returns recovery guidance without another quota charge");
+        Check(store.Files.ContainsKey(abandoned.ObjectKey), "interrupted status leaves physical deletion to cleanup");
         using (var scope = provider.CreateScope())
             await Processor(scope.ServiceProvider).CleanupAsync(default);
         Check(!store.Files.ContainsKey(abandoned.ObjectKey), "crashed upload is durably cleaned");

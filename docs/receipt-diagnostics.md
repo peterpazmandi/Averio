@@ -16,6 +16,7 @@ The API stores each upload before signaling its receipt extraction service. The 
 | `Receipt extraction is disabled in the API` | Set `Receipts__Enabled=true` in the API environment and restart it. |
 | API startup reports invalid receipt configuration | Supply the API's S3 bucket and region and its Gemini key and model. |
 | A scan is still pending | Check the scan expiry, active household membership, the next retry time and any outstanding lease. A scan with a live lease becomes eligible after the lease expires. |
+| An upload is interrupted | Uploads that remain unqueued after five minutes show a failed status. Select the photo again or enter the expense manually. |
 | `Receipt queue recovery failed` | Check database availability and the API's connection settings. The receipt service backs off for 30 seconds before retrying this operation. |
 | Claimed, then storage failure | Check the API credentials, bucket/region and private read permissions. `AccessDenied`, `NoSuchBucket`, `NoSuchKey`, `ExpiredToken` and signature errors are distinguished. |
 | Provider HTTP error / timeout | Inspect status, stage and retry outcome. The HTTP budget is 50 seconds and overall processing budget 60 seconds. Retry logs give the next attempt time; the durable queue owns the three-attempt limit. |

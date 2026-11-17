@@ -58,7 +58,8 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
             setHistory(false); setStatus(''); setPage(0);
             if (input.current) input.current.value = '';
             if (camera.current) camera.current.value = '';
-            setNotice(t('receipts.uploaded')); await refresh();
+            setNotice(result.failureCode === 'upload_interrupted' ? '' : t('receipts.uploaded'));
+            await refresh();
         },
         // A lost response may still represent an accepted upload. Refresh the
         // private inbox and retain the same operation ID for a deliberate retry.
@@ -217,7 +218,8 @@ export function ReceiptsPage({ userId, householdId }: { userId: string; househol
                 {['Queued', 'Processing'].includes(scan.status) && inbox.dataUpdatedAt - Date.parse(scan.createdAt) >= 120000 && <p className="text-xs text-amber-800 dark:text-amber-200">{t('receipts.overview.delayed')}</p>}
                 {scan.status === 'Ready' && <p className="text-sm">{t('receipts.expires', { date: new Date(scan.expiresAt).toLocaleDateString(i18n.resolvedLanguage ?? i18n.language) })}</p>}
                 {scan.status === 'Failed' && <div className="grid gap-2">
-                    <p className="text-sm">{t(['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
+                    <p className="text-sm">{t(scan.failureCode === 'upload_interrupted' ? 'receipts.uploadInterrupted'
+                        : ['provider_unavailable', 'attempts_exhausted', 'timeout', 'processing_failed'].includes(scan.failureCode ?? '') ? 'receipts.providerFailed' : 'receipts.failedHelp')}</p>
                     <p className="text-xs">{t('receipts.newScanCharge')}</p>
                     <div className="flex flex-wrap gap-2">
                         <AverioButton disabled={!canStartUpload || scanBusy} onClick={() => input.current?.click()}>{t('receipts.anotherPhoto')}</AverioButton>

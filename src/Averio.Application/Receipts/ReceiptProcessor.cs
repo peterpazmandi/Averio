@@ -91,9 +91,6 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
                 {
                     log.LogInformation("Receipt cleanup started: ScanId={ScanId}", scan.Id);
                     await documents.DeleteAsync(scan.ObjectKey, timeout.Token);
-                    await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
-                    ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "deleted"));
-                    log.LogInformation("Receipt cleanup completed: ScanId={ScanId}", scan.Id);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                 catch (Exception ex)
@@ -103,7 +100,12 @@ public sealed class ReceiptProcessor(IReceiptRepository receipts, IReceiptDocume
                     ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "retry"));
                     // A poisoned object must not monopolize the oldest-first batch.
                     await receipts.DeferCleanupAsync(scan.Id, clock.GetUtcNow().AddMinutes(1), ct);
+                    continue;
                 }
+                // Database failures must reach the nightly retry policy. A repeated S3 delete is safe.
+                await receipts.MarkDocumentDeletedAsync(scan.Id, clock.GetUtcNow(), ct);
+                ReceiptMetrics.Cleanup.Add(1, new KeyValuePair<string, object?>("outcome", "deleted"));
+                log.LogInformation("Receipt cleanup completed: ScanId={ScanId}", scan.Id);
             }
         }
     }
