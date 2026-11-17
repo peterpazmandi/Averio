@@ -19,7 +19,7 @@ internal static class NightlyScheduleChecks
 
         await NightlyJobRetry.RunAsync("transient recovery", _ =>
         {
-            if (++attempts < 3) throw new TimeoutException();
+            if (++attempts < 3) throw new InvalidOperationException("Wrapped failure", new TimeoutException());
             return Task.CompletedTask;
         }, clock, NullLogger.Instance, default);
         if (attempts != 3 || !clock.Delays.SequenceEqual(new[] { TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(4) }))

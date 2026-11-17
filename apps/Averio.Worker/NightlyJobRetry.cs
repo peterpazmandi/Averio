@@ -7,8 +7,15 @@ internal static class NightlyJobRetry
 {
     private const int MaxAttempts = 3;
 
-    internal static bool IsTransient(Exception error) =>
-        error is TimeoutException or DbException { IsTransient: true };
+    internal static bool IsTransient(Exception error)
+    {
+        // EF can wrap a transient database error when saving changes.
+        for (Exception? cause = error; cause is not null; cause = cause.InnerException)
+            if (cause is TimeoutException or DbException { IsTransient: true })
+                return true;
+
+        return false;
+    }
 
     internal static async Task RunAsync(string job, Func<CancellationToken, Task> run, TimeProvider clock,
         ILogger logger, CancellationToken ct)
