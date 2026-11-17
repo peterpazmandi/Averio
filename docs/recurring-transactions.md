@@ -26,7 +26,7 @@ Publish the worker with `dotnet publish apps/Averio.Worker -c Release -o artifac
 
 The Worker starts the automatic recurring transaction run daily at 03:00 `Europe/Budapest`, including through clock changes. It checks up to 100 candidate rules per page and processes overdue occurrences in the same run. If the Worker is offline at 03:00, the next nightly run catches up. Multiple worker instances and simultaneous manual confirmation are serialized by the existing household lock and receipt key.
 
-Expected validation or access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account or category, then edit and save the schedule to clear the blocked state. The Worker moves past failed rules so later schedules can still run and retries infrastructure failures the following night. Amounts stay in the account currency.
+Expected validation or access failures mark a schedule **Needs review** without consuming the occurrence. Correct the account or category, then edit and save the schedule to clear the blocked state. The Worker moves past failed rules so later schedules can still run and retries transient database failures up to twice in the same nightly window. Other infrastructure failures are revisited the following night. Amounts stay in the account currency.
 
 ## Verification
 
