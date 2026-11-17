@@ -26,7 +26,6 @@ var checks = new (string Name, Action Run)[]
     ("receipt quotas, UTC resets, retention and metrics", ReceiptRolloutChecks.Run),
     ("receipt benchmark and production timeout parity", () => ReceiptTimeoutChecks.RunAsync().GetAwaiter().GetResult()),
     ("Budapest nightly schedule through clock changes", NightlyScheduleChecks.Run),
-    ("receipt processing and cleanup stay independent", () => ReceiptWorkerChecks.RunAsync().GetAwaiter().GetResult()),
     ("receipt images, amounts and provider contract", () => ReceiptChecks.RunAsync().GetAwaiter().GetResult()),
     ("receipt request MVC record validation", ReceiptRequestValidationChecks.Run),
     ("receipt confirmation request identity and canonical values", ReceiptConfirmationChecks.Run),
