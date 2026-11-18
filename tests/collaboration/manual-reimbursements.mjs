@@ -60,7 +60,7 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     const previousVersion = (await ok(page, base + '/reimbursements?transactionId=' + existing.id))[0].version;
     await detail.getByRole('button', { name: 'Edit reimbursement', exact: true }).click();
     const editClaim = page.getByRole('dialog', { name: 'Edit reimbursement', exact: true });
-    for (const [subject, explanation] of [['Reimbursement provider', /organisation or person paying you back/], ['Expected payment', /confirm external submission/]]) {
+    for (const [subject, explanation] of [['Reimbursement provider', /organisation or person you expect to pay you back/], ['Expected payment', /confirm external submission/]]) {
         await editClaim.getByRole('button', { name: 'About ' + subject, exact: true }).click();
         await page.getByRole('dialog', { name: subject, exact: true }).getByText(explanation).waitFor();
         await page.keyboard.press('Escape');

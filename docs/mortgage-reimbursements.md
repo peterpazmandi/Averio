@@ -63,6 +63,14 @@ Each edit appends before/after snapshots to claim history with provider, amount,
 
 The follow-up form uses two matching panels with aligned desktop inputs and a stacked mobile layout.
 
-The shared provider information icon explains who pays the reimbursement (for example, a fund, insurer or employer), rather than the merchant receiving the expense. Expected payment has its own information icon explaining the delay from confirmed external receipt submission and that an estimated date never records received money. Both helpers are available in English, German and Hungarian.
+The shared provider information icon explains who pays the reimbursement (for example, an employer, insurer, fund or retailer). Expected payment has its own information icon explaining the delay from confirmed external receipt submission and that an estimated date never records received money. Both helpers are available in English, German and Hungarian.
 
 Manual creation and individual claim edits reject a fixed estimate above the original recorded expense, even if an optional cap would reduce it. The form shows the expense limit beside the estimate and validates exact amounts to four decimal places; an estimate equal to the expense is allowed. Backend validation enforces the same rule. Recurring configuration remains a template: its generated claim is always capped at the actual recorded payment.
+
+## Providers and received refunds
+
+Reimbursements are not limited to health funds. The receipt instructions, provider help and external-submission confirmation use general wording for the organisation or person paying the money back. Submission may happen through any process that provider accepts; adding or scanning a receipt in Averio never submits it externally.
+
+For a merchant refund already received on an ordinary purchase, keep the original expense and record the money received as a separate Income transaction on the receiving account, dated when it arrived. If the incoming transaction was imported already, use that record rather than creating a duplicate. Use its description or note to identify the original purchase. Do not void a real purchase merely because it was later refunded.
+
+General expense-to-refund linking and reimbursement payment matching are not implemented in this slice. The refund therefore remains income in category reports; it does not reduce the original expense category. An Activity can group the expense and refund to display their net result. Existing Personal Money refund attribution applies only to purchases already charged to the member's allowance, with its own same-account/currency rules. External receipt confirmation records submission, never receipt of the refund.

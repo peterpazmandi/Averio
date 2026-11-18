@@ -30,7 +30,7 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     await page.getByRole('dialog', { name: 'How much can you claim?', exact: true }).waitFor();
     await page.keyboard.press('Escape');
     assert.equal(await dialog.isVisible(), true, 'Closing help must preserve the transaction dialog');
-    await dialog.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Browser health fund');
+    await dialog.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Browser employer');
     await dialog.getByLabel(/^Reimbursement estimate/).fill('30');
     await dialog.getByLabel('Destination account', { exact: true }).selectOption(f.sharedAccountId);
     await dialog.getByLabel('Days after recording the expense', { exact: true }).fill('0');
@@ -65,7 +65,7 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     const submission = page.getByRole('dialog', { name: 'Mark receipt as submitted', exact: true });
     assert.equal(await submission.getByRole('button', { name: 'Confirm', exact: true }).isDisabled(), true);
     await submission.getByLabel('Claim reference (optional)', { exact: true }).fill('BROWSER-CLAIM');
-    await submission.getByLabel('I confirm that I submitted this receipt to the health fund outside Averio.', { exact: true }).check();
+    await submission.getByLabel('I confirm that I submitted this receipt to the reimbursement provider outside Averio.', { exact: true }).check();
     await submission.getByRole('button', { name: 'Confirm', exact: true }).click();
     await submission.waitFor({ state: 'hidden' });
     await panel.getByText('Submitted', { exact: true }).waitFor();
