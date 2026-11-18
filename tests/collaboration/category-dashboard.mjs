@@ -22,6 +22,9 @@ export async function verifyCategoryDashboard({ fixture: f, password, session, o
     };
     const dashboard = async () => {
         await page.locator('a[href="/app"]').first().click();
+        // The outgoing category report has the same accessible region name.
+        // Wait for navigation before looking up dashboard controls or links.
+        await page.waitForURL(url => url.pathname === '/app' || url.pathname === '/app/');
         await page.getByRole('region', { name: 'Spending by category', exact: true }).waitFor();
     };
     const card = () => page.getByRole('region', { name: /^(Spending|Income) by category$/ });
