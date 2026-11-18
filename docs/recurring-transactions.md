@@ -37,3 +37,5 @@ Run the repository's existing verification workflow. PostgreSQL and browser test
 See [ADR-027](decisions/ADR-027-daily-recurring-frequency.md) for daily scheduling and [ADR-026](decisions/ADR-026-recurring-transaction-templates.md) for the stable domain decisions.
 
 Review hardening: see [ADR-028](decisions/ADR-028-recurring-receipts-and-owner-recovery.md). New occurrence receipts retain ordered item amounts for retry validation. Explicit per-item retries of older receipts without a snapshot return a conflict; verify their existing transaction instead of resubmitting. Completed rules do not consume the unfinished quota, and extending them rechecks it. Unavailable private accounts retain owner-only pause/stop controls without exposing account details or history.
+
+Optional expense reimbursement configuration and manual external receipt confirmation are described in [mortgage reimbursements](mortgage-reimbursements.md) and [ADR-045](decisions/ADR-045-recurring-reimbursement-submission.md).

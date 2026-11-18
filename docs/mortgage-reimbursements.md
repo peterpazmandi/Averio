@@ -1,0 +1,32 @@
+# Recurring mortgage reimbursements
+
+The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. A future payment-matching deliverable will link existing bank movements and introduce partially/fully received statuses.
+
+## Workflow and privacy
+
+Enable reimbursement tracking in the shared transaction/recurring editor. Choose the provider, fixed amount or percentage, optional cap, same-currency destination account, estimated payment delay (0–365 days), and optional submission reminder (0–365 days after recording). Estimates cannot exceed the recorded expense. Amounts retain four decimal places. The percentage uses the actual recorded item total, not the template total.
+
+Saving a rule or reaching a scheduled date does not create a claim. Recording an occurrence creates the expense, occurrence receipt and one claim in the same database transaction. Opt-in automatic expense recording uses this same path. A skipped occurrence creates neither an expense nor a claim. Retrying an occurrence returns the previous transaction; household locking and a unique claim transaction index prevent duplicate claims. Failed postings roll back all three records. No historical occurrences are backfilled.
+
+Claims snapshot provider, amount, currency, destination account and timing. Changes to a rule affect future recordings only. Editing the source payment does not silently rewrite the snapshot: the UI asks the user to review the changed payment. Voided payments and payments changed to income suppress expected amounts and reminders and prohibit submission while keeping history available for cancellation.
+
+Claims are private to the recurring-rule creator, with additional server-side checks for visibility of both the source transaction and destination account. Modifications require current permission to modify the source account. Household administrators do not gain access to another member's private claim. Household departure and account ownership/visibility changes do not copy or reveal claims.
+
+## Manual submission and reminders
+
+- **Needs submission:** potential reimbursement only; expected and outstanding amounts are zero.
+- **Submitted:** the user explicitly confirms external submission, supplies a date from the original payment date through today (UTC), and optionally a reference of up to 160 characters. Expected date is submission date plus the snapshotted delay.
+- **Rejected:** only from Submitted; expected/outstanding amounts return to zero. A new explicitly confirmed submission can reopen it.
+- **Cancelled:** terminal; financial transactions and append-only claim events remain intact.
+
+Every state change records the actor, status, submission date/reference and timestamp. Optimistic version checks reject stale updates. Scanning a receipt does not change claim status. There is no provider upload or automated receipt submission.
+
+Dashboard and transaction detail cards show original/potential/expected amounts separately. Currency totals are never combined. In-app reminders appear when an unsubmitted claim reaches its reminder date or a submitted claim passes its expected date. They send no email or push notification, and never advance payment status. Received/linked amount remains zero in this deliverable; the UI explains that bank-payment linking is not yet available.
+
+## API and deployment
+
+Recurring save/list contracts expose optional `reimbursement` configuration. `GET /api/v1/households/{householdId}/reimbursements` lists visible active claims; `transactionId` includes that payment's cancelled history too. `PUT /api/v1/households/{householdId}/reimbursements/{claimId}/status` requires the current version and explicit receipt consent for Submitted.
+
+Apply migration `20261117220912_AddMortgageReimbursements` before deploying API, worker and frontend. It creates configuration, claim and audit-event tables without rewriting financial records. Normal application startup does not run migrations. Review the deployment SQL and preserve claim history before any rollback; migration Down removes these new tables.
+
+Verification: the existing transaction and PostgreSQL test executables include reimbursement cases. The collaboration browser suite includes `reimbursements.mjs`, covering settings, server/client consent, retry idempotency, unchanged account balances, dashboard/details and translated mobile/desktop layouts. Local PostgreSQL tests create and drop isolated databases; use only a dedicated test server.

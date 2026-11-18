@@ -10,6 +10,13 @@ public sealed class RecurringRule
     private readonly List<RecurringLabel> _labels = [];
     public IReadOnlyCollection<RecurringItem> Items => _items.AsReadOnly();
     public IReadOnlyCollection<RecurringLabel> Labels => _labels.AsReadOnly();
+    public RecurringReimbursementRule? Reimbursement { get; private set; }
+    public void SetReimbursement(RecurringReimbursementRule? reimbursement)
+    {
+        if (reimbursement is not null && (Kind != TransactionKind.Expense || reimbursement.Estimate(Amount) <= 0))
+            throw new ArgumentException("Reimbursement requires an expense and a positive estimate.");
+        Reimbursement = reimbursement;
+    }
     public string? Merchant { get; private set; }
     public string? Note { get; private set; }
     public Guid? ActivityId { get; private set; }

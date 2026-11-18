@@ -33,6 +33,7 @@ var checks = new (string Name, Action Run)[]
     ("receipt category suggestions and household rules", () => ReceiptCategoryChecks.RunAsync().GetAwaiter().GetResult()),
     ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
     ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
+    ("reimbursement estimates, consent, snapshots, history and constraints", ReimbursementChecks.Run),
     ("recurring calendar anchors", RecurringChecks.Calendar),
     ("recurring lifecycle", RecurringChecks.Lifecycle),
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),

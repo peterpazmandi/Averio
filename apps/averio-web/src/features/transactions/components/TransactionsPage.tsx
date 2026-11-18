@@ -638,7 +638,7 @@ export function TransactionsPage({
             )}
 
             {urlState.transaction && !activeEditor && <TransactionLinkDetail
-                query={detail} onClose={closeEditor}
+                query={detail} onClose={closeEditor} userId={userId} householdId={householdId}
                 personalRelation={relations.transactions.get(urlState.transaction)} />}
             {activeEditor && (
                 <TransactionEditor

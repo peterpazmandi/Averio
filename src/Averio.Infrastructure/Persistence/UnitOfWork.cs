@@ -22,6 +22,8 @@ internal sealed class UnitOfWork(AverioDbContext dbContext) : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Recurring.ReimbursementClaim))
+                throw new ConflictException("reimbursement_changed", "Error_ReimbursementChanged");
             if (exception.Entries.Any(entry => entry.Entity is SavedTransactionView))
                 throw new ConflictException("saved_view_changed", "Error_SavedViewChanged");
             if (exception.Entries.Any(entry => entry.Entity is Averio.Domain.Recurring.RecurringRule))

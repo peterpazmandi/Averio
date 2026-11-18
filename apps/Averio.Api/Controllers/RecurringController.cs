@@ -16,7 +16,7 @@ public sealed class RecurringController(RecurringHandler handler) : ControllerBa
             return new RecurringRuleResponse(r.Id, r.AccountId, r.CategoryId, r.Name, DecimalAmountMapper.Format(r.Amount),
                 x.Currency, r.Kind.ToString(), r.Visibility.ToString(), r.Frequency.ToString(), r.StartsOn, r.EndsOn,
                 r.NextDueOn, r.Automatic, r.IsPaused, r.IsStopped, r.IsBlocked, x.CanRecord, r.Version, r.Items.OrderBy(i => i.Position).Select(i => new RecurringItemRequest(i.Description, i.CategoryId, DecimalAmountMapper.Format(i.Amount))).ToArray(),
-                r.Labels.Select(l => l.LabelId).ToArray(), r.Merchant, r.Note, r.ActivityId); }).ToArray());
+                r.Labels.Select(l => l.LabelId).ToArray(), r.Merchant, r.Note, r.ActivityId, Configuration(r.Reimbursement)); }).ToArray());
     [HttpPost]
     public async Task<ActionResult<CreateRecurringRuleResponse>> Create(Guid householdId, SaveRecurringRuleRequest request, CancellationToken ct)
         => StatusCode(201, new CreateRecurringRuleResponse(await handler.SaveAsync(householdId, null, null, Input(request), ct)));
@@ -40,5 +40,17 @@ public sealed class RecurringController(RecurringHandler handler) : ControllerBa
         EnumParser.Parse<RecurringFrequency>(r.Frequency, nameof(r.Frequency), "Validation_Recurring"),
         r.StartsOn, r.EndsOn, r.Automatic, r.IsPaused, r.IsStopped,
         r.Items?.Select(i => new Averio.Application.Transactions.Common.TransactionItemInput(i.Description, i.CategoryId, DecimalAmountMapper.ParseTransactionAmount(i.Amount))).ToArray(),
-        r.LabelIds, r.Merchant, r.Note, r.ActivityId);
+        r.LabelIds, r.Merchant, r.Note, r.ActivityId, Configuration(r.Reimbursement));
+    private static RecurringReimbursementConfiguration? Configuration(RecurringReimbursementRule? r) => r is null ? null : new(
+        r.Provider, r.Calculation.ToString(), DecimalAmountMapper.Format(r.Value), r.MaximumAmount is decimal cap ? DecimalAmountMapper.Format(cap) : null,
+        r.DestinationAccountId, r.PaymentDelayDays, r.SubmissionReminderDays);
+    private static RecurringReimbursementRule? Configuration(RecurringReimbursementConfiguration? r)
+    {
+        if (r is null) return null;
+        try { return RecurringReimbursementRule.Create(r.Provider,
+            EnumParser.Parse<ReimbursementCalculation>(r.Calculation, nameof(r.Calculation), "Validation_Reimbursement"),
+            DecimalAmountMapper.ParseTransactionAmount(r.Value), r.MaximumAmount is null ? null : DecimalAmountMapper.ParseTransactionAmount(r.MaximumAmount),
+            r.DestinationAccountId, r.PaymentDelayDays, r.SubmissionReminderDays); }
+        catch (ArgumentException) { throw new Averio.Application.Common.Exceptions.BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
+    }
 }

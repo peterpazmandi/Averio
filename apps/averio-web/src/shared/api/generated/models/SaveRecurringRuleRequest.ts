@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RecurringReimbursementConfiguration } from './RecurringReimbursementConfiguration';
+import {
+    RecurringReimbursementConfigurationFromJSON,
+    RecurringReimbursementConfigurationFromJSONTyped,
+    RecurringReimbursementConfigurationToJSON,
+    RecurringReimbursementConfigurationToJSONTyped,
+} from './RecurringReimbursementConfiguration';
 import type { RecurringItemRequest } from './RecurringItemRequest';
 import {
     RecurringItemRequestFromJSON,
@@ -99,6 +106,10 @@ export interface SaveRecurringRuleRequest {
      * 
      */
     activityId?: string | null;
+    /**
+     * 
+     */
+    reimbursement?: RecurringReimbursementConfiguration | null;
 }
 
 /**
@@ -145,6 +156,7 @@ export function SaveRecurringRuleRequestFromJSONTyped(json: any, ignoreDiscrimin
         'merchant': json['merchant'] === undefined ? undefined : json['merchant'] === null ? null : json['merchant'],
         'note': json['note'] === undefined ? undefined : json['note'] === null ? null : json['note'],
         'activityId': json['activityId'] === undefined ? undefined : json['activityId'] === null ? null : json['activityId'],
+        'reimbursement': json['reimbursement'] === undefined ? undefined : json['reimbursement'] === null ? null : RecurringReimbursementConfigurationFromJSON(json['reimbursement']),
     };
 }
 
@@ -177,6 +189,7 @@ export function SaveRecurringRuleRequestToJSONTyped(value?: SaveRecurringRuleReq
         'merchant': value['merchant'],
         'note': value['note'],
         'activityId': value['activityId'],
+        'reimbursement': RecurringReimbursementConfigurationToJSON(value['reimbursement']),
     };
 }
 

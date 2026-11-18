@@ -232,7 +232,9 @@ builder.Services.AddOpenApi( options =>
                     // ASP.NET's generated integer schemas currently include a
                     // format and pattern but can omit the JSON Schema type.
                     // Explicitly declaring it keeps generated clients strongly typed.
-                    schema.Type = Microsoft.OpenApi.JsonSchemaType.Integer;
+                    schema.Type = Microsoft.OpenApi.JsonSchemaType.Integer
+                        | (Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) is not null
+                            ? Microsoft.OpenApi.JsonSchemaType.Null : 0);
                 }
 
                 return Task.CompletedTask;
@@ -355,5 +357,3 @@ app.MapControllers();
 app.Run();
 
 public partial class Program;
-
-

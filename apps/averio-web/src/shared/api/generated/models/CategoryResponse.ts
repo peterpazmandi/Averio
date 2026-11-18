@@ -70,7 +70,7 @@ export interface CategoryResponse {
     /**
      * 
      */
-    pinOrder: number;
+    pinOrder: number | null;
 }
 
 /**

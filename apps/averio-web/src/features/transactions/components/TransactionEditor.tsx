@@ -1,3 +1,6 @@
+import { ReimbursementFields } from '../../recurring/ReimbursementFields';
+import { ReimbursementsPanel } from '../../reimbursements/ReimbursementsPanel';
+import type { RecurringReimbursementConfiguration } from '../../../shared/api/generated';
 import type { ReceiptDraft, RememberReceiptCategoryRequest } from '../../../shared/api/generated';
 import { assignReceiptDiscounts, normalizeReceiptAmount, receiptItems, receiptReconciles, suggestReceiptCategory } from '../../receipts/receiptReview';
 import { getCategoryDisplayName } from '../categoryLocalization';
@@ -124,6 +127,7 @@ export function TransactionEditor({
     const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
     const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
     const [timing, setTiming] = useState({ frequency: initialRule?.frequency ?? 'Monthly', endsOn: initialRule?.endsOn ?? null as string | null, automatic: initialRule?.automatic ?? false });
+    const [reimbursement, setReimbursement] = useState<RecurringReimbursementConfiguration | null>(initialRule?.reimbursement ?? null);
     const [paused, setPaused] = useState(initialRule?.isPaused ?? false);
     const [stopped, setStopped] = useState(initialRule?.isStopped ?? false);
     const [stopConsent, setStopConsent] = useState(false);
@@ -418,6 +422,7 @@ export function TransactionEditor({
                     labelIds: resolvedLabelIds, merchant: merchant.trim() || null, note: note.trim() || null,
                     activityId: activityId || null, startsOn: occurredOn, ...timing,
                     isPaused: paused, isStopped: stopped, expectedVersion: rule?.version,
+                    reimbursement: kind === 'Expense' ? reimbursement : null,
                 });
                 return;
             }
@@ -676,6 +681,7 @@ export function TransactionEditor({
                         </>}
                     </AverioDisclosure>}
 
+            {recurring && kind === 'Expense' && <ReimbursementFields value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} busy={busy} />}
             <AverioDisclosure title={t('activities.activity')} defaultOpen={!!activityId} summary={activityId ? t('personalMoney.extraConfigured') : t('activities.none')}>
                 <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
                 <p className="text-xs">{t('activities.privateHelp')}</p>
@@ -722,6 +728,7 @@ export function TransactionEditor({
             </AverioCard>}
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
+        {transaction && <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} />}
         </div>
     </AverioDialog>
     {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}

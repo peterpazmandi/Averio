@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RecurringReimbursementConfiguration } from './RecurringReimbursementConfiguration';
+import {
+    RecurringReimbursementConfigurationFromJSON,
+    RecurringReimbursementConfigurationFromJSONTyped,
+    RecurringReimbursementConfigurationToJSON,
+    RecurringReimbursementConfigurationToJSONTyped,
+} from './RecurringReimbursementConfiguration';
 import type { RecurringItemRequest } from './RecurringItemRequest';
 import {
     RecurringItemRequestFromJSON,
@@ -119,6 +126,10 @@ export interface RecurringRuleResponse {
      * 
      */
     activityId: string | null;
+    /**
+     * 
+     */
+    reimbursement: RecurringReimbursementConfiguration | null;
 }
 
 /**
@@ -148,6 +159,7 @@ export function instanceOfRecurringRuleResponse(value: object): value is Recurri
     if (!('merchant' in value) || value['merchant'] === undefined) return false;
     if (!('note' in value) || value['note'] === undefined) return false;
     if (!('activityId' in value) || value['activityId'] === undefined) return false;
+    if (!('reimbursement' in value) || value['reimbursement'] === undefined) return false;
     return true;
 }
 
@@ -184,6 +196,7 @@ export function RecurringRuleResponseFromJSONTyped(json: any, ignoreDiscriminato
         'merchant': json['merchant'],
         'note': json['note'],
         'activityId': json['activityId'],
+        'reimbursement': RecurringReimbursementConfigurationFromJSON(json['reimbursement']),
     };
 }
 
@@ -221,6 +234,7 @@ export function RecurringRuleResponseToJSONTyped(value?: RecurringRuleResponse |
         'merchant': value['merchant'],
         'note': value['note'],
         'activityId': value['activityId'],
+        'reimbursement': RecurringReimbursementConfigurationToJSON(value['reimbursement']),
     };
 }
 

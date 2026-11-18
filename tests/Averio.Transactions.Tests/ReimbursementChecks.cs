@@ -1,0 +1,54 @@
+using Averio.Domain.Recurring;
+using Averio.Domain.Transactions;
+using Averio.Domain.Common;
+using Averio.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+internal static class ReimbursementChecks
+{
+    public static void Run()
+    {
+        var now = new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero);
+        var day = new DateOnly(2026,11,1);
+        var member = Guid.NewGuid();
+        var rule = RecurringRule.Create(Guid.NewGuid(), member, Guid.NewGuid(), Guid.NewGuid(), "Mortgage", 150000,
+            TransactionKind.Expense, TransactionVisibility.Household, RecurringFrequency.Monthly, day, null, false, now);
+        var config = RecurringReimbursementRule.Create("Health fund", ReimbursementCalculation.Percentage, 20, 30000, rule.AccountId, 7, 2);
+        rule.SetReimbursement(config);
+        var payment = Transaction.Create(rule.HouseholdId, rule.AccountId, member, TransactionKind.Expense, TransactionVisibility.Household,
+            CurrencyCode.Huf, null, null, day, [new("Mortgage", rule.CategoryId, "Housing", "home", 150000)], [], now);
+        var claim = ReimbursementClaim.Create(rule, payment, now);
+        Check(claim.PotentialAmount == 30000 && claim.ExpectedAmount == 0 && claim.ExpectedOn == null, "Unsubmitted opportunity is not expected income");
+        Check(claim.SubmissionReminderOn == new DateOnly(2026,11,19), "Reminder anchored to recording, not scheduled date");
+        rule.SetReimbursement(RecurringReimbursementRule.Create("New provider", ReimbursementCalculation.Fixed, 5, null, rule.AccountId, 30, null));
+        Check(claim.PotentialAmount == 30000 && claim.Provider == "Health fund" && claim.PaymentDelayDays == 7, "Snapshot changed");
+        Throws(() => claim.Submit(false, day, null, member, now));
+        Throws(() => claim.Submit(true, day.AddDays(-1), null, member, now));
+        Throws(() => claim.Submit(true, new(2026,11,18), null, member, now));
+        Throws(() => claim.Submit(true, day, new string('x',161), member, now));
+        claim.Submit(true, new(2026,11,3), "REF-1", member, now);
+        Check(claim.ExpectedAmount == 30000 && claim.ExpectedOn == new DateOnly(2026,11,10) && claim.Events.Count == 2, "Submission estimate/history");
+        Throws(() => claim.Submit(true, day, null, member, now));
+        claim.Close(ReimbursementStatus.Rejected, member, now);
+        Check(claim.ExpectedAmount == 0, "Rejected claim remains outstanding");
+        claim.Submit(true, new(2026,11,16), "REF-2", member, now);
+        Check(claim.Events.Any(e => e.Reference == "REF-1") && claim.Reference == "REF-2", "Resubmission lost history");
+        claim.Close(ReimbursementStatus.Cancelled, member, now);
+        Throws(() => claim.Submit(true, day, null, member, now));
+        Check(payment.Amount == 150000 && payment.Kind == TransactionKind.Expense && payment.Status == TransactionStatus.Posted, "Claim mutated payment");
+        Check(config.Estimate(10000) == 2000 && config.Estimate(200000) == 30000, "Percentage or cap");
+        Check(RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 20000, null, rule.AccountId, 0, null).Estimate(10000) == 10000, "Estimate exceeds source payment");
+        Throws(() => RecurringReimbursementRule.Create(" ", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 7, 2));
+        Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Percentage, 101, null, rule.AccountId, 7, 2));
+        Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 0, null, rule.AccountId, 7, 2));
+        Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 366, 2));
+        Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 7, -1));
+        using var db = new AverioDbContext(new DbContextOptionsBuilder<AverioDbContext>().UseNpgsql("Host=localhost;Database=unused").Options);
+        var entity = db.Model.FindEntityType(typeof(ReimbursementClaim))!;
+        Check(entity.GetIndexes().Any(i => i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == nameof(ReimbursementClaim.TransactionId)), "Missing idempotency index");
+        Check(entity.FindProperty(nameof(ReimbursementClaim.Version))!.IsConcurrencyToken, "Missing concurrency token");
+    }
+    private static void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
+    private static void Throws(Action action) { try { action(); } catch (ArgumentException) { return; } throw new Exception("Expected invalid reimbursement"); }
+}
+

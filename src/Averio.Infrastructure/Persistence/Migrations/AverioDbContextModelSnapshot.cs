@@ -1434,6 +1434,171 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid>("DestinationAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("destination_account_id");
+
+                    b.Property<DateOnly?>("ExpectedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_on");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("HouseholdMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<decimal>("OriginalPaymentAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("original_payment_amount");
+
+                    b.Property<int>("PaymentDelayDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_delay_days");
+
+                    b.Property<DateOnly>("PaymentOn")
+                        .HasColumnType("date")
+                        .HasColumnName("payment_on");
+
+                    b.Property<decimal>("PotentialAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("potential_amount");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("SubmissionReminderOn")
+                        .HasColumnType("date")
+                        .HasColumnName("submission_reminder_on");
+
+                    b.Property<DateOnly?>("SubmittedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("submitted_on");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "DestinationAccountId");
+
+                    b.HasIndex("HouseholdId", "RuleId");
+
+                    b.HasIndex("HouseholdId", "TransactionId");
+
+                    b.HasIndex("HouseholdId", "HouseholdMemberId", "Status");
+
+                    b.ToTable("reimbursement_claims", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_claim_amount", "potential_amount > 0 AND original_payment_amount >= potential_amount");
+
+                            t.HasCheckConstraint("ck_claim_currency", "currency IN ('EUR','USD','HUF')");
+
+                            t.HasCheckConstraint("ck_claim_provider", "length(btrim(provider)) > 0");
+
+                            t.HasCheckConstraint("ck_claim_status", "status IN ('NeedsSubmission','Submitted','Rejected','Cancelled')");
+
+                            t.HasCheckConstraint("ck_claim_submission", "(status NOT IN ('Submitted','Rejected') OR (submitted_on IS NOT NULL AND expected_on IS NOT NULL)) AND (submitted_on IS NULL OR submitted_on >= payment_on) AND (expected_on IS NULL OR expected_on >= submitted_on) AND payment_delay_days BETWEEN 0 AND 365");
+                        });
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaimEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_member_id");
+
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claim_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("SubmittedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("submitted_on");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "ActorMemberId");
+
+                    b.HasIndex("HouseholdId", "ClaimId");
+
+                    b.ToTable("reimbursement_claim_events", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Transactions.SavedTransactionView", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2438,6 +2603,115 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HouseholdId", "HouseholdMemberId", "ActivityId")
                         .HasPrincipalKey("HouseholdId", "HouseholdMemberId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("Averio.Domain.Recurring.RecurringReimbursementRule", "Reimbursement", b1 =>
+                        {
+                            b1.Property<Guid>("RecurringRuleId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("rule_id");
+
+                            b1.Property<string>("Calculation")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("calculation");
+
+                            b1.Property<Guid>("DestinationAccountId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("destination_account_id");
+
+                            b1.Property<decimal?>("MaximumAmount")
+                                .HasPrecision(19, 4)
+                                .HasColumnType("numeric(19,4)")
+                                .HasColumnName("maximum_amount");
+
+                            b1.Property<int>("PaymentDelayDays")
+                                .HasColumnType("integer")
+                                .HasColumnName("payment_delay_days");
+
+                            b1.Property<string>("Provider")
+                                .IsRequired()
+                                .HasMaxLength(160)
+                                .HasColumnType("character varying(160)")
+                                .HasColumnName("provider");
+
+                            b1.Property<int?>("SubmissionReminderDays")
+                                .HasColumnType("integer")
+                                .HasColumnName("submission_reminder_days");
+
+                            b1.Property<decimal>("Value")
+                                .HasPrecision(19, 4)
+                                .HasColumnType("numeric(19,4)")
+                                .HasColumnName("value");
+
+                            b1.HasKey("RecurringRuleId");
+
+                            b1.HasIndex("DestinationAccountId");
+
+                            b1.ToTable("recurring_reimbursement_rules", null, t =>
+                                {
+                                    t.HasCheckConstraint("ck_reimbursement_config", "length(btrim(provider)) > 0 AND value > 0 AND calculation IN ('Fixed','Percentage') AND (calculation <> 'Percentage' OR value <= 100) AND (maximum_amount IS NULL OR maximum_amount > 0) AND payment_delay_days BETWEEN 0 AND 365 AND (submission_reminder_days IS NULL OR submission_reminder_days BETWEEN 0 AND 365)");
+                                });
+
+                            b1.HasOne("Averio.Domain.Accounts.Account", null)
+                                .WithMany()
+                                .HasForeignKey("DestinationAccountId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+
+                            b1.WithOwner()
+                                .HasForeignKey("RecurringRuleId");
+                        });
+
+                    b.Navigation("Reimbursement");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaim", b =>
+                {
+                    b.HasOne("Averio.Domain.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "DestinationAccountId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Recurring.RecurringRule", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "RuleId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "TransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaimEvent", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "ActorMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Recurring.ReimbursementClaim", null)
+                        .WithMany("Events")
+                        .HasForeignKey("HouseholdId", "ClaimId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.SavedTransactionView", b =>
@@ -2644,6 +2918,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("Labels");
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaim", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
