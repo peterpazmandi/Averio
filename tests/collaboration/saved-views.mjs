@@ -128,7 +128,9 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     assert.equal((await ok(page, prefix + '/transactions/' + target.id)).id, target.id);
     await ok(page, endpoint, { method: 'POST', body: { name: 'Fixed January', filters: { ...view.filters, period: 'custom', from: '2026-01-01', to: '2026-01-31', labels: [] } } });
     await second.goto('http://localhost:5173/app/transactions'); await second.getByRole('button', { name: 'Fixed January', exact: true }).click();
+    await poll(() => new URL(second.url()).searchParams.get('from') === '2026-01-01', 'custom saved date navigation committed');
     await second.getByRole('button', { name: /^Filters/ }).click();
+    await poll(async () => await second.getByLabel('From', { exact: true }).inputValue() === '2026-01-01', 'custom saved date rendered');
     assert.equal(await second.getByLabel('From', { exact: true }).inputValue(), '2026-01-01');
     assert.equal(await second.getByLabel('To', { exact: true }).inputValue(), '2026-01-31');
     // Observe every rendered status, including transient changes during URL navigation.
