@@ -10,17 +10,17 @@ import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormC
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
 
-export function ReimbursementsPanel({ userId, householdId, transactionId }: { userId: string; householdId: string; transactionId?: string }) {
+export function ReimbursementsPanel({ userId, householdId, transactionId, className = '' }: { userId: string; householdId: string; transactionId?: string; className?: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? i18n.language);
     const date = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
-    if (query.isPending) return <p role="status">{t('reimbursements.loading')}</p>;
-    if (query.isError) return <AverioCard><p role="alert">{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>;
+    if (query.isPending) return <p className={className} role="status">{t('reimbursements.loading')}</p>;
+    if (query.isError) return <AverioCard className={className}><p role="alert">{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>;
     if (!query.data.length) return null;
     const currencies = [...new Set(query.data.map(c => c.currency))];
-    return <section className="grid min-w-0 gap-3" aria-label={t('reimbursements.title')}>
+    return <section className={'grid min-w-0 gap-3 ' + className} aria-label={t('reimbursements.title')}>
         <h2 className="text-lg font-bold">{t('reimbursements.title')}</h2>
         <p className="text-sm">{t('reimbursements.balanceHelp')}</p>
         {!transactionId && <div className="grid gap-3 sm:grid-cols-2">{currencies.map(currency => <AverioCard key={currency} className="space-y-2">

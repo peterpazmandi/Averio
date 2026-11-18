@@ -74,7 +74,9 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await second.clock.setFixedTime(new Date('2026-11-15T12:00:00Z'));
     await second.goto('http://localhost:5173/app/transactions');
     await second.getByRole('button', { name: 'Quarter review', exact: true }).click();
+    await poll(() => new URL(second.url()).searchParams.get('period') === 'previous-3-full-months', 'saved date preset navigation committed');
     await second.getByRole('button', { name: /^Filters/ }).click();
+    await poll(async () => await second.getByLabel('Date range', { exact: true }).inputValue() === 'previous-3-full-months', 'saved date preset rendered');
     assert.equal(await second.getByLabel('From', { exact: true }).inputValue(), '2026-08-01');
     assert.equal(await second.getByLabel('To', { exact: true }).inputValue(), '2026-10-31');
     await second.reload();
