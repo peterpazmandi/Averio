@@ -11,6 +11,7 @@ import { useTransactionToday } from '../useTransactionToday';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { SavedViews } from './SavedViews';
 import { LabelFilters } from './LabelFilters';
+import { ReimbursementBadge } from '../../reimbursements/ReimbursementBadge';
 import { TransactionLinkDetail } from './TransactionLinkDetail';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
@@ -552,6 +553,7 @@ export function TransactionsPage({
 
                                         {relations.transactions.get(transaction.id) && <PersonalMoneyRelationBadge
                                             relation={relations.transactions.get(transaction.id)!} detail />}
+                                        <ReimbursementBadge status={transaction.reimbursementStatus} />
                                         {transaction.activityName && <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{transaction.activityName}</span>}
                                         {transaction.items.length > 1 && (
                                             <span className="av-tx-item-count">

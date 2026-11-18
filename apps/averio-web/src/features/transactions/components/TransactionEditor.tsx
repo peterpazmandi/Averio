@@ -512,6 +512,7 @@ export function TransactionEditor({
         </>}>
         <div className={receiptComparison ? 'grid items-start gap-5 xl:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.6fr)]' : ''}>
         {receiptComparison && <aside className="hidden xl:sticky xl:top-0 xl:block">{receiptComparison}</aside>}
+        {transaction && <ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />}
         <form id="transaction-editor" className="grid gap-4" onSubmit={submit}
             onChangeCapture={event => {
                 // Any edited field invalidates the reviewed intent, including
@@ -731,7 +732,6 @@ export function TransactionEditor({
             </AverioCard>}
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
-        {transaction && <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />}
         </div>
     </AverioDialog>
     {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}

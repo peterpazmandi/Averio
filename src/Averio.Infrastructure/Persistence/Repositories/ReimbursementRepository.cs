@@ -19,5 +19,12 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
         => Visible(householdId, memberId).Include(c => c.Events).SingleOrDefaultAsync(c => c.Id == id, ct);
     public Task<ReimbursementClaim?> FindForTransactionAsync(Guid householdId, Guid transactionId, CancellationToken ct)
         => db.Set<ReimbursementClaim>().SingleOrDefaultAsync(c => c.HouseholdId == householdId && c.TransactionId == transactionId, ct);
+    public async Task<IReadOnlyDictionary<Guid, string>> StatusesAsync(Guid householdId, Guid memberId, IReadOnlyList<Guid> transactionIds, CancellationToken ct)
+    {
+        if (transactionIds.Count == 0) return new Dictionary<Guid, string>();
+        var rows = await Visible(householdId, memberId).AsNoTracking().Where(c => transactionIds.Contains(c.TransactionId))
+            .Select(c => new { c.TransactionId, c.Status }).ToArrayAsync(ct);
+        return rows.ToDictionary(c => c.TransactionId, c => c.Status.ToString());
+    }
     public void Add(ReimbursementClaim claim) => db.Add(claim);
 }

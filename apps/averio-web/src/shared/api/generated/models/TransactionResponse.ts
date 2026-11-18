@@ -126,6 +126,10 @@ export interface TransactionResponse {
      * 
      */
     importBatchId?: string | null;
+    /**
+     * 
+     */
+    reimbursementStatus?: string | null;
 }
 
 /**
@@ -188,6 +192,7 @@ export function TransactionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'isArchived': json['isArchived'] == null ? undefined : json['isArchived'],
         'isImported': json['isImported'] == null ? undefined : json['isImported'],
         'importBatchId': json['importBatchId'] === undefined ? undefined : json['importBatchId'] === null ? null : json['importBatchId'],
+        'reimbursementStatus': json['reimbursementStatus'] === undefined ? undefined : json['reimbursementStatus'] === null ? null : json['reimbursementStatus'],
     };
 }
 
@@ -225,6 +230,7 @@ export function TransactionResponseToJSONTyped(value?: TransactionResponse | nul
         'isArchived': value['isArchived'],
         'isImported': value['isImported'],
         'importBatchId': value['importBatchId'],
+        'reimbursementStatus': value['reimbursementStatus'],
     };
 }
 

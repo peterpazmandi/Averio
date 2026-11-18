@@ -36,7 +36,7 @@ export function ReimbursementFields({ value, onChange, accounts, currency, payme
     const heading = (key: string, help: string) => <h4 className="flex items-center justify-between gap-2 font-semibold" aria-label={t(key)}>{t(key)} <InfoPopover label={t(key)}>{t(help)}</InfoPopover></h4>;
     return <AverioCard className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-bold" aria-label={t('reimbursements.settings')}>{t('reimbursements.settings')} <InfoPopover label={t('reimbursements.settings')}>{t('reimbursements.externalHelp')}</InfoPopover></h3>
+            <h3 className="font-semibold" aria-label={t('reimbursements.settings')}>{t('reimbursements.settings')} <InfoPopover label={t('reimbursements.settings')}>{t('reimbursements.externalHelp')}</InfoPopover></h3>
             <label className="flex min-h-11 items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-4 accent-emerald-500" checked={!!value} disabled={busy}
                 onChange={e => onChange(e.target.checked ? { provider: '', calculation: 'Fixed', value: '', maximumAmount: null,
                     destinationAccountId: eligible.some(a => a.id === sourceAccountId) ? sourceAccountId : '', paymentDelayDays: 7, submissionReminderDays: 2 } : null)} />{t('reimbursements.enable')}</label>
@@ -69,7 +69,13 @@ export function ReimbursementFields({ value, onChange, accounts, currency, payme
                         <AverioInput required inputMode="decimal" value={value.value} disabled={busy} onChange={e => patch({ value: e.target.value.replace(',', '.') })} /></AverioField>
                 </div>
                 <AverioDisclosure title={t('reimbursements.maximum')} defaultOpen={!!value.maximumAmount} summary={value.maximumAmount ? `${value.maximumAmount} ${currency}` : undefined}>
-                    <AverioField>{t('reimbursements.maximum')} · {currency}<AverioInput inputMode="decimal" value={value.maximumAmount ?? ''} disabled={busy} onChange={e => patch({ maximumAmount: e.target.value.replace(',', '.') || null })} /></AverioField>
+                    <div className="grid gap-2"><div className="flex items-center justify-between gap-2">
+                        <AverioField htmlFor={id + '-cap'}>{t('reimbursements.maximum')} · {currency}</AverioField>
+                        <InfoPopover label={t('reimbursements.maximum')} id={id + '-cap-help'}>{t('reimbursements.capHelp', {
+                            payment: formatDecimalAmount('150000', currency || 'EUR', i18n.resolvedLanguage ?? i18n.language),
+                            estimate: formatDecimalAmount('30000', currency || 'EUR', i18n.resolvedLanguage ?? i18n.language),
+                            cap: formatDecimalAmount('25000', currency || 'EUR', i18n.resolvedLanguage ?? i18n.language) })}</InfoPopover>
+                    </div><AverioInput id={id + '-cap'} aria-describedby={id + '-cap-help'} inputMode="decimal" value={value.maximumAmount ?? ''} disabled={busy} onChange={e => patch({ maximumAmount: e.target.value.replace(',', '.') || null })} /></div>
                 </AverioDisclosure>
                 {preview && <p role="status" className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">{t('reimbursements.design.preview')} <strong>{formatDecimalAmount(preview, currency, i18n.resolvedLanguage ?? i18n.language)}</strong></p>}
             </div>

@@ -8,7 +8,7 @@ namespace Averio.Application.Transactions.GetTransactions;
 public sealed class GetTransactionsHandler(
     ICurrentUser currentUser,
     IHouseholdRepository householdRepository,
-    ITransactionRepository transactionRepository)
+    ITransactionRepository transactionRepository, Averio.Application.Recurring.IReimbursementRepository reimbursements)
 {
     public async Task<TransactionPageResult> HandleAsync(
         Guid householdId,
@@ -53,8 +53,9 @@ public sealed class GetTransactionsHandler(
                 cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly),
             cancellationToken);
 
+        var statuses = await reimbursements.StatusesAsync(household.Id, membership.Id, page.Items.Select(t => t.Id).ToArray(), cancellationToken);
         return new TransactionPageResult(
-            page.Items.Select(TransactionResult.From).ToArray(),
+            page.Items.Select(t => TransactionResult.From(t) with { ReimbursementStatus = statuses.GetValueOrDefault(t.Id) }).ToArray(),
             page.HasMore);
     }
 }
@@ -96,7 +97,7 @@ public sealed record TransactionResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null)
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,

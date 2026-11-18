@@ -1,3 +1,4 @@
+import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 import { ManualClaimDialog } from './ManualClaimDialog';
 import type { TransactionDto } from '../transactions/api/transactionApi';
 import { useState } from 'react';
@@ -22,8 +23,11 @@ export function ReimbursementsPanel({ userId, householdId, transactionId, source
     if (query.isPending) return <p className={className} role="status">{t('reimbursements.loading')}</p>;
     if (query.isError) return <AverioCard className={className}><p role="alert">{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>;
     if (!query.data.length) return sourceTransaction?.canModify && sourceTransaction.kind === 'Expense' && sourceTransaction.status === 'Posted' && !sourceTransaction.isArchived
-        ? <div className={className}><AverioButton onClick={() => setCreating(true)}>{t('reimbursements.manual.add')}</AverioButton>
-            {creating && <ManualClaimDialog userId={userId} householdId={householdId} transaction={sourceTransaction} onClose={() => setCreating(false)} />}</div> : null;
+        ? <AverioCard className={'flex flex-wrap items-center justify-between gap-3 ' + className}>
+            <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">↻</span>
+                <div><h3 className="text-sm font-semibold">{t('reimbursements.title')}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('reimbursements.manual.shortHelp')}</p></div></div>
+            <AverioButton variant="primary" onClick={() => setCreating(true)}>{t('reimbursements.manual.add')}</AverioButton>
+            {creating && <ManualClaimDialog userId={userId} householdId={householdId} transaction={sourceTransaction} onClose={() => setCreating(false)} />}</AverioCard> : null;
     const currencies = [...new Set(query.data.map(c => c.currency))];
     return <section className={'grid min-w-0 gap-3 ' + className} aria-label={t('reimbursements.title')}>
         <h2 className="text-lg font-bold">{t('reimbursements.title')}</h2>
@@ -71,7 +75,7 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
     const submitting = status === 'Submitted';
     const mutation = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPut({ householdId, claimId: claim.id,
         changeReimbursementRequest: { expectedVersion: claim.version, status, receiptSubmitted: confirmed, submittedOn: submitting ? submittedOn : null, reference: submitting ? reference.trim() || null : null } }),
-        onSuccess: async () => { await client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }); onClose(); },
+        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]); onClose(); },
     });
     return <AverioDialog open title={t(submitting ? 'reimbursements.markSubmitted' : status === 'Rejected' ? 'reimbursements.reject' : 'reimbursements.cancel')}
         closeLabel={t('common.actions.close')} onDismiss={onClose} busy={mutation.isPending}

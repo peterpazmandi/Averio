@@ -14,11 +14,17 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     await editor.getByLabel('Track reimbursement for this payment', { exact: true }).check();
     await editor.getByLabel('Reimbursement provider', { exact: true }).fill('Manual health fund');
     await editor.getByLabel(/^Reimbursement estimate/).fill('25');
+    assert.equal(await editor.getByRole('heading', { name: 'Reimbursement settings', exact: true }).evaluate(el => getComputedStyle(el).fontWeight), '600');
+    await editor.getByRole('button', { name: 'Reimbursement cap (optional)', exact: true }).click();
+    await editor.getByRole('button', { name: 'About Reimbursement cap (optional)', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Reimbursement cap (optional)', exact: true }).getByText(/upper limit for each claim/).waitFor();
+    await page.keyboard.press('Escape');
+    await editor.getByRole('textbox', { name: /^Reimbursement cap/ }).fill('20');
     await editor.getByRole('button', { name: 'Save transaction', exact: true }).click();
     await editor.waitFor({ state: 'hidden' });
     let claims = await ok(page, base + '/reimbursements');
     assert.equal(claims.length, 1);
-    assert.equal(claims[0].potentialAmount, '25'); assert.equal(claims[0].expectedAmount, '0');
+    assert.equal(claims[0].potentialAmount, '20'); assert.equal(claims[0].expectedAmount, '0');
     assert.equal(claims[0].status, 'NeedsSubmission');
     assert.equal((await ok(page, base + '/recurring')).length, 0, 'Manual claim created a schedule');
 
@@ -29,7 +35,12 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     const before = await ok(page, base + '/accounts');
     await page.goto('http://localhost:5173/app/transactions?transaction=' + existing.id);
     const detail = page.getByRole('dialog');
-    await detail.getByRole('button', { name: 'Track reimbursement', exact: true }).click();
+    const track = detail.getByRole('button', { name: 'Track reimbursement', exact: true });
+    await track.waitFor();
+    const form = detail.locator('#transaction-editor');
+    assert.ok((await track.boundingBox()).y < (await form.boundingBox()).y, 'Tracking action must be above the transaction form');
+    await page.screenshot({ path: path.join(artifacts, 'reimbursement-action-top.png'), fullPage: true });
+    await track.click();
     const create = page.getByRole('dialog', { name: 'Track reimbursement', exact: true });
     await create.getByLabel('Reimbursement provider', { exact: true }).fill('Manual insurer');
     await create.getByLabel(/^Reimbursement estimate/).fill('10');
@@ -44,6 +55,11 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     assert.equal(perPayment.length, 1); assert.equal(perPayment[0].potentialAmount, '10');
     assert.deepEqual(await ok(page, base + '/accounts'), before, 'Tracking an existing expense changed balances');
     assert.equal((await api(page, base + '/reimbursements', { method: 'POST', body: { ...payload, expectedUpdatedAt: '2000-01-01T00:00:00Z' } })).status, 409);
+    await detail.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.goto('http://localhost:5173/app/transactions');
+    assert.equal((await ok(page, base + '/transactions/' + existing.id)).reimbursementStatus, 'NeedsSubmission');
+    const bubble = page.locator('[data-transaction-id="' + existing.id + '"]');
+    await bubble.getByText('Reimbursement · Needs submission', { exact: true }).waitFor();
     await page.setViewportSize({ width: 375, height: 1000 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: path.join(artifacts, 'manual-reimbursement-mobile.png'), fullPage: true });

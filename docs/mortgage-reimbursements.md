@@ -46,3 +46,9 @@ For an existing posted, unarchived expense, Track reimbursement opens a separate
 There is one claim per source payment, including recurring and cancelled history. An identical retry by the same creator returns its original claim, while different configuration or another creator receives a generic conflict without claim details. The existing mandatory submission confirmation, reminders, history and account visibility rules apply. Claim creation and submission never create incoming transactions or change financial totals.
 
 Apply 20261118130622_AddManualReimbursementClaims after the original reimbursement migration. It permits a null recurring-rule association and adds the private creation fingerprint for duplicate protection. Rollback refuses to proceed while manual claims exist, preserving history for deliberate resolution.
+
+## Transaction overview and edit action
+
+The existing-expense tracking action appears in a compact reimbursement card above the edit fields. New transaction settings use the same heading weight as the other form sections. Reimbursement cap is an optional per-claim ceiling applied after fixed/percentage calculation; for example, 20% of HUF 150,000 estimates HUF 30,000, but a HUF 25,000 cap limits it to HUF 25,000. The shared information popover beside the cap field explains this; the estimate can never exceed the source expense.
+
+Transaction responses include a nullable reimbursement status. The list loads statuses in one batch for the current transaction page and applies the same creator/source/destination visibility checks as claim details. Badges include needs submission, submitted, rejected and cancelled history; a shared expense never reveals another member's private claim through its badge. Claim creation and status changes refresh transaction queries so overview badges stay current.

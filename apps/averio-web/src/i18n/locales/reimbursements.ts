@@ -8,7 +8,7 @@ export const reimbursementsEN = {
     "fixed": "Fixed amount",
     "percentage": "Percentage of payment",
     "estimate": "Reimbursement estimate",
-    "maximum": "Maximum amount (optional)",
+    "maximum": "Reimbursement cap (optional)",
     "destination": "Destination account",
     "chooseAccount": "Choose an account",
     "unavailableAccount": "Saved account unavailable",
@@ -69,8 +69,11 @@ export const reimbursementsEN = {
     "manual": {
         "add": "Track reimbursement",
         "create": "Create claim",
-        "savedExpense": "This claim uses the saved expense shown above. Save any transaction edits first. Creating a claim does not change the expense or record money received."
-    }
+        "savedExpense": "This claim uses the saved expense shown above. Save any transaction edits first. Creating a claim does not change the expense or record money received.",
+        "shortHelp": "Expect money back for this expense?"
+    },
+    "badge": "Reimbursement · {{status}}",
+    "capHelp": "An upper limit for each claim, especially when using a percentage. Example: 20% of {{payment}} is {{estimate}}. A cap of {{cap}} limits the estimate to {{cap}}. Leave blank for no extra cap. The estimate can never exceed the original expense."
 };
 export const reimbursementsDE = {
     "title": "Erstattungen",
@@ -82,7 +85,7 @@ export const reimbursementsDE = {
     "fixed": "Fester Betrag",
     "percentage": "Prozentsatz der Zahlung",
     "estimate": "Geschätzte Erstattung",
-    "maximum": "Höchstbetrag (optional)",
+    "maximum": "Erstattungsobergrenze (optional)",
     "destination": "Zielkonto",
     "chooseAccount": "Konto auswählen",
     "unavailableAccount": "Gespeichertes Konto nicht verfügbar",
@@ -143,8 +146,11 @@ export const reimbursementsDE = {
     "manual": {
         "add": "Erstattung verfolgen",
         "create": "Anspruch erstellen",
-        "savedExpense": "Dieser Anspruch verwendet die oben gezeigte gespeicherte Ausgabe. Speichere Änderungen an der Transaktion zuerst. Das Erstellen ändert die Ausgabe nicht und erfasst keinen Geldeingang."
-    }
+        "savedExpense": "Dieser Anspruch verwendet die oben gezeigte gespeicherte Ausgabe. Speichere Änderungen an der Transaktion zuerst. Das Erstellen ändert die Ausgabe nicht und erfasst keinen Geldeingang.",
+        "shortHelp": "Erwartest du eine Erstattung für diese Ausgabe?"
+    },
+    "badge": "Erstattung · {{status}}",
+    "capHelp": "Eine Obergrenze pro Anspruch, besonders bei Prozentberechnung. Beispiel: 20 % von {{payment}} sind {{estimate}}. Eine Obergrenze von {{cap}} begrenzt die Schätzung auf {{cap}}. Leer lassen für keine zusätzliche Grenze. Die Schätzung kann die ursprüngliche Ausgabe nie übersteigen."
 };
 export const reimbursementsHU = {
     "title": "Visszatérítések",
@@ -156,7 +162,7 @@ export const reimbursementsHU = {
     "fixed": "Fix összeg",
     "percentage": "A kifizetés százaléka",
     "estimate": "Becsült visszatérítés",
-    "maximum": "Felső összeghatár (nem kötelező)",
+    "maximum": "Visszatérítési plafon (nem kötelező)",
     "destination": "Fogadó számla",
     "chooseAccount": "Válassz számlát",
     "unavailableAccount": "A mentett számla nem elérhető",
@@ -217,6 +223,9 @@ export const reimbursementsHU = {
     "manual": {
         "add": "Visszatérítés követése",
         "create": "Igény létrehozása",
-        "savedExpense": "Az igény a fent látható mentett kiadáshoz kapcsolódik. Előbb mentsd a tranzakció módosításait. Az igény létrehozása nem módosítja a kiadást, és nem rögzít beérkezett pénzt."
-    }
+        "savedExpense": "Az igény a fent látható mentett kiadáshoz kapcsolódik. Előbb mentsd a tranzakció módosításait. Az igény létrehozása nem módosítja a kiadást, és nem rögzít beérkezett pénzt.",
+        "shortHelp": "Vársz visszatérítést erre a kiadásra?"
+    },
+    "badge": "Visszatérítés · {{status}}",
+    "capHelp": "Igényenkénti felső határ, különösen százalékos számításnál. Példa: {{payment}} 20%-a {{estimate}}. {{cap}} plafonnal a becslés legfeljebb {{cap}}. Hagyd üresen, ha nincs külön plafon. A becslés nem haladhatja meg az eredeti kiadást."
 };

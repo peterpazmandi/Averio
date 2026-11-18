@@ -42,10 +42,12 @@ internal static class ManualReimbursementVerification
         Check(await Totals() == before, "Manual claim changed actual money");
         var claim = (await List(expense)).Single().Claim;
         Check(claim.RuleId == null && claim.OriginalPaymentAmount == payment.Amount && claim.Events.Count == 1, "Expense-linked manual claim");
+        Check(await DetailStatus(expense) == "NeedsSubmission" && await OverviewStatus(expense) == "NeedsSubmission", "Owner reimbursement badge missing");
         var different = RecurringReimbursementRule.Create("Other", ReimbursementCalculation.Fixed, 40, null, f.HouseholdAccountId, 7, 0);
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt, different));
         user.UserId = f.MemberUserId;
         Check((await List(expense)).Count == 0, "Shared expense leaked private claim");
+        Check(await DetailStatus(expense) == null && await OverviewStatus(expense) == null, "Shared expense badge leaked private claim");
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt, config));
         await Throws<NotFoundException>(() => Create(Guid.NewGuid(), payment.UpdatedAt, config));
         user.UserId = f.OwnerUserId;
@@ -55,8 +57,11 @@ internal static class ManualReimbursementVerification
         Check(submitted.ExpectedAmount == 30 && submitted.SubmittedOn == day, "Manual submission does not reuse lifecycle");
         Check(await Create(expense, payment.UpdatedAt, config) == claim.Id, "Retry after submission lost idempotency");
         Check(await Totals() == before, "Submission created actual income");
+        Check(await OverviewStatus(expense) == "Submitted", "Submitted badge stale");
         Console.WriteLine("PASS manual reimbursement: atomic expense+claim, rollback, concurrent retries, no schedule, consent, snapshots, privacy and unchanged financial totals");
 
+        async Task<string?> DetailStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>().HandleAsync(f.HouseholdId, id, ct)).ReimbursementStatus; }
+        async Task<string?> OverviewStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransactions.GetTransactionsHandler>().HandleAsync(f.HouseholdId, null, null, null, null, null, 100, null, null, null, ct)).Items.Single(t => t.Id == id).ReimbursementStatus; }
         async Task<Guid> Post(CreateTransactionCommand command) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(command, ct); }
         async Task<Guid> Create(Guid id, DateTimeOffset version, RecurringReimbursementRule configuration) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().CreateAsync(f.HouseholdId, id, version, configuration, ct); }
         async Task<IReadOnlyList<ReimbursementResult>> List(Guid id) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ListAsync(f.HouseholdId, id, ct); }
