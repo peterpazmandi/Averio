@@ -55,6 +55,14 @@ public sealed class ReimbursementClaimEventConfiguration : IEntityTypeConfigurat
     public void Configure(EntityTypeBuilder<ReimbursementClaimEvent> b)
     {
         b.ToTable("reimbursement_claim_events");
+        b.Property(x => x.Sequence).HasColumnName("sequence");
+        b.Property(x => x.ChangeKind).HasColumnName("change_kind").HasMaxLength(24);
+        b.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(160);
+        b.Property(x => x.PotentialAmount).HasColumnName("potential_amount").HasPrecision(19, 4);
+        b.Property(x => x.DestinationAccountId).HasColumnName("destination_account_id");
+        b.Property(x => x.PaymentDelayDays).HasColumnName("payment_delay_days");
+        b.Property(x => x.SubmissionReminderOn).HasColumnName("submission_reminder_on");
+        b.Property(x => x.ExpectedOn).HasColumnName("expected_on");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         b.Property(x => x.HouseholdId).HasColumnName("household_id");

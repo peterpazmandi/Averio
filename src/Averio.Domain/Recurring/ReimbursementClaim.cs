@@ -59,8 +59,22 @@ public sealed class ReimbursementClaim
             PotentialAmount = estimate, OriginalPaymentAmount = payment.Amount, PaymentOn = payment.OccurredOn,
             PaymentDelayDays = config.PaymentDelayDays, CreatedAt = now,
             SubmissionReminderOn = config.SubmissionReminderDays is int days ? DateOnly.FromDateTime(now.UtcDateTime).AddDays(days) : null };
-        claim.Record(memberId, now);
+        claim.Record(memberId, now, "Created");
         return claim;
+    }
+    public void Update(RecurringReimbursementRule configuration, Guid actor, DateTimeOffset now)
+    {
+        if (Status == ReimbursementStatus.Cancelled || actor == Guid.Empty) throw new ArgumentException("Claim is closed.");
+        var amount = configuration.Estimate(OriginalPaymentAmount);
+        if (amount <= 0 || (SubmittedOn is DateOnly submitted && submitted.DayNumber > DateOnly.MaxValue.DayNumber - configuration.PaymentDelayDays))
+            throw new ArgumentException("Invalid claim estimate.");
+        var reminder = configuration.SubmissionReminderDays is int days ? DateOnly.FromDateTime(CreatedAt.UtcDateTime).AddDays(days) : (DateOnly?)null;
+        // Preserve pre-edit details even for claims created before snapshot events existed.
+        Record(actor, now, "BeforeUpdate");
+        Provider = configuration.Provider; PotentialAmount = amount; DestinationAccountId = configuration.DestinationAccountId;
+        PaymentDelayDays = configuration.PaymentDelayDays; SubmissionReminderOn = reminder;
+        ExpectedOn = SubmittedOn?.AddDays(PaymentDelayDays);
+        Record(actor, now, "Updated");
     }
     public void Submit(bool confirmed, DateOnly submittedOn, string? reference, Guid actor, DateTimeOffset now)
     {
@@ -79,11 +93,11 @@ public sealed class ReimbursementClaim
             throw new ArgumentException("Invalid claim transition.");
         Status = status; Record(actor, now);
     }
-    private void Record(Guid actor, DateTimeOffset now)
+    private void Record(Guid actor, DateTimeOffset now, string changeKind = "StatusChanged")
     {
         if (actor == Guid.Empty) throw new ArgumentException("Actor required.");
         Version = Guid.NewGuid(); UpdatedAt = now;
-        _events.Add(ReimbursementClaimEvent.Create(this, actor, now));
+        _events.Add(ReimbursementClaimEvent.Create(this, actor, now, changeKind, _events.Count));
     }
 }
 
@@ -98,7 +112,17 @@ public sealed class ReimbursementClaimEvent
     public DateOnly? SubmittedOn { get; private set; }
     public string? Reference { get; private set; }
     public DateTimeOffset RecordedAt { get; private set; }
-    internal static ReimbursementClaimEvent Create(ReimbursementClaim claim, Guid actor, DateTimeOffset now) => new() {
+    public int? Sequence { get; private set; }
+    public string? ChangeKind { get; private set; }
+    public string? Provider { get; private set; }
+    public decimal? PotentialAmount { get; private set; }
+    public Guid? DestinationAccountId { get; private set; }
+    public int? PaymentDelayDays { get; private set; }
+    public DateOnly? SubmissionReminderOn { get; private set; }
+    public DateOnly? ExpectedOn { get; private set; }
+    internal static ReimbursementClaimEvent Create(ReimbursementClaim claim, Guid actor, DateTimeOffset now, string changeKind, int sequence) => new() {
         Id = Guid.NewGuid(), ClaimId = claim.Id, HouseholdId = claim.HouseholdId, ActorMemberId = actor,
-        Status = claim.Status, SubmittedOn = claim.SubmittedOn, Reference = claim.Reference, RecordedAt = now };
+        Status = claim.Status, SubmittedOn = claim.SubmittedOn, Reference = claim.Reference, RecordedAt = now,
+        Sequence = sequence, ChangeKind = changeKind, Provider = claim.Provider, PotentialAmount = claim.PotentialAmount, DestinationAccountId = claim.DestinationAccountId,
+        PaymentDelayDays = claim.PaymentDelayDays, SubmissionReminderOn = claim.SubmissionReminderOn, ExpectedOn = claim.ExpectedOn };
 }

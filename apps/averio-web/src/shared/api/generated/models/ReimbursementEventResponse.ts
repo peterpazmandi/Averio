@@ -35,6 +35,34 @@ export interface ReimbursementEventResponse {
      * 
      */
     recordedAt: string;
+    /**
+     * 
+     */
+    changeKind: string | null;
+    /**
+     * 
+     */
+    provider: string | null;
+    /**
+     * 
+     */
+    potentialAmount: string | null;
+    /**
+     * 
+     */
+    destinationAccountId: string | null;
+    /**
+     * 
+     */
+    paymentDelayDays: number | null;
+    /**
+     * 
+     */
+    submissionReminderOn: string | null;
+    /**
+     * 
+     */
+    expectedOn: string | null;
 }
 
 /**
@@ -45,6 +73,13 @@ export function instanceOfReimbursementEventResponse(value: object): value is Re
     if (!('submittedOn' in value) || value['submittedOn'] === undefined) return false;
     if (!('reference' in value) || value['reference'] === undefined) return false;
     if (!('recordedAt' in value) || value['recordedAt'] === undefined) return false;
+    if (!('changeKind' in value) || value['changeKind'] === undefined) return false;
+    if (!('provider' in value) || value['provider'] === undefined) return false;
+    if (!('potentialAmount' in value) || value['potentialAmount'] === undefined) return false;
+    if (!('destinationAccountId' in value) || value['destinationAccountId'] === undefined) return false;
+    if (!('paymentDelayDays' in value) || value['paymentDelayDays'] === undefined) return false;
+    if (!('submissionReminderOn' in value) || value['submissionReminderOn'] === undefined) return false;
+    if (!('expectedOn' in value) || value['expectedOn'] === undefined) return false;
     return true;
 }
 
@@ -62,6 +97,13 @@ export function ReimbursementEventResponseFromJSONTyped(json: any, ignoreDiscrim
         'submittedOn': json['submittedOn'],
         'reference': json['reference'],
         'recordedAt': json['recordedAt'],
+        'changeKind': json['changeKind'],
+        'provider': json['provider'],
+        'potentialAmount': json['potentialAmount'],
+        'destinationAccountId': json['destinationAccountId'],
+        'paymentDelayDays': json['paymentDelayDays'],
+        'submissionReminderOn': json['submissionReminderOn'],
+        'expectedOn': json['expectedOn'],
     };
 }
 
@@ -80,6 +122,13 @@ export function ReimbursementEventResponseToJSONTyped(value?: ReimbursementEvent
         'submittedOn': value['submittedOn'],
         'reference': value['reference'],
         'recordedAt': value['recordedAt'],
+        'changeKind': value['changeKind'],
+        'provider': value['provider'],
+        'potentialAmount': value['potentialAmount'],
+        'destinationAccountId': value['destinationAccountId'],
+        'paymentDelayDays': value['paymentDelayDays'],
+        'submissionReminderOn': value['submissionReminderOn'],
+        'expectedOn': value['expectedOn'],
     };
 }
 

@@ -123,6 +123,14 @@ export interface ReimbursementClaimResponse {
      * 
      */
     events: Array<ReimbursementEventResponse>;
+    /**
+     * 
+     */
+    paymentDelayDays: number;
+    /**
+     * 
+     */
+    submissionReminderDays: number | null;
 }
 
 /**
@@ -153,6 +161,8 @@ export function instanceOfReimbursementClaimResponse(value: object): value is Re
     if (!('submissionReminderDue' in value) || value['submissionReminderDue'] === undefined) return false;
     if (!('paymentFollowUpDue' in value) || value['paymentFollowUpDue'] === undefined) return false;
     if (!('events' in value) || value['events'] === undefined) return false;
+    if (!('paymentDelayDays' in value) || value['paymentDelayDays'] === undefined) return false;
+    if (!('submissionReminderDays' in value) || value['submissionReminderDays'] === undefined) return false;
     return true;
 }
 
@@ -190,6 +200,8 @@ export function ReimbursementClaimResponseFromJSONTyped(json: any, ignoreDiscrim
         'submissionReminderDue': json['submissionReminderDue'],
         'paymentFollowUpDue': json['paymentFollowUpDue'],
         'events': ((json['events'] as Array<any>).map(ReimbursementEventResponseFromJSON)),
+        'paymentDelayDays': json['paymentDelayDays'],
+        'submissionReminderDays': json['submissionReminderDays'],
     };
 }
 
@@ -228,6 +240,8 @@ export function ReimbursementClaimResponseToJSONTyped(value?: ReimbursementClaim
         'submissionReminderDue': value['submissionReminderDue'],
         'paymentFollowUpDue': value['paymentFollowUpDue'],
         'events': ((value['events'] as Array<any>).map(ReimbursementEventResponseToJSON)),
+        'paymentDelayDays': value['paymentDelayDays'],
+        'submissionReminderDays': value['submissionReminderDays'],
     };
 }
 

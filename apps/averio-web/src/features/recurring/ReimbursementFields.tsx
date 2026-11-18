@@ -21,7 +21,8 @@ function estimate(payment: string, config: RecurringReimbursementConfiguration):
     return result > 0n ? `${result / 10000n}.${(result % 10000n).toString().padStart(4, '0')}` : null;
 }
 
-export function ReimbursementFields({ value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy }: {
+export function ReimbursementFields({ value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true }: {
+    allowDisable?: boolean;
     value: RecurringReimbursementConfiguration | null;
     onChange: (value: RecurringReimbursementConfiguration | null) => void;
     accounts: { id: string; name: string; currency: string; status: string; cutoverAtUtc?: string | null }[];
@@ -37,9 +38,9 @@ export function ReimbursementFields({ value, onChange, accounts, currency, payme
     return <AverioCard className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold" aria-label={t('reimbursements.settings')}>{t('reimbursements.settings')} <InfoPopover label={t('reimbursements.settings')}>{t('reimbursements.externalHelp')}</InfoPopover></h3>
-            <label className="flex min-h-11 items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-4 accent-emerald-500" checked={!!value} disabled={busy}
+            {allowDisable && <label className="flex min-h-11 items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-4 accent-emerald-500" checked={!!value} disabled={busy}
                 onChange={e => onChange(e.target.checked ? { provider: '', calculation: 'Fixed', value: '', maximumAmount: null,
-                    destinationAccountId: eligible.some(a => a.id === sourceAccountId) ? sourceAccountId : '', paymentDelayDays: 7, submissionReminderDays: 2 } : null)} />{t('reimbursements.enable')}</label>
+                    destinationAccountId: eligible.some(a => a.id === sourceAccountId) ? sourceAccountId : '', paymentDelayDays: 7, submissionReminderDays: 2 } : null)} />{t('reimbursements.enable')}</label>}
         </div>
         {value && <>
             <div className="rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950/40">
@@ -81,15 +82,18 @@ export function ReimbursementFields({ value, onChange, accounts, currency, payme
             </div>
             <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
                 {heading('reimbursements.design.when', 'reimbursements.design.whenHelp')}
-                <div className="grid items-start gap-4 sm:grid-cols-2">
-                    <AverioField>{t('reimbursements.delay')}<AverioInput required type="number" min={0} max={365} step={1} value={value.paymentDelayDays} disabled={busy} onChange={e => patch({ paymentDelayDays: Number(e.target.value) })} /></AverioField>
-                    <div className="grid gap-2">
+                <div className="grid items-stretch gap-4 sm:grid-cols-2">
+                    <div className="grid content-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <h5 className="flex min-h-11 items-center text-sm font-semibold">{t('reimbursements.edit.paymentTiming')}</h5>
+                        <AverioField>{t('reimbursements.delay')}<AverioInput required type="number" min={0} max={365} step={1} value={value.paymentDelayDays} disabled={busy} onChange={e => patch({ paymentDelayDays: Number(e.target.value) })} /></AverioField>
+                    </div>
+                    <div className="grid content-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                         <label className="flex min-h-11 items-center gap-3 text-sm font-semibold"><input type="checkbox" className="size-4 accent-emerald-500" checked={value.submissionReminderDays !== null} disabled={busy}
                             onChange={e => patch({ submissionReminderDays: e.target.checked ? 2 : null })} />{t('reimbursements.design.remind')}</label>
-                        {value.submissionReminderDays !== null && <div className="grid gap-1">
+                        {value.submissionReminderDays !== null ? <div className="grid gap-[7px]">
                             <AverioField htmlFor={id}>{t('reimbursements.design.reminderDays')}</AverioField>
                             <AverioInput id={id} required type="number" min={0} max={365} step={1} value={value.submissionReminderDays} disabled={busy} onChange={e => patch({ submissionReminderDays: Number(e.target.value) })} />
-                        </div>}
+                        </div> : <p className="text-sm text-slate-600 dark:text-slate-300">{t('reimbursements.edit.reminderOff')}</p>}
                     </div>
                 </div>
             </div>

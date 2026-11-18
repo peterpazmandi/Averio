@@ -73,7 +73,15 @@ export const reimbursementsEN = {
         "shortHelp": "Expect money back for this expense?"
     },
     "badge": "Reimbursement · {{status}}",
-    "capHelp": "An upper limit for each claim, especially when using a percentage. Example: 20% of {{payment}} is {{estimate}}. A cap of {{cap}} limits the estimate to {{cap}}. Leave blank for no extra cap. The estimate can never exceed the original expense."
+    "capHelp": "An upper limit for each claim, especially when using a percentage. Example: 20% of {{payment}} is {{estimate}}. A cap of {{cap}} limits the estimate to {{cap}}. Leave blank for no extra cap. The estimate can never exceed the original expense.",
+    "edit": {
+        "title": "Edit reimbursement",
+        "paymentTiming": "Expected payment",
+        "reminderOff": "Submission reminder is off.",
+        "updated": "Reimbursement updated",
+        "before": "Before update",
+        "help": "Changes apply only to this claim. The saved estimate opens as a fixed amount and remains capped at the original expense. Your recurring schedule, submission date and reference stay as recorded. Payment timing is counted from submission; reminder timing is counted from when this claim was created."
+    }
 };
 export const reimbursementsDE = {
     "title": "Erstattungen",
@@ -150,7 +158,15 @@ export const reimbursementsDE = {
         "shortHelp": "Erwartest du eine Erstattung für diese Ausgabe?"
     },
     "badge": "Erstattung · {{status}}",
-    "capHelp": "Eine Obergrenze pro Anspruch, besonders bei Prozentberechnung. Beispiel: 20 % von {{payment}} sind {{estimate}}. Eine Obergrenze von {{cap}} begrenzt die Schätzung auf {{cap}}. Leer lassen für keine zusätzliche Grenze. Die Schätzung kann die ursprüngliche Ausgabe nie übersteigen."
+    "capHelp": "Eine Obergrenze pro Anspruch, besonders bei Prozentberechnung. Beispiel: 20 % von {{payment}} sind {{estimate}}. Eine Obergrenze von {{cap}} begrenzt die Schätzung auf {{cap}}. Leer lassen für keine zusätzliche Grenze. Die Schätzung kann die ursprüngliche Ausgabe nie übersteigen.",
+    "edit": {
+        "title": "Erstattung bearbeiten",
+        "paymentTiming": "Erwartete Zahlung",
+        "reminderOff": "Einreichungserinnerung ist ausgeschaltet.",
+        "updated": "Erstattung aktualisiert",
+        "before": "Vor der Änderung",
+        "help": "Änderungen gelten nur für diesen Anspruch. Die gespeicherte Schätzung wird als fester Betrag geöffnet und bleibt auf die ursprüngliche Ausgabe begrenzt. Zeitplan, Einreichungsdatum und Referenz bleiben erhalten. Die Zahlungsfrist beginnt mit der Einreichung, die Erinnerung mit der Erstellung dieses Anspruchs."
+    }
 };
 export const reimbursementsHU = {
     "title": "Visszatérítések",
@@ -227,5 +243,13 @@ export const reimbursementsHU = {
         "shortHelp": "Vársz visszatérítést erre a kiadásra?"
     },
     "badge": "Visszatérítés · {{status}}",
-    "capHelp": "Igényenkénti felső határ, különösen százalékos számításnál. Példa: {{payment}} 20%-a {{estimate}}. {{cap}} plafonnal a becslés legfeljebb {{cap}}. Hagyd üresen, ha nincs külön plafon. A becslés nem haladhatja meg az eredeti kiadást."
+    "capHelp": "Igényenkénti felső határ, különösen százalékos számításnál. Példa: {{payment}} 20%-a {{estimate}}. {{cap}} plafonnal a becslés legfeljebb {{cap}}. Hagyd üresen, ha nincs külön plafon. A becslés nem haladhatja meg az eredeti kiadást.",
+    "edit": {
+        "title": "Visszatérítés szerkesztése",
+        "paymentTiming": "Várható kifizetés",
+        "reminderOff": "A beküldési emlékeztető ki van kapcsolva.",
+        "updated": "Visszatérítés módosítva",
+        "before": "Módosítás előtt",
+        "help": "A módosítások csak erre az igényre vonatkoznak. A mentett becslés fix összegként nyílik meg, és nem haladhatja meg az eredeti kiadást. Az ismétlődő ütemezés, a beküldés dátuma és az azonosító megmarad. A kifizetés ideje a beküldéstől, az emlékeztető az igény létrehozásától számít."
+    }
 };

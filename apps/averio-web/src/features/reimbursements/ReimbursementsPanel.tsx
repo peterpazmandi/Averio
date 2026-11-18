@@ -1,3 +1,4 @@
+import { EditClaimDialog } from './EditClaimDialog';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 import { ManualClaimDialog } from './ManualClaimDialog';
 import type { TransactionDto } from '../transactions/api/transactionApi';
@@ -17,6 +18,7 @@ export function ReimbursementsPanel({ userId, householdId, transactionId, source
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
+    const [editing, setEditing] = useState<ReimbursementClaimResponse | null>(null);
     const [creating, setCreating] = useState(false);
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? i18n.language);
     const date = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
@@ -55,13 +57,16 @@ export function ReimbursementsPanel({ userId, householdId, transactionId, source
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
                 {!transactionId && <Link className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-emerald-700 underline focus-visible:outline-2 dark:text-emerald-300" to="/app/transactions" search={{ transaction: claim.transactionId }}>{t('reimbursements.viewPayment')}</Link>}
                 {claim.canModify && <>
+                    {!claim.paymentUnavailable && claim.status !== 'Cancelled' && <AverioButton onClick={() => setEditing(claim)}>{t('reimbursements.edit.title')}</AverioButton>}
                     {!claim.paymentUnavailable && ['NeedsSubmission', 'Rejected'].includes(claim.status) && <AverioButton variant="primary" onClick={() => setSelected({ claim, status: 'Submitted' })}>{t('reimbursements.markSubmitted')}</AverioButton>}
                     {claim.status === 'Submitted' && <AverioButton onClick={() => setSelected({ claim, status: 'Rejected' })}>{t('reimbursements.reject')}</AverioButton>}
                     {claim.status !== 'Cancelled' && <AverioButton onClick={() => setSelected({ claim, status: 'Cancelled' })}>{t('reimbursements.cancel')}</AverioButton>}
                 </>}
             </div>
-            {transactionId && <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('reimbursements.history')}</summary><ul className="space-y-2 text-sm">{claim.events.map((event, index) => <li key={index}>{t('reimbursements.status.' + event.status)} · {date(event.recordedAt.slice(0, 10))}{event.reference ? ' · ' + event.reference : ''}</li>)}</ul></details>}
+            {transactionId && <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('reimbursements.history')}</summary><ul className="space-y-2 text-sm">{claim.events.map((event, index) => <li key={index}>{t(event.changeKind === 'Updated' ? 'reimbursements.edit.updated' : event.changeKind === 'BeforeUpdate' ? 'reimbursements.edit.before' : 'reimbursements.status.' + event.status)} · {date(event.recordedAt.slice(0, 10))}{event.reference ? ' · ' + event.reference : ''}
+                {event.provider && event.potentialAmount && <span className="block">{event.provider} · {money(event.potentialAmount, claim.currency)}</span>}</li>)}</ul></details>}
         </AverioCard>)}
+        {editing && <EditClaimDialog userId={userId} householdId={householdId} claim={editing} onClose={() => setEditing(null)} />}
         {selected && <ClaimStatusDialog key={selected.claim.id + selected.status} userId={userId} householdId={householdId} claim={selected.claim} status={selected.status} onClose={() => setSelected(null)} />}
     </section>;
 }

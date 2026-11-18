@@ -68,6 +68,23 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
         catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
         claims.Add(claim); return claim.Id;
     }
+    public async Task UpdateAsync(Guid householdId, Guid id, Guid expectedVersion, RecurringReimbursementRule configuration, CancellationToken ct)
+    {
+        await using var tx = await uow.BeginTransactionAsync(ct);
+        var member = await Member(householdId, ct);
+        var claim = await claims.GetAsync(householdId, member.Id, id, ct) ?? throw new NotFoundException("reimbursement", id);
+        var payment = await transactions.GetVisibleByIdAsync(householdId, member.Id, claim.TransactionId, ct) ?? throw new NotFoundException("reimbursement", id);
+        var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, payment.AccountId, ct) ?? throw new NotFoundException("reimbursement", id);
+        if (!TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
+        if (claim.Version != expectedVersion) throw new ConflictException("reimbursement_changed", "Error_ReimbursementChanged");
+        var destination = await accounts.GetVisibleByIdAsync(householdId, member.Id, configuration.DestinationAccountId, ct) ?? throw new NotFoundException("account", configuration.DestinationAccountId);
+        if (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense || payment.IsArchived
+            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || destination.CutoverAtUtc is not null || destination.Currency.Value != claim.Currency)
+            throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
+        try { claim.Update(configuration, member.Id, clock.GetUtcNow()); }
+        catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
+        await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+    }
     public async Task ChangeAsync(Guid householdId, Guid id, Guid expectedVersion, bool confirmed,
         DateOnly? submittedOn, string? reference, ReimbursementStatus status, CancellationToken ct)
     {

@@ -16,6 +16,14 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, TimeP
             ?? throw new Averio.Application.Common.Exceptions.BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
         return Ok(new CreateReimbursementClaimResponse(await handler.CreateAsync(householdId, request.TransactionId, request.ExpectedUpdatedAt, configuration, ct)));
     }
+    [HttpPut("{claimId:guid}")]
+    public async Task<IActionResult> Update(Guid householdId, Guid claimId, UpdateReimbursementClaimRequest request, CancellationToken ct)
+    {
+        var configuration = ReimbursementConfigurationMapper.Parse(request.Configuration)
+            ?? throw new Averio.Application.Common.Exceptions.BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
+        await handler.UpdateAsync(householdId, claimId, request.ExpectedVersion, configuration, ct);
+        return NoContent();
+    }
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ReimbursementClaimResponse>>> List(Guid householdId, [FromQuery] Guid? transactionId, CancellationToken ct)
     {
@@ -29,7 +37,10 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, TimeP
                 c.SubmissionReminderOn, c.SubmittedOn, c.ExpectedOn, c.Reference, c.Version, x.CanModify, x.PaymentUnavailable, x.PaymentChanged,
                 !x.PaymentUnavailable && c.Status == ReimbursementStatus.NeedsSubmission && c.SubmissionReminderOn <= today,
                 !x.PaymentUnavailable && c.Status == ReimbursementStatus.Submitted && c.ExpectedOn < today,
-                c.Events.OrderBy(e => e.RecordedAt).Select(e => new ReimbursementEventResponse(e.Status.ToString(), e.SubmittedOn, e.Reference, e.RecordedAt)).ToArray());
+                c.Events.OrderBy(e => e.RecordedAt).ThenBy(e => e.Sequence).Select(e => new ReimbursementEventResponse(e.Status.ToString(), e.SubmittedOn, e.Reference, e.RecordedAt,
+                    e.ChangeKind, e.Provider, e.PotentialAmount is decimal amount ? DecimalAmountMapper.Format(amount) : null, e.DestinationAccountId,
+                    e.PaymentDelayDays, e.SubmissionReminderOn, e.ExpectedOn)).ToArray(), c.PaymentDelayDays,
+                c.SubmissionReminderOn is DateOnly reminder ? reminder.DayNumber - DateOnly.FromDateTime(c.CreatedAt.UtcDateTime).DayNumber : null);
         }).ToArray());
     }
     [HttpPut("{claimId:guid}/status")]

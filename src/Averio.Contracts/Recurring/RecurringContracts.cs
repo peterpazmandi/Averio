@@ -26,8 +26,10 @@ public sealed record ReimbursementClaimResponse(Guid Id, Guid TransactionId, str
     string OriginalPaymentAmount, DateOnly PaymentOn, Guid DestinationAccountId, string Status,
     DateOnly? SubmissionReminderOn, DateOnly? SubmittedOn, DateOnly? ExpectedOn, string? Reference, Guid Version,
     bool CanModify, bool PaymentUnavailable, bool PaymentChanged, bool SubmissionReminderDue, bool PaymentFollowUpDue,
-    IReadOnlyList<ReimbursementEventResponse> Events);
-public sealed record ReimbursementEventResponse(string Status, DateOnly? SubmittedOn, string? Reference, DateTimeOffset RecordedAt);
+    IReadOnlyList<ReimbursementEventResponse> Events, int PaymentDelayDays, int? SubmissionReminderDays);
+public sealed record ReimbursementEventResponse(string Status, DateOnly? SubmittedOn, string? Reference, DateTimeOffset RecordedAt,
+    string? ChangeKind, string? Provider, string? PotentialAmount, Guid? DestinationAccountId, int? PaymentDelayDays, DateOnly? SubmissionReminderOn, DateOnly? ExpectedOn);
+public sealed record UpdateReimbursementClaimRequest(Guid ExpectedVersion, RecurringReimbursementConfiguration Configuration);
 
 public sealed record CreateReimbursementClaimRequest(Guid TransactionId, DateTimeOffset ExpectedUpdatedAt, RecurringReimbursementConfiguration Configuration);
 public sealed record CreateReimbursementClaimResponse(Guid Id);

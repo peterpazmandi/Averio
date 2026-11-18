@@ -33,6 +33,26 @@ import {
     ReimbursementClaimResponseFromJSON,
     ReimbursementClaimResponseToJSON,
 } from '../models/ReimbursementClaimResponse';
+import {
+    type UpdateReimbursementClaimRequest,
+    UpdateReimbursementClaimRequestFromJSON,
+    UpdateReimbursementClaimRequestToJSON,
+} from '../models/UpdateReimbursementClaimRequest';
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    claimId: string;
+    /**
+     * 
+     */
+    updateReimbursementClaimRequest: UpdateReimbursementClaimRequest;
+}
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPutRequest {
     /**
@@ -75,6 +95,66 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsPostRequest {
  * 
  */
 export class ReimbursementsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut().'
+            );
+        }
+
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut().'
+            );
+        }
+
+        if (requestParameters['updateReimbursementClaimRequest'] == null) {
+            throw new runtime.RequiredError(
+                'updateReimbursementClaimRequest',
+                'Required parameter "updateReimbursementClaimRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/{claimId}`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{claimId}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UpdateReimbursementClaimRequestToJSON(requestParameters['updateReimbursementClaimRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPut without sending the request

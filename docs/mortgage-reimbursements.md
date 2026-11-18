@@ -52,3 +52,13 @@ Apply 20261118130622_AddManualReimbursementClaims after the original reimburseme
 The existing-expense tracking action appears in a compact reimbursement card above the edit fields. New transaction settings use the same heading weight as the other form sections. Reimbursement cap is an optional per-claim ceiling applied after fixed/percentage calculation; for example, 20% of HUF 150,000 estimates HUF 30,000, but a HUF 25,000 cap limits it to HUF 25,000. The shared information popover beside the cap field explains this; the estimate can never exceed the source expense.
 
 Transaction responses include a nullable reimbursement status. The list loads statuses in one batch for the current transaction page and applies the same creator/source/destination visibility checks as claim details. Badges include needs submission, submitted, rejected and cancelled history; a shared expense never reveals another member's private claim through its badge. Claim creation and status changes refresh transaction queries so overview badges stay current.
+
+## Editing an existing claim
+
+Edit reimbursement is available for visible, modifiable claims on posted expenses until the claim is cancelled. It reuses the reimbursement form to change provider, the occurrence estimate, destination account, payment delay and submission-reminder setting. The saved occurrence estimate opens as a fixed amount; percentage/cap calculations can be applied against the original payment snapshot. Changes affect only this claim, never its recurring rule or original transaction.
+
+PUT /api/v1/households/{householdId}/reimbursements/{claimId} requires the current claim version and rechecks source permissions, status and destination currency/visibility. Submitted date/reference and status remain intact; changing the delay recalculates the estimated payment date from the saved submission date. Reminder changes remain anchored to claim creation. Cancelled claims cannot be edited.
+
+Each edit appends before/after snapshots to claim history with provider, amount, destination and timing; old events are not rewritten or falsely backfilled. Apply 20261118140924_ReimbursementEditHistory before deploying. It adds nullable event snapshot fields and stable ordering for new events, preserving legacy history. Rolling it back discards those added audit details, so preserve them first.
+
+The follow-up form uses two matching panels with aligned desktop inputs and a stacked mobile layout.

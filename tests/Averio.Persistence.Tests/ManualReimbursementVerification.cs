@@ -58,8 +58,24 @@ internal static class ManualReimbursementVerification
         Check(await Create(expense, payment.UpdatedAt, config) == claim.Id, "Retry after submission lost idempotency");
         Check(await Totals() == before, "Submission created actual income");
         Check(await OverviewStatus(expense) == "Submitted", "Submitted badge stale");
+        var revised = RecurringReimbursementRule.Create("Edited provider", ReimbursementCalculation.Fixed, 50, null, f.HouseholdAccountId, 3, null);
+        await Edit(claim.Id, submitted.Version, revised);
+        var edited = (await List(expense)).Single().Claim;
+        Check(edited.Provider == "Edited provider" && edited.PotentialAmount == 50 && edited.Status == ReimbursementStatus.Submitted
+            && edited.SubmittedOn == day && edited.Reference == "MANUAL" && edited.ExpectedOn == day.AddDays(3) && edited.SubmissionReminderOn == null, "Editing lost submission history or timing");
+        Check(edited.Events.Any(e => e.ChangeKind == "BeforeUpdate" && e.PotentialAmount == 30) && edited.Events.Any(e => e.ChangeKind == "Updated" && e.PotentialAmount == 50), "Edit audit snapshots missing");
+        Check(edited.OriginalPaymentAmount == payment.Amount && await Totals() == before, "Edit changed source or actual money");
+        await Throws<ConflictException>(() => Edit(claim.Id, submitted.Version, config));
+        user.UserId = f.MemberUserId;
+        await Throws<NotFoundException>(() => Edit(claim.Id, edited.Version, config));
+        user.UserId = f.OwnerUserId;
+        await using (var scope = provider.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ChangeAsync(f.HouseholdId, claim.Id, edited.Version, false, null, null, ReimbursementStatus.Cancelled, ct);
+        var cancelled = (await List(expense)).Single().Claim;
+        await Throws<BusinessRuleException>(() => Edit(claim.Id, cancelled.Version, config));
         Console.WriteLine("PASS manual reimbursement: atomic expense+claim, rollback, concurrent retries, no schedule, consent, snapshots, privacy and unchanged financial totals");
 
+        async Task Edit(Guid id, Guid version, RecurringReimbursementRule configuration) { await using var scope = provider.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().UpdateAsync(f.HouseholdId, id, version, configuration, ct); }
         async Task<string?> DetailStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>().HandleAsync(f.HouseholdId, id, ct)).ReimbursementStatus; }
         async Task<string?> OverviewStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransactions.GetTransactionsHandler>().HandleAsync(f.HouseholdId, null, null, null, null, null, 100, null, null, null, ct)).Items.Single(t => t.Id == id).ReimbursementStatus; }
         async Task<Guid> Post(CreateTransactionCommand command) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(command, ct); }

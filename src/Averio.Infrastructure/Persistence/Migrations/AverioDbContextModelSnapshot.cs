@@ -1560,6 +1560,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaimEvent", b =>
                 {
+                    b.Property<int?>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
@@ -1568,13 +1572,40 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("actor_member_id");
 
+                    b.Property<string>("ChangeKind")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("change_kind");
+
                     b.Property<Guid>("ClaimId")
                         .HasColumnType("uuid")
                         .HasColumnName("claim_id");
 
+                    b.Property<Guid?>("DestinationAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("destination_account_id");
+
+                    b.Property<DateOnly?>("ExpectedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_on");
+
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
+
+                    b.Property<int?>("PaymentDelayDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_delay_days");
+
+                    b.Property<decimal?>("PotentialAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("potential_amount");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("provider");
 
                     b.Property<DateTimeOffset>("RecordedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1590,6 +1621,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasMaxLength(24)
                         .HasColumnType("character varying(24)")
                         .HasColumnName("status");
+
+                    b.Property<DateOnly?>("SubmissionReminderOn")
+                        .HasColumnType("date")
+                        .HasColumnName("submission_reminder_on");
 
                     b.Property<DateOnly?>("SubmittedOn")
                         .HasColumnType("date")

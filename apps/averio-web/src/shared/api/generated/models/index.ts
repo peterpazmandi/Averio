@@ -163,6 +163,7 @@ export * from './UpdateCategoryRequest';
 export * from './UpdateHouseholdRequest';
 export * from './UpdateProfileRequest';
 export * from './UpdateRecurringAllowanceRequest';
+export * from './UpdateReimbursementClaimRequest';
 export * from './UpdateTransactionRequest';
 export * from './UpdateTransferRequest';
 export * from './VerifyEmailRequest';
