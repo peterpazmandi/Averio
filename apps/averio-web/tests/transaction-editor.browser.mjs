@@ -14,6 +14,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const context = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/personalMoney.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/transactionManagement.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
+for (const file of ['recurring', 'reimbursements']) {
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/locales/' + file + '.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
+}
 let browser;
 try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(url)).ok) break; } catch {} await pause(100); }
@@ -21,6 +24,8 @@ try {
     for (const language of ['en', 'de', 'hu']) for (const dark of [false, true]) for (const width of [320, 375, 1440]) {
         const copy = context.exports['personalMoney' + language.toUpperCase()];
         const transactionCopy = context.exports['transactionManagement' + language.toUpperCase()];
+        const recurringCopy = context.exports['recurring' + language.toUpperCase()];
+        const reimbursementCopy = context.exports['reimbursements' + language.toUpperCase()];
         const page = await browser.newPage({ viewport: { width, height: 900 } });
         const errors = [];
         let editing = false;
@@ -87,7 +92,10 @@ try {
         assert.ok((await disclosures.nth(2).textContent()).includes('Keep my note'));
         await page.screenshot({ path: path.join(artifacts, 'editor-compact-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await disclosures.nth(0).click();
-        await page.locator('input[type="checkbox"]:visible').last().check();
+        // Recurrence and reimbursement are independent; select by label, never display order.
+        await page.getByRole('checkbox', { name: recurringCopy.makeRecurring, exact: true }).check();
+        await allowanceButton.waitFor({ state: 'hidden' });
+        assert.equal(await page.getByRole('checkbox', { name: reimbursementCopy.enable, exact: true }).isChecked(), false, 'Choosing recurrence must not enable reimbursement tracking.');
         assert.equal(await checkbox.count(), 0, 'Recurring templates must not offer posted-item wallet charges.');
         assert.equal(await allowanceButton.count(), 0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
@@ -159,3 +167,4 @@ try {
     }
     console.log("PASS item-level Personal Money on shared/private receipts: EN/DE/HU, desktop/mobile, light/dark");
 } finally { await browser?.close(); server.kill(); }
+
