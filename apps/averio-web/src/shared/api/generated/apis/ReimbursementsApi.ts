@@ -19,6 +19,16 @@ import {
     ChangeReimbursementRequestToJSON,
 } from '../models/ChangeReimbursementRequest';
 import {
+    type CreateReimbursementClaimRequest,
+    CreateReimbursementClaimRequestFromJSON,
+    CreateReimbursementClaimRequestToJSON,
+} from '../models/CreateReimbursementClaimRequest';
+import {
+    type CreateReimbursementClaimResponse,
+    CreateReimbursementClaimResponseFromJSON,
+    CreateReimbursementClaimResponseToJSON,
+} from '../models/CreateReimbursementClaimResponse';
+import {
     type ReimbursementClaimResponse,
     ReimbursementClaimResponseFromJSON,
     ReimbursementClaimResponseToJSON,
@@ -48,6 +58,17 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsGetRequest {
      * 
      */
     transactionId?: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    createReimbursementClaimRequest: CreateReimbursementClaimRequest;
 }
 
 /**
@@ -159,6 +180,59 @@ export class ReimbursementsApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdReimbursementsGet(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ReimbursementClaimResponse>> {
         const response = await this.apiV1HouseholdsHouseholdIdReimbursementsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsPost().'
+            );
+        }
+
+        if (requestParameters['createReimbursementClaimRequest'] == null) {
+            throw new runtime.RequiredError(
+                'createReimbursementClaimRequest',
+                'Required parameter "createReimbursementClaimRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CreateReimbursementClaimRequestToJSON(requestParameters['createReimbursementClaimRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateReimbursementClaimResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CreateReimbursementClaimResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPost(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateReimbursementClaimResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdReimbursementsPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

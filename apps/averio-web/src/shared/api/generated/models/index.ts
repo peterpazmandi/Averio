@@ -41,6 +41,8 @@ export * from './CreateLabelRequest';
 export * from './CreateLabelResponse';
 export * from './CreateRecurringAllowanceRequest';
 export * from './CreateRecurringRuleResponse';
+export * from './CreateReimbursementClaimRequest';
+export * from './CreateReimbursementClaimResponse';
 export * from './CreateTransactionRequest';
 export * from './CreateTransactionResponse';
 export * from './CreateTransferRequest';

@@ -22,6 +22,7 @@ public sealed class ReimbursementClaimConfiguration : IEntityTypeConfiguration<R
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         b.Property(x => x.HouseholdId).HasColumnName("household_id");
         b.Property(x => x.HouseholdMemberId).HasColumnName("household_member_id");
+        b.Property(x => x.CreationFingerprint).HasColumnName("creation_fingerprint").HasMaxLength(64);
         b.Property(x => x.RuleId).HasColumnName("rule_id");
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
         b.Property(x => x.DestinationAccountId).HasColumnName("destination_account_id");

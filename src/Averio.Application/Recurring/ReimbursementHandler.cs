@@ -30,6 +30,44 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
         }
         return results;
     }
+    public async Task<Guid> CreateAsync(Guid householdId, Guid transactionId, DateTimeOffset expectedUpdatedAt,
+        RecurringReimbursementRule configuration, CancellationToken ct)
+    {
+        await using var tx = await uow.BeginTransactionAsync(ct);
+        var member = await Member(householdId, ct);
+        var payment = await transactions.GetVisibleByIdAsync(householdId, member.Id, transactionId, ct)
+            ?? throw new NotFoundException("transaction", transactionId);
+        var id = await CreateWithinTransactionAsync(payment, member, expectedUpdatedAt, configuration, ct);
+        await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct); return id;
+    }
+    internal async Task<Guid> CreateWithinTransactionAsync(Transaction payment, Averio.Domain.Households.HouseholdMember member,
+        DateTimeOffset expectedUpdatedAt, RecurringReimbursementRule configuration, CancellationToken ct)
+    {
+        var account = await accounts.GetVisibleByIdAsync(payment.HouseholdId, member.Id, payment.AccountId, ct)
+            ?? throw new NotFoundException("transaction", payment.Id);
+        if (!TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
+        var destination = await accounts.GetVisibleByIdAsync(payment.HouseholdId, member.Id, configuration.DestinationAccountId, ct)
+            ?? throw new NotFoundException("account", configuration.DestinationAccountId);
+        if (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense || payment.IsArchived
+            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || destination.CutoverAtUtc is not null
+            || destination.Currency != payment.Currency)
+            throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
+        var identity = System.Text.Json.JsonSerializer.Serialize(new { UpdatedAt = expectedUpdatedAt.ToUniversalTime(),
+            configuration.Provider, configuration.Calculation, configuration.Value, configuration.MaximumAmount,
+            configuration.DestinationAccountId, configuration.PaymentDelayDays, configuration.SubmissionReminderDays });
+        var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(identity)));
+        var previous = await claims.FindForTransactionAsync(payment.HouseholdId, payment.Id, ct);
+        if (previous is not null)
+        {
+            if (previous.HouseholdMemberId == member.Id && previous.CreationFingerprint == fingerprint) return previous.Id;
+            throw new ConflictException("reimbursement_changed", "Error_ReimbursementChanged");
+        }
+        if (payment.UpdatedAt != expectedUpdatedAt) throw new ConflictException("transaction_changed", "Error_TransactionChanged");
+        ReimbursementClaim claim;
+        try { claim = ReimbursementClaim.CreateManual(payment, member.Id, configuration, fingerprint, clock.GetUtcNow()); }
+        catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
+        claims.Add(claim); return claim.Id;
+    }
     public async Task ChangeAsync(Guid householdId, Guid id, Guid expectedVersion, bool confirmed,
         DateOnly? submittedOn, string? reference, ReimbursementStatus status, CancellationToken ct)
     {

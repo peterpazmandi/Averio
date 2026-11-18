@@ -1,3 +1,4 @@
+import { verifyManualReimbursements } from './manual-reimbursements.mjs';
 import { verifyReimbursements } from './reimbursements.mjs';
 import { verifyRecurring } from './recurring.mjs';
 import { verifySavedViews } from './saved-views.mjs';
@@ -136,6 +137,7 @@ try {
     const { owner: f, existing: old, password } = fixture;
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts });
+    await verifyManualReimbursements({ fixture: fixture.manual, password, session, api, ok, artifacts });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');
     await owner.locator('a[href="#household-invitations"]').waitFor();

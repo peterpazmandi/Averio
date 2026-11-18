@@ -1,3 +1,5 @@
+import { ManualClaimDialog } from './ManualClaimDialog';
+import type { TransactionDto } from '../transactions/api/transactionApi';
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,15 +12,18 @@ import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormC
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
 
-export function ReimbursementsPanel({ userId, householdId, transactionId, className = '' }: { userId: string; householdId: string; transactionId?: string; className?: string }) {
+export function ReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; className?: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
+    const [creating, setCreating] = useState(false);
     const money = (amount: string, currency: string) => formatDecimalAmount(amount, currency, i18n.resolvedLanguage ?? i18n.language);
     const date = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     if (query.isPending) return <p className={className} role="status">{t('reimbursements.loading')}</p>;
     if (query.isError) return <AverioCard className={className}><p role="alert">{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>;
-    if (!query.data.length) return null;
+    if (!query.data.length) return sourceTransaction?.canModify && sourceTransaction.kind === 'Expense' && sourceTransaction.status === 'Posted' && !sourceTransaction.isArchived
+        ? <div className={className}><AverioButton onClick={() => setCreating(true)}>{t('reimbursements.manual.add')}</AverioButton>
+            {creating && <ManualClaimDialog userId={userId} householdId={householdId} transaction={sourceTransaction} onClose={() => setCreating(false)} />}</div> : null;
     const currencies = [...new Set(query.data.map(c => c.currency))];
     return <section className={'grid min-w-0 gap-3 ' + className} aria-label={t('reimbursements.title')}>
         <h2 className="text-lg font-bold">{t('reimbursements.title')}</h2>

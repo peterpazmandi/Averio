@@ -18,7 +18,7 @@ public sealed record CreateTransactionCommand(
     IReadOnlyList<TransactionItemInput> Items,
     IReadOnlyList<Guid> LabelIds,
     Averio.Application.Activities.ActivityAssignmentInput? ActivityAssignment = null,
-    bool ChargePersonalMoney = false);
+    bool ChargePersonalMoney = false, Averio.Domain.Recurring.RecurringReimbursementRule? Reimbursement = null);
 
 public sealed class CreateTransactionHandler(
     ICurrentUser currentUser,
@@ -31,7 +31,7 @@ public sealed class CreateTransactionHandler(
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     Averio.Application.Activities.ActivityHandler activities,
-    Averio.Application.PersonalMoney.PersonalMoneyHandler personalMoney)
+    Averio.Application.PersonalMoney.PersonalMoneyHandler personalMoney, Averio.Application.Recurring.ReimbursementHandler reimbursements)
 {
     public async Task<Guid> HandleAsync(
         CreateTransactionCommand command,
@@ -130,6 +130,11 @@ public sealed class CreateTransactionHandler(
                 transaction.Amount, transaction.Id, cancellationToken);
         await personalMoney.ApplyItemChargesWithinTransactionAsync(household.Id, transaction.Id,
             command.Items, cancellationToken);
+        if (command.Reimbursement is { } configuration)
+        {
+            await reimbursements.CreateWithinTransactionAsync(transaction, membership, transaction.UpdatedAt, configuration, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
         return transaction.Id;
     }
 }

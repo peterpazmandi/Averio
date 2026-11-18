@@ -17,5 +17,7 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
             .OrderBy(c => c.CreatedAt).ToArrayAsync(ct);
     public Task<ReimbursementClaim?> GetAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
         => Visible(householdId, memberId).Include(c => c.Events).SingleOrDefaultAsync(c => c.Id == id, ct);
+    public Task<ReimbursementClaim?> FindForTransactionAsync(Guid householdId, Guid transactionId, CancellationToken ct)
+        => db.Set<ReimbursementClaim>().SingleOrDefaultAsync(c => c.HouseholdId == householdId && c.TransactionId == transactionId, ct);
     public void Add(ReimbursementClaim claim) => db.Add(claim);
 }

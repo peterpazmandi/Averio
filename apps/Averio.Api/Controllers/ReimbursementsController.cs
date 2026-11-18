@@ -9,6 +9,13 @@ namespace Averio.Api.Controllers;
 [Authorize, ApiController, Route("api/v1/households/{householdId:guid}/reimbursements")]
 public sealed class ReimbursementsController(ReimbursementHandler handler, TimeProvider clock) : ControllerBase
 {
+    [HttpPost]
+    public async Task<ActionResult<CreateReimbursementClaimResponse>> Create(Guid householdId, CreateReimbursementClaimRequest request, CancellationToken ct)
+    {
+        var configuration = ReimbursementConfigurationMapper.Parse(request.Configuration)
+            ?? throw new Averio.Application.Common.Exceptions.BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
+        return Ok(new CreateReimbursementClaimResponse(await handler.CreateAsync(householdId, request.TransactionId, request.ExpectedUpdatedAt, configuration, ct)));
+    }
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ReimbursementClaimResponse>>> List(Guid householdId, [FromQuery] Guid? transactionId, CancellationToken ct)
     {

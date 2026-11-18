@@ -40,17 +40,8 @@ public sealed class RecurringController(RecurringHandler handler) : ControllerBa
         EnumParser.Parse<RecurringFrequency>(r.Frequency, nameof(r.Frequency), "Validation_Recurring"),
         r.StartsOn, r.EndsOn, r.Automatic, r.IsPaused, r.IsStopped,
         r.Items?.Select(i => new Averio.Application.Transactions.Common.TransactionItemInput(i.Description, i.CategoryId, DecimalAmountMapper.ParseTransactionAmount(i.Amount))).ToArray(),
-        r.LabelIds, r.Merchant, r.Note, r.ActivityId, Configuration(r.Reimbursement));
+        r.LabelIds, r.Merchant, r.Note, r.ActivityId, ReimbursementConfigurationMapper.Parse(r.Reimbursement));
     private static RecurringReimbursementConfiguration? Configuration(RecurringReimbursementRule? r) => r is null ? null : new(
         r.Provider, r.Calculation.ToString(), DecimalAmountMapper.Format(r.Value), r.MaximumAmount is decimal cap ? DecimalAmountMapper.Format(cap) : null,
         r.DestinationAccountId, r.PaymentDelayDays, r.SubmissionReminderDays);
-    private static RecurringReimbursementRule? Configuration(RecurringReimbursementConfiguration? r)
-    {
-        if (r is null) return null;
-        try { return RecurringReimbursementRule.Create(r.Provider,
-            EnumParser.Parse<ReimbursementCalculation>(r.Calculation, nameof(r.Calculation), "Validation_Reimbursement"),
-            DecimalAmountMapper.ParseTransactionAmount(r.Value), r.MaximumAmount is null ? null : DecimalAmountMapper.ParseTransactionAmount(r.MaximumAmount),
-            r.DestinationAccountId, r.PaymentDelayDays, r.SubmissionReminderDays); }
-        catch (ArgumentException) { throw new Averio.Application.Common.Exceptions.BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
-    }
 }

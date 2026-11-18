@@ -65,6 +65,11 @@ export const reimbursementsEN = {
         "whenHelp": "The payment estimate starts from the date you confirm external submission. Submission reminders start when the expense is recorded. Zero means the same day. Reminders appear in Averio.",
         "remind": "Remind me to submit the receipt",
         "reminderDays": "Days after recording the expense"
+    },
+    "manual": {
+        "add": "Track reimbursement",
+        "create": "Create claim",
+        "savedExpense": "This claim uses the saved expense shown above. Save any transaction edits first. Creating a claim does not change the expense or record money received."
     }
 };
 export const reimbursementsDE = {
@@ -134,6 +139,11 @@ export const reimbursementsDE = {
         "whenHelp": "Die Zahlungsschätzung beginnt mit dem bestätigten Einreichungsdatum. Einreichungserinnerungen beginnen mit der Erfassung der Ausgabe. Null bedeutet am selben Tag. Erinnerungen erscheinen in Averio.",
         "remind": "An die Belegeinreichung erinnern",
         "reminderDays": "Tage nach Erfassung der Ausgabe"
+    },
+    "manual": {
+        "add": "Erstattung verfolgen",
+        "create": "Anspruch erstellen",
+        "savedExpense": "Dieser Anspruch verwendet die oben gezeigte gespeicherte Ausgabe. Speichere Änderungen an der Transaktion zuerst. Das Erstellen ändert die Ausgabe nicht und erfasst keinen Geldeingang."
     }
 };
 export const reimbursementsHU = {
@@ -203,5 +213,10 @@ export const reimbursementsHU = {
         "whenHelp": "A kifizetés becsült ideje a megerősített beküldés napjától számít. A beküldési emlékeztető a kiadás rögzítésétől indul. A nulla ugyanazt a napot jelenti. Az emlékeztetők az Averióban jelennek meg.",
         "remind": "Emlékeztess a bizonylat beküldésére",
         "reminderDays": "Napok a kiadás rögzítése után"
+    },
+    "manual": {
+        "add": "Visszatérítés követése",
+        "create": "Igény létrehozása",
+        "savedExpense": "Az igény a fent látható mentett kiadáshoz kapcsolódik. Előbb mentsd a tranzakció módosításait. Az igény létrehozása nem módosítja a kiadást, és nem rögzít beérkezett pénzt."
     }
 };

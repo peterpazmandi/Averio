@@ -1444,6 +1444,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CreationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("creation_fingerprint");
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -1495,7 +1500,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)")
                         .HasColumnName("reference");
 
-                    b.Property<Guid>("RuleId")
+                    b.Property<Guid?>("RuleId")
                         .HasColumnType("uuid")
                         .HasColumnName("rule_id");
 
@@ -2686,8 +2691,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("HouseholdId", "RuleId")
                         .HasPrincipalKey("HouseholdId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Averio.Domain.Transactions.Transaction", null)
                         .WithMany()

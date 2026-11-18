@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RecurringReimbursementConfiguration } from './RecurringReimbursementConfiguration';
+import {
+    RecurringReimbursementConfigurationFromJSON,
+    RecurringReimbursementConfigurationFromJSONTyped,
+    RecurringReimbursementConfigurationToJSON,
+    RecurringReimbursementConfigurationToJSONTyped,
+} from './RecurringReimbursementConfiguration';
 import type { ActivityAssignmentRequest } from './ActivityAssignmentRequest';
 import {
     ActivityAssignmentRequestFromJSON,
@@ -74,6 +81,10 @@ export interface CreateTransactionRequest {
      * 
      */
     chargePersonalMoney?: boolean;
+    /**
+     * 
+     */
+    reimbursement?: RecurringReimbursementConfiguration | null;
 }
 
 /**
@@ -111,6 +122,7 @@ export function CreateTransactionRequestFromJSONTyped(json: any, ignoreDiscrimin
         'labelIds': json['labelIds'] == null ? null : json['labelIds'],
         'activityAssignment': json['activityAssignment'] === undefined ? undefined : json['activityAssignment'] === null ? null : ActivityAssignmentRequestFromJSON(json['activityAssignment']),
         'chargePersonalMoney': json['chargePersonalMoney'] == null ? undefined : json['chargePersonalMoney'],
+        'reimbursement': json['reimbursement'] === undefined ? undefined : json['reimbursement'] === null ? null : RecurringReimbursementConfigurationFromJSON(json['reimbursement']),
     };
 }
 
@@ -135,6 +147,7 @@ export function CreateTransactionRequestToJSONTyped(value?: CreateTransactionReq
         'labelIds': value['labelIds'],
         'activityAssignment': ActivityAssignmentRequestToJSON(value['activityAssignment']),
         'chargePersonalMoney': value['chargePersonalMoney'],
+        'reimbursement': RecurringReimbursementConfigurationToJSON(value['reimbursement']),
     };
 }
 

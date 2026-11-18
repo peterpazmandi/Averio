@@ -18,7 +18,7 @@ public sealed record CreateTransactionRequest(
     [property: JsonRequired] IReadOnlyList<TransactionItemRequest> Items,
     IReadOnlyList<Guid>? LabelIds,
     Averio.Contracts.Activities.ActivityAssignmentRequest? ActivityAssignment = null,
-    bool ChargePersonalMoney = false);
+    bool ChargePersonalMoney = false, Averio.Contracts.Recurring.RecurringReimbursementConfiguration? Reimbursement = null);
 
 public sealed record UpdateTransactionRequest(
     Guid AccountId,

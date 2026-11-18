@@ -11,7 +11,8 @@ public sealed class ReimbursementClaim
     public Guid Id { get; private set; }
     public Guid HouseholdId { get; private set; }
     public Guid HouseholdMemberId { get; private set; }
-    public Guid RuleId { get; private set; }
+    public Guid? RuleId { get; private set; }
+    public string? CreationFingerprint { get; private set; }
     public Guid TransactionId { get; private set; }
     public Guid DestinationAccountId { get; private set; }
     public string Provider { get; private set; } = null!;
@@ -36,15 +37,29 @@ public sealed class ReimbursementClaim
         if (rule.Kind != TransactionKind.Expense || payment.Kind != TransactionKind.Expense || payment.Status != TransactionStatus.Posted
             || payment.HouseholdId != rule.HouseholdId || payment.AccountId != rule.AccountId)
             throw new ArgumentException("A recorded expense is required.");
+        return Create(payment, rule.HouseholdMemberId, config, now, rule.Id);
+    }
+    public static ReimbursementClaim CreateManual(Transaction payment, Guid memberId, RecurringReimbursementRule config,
+        string fingerprint, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(fingerprint) || fingerprint.Length != 64) throw new ArgumentException("Invalid fingerprint.");
+        var claim = Create(payment, memberId, config, now, null);
+        claim.CreationFingerprint = fingerprint;
+        return claim;
+    }
+    private static ReimbursementClaim Create(Transaction payment, Guid memberId, RecurringReimbursementRule config, DateTimeOffset now, Guid? ruleId)
+    {
+        if (memberId == Guid.Empty || payment.Kind != TransactionKind.Expense || payment.Status != TransactionStatus.Posted || payment.IsArchived)
+            throw new ArgumentException("A recorded expense is required.");
         var estimate = config.Estimate(payment.Amount);
         if (estimate <= 0) throw new ArgumentException("Estimate rounds to zero.");
-        var claim = new ReimbursementClaim { Id = Guid.NewGuid(), HouseholdId = rule.HouseholdId,
-            HouseholdMemberId = rule.HouseholdMemberId, RuleId = rule.Id, TransactionId = payment.Id,
+        var claim = new ReimbursementClaim { Id = Guid.NewGuid(), HouseholdId = payment.HouseholdId,
+            HouseholdMemberId = memberId, RuleId = ruleId, TransactionId = payment.Id,
             DestinationAccountId = config.DestinationAccountId, Provider = config.Provider, Currency = payment.Currency.Value,
             PotentialAmount = estimate, OriginalPaymentAmount = payment.Amount, PaymentOn = payment.OccurredOn,
             PaymentDelayDays = config.PaymentDelayDays, CreatedAt = now,
             SubmissionReminderOn = config.SubmissionReminderDays is int days ? DateOnly.FromDateTime(now.UtcDateTime).AddDays(days) : null };
-        claim.Record(rule.HouseholdMemberId, now);
+        claim.Record(memberId, now);
         return claim;
     }
     public void Submit(bool confirmed, DateOnly submittedOn, string? reference, Guid actor, DateTimeOffset now)

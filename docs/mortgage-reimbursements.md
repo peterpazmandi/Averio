@@ -36,3 +36,13 @@ Verification: the existing transaction and PostgreSQL test executables include r
 New recurring first offers Recurring expense, Recurring income, or Expense with reimbursement. These are form presets over the existing recurring model. The reimbursement preset selects Expense and enables claim tracking; it never represents automatic incoming income. The ordinary transaction editor can still enable tracking for an expense.
 
 Reimbursement settings group provider/destination, calculation/amount with an exact-decimal potential estimate, and payment/submission reminder timing. The optional cap is expandable, and reminders have an explicit on/off checkbox. Shared InfoPopover controls hold optional explanations; external submission and its financial consequence remain visible. EN/DE/HU, responsive layouts and dark mode use the shared Tailwind components.
+
+## Manual claims on ordinary expenses
+
+An ordinary new expense can enable Track reimbursement using the same settings. The expense, aggregates and claim save in one database transaction; failed reimbursement validation rolls all of them back. Receipt scanning does not silently enable tracking. Once a scanned/imported expense is recorded, it can use the same action in transaction details.
+
+For an existing posted, unarchived expense, Track reimbursement opens a separate claim form based on the saved expense snapshot. Unsaved transaction edits must be saved first. POST /api/v1/households/{householdId}/reimbursements accepts the source transaction ID, expected transaction timestamp and reimbursement configuration. Permissions are checked on the source account, and the destination must be visible, active and in the same currency. The claim belongs to the creator and has no recurring rule. Income, voided/archived expenses and inaccessible records cannot create claims.
+
+There is one claim per source payment, including recurring and cancelled history. An identical retry by the same creator returns its original claim, while different configuration or another creator receives a generic conflict without claim details. The existing mandatory submission confirmation, reminders, history and account visibility rules apply. Claim creation and submission never create incoming transactions or change financial totals.
+
+Apply 20261118130622_AddManualReimbursementClaims after the original reimbursement migration. It permits a null recurring-rule association and adds the private creation fingerprint for duplicate protection. Rollback refuses to proceed while manual claims exist, preserving history for deliberate resolution.

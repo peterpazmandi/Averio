@@ -442,6 +442,7 @@ export function TransactionEditor({
                 items: mappedItems,
                 labelIds: resolvedLabelIds,
                 chargePersonalMoney: false,
+                reimbursement: !transaction && !receiptDraft && !receiptEvidence && kind === 'Expense' && reimbursement ? { ...reimbursement, destinationAccountId: reimbursement.destinationAccountId || resolvedAccountId } : null,
                 activityAssignment: activityId !== (transaction?.activityId ?? '')
                     ? { activityId: activityId || null, expectedVersion: transaction?.activityAssignmentVersion ?? emptyAssignmentVersion }
                     : null,
@@ -683,7 +684,7 @@ export function TransactionEditor({
                         </>}
                     </AverioDisclosure>}
 
-            {recurring && kind === 'Expense' && <ReimbursementFields value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} paymentAmount={total} sourceAccountId={resolvedAccountId} busy={busy} />}
+            {(recurring || (!transaction && !receiptDraft && !receiptEvidence)) && kind === 'Expense' && <ReimbursementFields value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} paymentAmount={total} sourceAccountId={resolvedAccountId} busy={busy} />}
             <AverioDisclosure title={t('activities.activity')} defaultOpen={!!activityId} summary={activityId ? t('personalMoney.extraConfigured') : t('activities.none')}>
                 <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
                 <p className="text-xs">{t('activities.privateHelp')}</p>
@@ -730,7 +731,7 @@ export function TransactionEditor({
             </AverioCard>}
             {error && <p role="alert" className="text-red-700 dark:text-red-400">{error} {rule && t('recurring.updatedElsewhere')}</p>}
         </form>
-        {transaction && <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} />}
+        {transaction && <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />}
         </div>
     </AverioDialog>
     {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}
