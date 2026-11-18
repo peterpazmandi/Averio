@@ -136,7 +136,7 @@ try {
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const { owner: f, existing: old, password } = fixture;
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
-    await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts });
+    await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts, localeFile });
     await verifyManualReimbursements({ fixture: fixture.manual, password, session, api, ok, artifacts });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');

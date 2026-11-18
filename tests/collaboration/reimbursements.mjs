@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-export async function verifyReimbursements({ fixture: f, password, session, api, ok, artifacts }) {
+export async function verifyReimbursements({ fixture: f, password, session, api, ok, artifacts, localeFile }) {
     const page = await session(f.email, password);
     await page.clock.setFixedTime(new Date(f.date + 'T12:00:00Z'));
     const base = '/households/' + f.householdId;
@@ -30,7 +30,7 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     await page.getByRole('dialog', { name: 'How much can you claim?', exact: true }).waitFor();
     await page.keyboard.press('Escape');
     assert.equal(await dialog.isVisible(), true, 'Closing help must preserve the transaction dialog');
-    await dialog.getByLabel('Reimbursement provider', { exact: true }).fill('Browser health fund');
+    await dialog.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Browser health fund');
     await dialog.getByLabel(/^Reimbursement estimate/).fill('30');
     await dialog.getByLabel('Destination account', { exact: true }).selectOption(f.sharedAccountId);
     await dialog.getByLabel('Days after recording the expense', { exact: true }).fill('0');
@@ -95,6 +95,16 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
             const editing = page.getByRole('dialog', { name: editName, exact: true });
             const settingsName = { en: 'Reimbursement settings', de: 'Erstattungseinstellungen', hu: 'Visszatérítési beállítások' }[language];
             const settings = editing.getByRole('heading', { name: settingsName, exact: true }).locator('../..');
+            const copy = localeFile('reimbursements')['reimbursements' + language.toUpperCase()];
+            const about = localeFile(language)[language].common.infoAbout;
+            for (const [subject, explanation] of [[copy.provider, copy.providerHelp], [copy.edit.paymentTiming, copy.edit.paymentTimingHelp]]) {
+                await editing.getByRole('button', { name: about.replace('{{subject}}', subject), exact: true }).click();
+                const help = page.getByRole('dialog', { name: subject, exact: true });
+                await help.getByText(explanation, { exact: true }).waitFor();
+                assert.equal(await help.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Reimbursement help overflow');
+                await page.keyboard.press('Escape');
+                assert.equal(await editing.isVisible(), true, 'Help dismissal closed the editor');
+            }
             assert.equal(await settings.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Reimbursement editor overflow');
             await settings.screenshot({ path: path.join(artifacts, 'reimbursement-editor-' + language + '-' + theme + '-' + width + '.png') });
             await editing.getByRole('button', { name: { en: 'Cancel', de: 'Abbrechen', hu: 'Mégse' }[language], exact: true }).click();

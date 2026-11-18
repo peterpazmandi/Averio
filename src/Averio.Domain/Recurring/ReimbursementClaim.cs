@@ -43,6 +43,8 @@ public sealed class ReimbursementClaim
         string fingerprint, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(fingerprint) || fingerprint.Length != 64) throw new ArgumentException("Invalid fingerprint.");
+        if (config.Calculation == ReimbursementCalculation.Fixed && config.Value > payment.Amount)
+            throw new ArgumentException("The claim estimate cannot exceed the recorded expense.");
         var claim = Create(payment, memberId, config, now, null);
         claim.CreationFingerprint = fingerprint;
         return claim;
@@ -65,6 +67,8 @@ public sealed class ReimbursementClaim
     public void Update(RecurringReimbursementRule configuration, Guid actor, DateTimeOffset now)
     {
         if (Status == ReimbursementStatus.Cancelled || actor == Guid.Empty) throw new ArgumentException("Claim is closed.");
+        if (configuration.Calculation == ReimbursementCalculation.Fixed && configuration.Value > OriginalPaymentAmount)
+            throw new ArgumentException("The claim estimate cannot exceed the recorded expense.");
         var amount = configuration.Estimate(OriginalPaymentAmount);
         if (amount <= 0 || (SubmittedOn is DateOnly submitted && submitted.DayNumber > DateOnly.MaxValue.DayNumber - configuration.PaymentDelayDays))
             throw new ArgumentException("Invalid claim estimate.");

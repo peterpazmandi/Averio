@@ -38,6 +38,15 @@ internal static class ReimbursementChecks
         Check(payment.Amount == 150000 && payment.Kind == TransactionKind.Expense && payment.Status == TransactionStatus.Posted, "Claim mutated payment");
         Check(config.Estimate(10000) == 2000 && config.Estimate(200000) == 30000, "Percentage or cap");
         Check(RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 20000, null, rule.AccountId, 0, null).Estimate(10000) == 10000, "Estimate exceeds source payment");
+        var fullAmount = RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, payment.Amount, null, rule.AccountId, 0, null);
+        var manual = ReimbursementClaim.CreateManual(payment, member, fullAmount, new string('A', 64), now);
+        Check(manual.PotentialAmount == payment.Amount, "A full-expense reimbursement must be allowed");
+        var tooMuch = RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, payment.Amount + 0.0001m, 1, rule.AccountId, 0, null);
+        Throws(() => ReimbursementClaim.CreateManual(payment, member, tooMuch, new string('B', 64), now));
+        var version = manual.Version;
+        Throws(() => manual.Update(tooMuch, member, now));
+        Check(manual.Version == version && manual.Events.Count == 1 && manual.PotentialAmount == payment.Amount,
+            "Invalid estimate changed the claim or audit history");
         Throws(() => RecurringReimbursementRule.Create(" ", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 7, 2));
         Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Percentage, 101, null, rule.AccountId, 7, 2));
         Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 0, null, rule.AccountId, 7, 2));

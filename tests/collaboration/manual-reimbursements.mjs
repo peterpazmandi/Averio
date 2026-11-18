@@ -12,8 +12,16 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     await editor.getByLabel('Description', { exact: true }).fill('Manual pharmacy');
     await editor.getByLabel(/^Amount/).first().fill('100');
     await editor.getByLabel('Track reimbursement for this payment', { exact: true }).check();
-    await editor.getByLabel('Reimbursement provider', { exact: true }).fill('Manual health fund');
-    await editor.getByLabel(/^Reimbursement estimate/).fill('25');
+    await editor.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Manual health fund');
+    const estimate = editor.getByLabel(/^Reimbursement estimate/);
+    await estimate.fill('100.0001');
+    await editor.getByRole('alert').filter({ hasText: /cannot exceed the recorded expense/ }).waitFor();
+    assert.equal(await estimate.evaluate(input => input.checkValidity()), false);
+    await editor.getByRole('button', { name: 'Save transaction', exact: true }).click();
+    assert.equal((await ok(page, base + '/reimbursements')).length, 0, 'Invalid estimate submitted a claim');
+    await estimate.fill('100');
+    assert.equal(await estimate.evaluate(input => input.checkValidity()), true, 'An estimate equal to the expense must be valid');
+    await estimate.fill('25');
     assert.equal(await editor.getByRole('heading', { name: 'Reimbursement settings', exact: true }).evaluate(el => getComputedStyle(el).fontWeight), '600');
     await editor.getByRole('button', { name: 'Reimbursement cap (optional)', exact: true }).click();
     await editor.getByRole('button', { name: 'About Reimbursement cap (optional)', exact: true }).click();
@@ -42,7 +50,7 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     await page.screenshot({ path: path.join(artifacts, 'reimbursement-action-top.png'), fullPage: true });
     await track.click();
     const create = page.getByRole('dialog', { name: 'Track reimbursement', exact: true });
-    await create.getByLabel('Reimbursement provider', { exact: true }).fill('Manual insurer');
+    await create.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Manual insurer');
     await create.getByLabel(/^Reimbursement estimate/).fill('10');
     const sent = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/reimbursements'));
     await create.getByRole('button', { name: 'Create claim', exact: true }).click();
@@ -52,8 +60,18 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     const previousVersion = (await ok(page, base + '/reimbursements?transactionId=' + existing.id))[0].version;
     await detail.getByRole('button', { name: 'Edit reimbursement', exact: true }).click();
     const editClaim = page.getByRole('dialog', { name: 'Edit reimbursement', exact: true });
-    await editClaim.getByLabel('Reimbursement provider', { exact: true }).fill('Corrected insurer');
-    await editClaim.getByLabel(/^Reimbursement estimate/).fill('15');
+    for (const [subject, explanation] of [['Reimbursement provider', /organisation or person paying you back/], ['Expected payment', /confirm external submission/]]) {
+        await editClaim.getByRole('button', { name: 'About ' + subject, exact: true }).click();
+        await page.getByRole('dialog', { name: subject, exact: true }).getByText(explanation).waitFor();
+        await page.keyboard.press('Escape');
+        assert.equal(await editClaim.isVisible(), true, 'Help must preserve the reimbursement dialog');
+    }
+    await editClaim.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Corrected insurer');
+    const editEstimate = editClaim.getByLabel(/^Reimbursement estimate/);
+    await editEstimate.fill('80.0001');
+    assert.equal(await editEstimate.evaluate(input => input.checkValidity()), false);
+    await editEstimate.fill('15');
+    assert.equal(await editEstimate.evaluate(input => input.checkValidity()), true);
     await editClaim.getByLabel('Estimated days after submission', { exact: true }).fill('5');
     const days = editClaim.getByLabel('Days after recording the expense', { exact: true });
     const paymentDelay = editClaim.getByLabel('Estimated days after submission', { exact: true });

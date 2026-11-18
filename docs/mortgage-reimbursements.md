@@ -62,3 +62,7 @@ PUT /api/v1/households/{householdId}/reimbursements/{claimId} requires the curre
 Each edit appends before/after snapshots to claim history with provider, amount, destination and timing; old events are not rewritten or falsely backfilled. Apply 20261118140924_ReimbursementEditHistory before deploying. It adds nullable event snapshot fields and stable ordering for new events, preserving legacy history. Rolling it back discards those added audit details, so preserve them first.
 
 The follow-up form uses two matching panels with aligned desktop inputs and a stacked mobile layout.
+
+The shared provider information icon explains who pays the reimbursement (for example, a fund, insurer or employer), rather than the merchant receiving the expense. Expected payment has its own information icon explaining the delay from confirmed external receipt submission and that an estimated date never records received money. Both helpers are available in English, German and Hungarian.
+
+Manual creation and individual claim edits reject a fixed estimate above the original recorded expense, even if an optional cap would reduce it. The form shows the expense limit beside the estimate and validates exact amounts to four decimal places; an estimate equal to the expense is allowed. Backend validation enforces the same rule. Recurring configuration remains a template: its generated claim is always capped at the actual recorded payment.

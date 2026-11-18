@@ -29,9 +29,14 @@ internal static class ManualReimbursementVerification
         var tinyInput = Input(tiny) with { Items = [new TransactionItemInput("Small", TestIds.Groceries, 0.0001m)] };
         await Throws<BusinessRuleException>(() => Post(tinyInput));
         Check(await Totals() == before, "Zero estimate did not roll back");
+        var oversized = RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 150.0001m, null, f.HouseholdAccountId, 7, 0);
+        await Throws<BusinessRuleException>(() => Post(Input(oversized)));
+        Check(await Totals() == before, "Oversized claim did not roll back its expense");
         var expense = await Post(Input());
         var payment = await Payment(expense);
         before = await Totals();
+        await Throws<BusinessRuleException>(() => Create(expense, payment.UpdatedAt, oversized));
+        Check((await List(expense)).Count == 0 && await Totals() == before, "Oversized claim changed recorded finances");
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt.AddSeconds(-1), config));
         var hidden = RecurringReimbursementRule.Create("Private destination", ReimbursementCalculation.Fixed, 30, null, f.PrivateAccountId, 7, 0);
         user.UserId = f.MemberUserId;
@@ -65,6 +70,8 @@ internal static class ManualReimbursementVerification
             && edited.SubmittedOn == day && edited.Reference == "MANUAL" && edited.ExpectedOn == day.AddDays(3) && edited.SubmissionReminderOn == null, "Editing lost submission history or timing");
         Check(edited.Events.Any(e => e.ChangeKind == "BeforeUpdate" && e.PotentialAmount == 30) && edited.Events.Any(e => e.ChangeKind == "Updated" && e.PotentialAmount == 50), "Edit audit snapshots missing");
         Check(edited.OriginalPaymentAmount == payment.Amount && await Totals() == before, "Edit changed source or actual money");
+        await Throws<BusinessRuleException>(() => Edit(claim.Id, edited.Version, oversized));
+        Check((await List(expense)).Single().Claim.Version == edited.Version && await Totals() == before, "Invalid edit changed claim or actual money");
         await Throws<ConflictException>(() => Edit(claim.Id, submitted.Version, config));
         user.UserId = f.MemberUserId;
         await Throws<NotFoundException>(() => Edit(claim.Id, edited.Version, config));
