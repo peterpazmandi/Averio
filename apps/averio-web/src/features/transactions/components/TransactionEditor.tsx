@@ -50,6 +50,7 @@ interface Props {
     onCancel: () => void;
     recurringRule?: RecurringRuleResponse;
     initialRecurring?: boolean;
+    initialReimbursement?: boolean;
     onSaveRecurring?: (request: SaveRecurringRuleRequest) => Promise<void>;
     onSave?: (request: TransactionInputDto, expectedUpdatedAt?: string) => Promise<void>;
     onVoid?: (expectedUpdatedAt: string) => Promise<void>;
@@ -113,6 +114,7 @@ export function TransactionEditor({
     receiptDraft, receiptEvidence, receiptPhotoAction, receiptComparison, onSaveReceipt,
     recurringRule: initialRule,
     initialRecurring = false,
+    initialReimbursement = false,
     onSaveRecurring,
     onCancel,
     onSave,
@@ -127,7 +129,7 @@ export function TransactionEditor({
     const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
     const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
     const [timing, setTiming] = useState({ frequency: initialRule?.frequency ?? 'Monthly', endsOn: initialRule?.endsOn ?? null as string | null, automatic: initialRule?.automatic ?? false });
-    const [reimbursement, setReimbursement] = useState<RecurringReimbursementConfiguration | null>(initialRule?.reimbursement ?? null);
+    const [reimbursement, setReimbursement] = useState<RecurringReimbursementConfiguration | null>(initialRule?.reimbursement ?? (initialReimbursement && !initialRule ? { provider: '', calculation: 'Fixed', value: '', maximumAmount: null, destinationAccountId: '', paymentDelayDays: 7, submissionReminderDays: 2 } : null));
     const [paused, setPaused] = useState(initialRule?.isPaused ?? false);
     const [stopped, setStopped] = useState(initialRule?.isStopped ?? false);
     const [stopConsent, setStopConsent] = useState(false);
@@ -422,7 +424,7 @@ export function TransactionEditor({
                     labelIds: resolvedLabelIds, merchant: merchant.trim() || null, note: note.trim() || null,
                     activityId: activityId || null, startsOn: occurredOn, ...timing,
                     isPaused: paused, isStopped: stopped, expectedVersion: rule?.version,
-                    reimbursement: kind === 'Expense' ? reimbursement : null,
+                    reimbursement: kind === 'Expense' && reimbursement ? { ...reimbursement, destinationAccountId: reimbursement.destinationAccountId || resolvedAccountId } : null,
                 });
                 return;
             }
@@ -481,7 +483,7 @@ export function TransactionEditor({
                 </div>}
     </>;
 
-    return <><AverioDialog open wide extraWide={!!receiptComparison} title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : 'transactionManagement.add')}
+    return <><AverioDialog open wide extraWide={!!receiptComparison} title={t(receiptDraft ? 'receipts.review' : rule ? 'recurring.edit' : transaction ? 'transactionManagement.edit' : initialRecurring ? 'recurring.add' : 'transactionManagement.add')}
         closeLabel={t('common.actions.close')} busy={busy} onDismiss={dismiss}
         actions={<>
             {receiptDraft && <div className="mr-auto min-w-0 text-sm" role="status">
@@ -681,7 +683,7 @@ export function TransactionEditor({
                         </>}
                     </AverioDisclosure>}
 
-            {recurring && kind === 'Expense' && <ReimbursementFields value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} busy={busy} />}
+            {recurring && kind === 'Expense' && <ReimbursementFields value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} paymentAmount={total} sourceAccountId={resolvedAccountId} busy={busy} />}
             <AverioDisclosure title={t('activities.activity')} defaultOpen={!!activityId} summary={activityId ? t('personalMoney.extraConfigured') : t('activities.none')}>
                 <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
                 <p className="text-xs">{t('activities.privateHelp')}</p>

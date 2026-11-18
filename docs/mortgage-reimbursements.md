@@ -30,3 +30,9 @@ Recurring save/list contracts expose optional `reimbursement` configuration. `GE
 Apply migration `20261117220912_AddMortgageReimbursements` before deploying API, worker and frontend. It creates configuration, claim and audit-event tables without rewriting financial records. Normal application startup does not run migrations. Review the deployment SQL and preserve claim history before any rollback; migration Down removes these new tables.
 
 Verification: the existing transaction and PostgreSQL test executables include reimbursement cases. The collaboration browser suite includes `reimbursements.mjs`, covering settings, server/client consent, retry idempotency, unchanged account balances, dashboard/details and translated mobile/desktop layouts. Local PostgreSQL tests create and drop isolated databases; use only a dedicated test server.
+
+## Creating a schedule
+
+New recurring first offers Recurring expense, Recurring income, or Expense with reimbursement. These are form presets over the existing recurring model. The reimbursement preset selects Expense and enables claim tracking; it never represents automatic incoming income. The ordinary transaction editor can still enable tracking for an expense.
+
+Reimbursement settings group provider/destination, calculation/amount with an exact-decimal potential estimate, and payment/submission reminder timing. The optional cap is expandable, and reminders have an explicit on/off checkbox. Shared InfoPopover controls hold optional explanations; external submission and its financial consequence remain visible. EN/DE/HU, responsive layouts and dark mode use the shared Tailwind components.

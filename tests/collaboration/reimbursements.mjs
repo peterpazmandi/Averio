@@ -5,32 +5,47 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     const page = await session(f.email, password);
     await page.clock.setFixedTime(new Date(f.date + 'T12:00:00Z'));
     const base = '/households/' + f.householdId;
-    const categories = await ok(page, base + '/categories?kind=Expense');
-    const category = categories.find(c => !c.isArchived);
     const name = 'Mortgage reimbursement ' + Date.now();
-    const created = await ok(page, base + '/recurring', { method: 'POST', body: {
-        accountId: f.sharedAccountId, categoryId: category.id, name, amount: '150',
-        kind: 'Expense', visibility: 'Household', frequency: 'Monthly', startsOn: f.date, endsOn: null,
-        automatic: false,
-    } });
     await page.goto('http://localhost:5173/app/recurring');
-    const card = page.getByRole('article', { name, exact: true });
-    // Locate by the edit button in the card, avoiding assumptions about page-wide schedule count.
-    const edit = page.getByRole('button', { name: 'Edit schedule', exact: true });
-    const rules = await ok(page, base + '/recurring');
-    if (rules.length === 1) await edit.click();
-    else await card.getByRole('button', { name: 'Edit schedule', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Edit schedule', exact: true });
-    await dialog.getByRole('button', { name: /Reimbursement settings/ }).click();
-    await dialog.getByLabel('Track reimbursement for this payment', { exact: true }).check();
+    const startNew = async type => {
+        await page.getByRole('button', { name: 'New recurring', exact: true }).first().click();
+        const chooser = page.getByRole('dialog', { name: 'Choose a recurring transaction', exact: true });
+        await chooser.getByRole('button', { name: new RegExp('^' + type) }).click();
+        return page.getByRole('dialog', { name: 'New recurring', exact: true });
+    };
+    for (const type of ['Recurring expense', 'Recurring income']) {
+        const basic = await startNew(type);
+        assert.equal(await basic.getByLabel(type === 'Recurring income' ? 'Income' : 'Expense', { exact: true }).isChecked(), true);
+        await basic.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
+    const dialog = await startNew('Expense with reimbursement');
+    assert.equal(await dialog.getByLabel('Expense', { exact: true }).isChecked(), true);
+    assert.equal(await dialog.getByLabel('Track reimbursement for this payment', { exact: true }).isChecked(), true);
+    await dialog.getByLabel('Account', { exact: true }).selectOption(f.sharedAccountId);
+    await dialog.getByLabel('Description', { exact: true }).fill('Mortgage');
+    await dialog.getByLabel(/^Amount/).first().fill('150');
+    await dialog.getByLabel('Name', { exact: true }).fill(name);
+    await dialog.getByLabel('First date', { exact: true }).fill(f.date);
+    await dialog.getByRole('button', { name: 'About How much can you claim?', exact: true }).click();
+    await page.getByRole('dialog', { name: 'How much can you claim?', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await dialog.isVisible(), true, 'Closing help must preserve the transaction dialog');
     await dialog.getByLabel('Reimbursement provider', { exact: true }).fill('Browser health fund');
     await dialog.getByLabel(/^Reimbursement estimate/).fill('30');
     await dialog.getByLabel('Destination account', { exact: true }).selectOption(f.sharedAccountId);
-    await dialog.getByLabel(/^Submission reminder after/).fill('0');
+    await dialog.getByLabel('Days after recording the expense', { exact: true }).fill('0');
+    await dialog.getByLabel('Calculation', { exact: true }).selectOption('Percentage');
+    await dialog.getByLabel(/^Percentage of payment/).fill('20');
+    await dialog.getByRole('status').filter({ hasText: 'Potential reimbursement per payment:' }).waitFor();
+    await dialog.getByLabel('Remind me to submit the receipt', { exact: true }).uncheck();
+    assert.equal(await dialog.getByLabel('Days after recording the expense', { exact: true }).count(), 0);
+    await dialog.getByLabel('Remind me to submit the receipt', { exact: true }).check();
+    await dialog.getByLabel('Days after recording the expense', { exact: true }).fill('0');
     await dialog.getByRole('button', { name: 'Save schedule', exact: true }).click();
     await dialog.waitFor({ state: 'hidden' });
-    const rule = (await ok(page, base + '/recurring')).find(r => r.id === created.id);
-    assert.equal(rule.reimbursement.value, '30');
+    const rule = (await ok(page, base + '/recurring')).find(r => r.name === name);
+    assert.equal(rule.reimbursement.value, '20');
+    assert.equal(rule.reimbursement.calculation, 'Percentage');
     assert.equal(rule.reimbursement.submissionReminderDays, 0);
     assert.deepEqual(await ok(page, base + '/reimbursements'), []);
     const record = { method: 'POST', body: { expectedVersion: rule.version, dueOn: f.date } };
@@ -74,6 +89,17 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
             assert.equal(await region.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Claim content overflow');
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, language + ' overflow');
             await region.screenshot({ path: path.join(artifacts, 'reimbursements-' + language + '-' + theme + '-' + width + '.png') });
+            await page.goto('http://localhost:5173/app/recurring');
+            const editName = { en: 'Edit schedule', de: 'Zeitplan bearbeiten', hu: 'Ütemezés szerkesztése' }[language];
+            await page.getByRole('article', { name: rule.name, exact: true }).getByRole('button', { name: editName, exact: true }).click();
+            const editing = page.getByRole('dialog', { name: editName, exact: true });
+            const settingsName = { en: 'Reimbursement settings', de: 'Erstattungseinstellungen', hu: 'Visszatérítési beállítások' }[language];
+            const settings = editing.getByRole('heading', { name: settingsName, exact: true }).locator('../..');
+            assert.equal(await settings.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Reimbursement editor overflow');
+            await settings.screenshot({ path: path.join(artifacts, 'reimbursement-editor-' + language + '-' + theme + '-' + width + '.png') });
+            await editing.getByRole('button', { name: { en: 'Cancel', de: 'Abbrechen', hu: 'Mégse' }[language], exact: true }).click();
+            await page.goto('http://localhost:5173/app');
+
         }
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));

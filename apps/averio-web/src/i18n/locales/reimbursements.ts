@@ -42,6 +42,29 @@ export const reimbursementsEN = {
         "Submitted": "Submitted",
         "Rejected": "Rejected",
         "Cancelled": "Cancelled"
+    },
+    "creation": {
+        "title": "Choose a recurring transaction",
+        "expense": "Recurring expense",
+        "expenseHelp": "Bills, subscriptions, rent or other regular payments.",
+        "income": "Recurring income",
+        "incomeHelp": "Salary, pension or other regular money coming in.",
+        "reimbursement": "Expense with reimbursement",
+        "reimbursementHelp": "Pay an expense, then submit a receipt to claim some or all of it back."
+    },
+    "design": {
+        "recordStep": "Record expense",
+        "submitStep": "Submit receipt",
+        "awaitStep": "Track reimbursement",
+        "requiredSubmission": "Submit the receipt to your provider and confirm it in Averio before any reimbursement becomes expected. This never records money as received.",
+        "who": "Who reimburses you?",
+        "whoHelp": "Enter the fund or insurer name. Choose where you expect the money to arrive; only active accounts in the expense currency are available.",
+        "howMuch": "How much can you claim?",
+        "preview": "Potential reimbursement per payment:",
+        "when": "When should you follow up?",
+        "whenHelp": "The payment estimate starts from the date you confirm external submission. Submission reminders start when the expense is recorded. Zero means the same day. Reminders appear in Averio.",
+        "remind": "Remind me to submit the receipt",
+        "reminderDays": "Days after recording the expense"
     }
 };
 export const reimbursementsDE = {
@@ -88,6 +111,29 @@ export const reimbursementsDE = {
         "Submitted": "Eingereicht",
         "Rejected": "Abgelehnt",
         "Cancelled": "Storniert"
+    },
+    "creation": {
+        "title": "Wiederkehrende Transaktion wählen",
+        "expense": "Wiederkehrende Ausgabe",
+        "expenseHelp": "Rechnungen, Abos, Miete oder andere regelmäßige Zahlungen.",
+        "income": "Wiederkehrende Einnahme",
+        "incomeHelp": "Gehalt, Rente oder andere regelmäßige Zahlungseingänge.",
+        "reimbursement": "Ausgabe mit Erstattung",
+        "reimbursementHelp": "Bezahle eine Ausgabe und reiche anschließend einen Beleg für eine teilweise oder vollständige Erstattung ein."
+    },
+    "design": {
+        "recordStep": "Ausgabe erfassen",
+        "submitStep": "Beleg einreichen",
+        "awaitStep": "Erstattung verfolgen",
+        "requiredSubmission": "Reiche den Beleg beim Anbieter ein und bestätige dies in Averio, bevor eine Erstattung als erwartet gilt. Dadurch wird kein Geldeingang erfasst.",
+        "who": "Wer erstattet dir das Geld?",
+        "whoHelp": "Gib den Namen der Kasse oder Versicherung ein. Wähle das erwartete Empfangskonto; verfügbar sind aktive Konten in der Währung der Ausgabe.",
+        "howMuch": "Wie viel kannst du zurückfordern?",
+        "preview": "Mögliche Erstattung je Zahlung:",
+        "when": "Wann möchtest du nachfassen?",
+        "whenHelp": "Die Zahlungsschätzung beginnt mit dem bestätigten Einreichungsdatum. Einreichungserinnerungen beginnen mit der Erfassung der Ausgabe. Null bedeutet am selben Tag. Erinnerungen erscheinen in Averio.",
+        "remind": "An die Belegeinreichung erinnern",
+        "reminderDays": "Tage nach Erfassung der Ausgabe"
     }
 };
 export const reimbursementsHU = {
@@ -134,5 +180,28 @@ export const reimbursementsHU = {
         "Submitted": "Beküldve",
         "Rejected": "Elutasítva",
         "Cancelled": "Lezárva"
+    },
+    "creation": {
+        "title": "Ismétlődő tranzakció kiválasztása",
+        "expense": "Ismétlődő kiadás",
+        "expenseHelp": "Számlák, előfizetések, lakbér és más rendszeres kifizetések.",
+        "income": "Ismétlődő bevétel",
+        "incomeHelp": "Fizetés, nyugdíj és más rendszeresen beérkező összegek.",
+        "reimbursement": "Kiadás visszatérítéssel",
+        "reimbursementHelp": "Fizess ki egy kiadást, majd küldd be a bizonylatot a részleges vagy teljes visszatérítés igényléséhez."
+    },
+    "design": {
+        "recordStep": "Kiadás rögzítése",
+        "submitStep": "Bizonylat beküldése",
+        "awaitStep": "Visszatérítés követése",
+        "requiredSubmission": "Küldd be a bizonylatot a szolgáltatónak, és erősítsd meg az Averióban. Csak ezután lesz várt visszatérítés; ez nem rögzít beérkezett pénzt.",
+        "who": "Ki téríti vissza az összeget?",
+        "whoHelp": "Add meg a pénztár vagy biztosító nevét. Válaszd ki, melyik számlára várod a pénzt; a kiadás pénznemében vezetett aktív számlák választhatók.",
+        "howMuch": "Mekkora visszatérítést igényelhetsz?",
+        "preview": "Lehetséges visszatérítés kifizetésenként:",
+        "when": "Mikor szeretnél utánajárni?",
+        "whenHelp": "A kifizetés becsült ideje a megerősített beküldés napjától számít. A beküldési emlékeztető a kiadás rögzítésétől indul. A nulla ugyanazt a napot jelenti. Az emlékeztetők az Averióban jelennek meg.",
+        "remind": "Emlékeztess a bizonylat beküldésére",
+        "reminderDays": "Napok a kiadás rögzítése után"
     }
 };
