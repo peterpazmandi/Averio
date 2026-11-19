@@ -1,3 +1,4 @@
+import { ReimbursementsPanel } from '../../reimbursements/ReimbursementsPanel';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { useState } from 'react';
 import { PersonalMoneyCard } from './PersonalMoneyCard';
@@ -412,6 +413,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                     )}
                 </AverioCard>
 
+                <ReimbursementsPanel userId={userId} householdId={householdId} className="col-span-12" />
                 <PersonalMoneyCard key={`${userId}:${householdId}`} userId={userId} householdId={householdId} />
 
                 <AverioCard className="av-span-12" aria-labelledby="dashboard-accounts-title">

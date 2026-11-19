@@ -361,6 +361,8 @@
 <data name="Error_ImportMapping" xml:space="preserve"><value>Ellenőrizd a számlák pénznemét, a láthatóságot és a kategóriapárosításokat, majd fogadd el az egyenlegekre és átfedésekre vonatkozó figyelmeztetést.</value></data>
 <data name="Error_ImportReviewChanged" xml:space="preserve"><value>Az import ellenőrzése megváltozott. Frissítsd, majd erősítsd meg újra a választásaidat.</value></data>
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Az időszak túl sok tételt tartalmaz az ellenőrzéshez. Exportálj rövidebb időszakot.</value></data>
+<data name="Validation_Reimbursement" xml:space="preserve"><value>Ellenőrizd a szolgáltatót, az összeget, a számlát és a dátumokat. A beküldés jelölése előtt erősítsd meg, hogy a bizonylatot külső felületen beküldted.</value></data>
+<data name="Error_ReimbursementChanged" xml:space="preserve"><value>A visszatérítés megváltozott. Frissítsd a nézetet, és próbáld újra.</value></data>
 </root>
 
 

@@ -21,6 +21,20 @@ public sealed class RecurringRuleConfiguration : IEntityTypeConfiguration<Recurr
             t.HasCheckConstraint("ck_recurring_frequency", "frequency IN ('Daily', 'Weekly', 'Monthly', 'Yearly')");
             t.HasCheckConstraint("ck_recurring_dates", "(ends_on IS NULL OR ends_on >= starts_on) AND occurrence_index >= 0 AND (next_due_on IS NULL OR next_due_on >= starts_on)");
         });
+        b.OwnsOne(x => x.Reimbursement, r => {
+            r.ToTable("recurring_reimbursement_rules", t => {
+                t.HasCheckConstraint("ck_reimbursement_config", "length(btrim(provider)) > 0 AND value > 0 AND calculation IN ('Fixed','Percentage') AND (calculation <> 'Percentage' OR value <= 100) AND (maximum_amount IS NULL OR maximum_amount > 0) AND payment_delay_days BETWEEN 0 AND 365 AND (submission_reminder_days IS NULL OR submission_reminder_days BETWEEN 0 AND 365)");
+            });
+            r.Property<Guid>("RecurringRuleId").HasColumnName("rule_id");
+            r.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(160);
+            r.Property(x => x.Calculation).HasColumnName("calculation").HasConversion<string>().HasMaxLength(20);
+            r.Property(x => x.Value).HasColumnName("value").HasPrecision(19,4);
+            r.Property(x => x.MaximumAmount).HasColumnName("maximum_amount").HasPrecision(19,4);
+            r.Property(x => x.DestinationAccountId).HasColumnName("destination_account_id");
+            r.Property(x => x.PaymentDelayDays).HasColumnName("payment_delay_days");
+            r.Property(x => x.SubmissionReminderDays).HasColumnName("submission_reminder_days");
+            r.HasOne<Account>().WithMany().HasForeignKey(x => x.DestinationAccountId).OnDelete(DeleteBehavior.Restrict);
+        });
         b.Property(x => x.Merchant).HasColumnName("merchant").HasMaxLength(160);
         b.Property(x => x.Note).HasColumnName("note").HasMaxLength(500);
         b.Property(x => x.ActivityId).HasColumnName("activity_id");

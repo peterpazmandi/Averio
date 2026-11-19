@@ -1,3 +1,4 @@
+import { ReimbursementsPanel } from '../../reimbursements/ReimbursementsPanel';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
@@ -7,7 +8,8 @@ import type { TransactionDto } from '../api/transactionApi';
 import type { PersonalMoneyRelation } from '../../personal-money/personalMoneyRelations';
 import { PersonalMoneyRelationBadge } from '../../personal-money/PersonalMoneyRelationBadge';
 
-export function TransactionLinkDetail({ query, onClose, personalRelation }: {
+export function TransactionLinkDetail({ query, onClose, personalRelation, userId, householdId }: {
+    userId: string; householdId: string;
     query: UseQueryResult<TransactionDto, Error>; onClose: () => void;
     personalRelation?: PersonalMoneyRelation;
 }) {
@@ -33,6 +35,7 @@ export function TransactionLinkDetail({ query, onClose, personalRelation }: {
                 <dt>{t('transactionManagement.type')}</dt><dd>{t(transaction.kind === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}</dd>
                 <dt>{t('transactionManagement.amount')}</dt><dd className="break-all font-semibold tabular-nums">{money(transaction.amount)}</dd>
             </dl>
+            <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />
             {transaction.status === 'Voided' && <p>{t('transactionManagement.voided')}</p>}
             {transaction.note && <p className="whitespace-pre-wrap break-words">{transaction.note}</p>}
             <ul className="space-y-3">{transaction.items.map(item => <li key={item.id} className="flex flex-wrap justify-between gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">

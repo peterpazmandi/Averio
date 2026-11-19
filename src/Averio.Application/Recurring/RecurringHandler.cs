@@ -14,13 +14,13 @@ public sealed record RecurringInput(Guid AccountId, Guid CategoryId, string Name
     TransactionKind Kind, TransactionVisibility Visibility, RecurringFrequency Frequency,
     DateOnly StartsOn, DateOnly? EndsOn, bool Automatic, bool IsPaused = false, bool IsStopped = false,
     IReadOnlyList<TransactionItemInput>? Items = null, IReadOnlyList<Guid>? LabelIds = null,
-    string? Merchant = null, string? Note = null, Guid? ActivityId = null);
+    string? Merchant = null, string? Note = null, Guid? ActivityId = null, RecurringReimbursementRule? Reimbursement = null);
 public sealed record RecurringResult(RecurringRule Rule, string Currency, bool CanRecord);
 
 public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdRepository households,
     IAccountRepository accounts, IRecurringRepository rules, IUnitOfWork uow,
     TransactionReferenceResolver references, IValidator<TransactionInput> validator,
-    CreateTransactionHandler posting, TimeProvider clock, IActivityRepository activities)
+    CreateTransactionHandler posting, TimeProvider clock, IActivityRepository activities, IReimbursementRepository reimbursements, ITransactionRepository transactions)
 {
     private Guid UserId => currentUser.UserId ?? throw new AuthenticationFailedException();
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
@@ -77,12 +77,28 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         }
         else rule.Update(input.CategoryId, input.Name, input.Amount, input.Visibility, input.EndsOn,
             input.Automatic, input.IsPaused, input.IsStopped, clock.GetUtcNow(), drafts, labels, input.Merchant, input.Note, input.ActivityId);
+        rule.SetReimbursement(input.Reimbursement);
         await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct); return rule.Id;
     }
     private async Task ValidateAsync(Guid householdId, HouseholdMember member, RecurringInput input, IReadOnlyList<TransactionItemInput> items, IReadOnlyList<Guid> labels, RecurringRule? existing, bool active, CancellationToken ct)
     {
         await validator.ValidateAndThrowAsync(new TransactionInput(input.AccountId, input.Kind, input.Visibility,
             input.Merchant, input.Note, input.StartsOn, items, labels), ct);
+        if (input.Reimbursement is { } reimbursement)
+        {
+            if (input.Kind != TransactionKind.Expense || reimbursement.Estimate(input.Amount) <= 0) throw Invalid();
+            // Preserve the ability to suspend a schedule after losing account access.
+            if (active || existing is null)
+            {
+                var source = await accounts.GetVisibleByIdAsync(householdId, member.Id, input.AccountId, ct)
+                    ?? throw new NotFoundException("account", input.AccountId);
+                var destination = await accounts.GetVisibleByIdAsync(householdId, member.Id, reimbursement.DestinationAccountId, ct)
+                    ?? throw new NotFoundException("account", reimbursement.DestinationAccountId);
+                if (destination.Status != AccountStatus.Active || destination.CutoverAtUtc is not null
+                    || source.Currency != destination.Currency) throw Invalid();
+            }
+            else if (existing.Reimbursement is not { } prior || reimbursement.DestinationAccountId != prior.DestinationAccountId) throw Invalid();
+        }
         if (active)
         {
             var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, input.AccountId, ct)
@@ -161,11 +177,22 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         var items = rule.Items.OrderBy(i => i.Position).Select((i, index) =>
             new TransactionItemInput(i.Description, i.CategoryId, itemAmounts?[index] ?? (rule.Items.Count == 1 ? amount ?? i.Amount : i.Amount))).ToArray();
         if (!skip && itemAmounts is null && rule.Items.Count > 1 && amount is decimal actual && actual != rule.Amount) throw Invalid();
+        if (!skip && rule.Reimbursement is { } reimbursement)
+        {
+            try { if (reimbursement.Estimate(items.Sum(i => i.Amount)) <= 0) throw new ArgumentException(); }
+            catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
+        }
         if (!skip)
             transactionId = await posting.CreateWithinTransactionAsync(new CreateTransactionCommand(rule.HouseholdId,
                 rule.AccountId, rule.Kind, rule.Visibility, rule.Merchant, rule.Note, dueOn,
                 items, rule.Labels.Select(l => l.LabelId).ToArray(),
                 rule.ActivityId is Guid activityId ? new Averio.Application.Activities.ActivityAssignmentInput(activityId, Guid.Empty) : null), userId, ct);
+        if (transactionId is Guid postedId && rule.Reimbursement is not null)
+        {
+            var payment = await transactions.GetVisibleByIdAsync(rule.HouseholdId, rule.HouseholdMemberId, postedId, ct)
+                ?? throw new NotFoundException("transaction", postedId);
+            reimbursements.Add(ReimbursementClaim.Create(rule, payment, clock.GetUtcNow()));
+        }
         rules.Add(RecurringOccurrence.Create(rule, dueOn, transactionId, skip ? null : amount ?? rule.Amount, clock.GetUtcNow(), skip ? null : items.Select(i => i.Amount).ToArray()));
         rule.Advance(clock.GetUtcNow()); await uow.SaveChangesAsync(ct);
         return transactionId;

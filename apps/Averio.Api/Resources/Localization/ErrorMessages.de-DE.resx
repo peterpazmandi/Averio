@@ -361,6 +361,8 @@
 <data name="Error_ImportMapping" xml:space="preserve"><value>Prüfe Kontowährungen, Sichtbarkeit und Kategoriezuordnungen und bestätige den Hinweis zu Salden und Überschneidungen.</value></data>
 <data name="Error_ImportReviewChanged" xml:space="preserve"><value>Die Importprüfung hat sich geändert. Aktualisiere sie und bestätige deine Auswahl erneut.</value></data>
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Dieser Zeitraum enthält zu viele Einträge. Exportiere einen kleineren Zeitraum.</value></data>
+<data name="Validation_Reimbursement" xml:space="preserve"><value>Prüfe Anbieter, Betrag, Konto und Daten. Bestätige vor dem Markieren, dass du den Beleg extern eingereicht hast.</value></data>
+<data name="Error_ReimbursementChanged" xml:space="preserve"><value>Diese Erstattung wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
 </root>
 
 

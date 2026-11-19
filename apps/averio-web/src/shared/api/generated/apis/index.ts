@@ -18,6 +18,7 @@ export * from './PersonalMoneyApi';
 export * from './ProfileApi';
 export * from './ReceiptsApi';
 export * from './RecurringApi';
+export * from './ReimbursementsApi';
 export * from './SavedTransactionViewsApi';
 export * from './SecurityApi';
 export * from './StatisticsApi';

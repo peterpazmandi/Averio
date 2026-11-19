@@ -212,6 +212,8 @@ static async Task RunVerificationAsync(string connectionString)
     await TransferAccountConcurrencyVerification.RunAsync(provider, fixture, clock);
     await CategoryVerification.RunAsync(provider, currentUser, fixture, clock);
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
+    await ReimbursementVerification.RunAsync(provider, currentUser, fixture, clock);
+    await ManualReimbursementVerification.RunAsync(provider, currentUser, fixture, clock);
     await RecurringVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
     await InvitationVerification.RunAsync(provider, fixture, clock);
@@ -489,7 +491,7 @@ static async Task VerifyAtomicRollbackAsync(
             services.GetRequiredService<IUnitOfWork>(),
             services.GetRequiredService<TimeProvider>(),
             services.GetRequiredService<Averio.Application.Activities.ActivityHandler>(),
-            services.GetRequiredService<Averio.Application.PersonalMoney.PersonalMoneyHandler>());
+            services.GetRequiredService<Averio.Application.PersonalMoney.PersonalMoneyHandler>(), services.GetRequiredService<Averio.Application.Recurring.ReimbursementHandler>());
 
         await ThrowsAsync<AggregateWriteFailedException>(() => handler.HandleAsync(
             new CreateTransactionCommand(
@@ -991,6 +993,3 @@ internal sealed record CreatedTransactions(
     Guid ExpenseId,
     Guid IncomeId,
     Guid PrivateId);
-
-
-

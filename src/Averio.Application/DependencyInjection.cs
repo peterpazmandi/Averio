@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<Receipts.PostReceiptHandler>();
         services.AddScoped<Receipts.ReceiptProcessor>();
         services.AddScoped<Recurring.RecurringHandler>();
+        services.AddScoped<Recurring.ReimbursementHandler>();
         services.AddScoped<RegisterUserHandler>();
         services.AddScoped<Households.Invitations.InvitationHandler>();
         services.AddScoped<LoginUserHandler>();

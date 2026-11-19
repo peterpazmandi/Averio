@@ -13,7 +13,7 @@ public sealed class GetTransactionHandler(
     IAccountRepository accountRepository,
     ILabelRepository labelRepository,
     ITransactionRepository transactionRepository,
-    Averio.Application.Activities.IActivityRepository activities)
+    Averio.Application.Activities.IActivityRepository activities, Averio.Application.Recurring.IReimbursementRepository reimbursements)
 {
     public async Task<TransactionDetailResult> HandleAsync(
         Guid householdId,
@@ -55,6 +55,7 @@ public sealed class GetTransactionHandler(
 
         var assignment = await activities.ReadAssignmentAsync(household.Id, membership.Id, transaction.Id, cancellationToken);
 
+        var statuses = await reimbursements.StatusesAsync(household.Id, membership.Id, [transaction.Id], cancellationToken);
         return new TransactionDetailResult(
             transaction.Id,
             transaction.AccountId,
@@ -91,7 +92,7 @@ public sealed class GetTransactionHandler(
                     label.Scope))
                 .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty,
             transaction.IsArchived, transaction.ImportBatchId != null,
-            transaction.CreatedByHouseholdMemberId == membership.Id ? transaction.ImportBatchId : null);
+            transaction.CreatedByHouseholdMemberId == membership.Id ? transaction.ImportBatchId : null, statuses.GetValueOrDefault(transaction.Id));
     }
 }
 
@@ -114,4 +115,4 @@ public sealed record TransactionDetailResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null);

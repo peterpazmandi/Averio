@@ -27,7 +27,7 @@ internal static class TransactionMapper
             request.Note,
             request.OccurredOn,
             MapItems(request.Items),
-            request.LabelIds ?? [], MapAssignment(request.ActivityAssignment), request.ChargePersonalMoney);
+            request.LabelIds ?? [], MapAssignment(request.ActivityAssignment), request.ChargePersonalMoney, ReimbursementConfigurationMapper.Parse(request.Reimbursement));
 
     public static UpdateTransactionCommand ToCommand(
         Guid householdId,
@@ -79,7 +79,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus);
 
     public static TransactionResponse From(TransactionDetailResult result) => new(
         result.Id,
@@ -109,7 +109,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus);
 
     private static Averio.Application.Activities.ActivityAssignmentInput? MapAssignment(Averio.Contracts.Activities.ActivityAssignmentRequest? input)
         => input is null ? null : new(input.ActivityId, input.ExpectedVersion);

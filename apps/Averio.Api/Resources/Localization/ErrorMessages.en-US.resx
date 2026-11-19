@@ -361,6 +361,8 @@
 <data name="Error_ImportMapping" xml:space="preserve"><value>Check account currencies, visibility and category mappings, then acknowledge the balance and overlap warning.</value></data>
 <data name="Error_ImportReviewChanged" xml:space="preserve"><value>The import review changed. Refresh the review and confirm your choices again.</value></data>
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>This date range contains too many records to review. Export a smaller date range.</value></data>
+<data name="Validation_Reimbursement" xml:space="preserve"><value>Check the reimbursement provider, amount, account and dates. Confirm that you submitted the receipt externally before marking it as submitted.</value></data>
+<data name="Error_ReimbursementChanged" xml:space="preserve"><value>This reimbursement changed. Refresh it and try again.</value></data>
 </root>
 
 

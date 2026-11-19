@@ -13,6 +13,7 @@ import { AverioLogo } from '../../shared/components/branding/AverioLogo';
 import { formatDecimalAmount } from '../../shared/money/decimalAmount';
 import { accountsQueries } from '../accounts/api/accountsQueries';
 import { recurringApi, recurringQueries } from './recurringQueries';
+import { RecurringTypeDialog, type RecurringType } from './RecurringTypeDialog';
 import { RecurringEditor } from './RecurringEditor';
 
 
@@ -34,6 +35,8 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const owners = useQuery(accountsQueries.ownerOptions(userId, householdId));
     const [editor, setEditor] = useState<RecurringRuleResponse | 'new' | null>(null);
+    const [choosingType, setChoosingType] = useState(false);
+    const [creationType, setCreationType] = useState<RecurringType>('expense');
     const [review, setReview] = useState<{ rule: RecurringRuleResponse; skip: boolean } | null>(null);
     const [history, setHistory] = useState<RecurringRuleResponse | null>(null);
     const [status, setStatus] = useState('all');
@@ -50,7 +53,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
     const date = (value: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     return <section className="grid min-w-0 gap-5">
         <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold" aria-label={t('recurring.title')}>{t('recurring.title')} <InfoPopover label={t('recurring.title')}>{t('recurring.intro')}</InfoPopover></h2></div>
-            <AverioButton variant="primary" disabled={!canCreate} onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton></div>
+            <AverioButton variant="primary" disabled={!canCreate} onClick={() => setChoosingType(true)}>{t('recurring.add')}</AverioButton></div>
         {notice && <p role="status">{notice}</p>}
         {mutation.isError && <p role="alert">{mutation.error.message}</p>}
         <div className="flex flex-wrap items-end gap-3"><AverioField>{t('recurring.status')}<AverioSelect aria-label={t('recurring.status')} value={status} onChange={e => setStatus(e.target.value)}>
@@ -62,7 +65,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
             <div aria-hidden="true" className="mx-auto mb-6 flex h-28 w-40 items-center justify-center gap-3 rounded-2xl border-2 border-emerald-500/40 bg-emerald-500/10"><span className="text-4xl text-emerald-500">↻</span><AverioLogo className="h-16 w-12" /></div>
             <h3 className="text-xl font-bold">{t(status !== 'all' ? 'recurring.noMatches' : 'recurring.emptyTitle')}</h3>
             <p className="mx-auto my-4 max-w-md">{t(canCreate ? 'recurring.emptyHelp' : 'recurring.noAccounts')}</p>
-            {status !== 'all' ? <AverioButton onClick={() => setStatus('all')}>{t('recurring.reset')}</AverioButton> : canCreate ? <AverioButton variant="primary" onClick={() => setEditor('new')}>{t('recurring.add')}</AverioButton> :
+            {status !== 'all' ? <AverioButton onClick={() => setStatus('all')}>{t('recurring.reset')}</AverioButton> : canCreate ? <AverioButton variant="primary" onClick={() => setChoosingType(true)}>{t('recurring.add')}</AverioButton> :
                 <Link to="/app/accounts/new" className="font-semibold text-emerald-700 underline dark:text-emerald-300">{t('recurring.createAccount')}</Link>}
         </AverioCard>}
         <div className="grid min-w-0 gap-4 md:grid-cols-2 2xl:grid-cols-3">
@@ -89,6 +92,7 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
                     <p className={rule.kind === 'Income' ? 'break-words text-2xl font-bold text-emerald-700 dark:text-emerald-400' : 'break-words text-2xl font-bold text-red-700 dark:text-red-400'}>{rule.kind === 'Income' ? '+' : '−'}{formatDecimalAmount(rule.amount, rule.currency, i18n.language)}</p>
                     {rule.nextDueOn && !rule.isStopped && <p className="mt-2 text-sm">{t(rule.isPaused ? 'recurring.pendingDate' : due ? 'recurring.due' : 'recurring.next')} · {date(rule.nextDueOn)}</p>}
                 </div>}
+                {rule.reimbursement && accountVisible && <p className="mb-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{t('reimbursements.creation.reimbursement')}</p>}
                 <dl className="grid gap-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.recordingMode')}</dt><dd className="font-semibold">{t(rule.automatic ? 'recurring.auto' : 'recurring.manual')}</dd></div>
                     <div className="flex flex-wrap justify-between gap-2"><dt className="text-slate-500 dark:text-slate-400">{t('recurring.visibility')}</dt><dd className="font-semibold">{t('recurring.' + rule.visibility)}</dd></div>
@@ -106,7 +110,8 @@ export function RecurringPage({ userId, householdId }: { userId: string; househo
                     </>}
                 </div></div></AverioCard>; })}
         </div>
-        {editor && <RecurringEditor userId={userId} householdId={householdId} rule={editor === 'new' ? null : editor}
+        {choosingType && <RecurringTypeDialog onClose={() => setChoosingType(false)} onChoose={type => { setCreationType(type); setChoosingType(false); setEditor('new'); }} />}
+        {editor && <RecurringEditor creationType={creationType} userId={userId} householdId={householdId} rule={editor === 'new' ? null : editor}
             onClose={() => setEditor(null)}
             onSave={async request => { await mutation.mutateAsync({ rule: editor === 'new' ? null : editor, request }); setEditor(null); setNotice(t('recurring.saved')); }} />}
         {review && <OccurrenceDialog householdId={householdId} rule={review.rule} skip={review.skip} onClose={() => setReview(null)}
