@@ -1,0 +1,136 @@
+import { useId, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TransactionDto, TransactionFilters } from '../api/transactionApi';
+import { getTransactions } from '../api/transactionApi';
+import { AverioCard } from '../../../shared/components/ui/AverioCard';
+import { AverioButton } from '../../../shared/components/ui/AverioButton';
+import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
+import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
+import { AverioLogo } from '../../../shared/components/branding/AverioLogo';
+import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../../shared/money/decimalAmount';
+import { itemRefundKeys, itemRefundsApi } from './itemRefundQueries';
+
+type Props = { userId: string; householdId: string; transaction: TransactionDto; onClose: () => void; onChanged?: () => void };
+const isPositive = (value: string) => subtractDecimalAmounts(value, '0') !== '0' && !value.startsWith('-');
+
+export function RecordItemRefundDialog({ userId, householdId, transaction, onClose, onChanged }: Props) {
+    const { t, i18n } = useTranslation();
+    const client = useQueryClient();
+    const id = useId();
+    const today = new Date().toISOString().slice(0, 10);
+    const [mode, setMode] = useState<'new' | 'existing'>('new');
+    const [itemId, setItemId] = useState(transaction.items.find(i => isPositive(i.amount))?.id ?? '');
+    const [amount, setAmount] = useState('');
+    const [date, setDate] = useState(today);
+    const [creditId, setCreditId] = useState('');
+    const [received, setReceived] = useState(false);
+    const [operationId, setOperationId] = useState(() => crypto.randomUUID());
+    const [search, setSearch] = useState('');
+    const [from, setFrom] = useState(transaction.occurredOn);
+    const [to, setTo] = useState(today);
+    const changed = () => { setOperationId(crypto.randomUUID()); setReceived(false); };
+    const filtersChanged = () => { setCreditId(''); changed(); };
+    const resetFilters = () => { setSearch(''); setFrom(transaction.occurredOn); setTo(today); filtersChanged(); };
+    const filters = { search: search.trim(), from: from || transaction.occurredOn, to: to || today };
+    const validRange = filters.from >= transaction.occurredOn && filters.to <= today && filters.from <= filters.to;
+    const credits = useInfiniteQuery({
+        queryKey: [...itemRefundKeys.credits(userId, householdId, transaction.accountId), filters],
+        initialPageParam: undefined as Pick<TransactionFilters, 'cursorDate' | 'cursorCreatedAt' | 'cursorId'> | undefined,
+        queryFn: ({ pageParam, signal }) => getTransactions(householdId, {
+            accountId: transaction.accountId, kind: 'Income', pageSize: 25, ...filters, ...pageParam,
+        }, signal),
+        getNextPageParam: page => { const last = page.items.at(-1); return page.hasMore && last ? { cursorDate: last.occurredOn, cursorCreatedAt: last.createdAt, cursorId: last.id } : undefined; },
+        enabled: mode === 'existing' && validRange,
+    });
+    const item = transaction.items.find(i => i.id === itemId);
+    const options = credits.data?.pages.flatMap(p => p.items).filter(c => c.canModify && c.status === 'Posted' && !c.isArchived
+        && c.visibility === transaction.visibility && c.currency === transaction.currency
+        && c.occurredOn >= filters.from && c.occurredOn <= filters.to
+        && item && isPositive(c.amount)
+        && !subtractDecimalAmounts(item.amount, c.amount).startsWith('-')) ?? [];
+    const credit = options.find(c => c.id === creditId);
+    const value = normalizeBalanceInput(mode === 'existing' ? credit?.amount ?? '' : amount);
+    const validAmount = !!item && !!value && value !== '0' && !value.startsWith('-') && !subtractDecimalAmounts(item.amount, value).startsWith('-');
+    const validDate = !!date && date >= transaction.occurredOn && date <= today;
+    const valid = validAmount && (mode === 'new' ? validDate : validRange && credits.isSuccess);
+    const language = i18n.resolvedLanguage ?? i18n.language;
+    const money = (v: string) => formatDecimalAmount(v, transaction.currency, language);
+    const displayDate = (v: string) => new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(v + 'T00:00:00Z'));
+    const mutation = useMutation({ mutationFn: () => itemRefundsApi.apiV1HouseholdsHouseholdIdTransactionsTransactionIdRefundsPost({
+        householdId, transactionId: transaction.id, recordItemRefundRequest: { transactionItemId: itemId, amount: value!, receivedOn: mode === 'existing' ? credit!.occurredOn : date,
+            operationId, expectedUpdatedAt: transaction.updatedAt, moneyReceived: received,
+            creditTransactionId: mode === 'existing' ? credit!.id : null, expectedCreditUpdatedAt: mode === 'existing' ? credit!.updatedAt : null },
+    }), onSuccess: async () => { await client.invalidateQueries(); onChanged?.(); onClose(); } });
+    const stepHeading = (step: number, title: string) => <h3 id={`${id}-step-${step}`} className="flex items-center gap-3 text-base font-semibold">
+        <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{step}</span>
+        <span><span className="sr-only">{t('itemRefunds.step', { number: step })} · </span>{title}</span>
+    </h3>;
+    return <AverioDialog open wide title={t('itemRefunds.add')} closeLabel={t('common.actions.close')} busy={mutation.isPending} onDismiss={onClose}
+        actions={<><AverioButton disabled={mutation.isPending} onClick={onClose}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="primary" type="submit" form="item-refund" disabled={mutation.isPending || !valid || !received}>{t(mode === 'existing' ? 'itemRefunds.link' : 'itemRefunds.record')}</AverioButton></>}>
+        <form id="item-refund" className="grid gap-5" onSubmit={e => { e.preventDefault(); if (valid && received && !mutation.isPending) mutation.mutate(); }}>
+            <AverioCard role="group" aria-labelledby={`${id}-step-1`} className="grid gap-4">
+                <div className="flex items-center justify-between gap-2">{stepHeading(1, t('itemRefunds.stepItem'))}<InfoPopover label={t('itemRefunds.item')}>{t('itemRefunds.savedHelp')}</InfoPopover></div>
+                <AverioField>{t('itemRefunds.item')}<AverioSelect aria-label={t('itemRefunds.item')} value={itemId} disabled={mutation.isPending} onChange={e => { setItemId(e.target.value); setCreditId(''); changed(); }}>
+                    {transaction.items.filter(i => isPositive(i.amount)).map(i => <option key={i.id} value={i.id}>{i.description} · {money(i.amount)}</option>)}
+                </AverioSelect></AverioField>
+                {item && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900"><span>{transaction.accountName} · {transaction.currency}</span><span>{t('itemRefunds.remaining')}: <strong>{money(item.amount)}</strong></span></div>}
+            </AverioCard>
+            <AverioCard role="group" aria-labelledby={`${id}-step-2`} className="grid gap-4">
+                {stepHeading(2, t('itemRefunds.stepMoney'))}
+                <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-2 text-sm font-semibold">{t('itemRefunds.mode')}</legend>
+                    {(['new', 'existing'] as const).map(v => <label key={v} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${mode === v ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : 'border-slate-200 dark:border-slate-700'}`}>
+                        <input className="mt-1 size-4 shrink-0 accent-emerald-500" type="radio" name="refund-mode" value={v} checked={mode === v} aria-label={t(v === 'new' ? 'itemRefunds.newCredit' : 'itemRefunds.existingCredit')} disabled={mutation.isPending} onChange={() => { setMode(v); changed(); }} />
+                        <span className="grid gap-1"><span className="font-semibold">{t(v === 'new' ? 'itemRefunds.newCredit' : 'itemRefunds.existingCredit')}</span><span className="text-xs text-slate-600 dark:text-slate-300">{t(v === 'new' ? 'itemRefunds.newHint' : 'itemRefunds.existingHint')}</span></span>
+                    </label>)}
+                </fieldset>
+                {mode === 'new' ? <div className="grid gap-4 sm:grid-cols-2">
+                    <AverioField>{t('itemRefunds.amount')} · {transaction.currency}<AverioInput required inputMode="decimal" value={amount} disabled={mutation.isPending} aria-invalid={!!amount && !validAmount || undefined} onChange={e => { setAmount(e.target.value.replace(',', '.')); changed(); }} /></AverioField>
+                    <AverioField>{t('itemRefunds.date')}<AverioInput required type="date" min={transaction.occurredOn} max={today} value={date} disabled={mutation.isPending} aria-invalid={!validDate || undefined} onChange={e => { setDate(e.target.value); changed(); }} /></AverioField>
+                </div> : <div className="grid gap-4">
+                    <p className="text-sm">{t('itemRefunds.existingHelp')}</p>
+                    <fieldset disabled={mutation.isPending} className="grid min-w-0 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
+                        <legend className="float-left mb-3 text-sm font-semibold">{t('itemRefunds.filters')}</legend>
+                        <AverioField className="clear-both">{t('itemRefunds.search')}<AverioInput type="search" maxLength={160} value={search} onChange={e => { setSearch(e.target.value); filtersChanged(); }} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} /></AverioField>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <AverioField>{t('itemRefunds.from')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={from} aria-invalid={!validRange || undefined} onChange={e => { setFrom(e.target.value); filtersChanged(); }} /></AverioField>
+                            <AverioField>{t('itemRefunds.to')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={to} aria-invalid={!validRange || undefined} onChange={e => { setTo(e.target.value); filtersChanged(); }} /></AverioField>
+                        </div>
+                        <div><AverioButton onClick={resetFilters}>{t('itemRefunds.resetFilters')}</AverioButton></div>
+                    </fieldset>
+                    {!validRange ? <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.invalidDates')}</p> : <>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">{t('itemRefunds.matchHelp', { amount: money(item?.amount ?? '0') })}</p>
+                        {credits.isPending && <p role="status">{t('common.status.loading')}</p>}
+                        {credits.isError && <p role="alert">{t('itemRefunds.error')}</p>}
+                        {!!options.length && <fieldset className="grid min-w-0 gap-2"><legend className="mb-2 text-sm font-semibold">{t('itemRefunds.chooseCredit')}</legend>
+                            <div className="grid max-h-72 gap-2 overflow-y-auto rounded-xl p-1">
+                                {options.map(c => <label key={c.id} data-credit-id={c.id} className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${creditId === c.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : 'border-slate-200 dark:border-slate-700'}`}>
+                                    <input className="mt-1 size-4 shrink-0 accent-emerald-500" type="radio" name="refund-credit" value={c.id} checked={creditId === c.id} disabled={mutation.isPending || !credits.isSuccess} onChange={() => { setCreditId(c.id); changed(); }} />
+                                    <span className="grid min-w-0 flex-1 gap-1"><span className="break-words font-semibold">{c.merchant || c.description}</span>{c.merchant && <span className="break-words text-xs">{c.items.map(i => i.description).join(' · ')}</span>}{c.note && <span className="line-clamp-2 break-words text-xs text-slate-600 dark:text-slate-300">{c.note}</span>}<span className="flex flex-wrap justify-between gap-2"><span className="text-slate-600 dark:text-slate-300">{displayDate(c.occurredOn)}</span><strong>{money(c.amount)}</strong></span></span>
+                                </label>)}
+                            </div>
+                        </fieldset>}
+                        {credits.isSuccess && options.length === 0 && <div role="status" className="grid justify-items-center gap-2 rounded-xl bg-slate-50 p-4 text-center text-sm dark:bg-slate-900"><div aria-hidden="true"><AverioLogo className="size-10" /></div><p className="font-semibold">{t('itemRefunds.none')}</p><p>{t(credits.hasNextPage ? 'itemRefunds.moreHelp' : 'itemRefunds.noMatchesHelp')}</p><AverioButton onClick={resetFilters}>{t('itemRefunds.resetFilters')}</AverioButton></div>}
+                        {(credits.hasNextPage || credits.isError) && <AverioButton disabled={credits.isFetching || mutation.isPending} onClick={() => { void (credits.isError ? credits.refetch() : credits.fetchNextPage()); }}>{t(credits.isError ? 'common.actions.retry' : 'itemRefunds.more')}</AverioButton>}
+                    </>}
+                </div>}
+                {item && value && !validAmount && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.maximum', { amount: money(item.amount) })}</p>}
+                {mode === 'new' && !validDate && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.invalidDates')}</p>}
+            </AverioCard>
+            <AverioCard role="group" aria-labelledby={`${id}-step-3`} className="grid gap-4">
+                {stepHeading(3, t('itemRefunds.stepReview'))}
+                {valid && item ? <dl className="grid gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2 dark:bg-slate-900">
+                    <div className="min-w-0"><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.item')}</dt><dd className="break-words font-semibold">{item.description}</dd></div>
+                    <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.amount')}</dt><dd className="font-semibold">{money(value!)}</dd></div>
+                    <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.date')}</dt><dd>{displayDate(mode === 'existing' ? credit!.occurredOn : date)}</dd></div>
+                    <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.netAfter')}</dt><dd className="font-semibold">{money(subtractDecimalAmounts(transaction.amount, value!))}</dd></div>
+                </dl> : <p className="text-sm text-slate-600 dark:text-slate-300">{t('itemRefunds.reviewHelp')}</p>}
+                <p className="text-sm">{t('itemRefunds.noIncome')}</p>
+                <div className="flex items-center gap-2 text-sm"><span>{t('personalMoney.itemAllocationTitle')}</span><InfoPopover label={t('itemRefunds.title')}>{t('itemRefunds.allowanceHelp')}</InfoPopover></div>
+                <label className="flex min-h-11 items-start gap-3 rounded-xl border border-emerald-200 p-3 text-sm font-semibold dark:border-emerald-900"><input className="mt-1 size-4 shrink-0 accent-emerald-500" type="checkbox" checked={received} disabled={mutation.isPending || !valid} onChange={e => setReceived(e.target.checked)} />{t('itemRefunds.received')}</label>
+            </AverioCard>
+            {mutation.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{mutation.error.message}</p>}
+        </form>
+    </AverioDialog>;
+}

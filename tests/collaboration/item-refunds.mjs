@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-export async function verifyItemRefunds({ fixture: f, password, session, api, ok, poll, localeFile, artifacts }) {
+export async function verifyItemRefunds({ fixture: f, password, session, api, ok, poll, localeFile, artifacts, control }) {
     const page = await session(f.email, password);
     await page.clock.setFixedTime(new Date(f.date + 'T12:00:00Z'));
     const base = '/households/' + f.householdId;
@@ -33,7 +33,7 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     await merchant.fill('Refund browser shop');
     await region().getByRole('button', { name: 'Add refund', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Add refund', exact: true });
-    await dialog.getByLabel('Receipt item', { exact: true }).selectOption(a);
+    await dialog.getByRole('combobox', { name: 'Receipt item', exact: true }).selectOption(a);
     await dialog.getByLabel(/^Refund amount/).fill('20');
     assert.equal(await dialog.getByRole('button', { name: 'Record refund', exact: true }).isDisabled(), true, 'Actual receipt confirmation is required');
     await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
@@ -49,29 +49,60 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     assert.equal((await ok(page, base + '/transactions/' + initialRefund.creditTransactionId)).kind, 'Refund');
     assert.equal(await balance(), '-180');
     const incoming = await post('Income', [{ description: 'Recorded bank return', categoryId: incomeCategory.id, amount: '15' }]);
+    // Put the target beyond the first page; searches must reach the saved history.
+    const unrelated = [];
+    await control('/advance', { seconds: 1 });
+    for (let i = 0; i < 27; i++) unrelated.push(await post('Income', [{ description: 'Unrelated credit ' + i, categoryId: incomeCategory.id, amount: '1' }]));
     const beforeLink = await balance();
     await region().getByRole('button', { name: 'Add refund', exact: true }).click();
-    await dialog.getByLabel('Receipt item', { exact: true }).selectOption(b);
+    await dialog.getByRole('combobox', { name: 'Receipt item', exact: true }).selectOption(b);
     await dialog.getByLabel('Link an existing incoming transaction', { exact: true }).check();
-    await dialog.getByLabel('Incoming transaction', { exact: true }).selectOption(incoming.id);
+    const candidate = () => dialog.locator('[data-credit-id="' + incoming.id + '"] input[type=radio]');
+    await dialog.getByRole('button', { name: 'Load more transactions', exact: true }).waitFor();
+    assert.equal(await candidate().count(), 0, 'The older target is not on the first page');
+    await dialog.getByRole('button', { name: 'Load more transactions', exact: true }).click();
+    await candidate().check();
+    await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
+    await dialog.getByLabel('Search merchant, item or note', { exact: true }).fill('No such bank credit');
+    await dialog.getByText('No matching incoming transactions.', { exact: true }).waitFor();
+    assert.equal(await dialog.getByRole('button', { name: 'Link refund', exact: true }).isDisabled(), true, 'Filter changes clear selection and consent');
+    const filteredRequest = page.waitForRequest(r => r.method() === 'GET' && new URL(r.url()).searchParams.get('search') === 'Recorded bank return');
+    await dialog.getByLabel('Search merchant, item or note', { exact: true }).fill('Recorded bank return');
+    const filteredUrl = new URL((await filteredRequest).url());
+    assert.equal(filteredUrl.searchParams.get('from'), f.date);
+    assert.equal(filteredUrl.searchParams.get('to'), f.date);
+    assert.equal(filteredUrl.searchParams.get('pageSize'), '25');
+    await candidate().check();
+    assert.equal(await dialog.locator('[name=refund-credit]').count(), 1, 'Server search finds the older target without fetching every page');
+    await page.screenshot({ path: path.join(artifacts, 'item-refund-search-selected.png'), fullPage: false });
+    await dialog.getByLabel('Received from', { exact: true }).fill('9999-12-31');
+    await dialog.getByRole('alert').filter({ hasText: /Choose dates/ }).waitFor();
+    assert.equal(await dialog.getByRole('button', { name: 'Link refund', exact: true }).isDisabled(), true);
+    await dialog.getByRole('button', { name: 'Reset filters', exact: true }).click();
+    await dialog.getByLabel('Search merchant, item or note', { exact: true }).fill('Recorded bank return');
+    await candidate().check();
     await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
     await dialog.getByRole('button', { name: 'Link refund', exact: true }).click();
     await dialog.waitFor({ state: 'hidden' });
     await poll(async () => (await source()).amount === '165', 'linked return net expense');
     assert.equal(await balance(), beforeLink, 'Existing credit was counted twice');
     assert.equal((await ok(page, base + '/transactions/' + incoming.id)).kind, 'Refund');
+    for (const extra of unrelated) {
+        const record = await ok(page, base + '/transactions/' + extra.id);
+        await ok(page, base + '/transactions/' + extra.id + '?expectedUpdatedAt=' + encodeURIComponent(record.updatedAt), { method: 'DELETE' });
+    }
     const after = await stats();
     assert.equal(categoryAmount(after, categoryA.id) - categoryAmount(beforeStats, categoryA.id), 100);
     assert.equal(categoryAmount(after, categoryB.id) - categoryAmount(beforeStats, categoryB.id), 65);
     assert.equal(incomeTotal(after), incomeTotal(beforeStats), 'Refund inflated income');
     for (const [itemId, amount] of [[a, '100'], [b, '65']]) {
         await region().getByRole('button', { name: 'Add refund', exact: true }).click();
-        await dialog.getByLabel('Receipt item', { exact: true }).selectOption(itemId);
+        await dialog.getByRole('combobox', { name: 'Receipt item', exact: true }).selectOption(itemId);
         await dialog.getByLabel(/^Refund amount/).fill(String(Number(amount) + 0.01));
-        await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
         await dialog.getByRole('alert').filter({ hasText: /remaining cost/ }).waitFor();
         assert.equal(await dialog.getByRole('button', { name: 'Record refund', exact: true }).isDisabled(), true);
         await dialog.getByLabel(/^Refund amount/).fill(amount);
+        await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
         await dialog.getByRole('button', { name: 'Record refund', exact: true }).click();
         await dialog.waitFor({ state: 'hidden' });
         await poll(async () => (await source()).items.find(i => i.id === itemId).amount === '0', 'full item return');
@@ -99,6 +130,7 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     assert.equal(categoryAmount(final, categoryA.id) - categoryAmount(beforeStats, categoryA.id), 0);
     assert.equal(categoryAmount(final, categoryB.id) - categoryAmount(beforeStats, categoryB.id), 15);
     assert.equal(incomeTotal(final), incomeTotal(beforeStats));
+    const preview = await post('Income', [{ description: 'Bank return for the remaining receipt item', categoryId: incomeCategory.id, amount: '2' }]);
 
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) for (const width of [375, 1440]) {
         await page.evaluate(({ language, theme }) => { localStorage.setItem('i18nextLng', language); localStorage.setItem('averio.theme', theme); }, { language, theme });
@@ -112,7 +144,18 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
         await adding.getByLabel(copy.received, { exact: true }).check();
         assert.equal(await adding.getByRole('button', { name: copy.record, exact: true }).isEnabled(), true);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Item refund form overflow');
-        await page.screenshot({ path: path.join(artifacts, `item-refund-${language}-${theme}-${width}.png`), fullPage: true });
+        await adding.locator('form').evaluate(form => { form.parentElement.scrollTop = 0; });
+        await page.screenshot({ path: path.join(artifacts, `item-refund-${language}-${theme}-${width}.png`), fullPage: false });
+        assert.equal(await adding.locator('form > [role=group]').count(), 3, 'The three numbered steps are separate accessible groups');
+        await adding.getByLabel(copy.existingCredit, { exact: true }).check();
+        await adding.locator('[data-credit-id="' + preview.id + '"] input[type=radio]').check();
+        assert.equal(await adding.getByLabel(copy.received, { exact: true }).isChecked(), false, 'Changing the recording mode resets consent');
+        await adding.getByLabel(copy.search, { exact: true }).fill('Bank return for the remaining receipt item');
+        await adding.locator('[data-credit-id="' + preview.id + '"] input[type=radio]').check();
+        await adding.getByLabel(copy.received, { exact: true }).check();
+        assert.equal(await adding.getByRole('button', { name: copy.link, exact: true }).isEnabled(), true);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Filtered credit list overflow');
+        await page.screenshot({ path: path.join(artifacts, `item-refund-filter-${language}-${theme}-${width}.png`), fullPage: false });
         await adding.getByRole('button', { name: { en: 'Cancel', de: 'Abbrechen', hu: 'Mégse' }[language], exact: true }).click();
     }
     console.log('PASS item refund UI: manual/link existing credit, actual-money confirmation, different receipt items, caps, full zero expense, net categories/no income, exact balances, duplicate retry, reversal, origin navigation and EN/DE/HU responsive themes');
