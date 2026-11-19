@@ -393,7 +393,7 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                     className="av-list-row"
                                 >
                                     <span className="av-tx-icon">
-                                        {transaction.kind === 'Income' ? '↙' : '↗'}
+                                        {transaction.kind !== 'Expense' ? '↙' : '↗'}
                                     </span>
                                     <span className="av-row-title">
                                         <strong>
@@ -402,9 +402,9 @@ export function DashboardPage({ userId, householdId }: DashboardPageProps) {
                                         </strong>
                                         <span>{transaction.accountName} · {date(transaction.occurredOn)}</span>
                                     </span>
-                                    <span className={transaction.kind === 'Income'
+                                    <span className={transaction.kind !== 'Expense'
                                         ? 'av-amount-pos' : 'av-amount-neg'}>
-                                        {transaction.kind === 'Income' ? '+' : '−'}
+                                        {transaction.kind !== 'Expense' ? '+' : '−'}
                                         {money(transaction.amount, transaction.currency)}
                                     </span>
                                 </Link>

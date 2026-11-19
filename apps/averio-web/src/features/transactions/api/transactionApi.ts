@@ -20,7 +20,7 @@ import type {
 } from '../../../shared/api/generated';
 import { generatedApiConfiguration } from '../../../shared/api/generatedApiConfiguration';
 
-export type TransactionKind = 'Income' | 'Expense';
+export type TransactionKind = 'Income' | 'Expense' | 'Refund';
 export type TransactionVisibility = 'Household' | 'Private';
 export type LabelScope = 'Household' | 'Account';
 export type AggregatePeriod = 'Day' | 'Month' | 'Year';

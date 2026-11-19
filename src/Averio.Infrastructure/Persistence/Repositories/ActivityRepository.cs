@@ -24,7 +24,7 @@ internal sealed class ActivityRepository(AverioDbContext db) : IActivityReposito
             from link in db.Set<ActivityAssignment>().AsNoTracking()
             join transaction in db.VisibleTransactions(householdId, memberId).AsNoTracking() on link.TransactionId equals transaction.Id
             where link.HouseholdId == householdId && link.HouseholdMemberId == memberId && link.ActivityId != null
-                && transaction.Status == TransactionStatus.Posted && transaction.OccurredOn <= through
+                && transaction.Status == TransactionStatus.Posted && transaction.Kind != TransactionKind.Refund && transaction.OccurredOn <= through
             group transaction by new { link.ActivityId, transaction.Currency } into g
             select new { g.Key.ActivityId, g.Key.Currency,
                 Income = g.Sum(x => x.Kind == TransactionKind.Income ? x.Amount : 0m),
@@ -44,7 +44,7 @@ internal sealed class ActivityRepository(AverioDbContext db) : IActivityReposito
             from link in db.Set<ActivityAssignment>().AsNoTracking()
             join transaction in db.VisibleTransactions(householdId, memberId).AsNoTracking() on link.TransactionId equals transaction.Id
             where link.HouseholdId == householdId && link.HouseholdMemberId == memberId && link.ActivityId == activityId
-                && transaction.Status == TransactionStatus.Posted && transaction.OccurredOn <= through
+                && transaction.Status == TransactionStatus.Posted && transaction.Kind != TransactionKind.Refund && transaction.OccurredOn <= through
             group transaction by new { transaction.OccurredOn, transaction.Currency } into g
             orderby g.Key.OccurredOn
             select new { g.Key.OccurredOn, g.Key.Currency,

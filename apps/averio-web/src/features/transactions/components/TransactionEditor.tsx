@@ -1,3 +1,4 @@
+import { ItemRefundsPanel } from '../refunds/ItemRefundsPanel';
 import { ReimbursementFields } from '../../recurring/ReimbursementFields';
 import { ReimbursementsPanel } from '../../reimbursements/ReimbursementsPanel';
 import type { RecurringReimbursementConfiguration } from '../../../shared/api/generated';
@@ -125,6 +126,7 @@ export function TransactionEditor({
     // Keep the draft and all concurrency tokens from the same editing session.
     // The parent keys this component by transaction ID and unmounts it on close.
     const [transaction] = useState(initialTransaction);
+    const [refundChanged, setRefundChanged] = useState(false);
     const [rule] = useState(initialRule);
     const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
     const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
@@ -173,7 +175,7 @@ export function TransactionEditor({
                     key: item.id || itemKey(),
                     description: item.description,
                     categoryId: item.categoryId,
-                    amount: item.amount,
+                    amount: sumDecimalAmounts([item.amount, item.refundedAmount ?? '0']),
                     personalAmount: null,
                 }))
             : [{
@@ -184,6 +186,8 @@ export function TransactionEditor({
                 personalAmount: null,
             }],
     );
+    const refundProtected = (initialTransaction ?? transaction)?.items.some(i => i.hasRefundHistory) ?? false;
+    const refundedTotal = sumDecimalAmounts((initialTransaction ?? transaction)?.items.map(i => i.refundedAmount ?? '0') ?? []);
     const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
         () => rule?.labelIds ?? transaction?.labels.map(label => label.id) ?? [],
     );
@@ -226,14 +230,18 @@ export function TransactionEditor({
     function personalAmount(item: EditorItem): string {
         return item.personalAmount ?? storedPersonalAmount(item);
     }
+    function hasActiveItemRefunds(item: EditorItem): boolean {
+        return (amountToScaled((initialTransaction ?? transaction)?.items.find(i => i.id === item.key)?.refundedAmount ?? '0') ?? 0n) > 0n;
+    }
     function canManagePersonalMoney(item: EditorItem): boolean {
+        if (hasActiveItemRefunds(item) && (amountToScaled(storedPersonalAmount(item)) ?? 0n) === 0n) return false;
         return canChargePersonalMoney || (!recurring && kind === 'Expense'
             && (amountToScaled(storedPersonalAmount(item)) ?? 0n) > 0n);
     }
     function chargeAllItems() {
         if (receiptDraft) setReviewConfirmed(false);
         setItems(current => current.map(item => ({
-            ...item, personalAmount: canChargePersonalMoney ? normalizeAmount(item.amount) : '0',
+            ...item, personalAmount: hasActiveItemRefunds(item) ? item.personalAmount : canChargePersonalMoney ? normalizeAmount(item.amount) : '0',
         })));
     }
 
@@ -318,6 +326,8 @@ export function TransactionEditor({
         .map(entry => entry.amount)))) ?? 0n) : 0n;
     const personalTotal = resolvedItems.reduce((sum, item) =>
         sum + (canManagePersonalMoney(item) ? (amountToScaled(personalAmount(item)) ?? 0n) : 0n), legacyPersonalTotal);
+    const personalReturned = amountToScaled(sumDecimalAmounts((wallet.data?.entries ?? []).filter(e => e.relatedTransactionId === transaction?.id && (e.kind === 'PrivateRefund' || e.kind === 'SharedRefund')).map(e => e.amount))) ?? 0n;
+    const netPersonalTotal = personalTotal > personalReturned ? personalTotal - personalReturned : 0n;
     const allowanceItem = resolvedItems.find(item => item.key === allowanceItemKey);
 
     function updateItem(key: string, patch: Partial<EditorItem>) {
@@ -498,7 +508,7 @@ export function TransactionEditor({
                         void onArchive(!transaction.isArchived, transaction.updatedAt).catch(reason =>
                             setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
                 }}>{t(transaction.isArchived ? 'transactionManagement.restore' : 'transactionManagement.archive')}</AverioButton>}
-            {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy} onClick={() => {
+            {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy || refundChanged || refundedTotal !== '0'} onClick={() => {
                 if (window.confirm(t('transactionManagement.voidConfirm'))) {
                     void onVoid(transaction.updatedAt).catch(reason => setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
                 }
@@ -506,14 +516,16 @@ export function TransactionEditor({
             {receiptPhotoAction}
             <AverioButton disabled={busy} onClick={dismiss}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
-                disabled={busy || !receiptValid || !resolvedAccountId || (!!receiptDraft && (!occurredOn || resolvedItems.some(item => !item.description.trim() || !validReceiptAmount(item.amount)))) || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                disabled={busy || refundChanged || !receiptValid || !resolvedAccountId || (!!receiptDraft && (!occurredOn || resolvedItems.some(item => !item.description.trim() || !validReceiptAmount(item.amount)))) || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
         <div className={receiptComparison ? 'grid items-start gap-5 xl:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.6fr)]' : ''}>
         {receiptComparison && <aside className="hidden xl:sticky xl:top-0 xl:block">{receiptComparison}</aside>}
-        {transaction && <ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />}
-        <form id="transaction-editor" className="grid gap-4" onSubmit={submit}
+        {transaction && <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} hasUnsavedChanges={editSnapshot !== initialSnapshot && !refundChanged} onChanged={() => setRefundChanged(true)} />}
+        {transaction && <ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={initialTransaction ?? transaction} />}
+        {refundChanged && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t('itemRefunds.reopen')}</p>}
+        <form id="transaction-editor" inert={refundChanged} className="grid gap-4" onSubmit={submit}
             onChangeCapture={event => {
                 // Any edited field invalidates the reviewed intent, including
                 // account changes that also change visibility or allocations.
@@ -542,11 +554,11 @@ export function TransactionEditor({
 
             <AverioCard className="grid gap-4">
                 <div><h3 className="font-bold" aria-label={t(receiptDraft ? 'receipts.detailsStep' : 'transactionManagement.basics')}>{t(receiptDraft ? 'receipts.detailsStep' : 'transactionManagement.basics')} <InfoPopover label={t('transactionManagement.basics')}>{t('transactionManagement.basicsHelp')}</InfoPopover></h3></div>
-                {!receiptDraft && <fieldset className="flex gap-3" disabled={busy || !!rule}>
+                {!receiptDraft && <fieldset className="flex gap-3" disabled={busy || !!rule || refundProtected}>
                     <legend className="sr-only">{t('transactionManagement.type')}</legend>
                     {(['Income', 'Expense'] as const).map(value => <label key={value}
                         className={'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 font-semibold ' + (kind === value ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700')}>
-                        <input type="radio" name="kind" value={value} checked={kind === value} className="accent-emerald-500" onChange={() => { setKind(value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }} />
+                        <input type="radio" name="kind" value={value} disabled={refundProtected || busy} checked={kind === value} className="accent-emerald-500" onChange={() => { setKind(value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }} />
                         {t(value === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}
                     </label>)}
                 </fieldset>}
@@ -559,11 +571,11 @@ export function TransactionEditor({
                         {['EUR', 'USD', 'HUF'].map(code => <option key={code}>{code}</option>)}
                     </AverioSelect></AverioField>
                     </>}
-                    <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule} required onChange={e => { setAccountId(e.target.value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
+                    <AverioField>{t('transactionManagement.account')}<AverioSelect aria-label={t('transactionManagement.account')} value={resolvedAccountId} disabled={busy || !!rule || refundProtected} required onChange={e => { setAccountId(e.target.value); setItems(current => current.map(i => ({ ...i, personalAmount: null }))); }}>
                         <option value="" disabled>{t('transactionManagement.account')}</option>
                         {writableAccounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
                     </AverioSelect>{receiptDraft && accounts.isSuccess && owners.isSuccess && writableAccounts.length === 0 && <span className="text-sm">{t('receipts.noAccount')}</span>}</AverioField>
-                    <AverioField>{t(recurring ? 'recurring.starts' : 'transactionManagement.date')}<AverioInput type="date" value={occurredOn} required disabled={busy || !!rule}
+                    <AverioField>{t(recurring ? 'recurring.starts' : 'transactionManagement.date')}<AverioInput type="date" value={occurredOn} required disabled={busy || !!rule || refundProtected}
                         min={recurring && !rule ? new Date().toISOString().slice(0, 10) : undefined} onChange={e => setOccurredOn(e.target.value)} /></AverioField>
                 </div>
                 <AverioField>{t('transactionManagement.merchant')}<AverioInput value={merchant} maxLength={160} disabled={busy}
@@ -639,7 +651,7 @@ export function TransactionEditor({
                         <div className="flex min-w-0 gap-1">
                             <AverioInput id={item.key + '-amount'} className="min-w-0" required
                                 aria-invalid={!!receiptDraft && !validReceiptAmount(item.amount)}
-                                aria-describedby={receiptDraft && !validReceiptAmount(item.amount) ? item.key + '-amount-error' : undefined} inputMode="decimal" value={item.amount} disabled={busy}
+                                aria-describedby={receiptDraft && !validReceiptAmount(item.amount) ? item.key + '-amount-error' : undefined} inputMode="decimal" value={item.amount} disabled={busy || !!(initialTransaction ?? transaction)?.items.some(i => i.id === item.key && i.refundedAmount !== undefined && i.refundedAmount !== '0')}
                                 onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" />
                             {canManagePersonalMoney(item) && <AverioButton size="icon" disabled={busy} aria-haspopup="dialog"
                                 aria-label={t('personalMoney.itemCharge') + ' · ' + (item.description || index + 1)}
@@ -651,18 +663,18 @@ export function TransactionEditor({
                         </div>
                         {receiptDraft && !validReceiptAmount(item.amount) && <p id={item.key + '-amount-error'} className="mt-1 text-xs text-red-700 dark:text-red-300">{t('receipts.invalidItemAmount')}</p>}
                     </div>
-                    <div className={receiptDraft ? "flex items-end justify-end sm:pt-[27px]" : "flex items-end justify-end"}><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1} onClick={() => removeItem(item.key)}
+                    <div className={receiptDraft ? "flex items-end justify-end sm:pt-[27px]" : "flex items-end justify-end"}><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || resolvedItems.length === 1 || !!transaction?.items.find(i => i.id === item.key)?.hasRefundHistory} onClick={() => removeItem(item.key)}
                         aria-label={t('transactionManagement.removeItem') + ' ' + (index + 1)}><ConceptIcon name="close" /></AverioButton></div>
                 </div>}</div></ItemContainer>; })}
                 {!recurring && kind === 'Expense' && wallet.isError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
                 <div className={'flex flex-wrap justify-between gap-3 font-bold ' + (kind === 'Income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
-                    <span>{t(recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
-                    <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(total, currency, language) : total}</strong>
+                    <span>{t(refundProtected ? 'itemRefunds.net' : recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
+                    <strong>{kind === 'Income' ? '+' : '−'}{currency ? formatDecimalAmount(subtractDecimalAmounts(total, refundedTotal), currency, language) : total}</strong>
                 </div>
                 {!recurring && kind === 'Expense' && (legacyPersonalTotal > 0n || canChargePersonalMoney || resolvedItems.some(canManagePersonalMoney)) &&
                     <div className="flex flex-wrap justify-between gap-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         <span>{t('personalMoney.totalMyAllocations')}</span>
-                        <output aria-label={t('personalMoney.totalMyAllocations')} aria-live="polite">{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</output>
+                        <output aria-label={t('personalMoney.totalMyAllocations')} aria-live="polite">{formatDecimalAmount(scaledToAmount(netPersonalTotal), currency, language)}</output>
                     </div>}
             </AverioCard>
             {receiptDraft && <AverioDisclosure title={t('transactionManagement.labels')} summary={t('receipts.optionalLabels')}>
@@ -694,7 +706,7 @@ export function TransactionEditor({
                 <p className="text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p>
                 <AverioField>{t('transactionManagement.note')}<AverioTextarea aria-label={t('transactionManagement.note')} value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
                 <AverioField>{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
-                    disabled={busy || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
+                    disabled={busy || refundProtected || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
                     <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
                     <option value="Private" disabled={forcedVisibility === 'Household'}>{t('transactionManagement.private')}</option>
                 </AverioSelect></AverioField>
@@ -748,11 +760,11 @@ export function TransactionEditor({
             </AverioButton> : <><label className="flex min-h-11 items-center gap-2 text-sm font-medium">
                 <input type="checkbox" className="size-4 accent-emerald-500" disabled={busy}
                     checked={(amountToScaled(personalAmount(allowanceItem)) ?? 0n) > 0n}
-                    onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.checked ? normalizeAmount(allowanceItem.amount) : '0' })} />
+                    onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.checked ? (hasActiveItemRefunds(allowanceItem) ? storedPersonalAmount(allowanceItem) : normalizeAmount(allowanceItem.amount)) : '0' })} />
                 {t('personalMoney.itemCharge')}
             </label>
             <AverioField>{t('personalMoney.itemChargeAmount')} · {currency}
-                <AverioInput inputMode="decimal" value={personalAmount(allowanceItem)} disabled={busy}
+                <AverioInput inputMode="decimal" value={personalAmount(allowanceItem)} disabled={busy || hasActiveItemRefunds(allowanceItem)}
                     onChange={event => updateItem(allowanceItem.key, { personalAmount: event.target.value })} />
             </AverioField></>}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -760,6 +772,7 @@ export function TransactionEditor({
                 <span>{t('personalMoney.itemSplitPersonal')} <strong>{formatDecimalAmount(scaledToAmount(personalTotal), currency, language)}</strong></span>
             </div>
             <p className="text-xs leading-relaxed">{t('personalMoney.itemAllocationHelp')}</p>
+            {hasActiveItemRefunds(allowanceItem) && <p className="text-xs">{t('itemRefunds.allocationProtected')}</p>}
             {canChargePersonalMoney && <AverioButton disabled={busy} onClick={chargeAllItems}>{t('personalMoney.chargeAllItems')}</AverioButton>}
         </div>
     </AverioDialog>}</>;

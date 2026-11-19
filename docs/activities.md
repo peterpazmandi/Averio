@@ -8,7 +8,7 @@ They group existing income and expenses without changing account balances or cat
 1. Open **Activities** under Planning and create “St. Ingbert”. Dates are optional.
 2. Choose the activity when creating or editing a transaction. You can also create an activity from the picker.
 3. For existing entries, open Transactions, choose **Select transactions**, select up to 100 posted entries, then assign them together. Choose no activity to remove assignments.
-4. Record reimbursements as income and assign them to the same activity. A EUR 620 reimbursement and EUR 575 expense produce EUR 45 net income.
+4. Assign actual income to the activity. For money returned against a receipt item, use [Item refunds](item-refunds.md): the original expense is reduced and the refund is not counted as income.
 5. Review income, expenses and net separately for each currency. Open the linked transaction list to inspect the history across all dates.
 6. Close the activity when finished. Reopen it before adding more entries. Closing does not freeze financial history: correcting or voiding an existing entry updates the result.
 

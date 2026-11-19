@@ -14,7 +14,7 @@ public sealed class TransactionAggregateWriter(
         if (direction is not (1 or -1))
             throw new ArgumentOutOfRangeException(nameof(direction));
 
-        if (!TransactionAccess.ContributesToHouseholdCashFlow(transaction))
+        if (transaction.Kind == TransactionKind.Refund || !TransactionAccess.ContributesToHouseholdCashFlow(transaction))
             return;
 
         await aggregateRepository.ApplyDeltaAsync(

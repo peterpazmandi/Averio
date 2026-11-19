@@ -79,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<Transactions.ArchiveTransaction.ArchiveTransactionHandler>();
         services.AddScoped<Transactions.GetTransaction.GetTransactionHandler>();
         services.AddScoped<Transactions.GetTransactions.GetTransactionsHandler>();
+        services.AddScoped<Transactions.Refunds.ItemRefundHandler>();
         services.AddScoped<Transactions.Common.TransactionReferenceResolver>();
         services.AddScoped<Transactions.Common.TransactionAggregateWriter>();
         services.AddScoped<Statistics.GetCashFlow.GetCashFlowHandler>();

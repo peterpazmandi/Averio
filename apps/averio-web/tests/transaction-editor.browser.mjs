@@ -161,6 +161,20 @@ try {
         await page.reload();
         await allocationTotal.waitFor();
         assert.equal(await allocationTotal.textContent(), money(0.2), 'Whole-receipt charges and reversals are included without assigning them to an item.');
+        legacy = false;
+        await page.addInitScript(() => {
+            window.editorFixture.amount = '11.50';
+            Object.assign(window.editorFixture.items[0], { amount: '11.50', refundedAmount: '1', hasRefundHistory: true });
+        });
+        await page.reload();
+        await existingAllowanceButton.click();
+        assert.equal(await page.locator('input[inputmode="decimal"]').last().isDisabled(), true,
+            'Active item refunds protect the allowance amount from changes.');
+        assert.equal(await checkbox.isDisabled(), false, 'The existing allocation can still be unlinked.');
+        await checkbox.uncheck();
+        await page.keyboard.press('Escape');
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).items[0].personalMoneyAmount === '0');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.deepEqual(errors, []);
         await page.close();

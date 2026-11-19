@@ -363,6 +363,8 @@
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Az időszak túl sok tételt tartalmaz az ellenőrzéshez. Exportálj rövidebb időszakot.</value></data>
 <data name="Validation_Reimbursement" xml:space="preserve"><value>Ellenőrizd a szolgáltatót, az összeget, a számlát és a dátumokat. A beküldés jelölése előtt erősítsd meg, hogy a bizonylatot külső felületen beküldted.</value></data>
 <data name="Error_ReimbursementChanged" xml:space="preserve"><value>A visszatérítés megváltozott. Frissítsd a nézetet, és próbáld újra.</value></data>
+<data name="Validation_ItemRefund" xml:space="preserve"><value>Válassz egy bizonylattételt és ugyanarra a számlára, azonos pénznemben beérkezett visszatérítést. Az összeg nem haladhatja meg a tétel fennmaradó költségét. Meglévő jóváírás csak nem kapcsolt, könyvelt bevétel lehet, egyező összeggel.</value></data>
+<data name="Error_ItemRefundLinked" xml:space="preserve"><value>A tranzakciónak tételszintű visszatérítési előzménye van. A számla, típus, láthatóság, dátum és érintett tételek védettek. Sztornózás előtt az eredeti bizonylaton vond vissza az aktív visszatérítéseket; a jóváírások is ott javíthatók.</value></data>
 </root>
 
 

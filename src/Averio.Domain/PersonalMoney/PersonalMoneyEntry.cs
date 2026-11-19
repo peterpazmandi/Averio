@@ -55,7 +55,7 @@ public sealed class PersonalMoneyEntry
             || transferId is not null && transactionId is not null
             || recurringAllowanceRuleId is not null && kind != PersonalMoneyEntryKind.Grant
             || transactionItemId is not null && (transactionId is null || kind is not
-                (PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge)))
+                (PersonalMoneyEntryKind.PrivateCharge or PersonalMoneyEntryKind.SharedCharge or PersonalMoneyEntryKind.PrivateRefund or PersonalMoneyEntryKind.SharedRefund)))
             throw new ArgumentException("Invalid ledger source.");
         return new PersonalMoneyEntry
         {

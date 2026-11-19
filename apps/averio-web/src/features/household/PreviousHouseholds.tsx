@@ -67,7 +67,7 @@ function HistoricalHousehold({ userId, id }: { userId: string; id: string }) {
         </li>)}</ul></AverioCard>
         <AverioCard className="space-y-3 p-5"><h4 className="font-semibold">{t('invitations.history.transactions')}</h4>
             {transactions.length === 0 && <p>{t('invitations.history.noEntries')}</p>}
-            {transactions.map(row => <details key={row.id} className="min-w-0 border-b border-slate-200 py-3 dark:border-slate-700"><summary className="cursor-pointer break-words">{row.occurredOn} · {row.description} · {row.kind === 'Income' ? '+' : '−'}{money(row.amount, row.currency)} {row.isVoided && t('invitations.history.voided')}</summary>
+            {transactions.map(row => <details key={row.id} className="min-w-0 border-b border-slate-200 py-3 dark:border-slate-700"><summary className="cursor-pointer break-words">{row.occurredOn} · {row.description} · {row.kind !== 'Expense' ? '+' : '−'}{money(row.amount, row.currency)} {row.isVoided && t('invitations.history.voided')}</summary>
                 <div className="space-y-2 pt-3 text-sm"><p className="break-words">{accountNames.get(row.accountId)}</p>{row.note && <p className="whitespace-pre-wrap break-words">{row.note}</p>}
                     <ul className="space-y-1">{row.items.map((item, i) => <li key={i} className="break-words">{item.description} · {getHistoricalCategoryDisplayName(item, t)} · {money(item.amount, row.currency)}</li>)}</ul></div>
             </details>)}

@@ -20,18 +20,33 @@ public sealed class TransactionItem
     public string CategoryName { get; private set; } = null!;
     public string CategoryIcon { get; private set; } = null!;
     public decimal Amount { get; private set; }
+    public decimal RefundedAmount { get; private set; }
+    public bool HasRefundHistory { get; private set; }
+    public decimal OriginalAmount => Amount + RefundedAmount;
+
+    internal void ApplyRefund(decimal change)
+    {
+        if (change == 0 || decimal.Round(change, 4) != change || RefundedAmount + change < 0 || Amount - change < 0)
+            throw new ArgumentException("Invalid item refund.");
+        Amount -= change;
+        RefundedAmount += change;
+        HasRefundHistory = true;
+    }
 
     internal void Retain(TransactionItemDraft draft, int position)
     {
         if (draft.ExistingItemId != Id)
             throw new ArgumentException("Cannot update another transaction item.");
+        if (RefundedAmount > 0 && draft.Amount != OriginalAmount)
+            throw new ArgumentException("Reverse item refunds before correcting the original paid amount.");
         var checkedItem = Create(HouseholdId, TransactionId, position, draft);
         Position = position;
         Description = checkedItem.Description;
         CategoryId = checkedItem.CategoryId;
         CategoryName = checkedItem.CategoryName;
         CategoryIcon = checkedItem.CategoryIcon;
-        Amount = checkedItem.Amount;
+        if (checkedItem.Amount < RefundedAmount) throw new ArgumentException("Item cost is below its refunds.");
+        Amount = checkedItem.Amount - RefundedAmount;
     }
 
     internal static TransactionItem Create(

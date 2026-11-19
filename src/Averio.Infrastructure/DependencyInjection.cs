@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<Averio.Application.Transfers.ITransferRepository, TransferRepository>();
         services.AddScoped<Averio.Application.Activities.IActivityRepository, ActivityRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<Averio.Application.Transactions.Refunds.IItemRefundRepository, ItemRefundRepository>();
         services.AddScoped<ITransactionAggregateRepository, TransactionAggregateRepository>();
         services.AddScoped<Averio.Application.Statistics.GetBoundaryCashFlow.IBoundaryFlowRepository, BoundaryFlowRepository>();
         services.AddScoped<IIdentityService, IdentityService>();

@@ -100,7 +100,7 @@ export function TransactionsPage({
         || mutations.update.isPending
         || mutations.void.isPending;
     const detail = useQuery({ ...transactionQueries.detail(userId, householdId, urlState.transaction ?? ''), enabled: Boolean(urlState.transaction), retry: false });
-    const activeEditor = urlState.transaction ? (detail.isSuccess && detail.data?.canModify && detail.data.status !== 'Voided' ? detail.data : null) : createRequested ? 'new' : editor;
+    const activeEditor = urlState.transaction ? (detail.isSuccess && detail.data?.canModify && detail.data.status !== 'Voided' && detail.data.kind !== 'Refund' ? detail.data : null) : createRequested ? 'new' : editor;
     const openTransaction = (transaction: TransactionDto) => {
         openedFromList.current = transaction.id;
         onUrlChange({ transaction: transaction.id, create: undefined, createKind: undefined });
@@ -348,12 +348,12 @@ export function TransactionsPage({
                             includeClosed allowCreate={false} emptyLabel={t('activities.all')} />
                         <fieldset className="min-w-0">
                             <legend className="mb-[7px] text-[13px] font-semibold">{t('transactionManagement.type')}</legend>
-                            <div className="grid h-11 grid-cols-3 rounded-[11px] border border-slate-200 p-0.5 dark:border-slate-700">
-                                {(['', 'Income', 'Expense'] as const).map(value => <button key={value} type="button"
+                            <div className="grid min-h-11 grid-cols-2 gap-1 rounded sm:grid-cols-4-[11px] border border-slate-200 p-0.5 dark:border-slate-700">
+                                {(['', 'Income', 'Expense', 'Refund'] as const).map(value => <button key={value} type="button"
                                     aria-pressed={kind === value}
-                                    className="min-w-0 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200"
+                                    className="min-h-11 min-w-0 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200"
                                     onClick={() => { setKind(value); setSelected({}); }}>
-                                    {t('transactionManagement.' + (value ? value.toLowerCase() : 'all'))}
+                                    {t(value === 'Refund' ? 'itemRefunds.refund' : 'transactionManagement.' + (value ? value.toLowerCase() : 'all'))}
                                 </button>)}
                             </div>
                         </fieldset>
@@ -485,7 +485,7 @@ export function TransactionsPage({
                         );
 
                         const isIncome =
-                            transaction.kind === 'Income';
+                            transaction.kind !== 'Expense';
 
                         const title =
                             transaction.merchant
@@ -493,7 +493,7 @@ export function TransactionsPage({
 
                         return (
                             <div key={transaction.id}>
-                                {selecting && transaction.status === 'Posted' && <label className="flex min-h-11 items-center gap-2 text-sm">
+                                {selecting && transaction.status === 'Posted' && transaction.kind !== 'Refund' && <label className="flex min-h-11 items-center gap-2 text-sm">
                                     <input type="checkbox" checked={transaction.id in selected}
                                         disabled={!(transaction.id in selected) && Object.keys(selected).length >= 100}
                                         onChange={event => setSelected(current => {
@@ -553,6 +553,8 @@ export function TransactionsPage({
 
                                         {relations.transactions.get(transaction.id) && <PersonalMoneyRelationBadge
                                             relation={relations.transactions.get(transaction.id)!} detail />}
+                                        {transaction.kind === 'Refund' && <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{t('itemRefunds.refund')}</span>}
+                                        {transaction.items.some(i => i.hasRefundHistory) && <span className="block text-xs">{t('itemRefunds.net')}</span>}
                                         <ReimbursementBadge status={transaction.reimbursementStatus} />
                                         {transaction.activityName && <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{transaction.activityName}</span>}
                                         {transaction.items.length > 1 && (

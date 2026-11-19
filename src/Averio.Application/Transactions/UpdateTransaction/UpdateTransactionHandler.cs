@@ -126,6 +126,13 @@ public sealed class UpdateTransactionHandler(
 
 
 
+        if (transaction.Kind == TransactionKind.Refund || transaction.HasRefundHistory && (
+            command.AccountId != transaction.AccountId || command.Kind != transaction.Kind || command.Visibility != transaction.Visibility
+            || command.OccurredOn != transaction.OccurredOn || transaction.Items.Any(item => item.HasRefundHistory &&
+                !command.Items.Any(i => i.ExistingItemId == item.Id && i.Amount >= item.RefundedAmount
+                    && (item.RefundedAmount == 0 || i.Amount == item.OriginalAmount)))))
+            throw new BusinessRuleException("item_refund_linked", "Error_ItemRefundLinked");
+
         var items = await referenceResolver.ResolveItemsAsync(
             household.Id,
             command.Kind,

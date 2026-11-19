@@ -53,7 +53,7 @@ public sealed record TransactionItemReadModel(
     Guid CategoryId,
     string CategoryName,
     string CategoryIcon,
-    decimal Amount);
+    decimal Amount, decimal RefundedAmount = 0, bool HasRefundHistory = false);
 
 public sealed record TransactionLabelReadModel(
     Guid Id,

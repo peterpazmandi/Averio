@@ -1,0 +1,19 @@
+# Received item refunds
+
+Open an ordinary expense and choose **Add refund** in **Item refunds**. Choose exactly one receipt item and either record returned money or link an existing unlinked incoming transaction. Confirm the money was actually received. Use the original account and currency, an actual receipt date from the purchase date through today, and an amount no greater than the item's remaining cost.
+
+For an existing recorded credit, select it instead of creating another movement. Its whole amount is reclassified as Refund, removing its income/category contribution. A returned-money transaction belongs to one item and cannot be selected twice. Income with existing Personal Money, receipt, recurring or reimbursement dependencies cannot be reused.
+
+Each receipt can have multiple item refunds. A EUR 100 clothing item plus a EUR 50 grocery item costs EUR 150. A EUR 20 clothing refund changes clothing expense to EUR 80 and the receipt to EUR 130; groceries remain EUR 50. A further EUR 10 grocery refund changes groceries to EUR 40 and the receipt to EUR 120. Income remains zero. Refunds may cover an entire item or receipt, leaving zero net expense without deleting original amounts or receipt items.
+
+The original expense and category totals show net cost in the original purchase period. The dated bank balance still uses the original gross debit and actual refund credit, including when an anchor lies between them. Activities also use the net expense; a linked returned-money credit adds no income. Refunded items remain stable across edits. The account, type, date and visibility of linked records cannot be changed through ordinary editing, and refunded items cannot be removed. Original paid amounts of items with active refunds are protected; reverse those refunds before correcting the original cost.
+
+Use **Reverse refund** only to correct a mistaken record. It restores the expense, removes the returned-money credit from account balances by voiding it, and reverses any related allowance restoration. The original refund and its reversal remain in history. Reverse active refunds before voiding their source expense. Viewing a refund credit links back to its original expense.
+
+The member's Personal Money is restored proportionally to the item's allocation; whole-receipt legacy allocations use their proportion of the gross receipt. Details of another member's allowance are never returned in the shared refund UI. Historical allowance-only refund attribution is preserved and remains a separate legacy workflow.
+
+Apply the `AddItemRefunds` migration before deploying the API, worker and frontend. It adds the refund relationship and net/gross preservation columns and permits the explicit Refund kind and fully refunded zero-value expense rows. Existing rows receive zero refunded amount. Rollback refuses while refund records exist. See ADR-048 for semantics and limits. One combined bank credit spanning multiple receipt items cannot be allocated across items by this version; split the received amount deliberately without retaining a duplicate bundled income. Cross-account/currency refunds and automatic matching are deferred.
+
+Refund actions use the latest saved receipt while the ordinary edit form retains its own revision. Save unsaved edits before managing refunds. After an explicit refund change, you may continue managing refunds, but close and reopen the transaction before editing its other details; an old draft can never overwrite the new financial revision.
+
+While an item's refunds are active, its allowance allocation is protected from amount changes. You can still unlink it; this removes both its allowance charge and related refund attribution. Reverse the item's refunds before setting a different allocation. Save or discard unsaved transaction changes before adding or reversing a refund, and reopen the expense afterwards to edit its updated values.

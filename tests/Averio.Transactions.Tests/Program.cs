@@ -34,6 +34,7 @@ var checks = new (string Name, Action Run)[]
     ("allowance migration metadata and snapshot", AllowanceSchemaChecks.Models),
     ("allowance schema errors produce scoped Problem Details", () => AllowanceSchemaChecks.ErrorsAsync().GetAwaiter().GetResult()),
     ("reimbursement estimates, consent, snapshots, history and constraints", ReimbursementChecks.Run),
+    ("merchant item refunds and net receipt costs", MerchantRefundChecks.Run),
     ("recurring calendar anchors", RecurringChecks.Calendar),
     ("recurring lifecycle", RecurringChecks.Lifecycle),
     ("category lifecycle and hierarchy invariants", CategoryChecks.Invariants),

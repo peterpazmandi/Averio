@@ -363,6 +363,8 @@
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Dieser Zeitraum enthält zu viele Einträge. Exportiere einen kleineren Zeitraum.</value></data>
 <data name="Validation_Reimbursement" xml:space="preserve"><value>Prüfe Anbieter, Betrag, Konto und Daten. Bestätige vor dem Markieren, dass du den Beleg extern eingereicht hast.</value></data>
 <data name="Error_ReimbursementChanged" xml:space="preserve"><value>Diese Erstattung wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
+<data name="Validation_ItemRefund" xml:space="preserve"><value>Wähle eine Belegposition und eine erhaltene Erstattung auf demselben Konto und in derselben Währung. Die Erstattung darf die verbleibenden Kosten der Position nicht übersteigen. Bestehende Gutschriften müssen unzugeordnete, gebuchte Einnahmen mit passendem Betrag sein.</value></data>
+<data name="Error_ItemRefundLinked" xml:space="preserve"><value>Diese Transaktion hat Positionserstattungen. Konto, Typ, Sichtbarkeit, Datum und betroffene Positionen sind geschützt. Hebe aktive Erstattungen im Originalbeleg auf, bevor du ihn stornierst; Gutschriften werden ebenfalls dort korrigiert.</value></data>
 </root>
 
 

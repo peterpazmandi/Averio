@@ -24,7 +24,7 @@ export function ReimbursementsPanel({ userId, householdId, transactionId, source
     const date = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value + 'T00:00:00Z'));
     if (query.isPending) return <p className={className} role="status">{t('reimbursements.loading')}</p>;
     if (query.isError) return <AverioCard className={className}><p role="alert">{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></AverioCard>;
-    if (!query.data.length) return sourceTransaction?.canModify && sourceTransaction.kind === 'Expense' && sourceTransaction.status === 'Posted' && !sourceTransaction.isArchived
+    if (!query.data.length) return sourceTransaction?.canModify && sourceTransaction.kind === 'Expense' && sourceTransaction.amount !== '0' && sourceTransaction.status === 'Posted' && !sourceTransaction.isArchived
         ? <AverioCard className={'flex flex-wrap items-center justify-between gap-3 ' + className}>
             <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">↻</span>
                 <div><h3 className="text-sm font-semibold">{t('reimbursements.title')}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('reimbursements.manual.shortHelp')}</p></div></div>

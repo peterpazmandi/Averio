@@ -317,3 +317,7 @@ home IP. Manual release creation and independent integration/production dispatch
 including required integration evidence for production, remain unchanged.
 Activation requires [SSM setup](deployment-ssm-setup.md); no live deployment or IAM
 change is implied. See [ADR-041](decisions/ADR-041-ssm-manual-deployments.md).
+
+## Item refunds — 2026-11-19
+
+Received refunds can be recorded or linked from an existing incoming credit to one item on an ordinary expense. Multiple partial returns are supported per receipt. Refund credits are classified separately from income; expense/category/activity amounts use net costs while dated bank balances retain the original purchase and actual returned-money movements. See [item-refunds.md](item-refunds.md) and ADR-048 for the workflow, migration and current same-account/currency boundary.

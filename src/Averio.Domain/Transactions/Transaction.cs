@@ -37,6 +37,29 @@ public sealed class Transaction
     public bool IsArchived { get; private set; }
     public IReadOnlyCollection<TransactionItem> Items => _items;
     public IReadOnlyCollection<TransactionLabel> Labels => _labels;
+    public decimal RefundedAmount => _items.Sum(x => x.RefundedAmount);
+    public decimal OriginalAmount => Amount + RefundedAmount;
+    public bool HasRefundHistory => _items.Any(x => x.HasRefundHistory);
+
+    public void ApplyItemRefund(Guid itemId, decimal change, DateTimeOffset now)
+    {
+        if (Kind != TransactionKind.Expense || Status != TransactionStatus.Posted)
+            throw new ArgumentException("A posted expense is required.");
+        var item = _items.SingleOrDefault(x => x.Id == itemId) ?? throw new ArgumentException("Unknown receipt item.");
+        item.ApplyRefund(change);
+        Amount = _items.Sum(x => x.Amount);
+        UpdatedAt = NextVersion(now);
+    }
+
+    public void ClassifyAsRefund(TransactionItem sourceItem, DateTimeOffset now)
+    {
+        if (Kind != TransactionKind.Income || Status != TransactionStatus.Posted || HasRefundHistory)
+            throw new ArgumentException("An unlinked incoming transaction is required.");
+        var draft = new TransactionItemDraft(Description, sourceItem.CategoryId, sourceItem.CategoryName, sourceItem.CategoryIcon, Amount);
+        Kind = TransactionKind.Refund;
+        ReplaceItems([draft]);
+        UpdatedAt = NextVersion(now);
+    }
 
     public static Transaction Create(
         Guid householdId,
@@ -103,6 +126,10 @@ public sealed class Transaction
     {
         if (Status != TransactionStatus.Posted)
             throw new InvalidOperationException("Voided transactions cannot be edited.");
+        if (Kind == TransactionKind.Refund || HasRefundHistory &&
+            (accountId != AccountId || kind != Kind || visibility != Visibility || occurredOn != OccurredOn
+             || _items.Any(x => x.HasRefundHistory && !items.Any(d => d.ExistingItemId == x.Id))))
+            throw new ArgumentException("Refund-linked transaction fields are protected.");
 
         ValidateBase(
             HouseholdId,
@@ -150,6 +177,8 @@ public sealed class Transaction
     {
         if (Status == TransactionStatus.Voided)
             return;
+        if (Kind == TransactionKind.Expense && RefundedAmount > 0)
+            throw new InvalidOperationException("Reverse the item refunds before voiding their source expense.");
 
         Status = TransactionStatus.Voided;
         VoidedAt = now;
@@ -184,7 +213,7 @@ public sealed class Transaction
 
         Amount = _items.Sum(item => item.Amount);
 
-        if (Amount <= 0 || Amount > 999999999999999.9999m)
+        if (Amount < 0 || Amount == 0 && !HasRefundHistory || Amount > 999999999999999.9999m)
             throw new ArgumentOutOfRangeException(nameof(drafts));
     }
 

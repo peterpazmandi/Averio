@@ -34,7 +34,7 @@ public sealed class SavedViewHandler(ICurrentUser user, IHouseholdRepository hou
         _ = await Authorize(householdId, ct);
         var f = input.Filters;
         if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Trim().Length > 80 || f is null
-            || !Periods.Contains(f.Period) || (f.Kind is not null && f.Kind is not "Expense" and not "Income")
+            || !Periods.Contains(f.Period) || (f.Kind is not null && f.Kind is not "Expense" and not "Income" and not "Refund")
             || f.Labels is null || f.Labels.Length > 20 || f.Labels.Any(x => x == Guid.Empty)
             || (f.Period == "custom" && f.From > f.To))
             throw new BusinessRuleException("saved_view_invalid", "Validation_SavedView");

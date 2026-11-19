@@ -81,7 +81,7 @@ public sealed class GetTransactionHandler(
                     item.CategoryId,
                     item.CategoryName,
                     item.CategoryIcon,
-                    item.Amount))
+                    item.Amount, item.RefundedAmount, item.HasRefundHistory))
                 .ToArray(),
             labels
                 .OrderBy(label => label.Scope)
