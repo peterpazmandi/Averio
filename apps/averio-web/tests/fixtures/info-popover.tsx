@@ -35,7 +35,7 @@ function Fixture() {
             <AccountFieldHelp id="locked-balance-help" field={t('app.accounts.recordedBalance')}>{t('accountManagement.balanceFixed')}</AccountFieldHelp>
         </AverioCard>
         <div className="flex min-h-[700px] items-end justify-end">
-            <InfoPopover label="Edge">{Array.from({ length: 12 }, (_, i) => <span className="mb-2 block" key={i}>{t('personalMoney.description')}</span>)}</InfoPopover>
+            <InfoPopover label="Edge">{Array.from({ length: 30 }, (_, i) => <span className="mb-2 block" key={i}>{t('personalMoney.description')}</span>)}</InfoPopover>
         </div>
         <AverioDialog open={dialog} title="Editor" closeLabel="Close editor" onDismiss={() => setDialog(false)}
             actions={<button type="submit" form="fixture-form">Save</button>}>
@@ -45,6 +45,10 @@ function Fixture() {
                 </h3>
                 <input aria-label="Name" />
                 <p>{t('transactionManagement.privateHelp')}</p>
+                <div aria-hidden="true" className="h-[700px]" />
+                <h3 aria-label="Lower help">Lower help
+                    <InfoPopover label="Lower help">{t('personalMoney.description')}</InfoPopover>
+                </h3>
             </form>
         </AverioDialog>
     </main>;

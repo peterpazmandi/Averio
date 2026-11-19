@@ -24,8 +24,45 @@ try {
         await page.addInitScript(({ language, dark }) => {
             localStorage.setItem('i18nextLng', language);
             document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.toggle('dark', dark));
+            window.helpOpeningFrames = {};
+            document.addEventListener('beforetoggle', event => {
+                const popup = event.target;
+                if (!(popup instanceof HTMLElement) || !popup.matches('[popover]') || event.newState !== 'open') return;
+                const parents = [];
+                for (let parent = popup.parentElement; parent; parent = parent.parentElement) {
+                    if (parent.scrollHeight > parent.clientHeight) parents.push(parent);
+                }
+                const scrolls = () => [window.scrollX, window.scrollY, ...parents.map(parent => parent.scrollTop)];
+                const opening = { beforeScroll: scrolls(), samples: [], complete: false };
+                window.helpOpeningFrames[popup.id] = opening;
+                let count = 0;
+                const sample = () => {
+                    if (popup.matches(':popover-open') && getComputedStyle(popup).visibility === 'visible') {
+                        const rect = popup.getBoundingClientRect();
+                        opening.samples.push({ x: rect.x, y: rect.y, width: rect.width, height: rect.height, scroll: scrolls() });
+                    }
+                    if (++count < 10) requestAnimationFrame(sample);
+                    else opening.complete = true;
+                };
+                requestAnimationFrame(sample);
+            }, true);
         }, { language, dark });
         await page.goto(url);
+        const assertStableOpening = async popup => {
+            const id = await popup.getAttribute('id');
+            await page.waitForFunction(id => window.helpOpeningFrames[id]?.complete, id);
+            const opening = await page.evaluate(id => window.helpOpeningFrames[id], id);
+            assert.ok(opening.samples.length >= 2, 'Opening produced visible frames');
+            const first = opening.samples[0];
+            for (const frame of opening.samples) {
+                assert.ok(frame.x >= 11 && frame.y >= 11 && frame.x + frame.width <= width - 11 && frame.y + frame.height <= 789,
+                    'The first visible frame is already inside the viewport');
+                for (const dimension of ['x', 'y', 'width', 'height']) {
+                    assert.ok(Math.abs(frame[dimension] - first[dimension]) < 1, 'Help must not jump after its first visible frame: ' + dimension);
+                }
+                assert.deepEqual(frame.scroll, opening.beforeScroll, 'Opening help must preserve page and editor scroll');
+            }
+        };
         const accessibility = await page.context().newCDPSession(page);
         const assertFieldDescriptions = async () => {
             const { root } = await accessibility.send('DOM.getDocument');
@@ -60,6 +97,7 @@ try {
         await popup.waitFor({ state: 'visible' });
         await page.waitForFunction(() => document.querySelector('button[popovertarget]')?.getAttribute('aria-expanded') === 'true');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+        await assertStableOpening(popup);
         await page.getByRole('heading', { name: headingName, exact: true }).waitFor();
         assert.equal(await popup.evaluate(el => el === document.activeElement), true);
         await page.keyboard.press('Escape');
@@ -77,9 +115,10 @@ try {
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: 'Open editor', exact: true }).click();
         const editor = page.locator('dialog[open]');
-        const innerTrigger = editor.locator('button[popovertarget]');
+        const innerTrigger = editor.locator('button[popovertarget]').first();
         await innerTrigger.click();
         await popup.waitFor({ state: 'visible' });
+        await assertStableOpening(popup);
         await page.keyboard.press('Escape');
         assert.equal(await popup.count(), 0);
         assert.equal(await editor.count(), 1, 'Escape must not dismiss the parent editor.');
@@ -89,15 +128,28 @@ try {
         await popup.waitFor({ state: 'visible' });
         await page.screenshot({ path: path.join(artifacts, 'editor-' + language + '-' + dark + '-' + width + '.png') });
         await page.keyboard.press('Escape');
+        const lowerTrigger = editor.getByRole('button', { name: /Lower help$/ });
+        for (let repeat = 0; repeat < 2; repeat++) {
+            await lowerTrigger.click();
+            await popup.waitFor({ state: 'visible' });
+            await assertStableOpening(popup);
+            await page.keyboard.press('Escape');
+            assert.equal(await editor.count(), 1);
+        }
         await page.getByRole('button', { name: 'Close editor', exact: true }).click();
         const edge = page.getByRole('button', { name: /Edge$/ });
         await edge.click();
         await popup.waitFor({ state: 'visible' });
+        await assertStableOpening(popup);
         await page.waitForTimeout(50);
         const box = await popup.boundingBox();
         assert.ok(box.x >= 0 && box.x + box.width <= width + 1, 'Help fits horizontally.');
         assert.ok(box.y >= 0 && box.y + box.height <= 801, 'Help fits vertically.');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        const scrollTarget = await popup.evaluate(el => { el.scrollTop = 60; return el.scrollTop; });
+        await page.waitForTimeout(50);
+        assert.ok(scrollTarget > 0, 'Long help has scrollable content');
+        assert.equal(await popup.evaluate(el => el.scrollTop), scrollTarget, 'Position updates must preserve help scrolling');
         await page.screenshot({ path: path.join(artifacts, 'edge-' + language + '-' + dark + '-' + width + '.png') });
         await page.keyboard.press('Escape');
         await page.getByRole('combobox', { name: 'Language' }).selectOption(language === 'hu' ? 'de' : 'hu');
@@ -107,7 +159,7 @@ try {
         assert.deepEqual(errors, []);
         await page.close();
     }
-    console.log('PASS InfoPopover: 12 locale/theme/viewport combinations; keyboard, touch, light dismissal, single-open behavior, nested editor Escape, no submit, viewport bounds and language switching.');
+    console.log('PASS InfoPopover: 12 locale/theme/viewport combinations; stable first visible frames, repeated openings in scrolled editors, preserved help scrolling, keyboard, touch, light dismissal, single-open behavior, nested editor Escape, no submit, viewport bounds and language switching.');
 } finally {
     await browser?.close();
     server.kill();

@@ -141,6 +141,9 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     assert.equal(categoryAmount(final, categoryA.id) - categoryAmount(beforeStats, categoryA.id), 0);
     assert.equal(categoryAmount(final, categoryB.id) - categoryAmount(beforeStats, categoryB.id), 15);
     assert.equal(incomeTotal(final), incomeTotal(beforeStats));
+    // The fixture clock is frozen: make the preview newer than the voided credits
+    // so UUID tie ordering cannot push it beyond the first result page.
+    await control('/advance', { seconds: 1 });
     const preview = await post('Income', [{ description: 'Bank return for the remaining receipt item', categoryId: incomeCategory.id, amount: '2' }]);
 
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) for (const width of [375, 1440]) {

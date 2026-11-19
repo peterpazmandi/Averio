@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,27 @@ interface InfoPopoverProps {
     children: ReactNode;
     /** Optional ID for the explanatory text, referenced by a control’s aria-describedby. */
     id?: string;
+}
+
+function positionPopover(anchor: HTMLElement | null, popup: HTMLElement | null) {
+    if (!anchor || !popup) return;
+    const rect = anchor.getBoundingClientRect();
+    const margin = 12;
+    const gap = 6;
+    const viewport = window.visualViewport;
+    const left = viewport?.offsetLeft ?? 0;
+    const top = viewport?.offsetTop ?? 0;
+    const width = viewport?.width ?? window.innerWidth;
+    const height = viewport?.height ?? window.innerHeight;
+    // Apply the final width before measuring wrapped text or choosing a side.
+    popup.style.maxWidth = Math.max(0, width - margin * 2) + 'px';
+    const below = top + height - rect.bottom - gap - margin;
+    const above = rect.top - top - gap - margin;
+    const placeBelow = below >= Math.min(popup.scrollHeight, 240) || below >= above;
+    popup.style.maxHeight = Math.max(0, Math.min(height - margin * 2, placeBelow ? below : above)) + 'px';
+    popup.style.left = Math.max(left + margin, Math.min(rect.left, left + width - popup.offsetWidth - margin)) + 'px';
+    const desiredTop = placeBelow ? rect.bottom + gap : rect.top - gap - popup.offsetHeight;
+    popup.style.top = Math.max(top + margin, Math.min(desiredTop, top + height - popup.offsetHeight - margin)) + 'px';
 }
 
 /** Click/tap help in the native top layer, including inside AverioDialog. */
@@ -20,29 +41,9 @@ export function InfoPopover({ label, children, id }: InfoPopoverProps) {
     const panel = useRef<HTMLSpanElement>(null);
     const [open, setOpen] = useState(false);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!open) return;
-        const position = () => {
-            const anchor = trigger.current;
-            const popup = panel.current;
-            if (!anchor || !popup) return;
-            const rect = anchor.getBoundingClientRect();
-            const margin = 12;
-            const gap = 6;
-            const viewport = window.visualViewport;
-            const left = viewport?.offsetLeft ?? 0;
-            const top = viewport?.offsetTop ?? 0;
-            const width = viewport?.width ?? window.innerWidth;
-            const height = viewport?.height ?? window.innerHeight;
-            const below = top + height - rect.bottom - gap - margin;
-            const above = rect.top - top - gap - margin;
-            const placeBelow = below >= Math.min(popup.scrollHeight, 240) || below >= above;
-            popup.style.maxHeight = Math.max(0, Math.min(height - margin * 2, placeBelow ? below : above)) + 'px';
-            popup.style.maxWidth = Math.max(0, width - margin * 2) + 'px';
-            popup.style.left = Math.max(left + margin, Math.min(rect.left, left + width - popup.offsetWidth - margin)) + 'px';
-            const desiredTop = placeBelow ? rect.bottom + gap : rect.top - gap - popup.offsetHeight;
-            popup.style.top = Math.max(top + margin, Math.min(desiredTop, top + height - popup.offsetHeight - margin)) + 'px';
-        };
+        const position = () => positionPopover(trigger.current, panel.current);
         position();
         const observer = new ResizeObserver(position);
         if (panel.current) observer.observe(panel.current);
@@ -71,10 +72,19 @@ export function InfoPopover({ label, children, id }: InfoPopoverProps) {
             </svg>
         </button>
         <span ref={panel} id={contentId} popover="auto" role="dialog" aria-label={label} aria-describedby={descriptionId} tabIndex={-1}
+            onBeforeToggle={event => {
+                // Native opening precedes the queued toggle event. Do not expose an
+                // unpositioned first frame or a previous opening's coordinates.
+                if (event.newState === 'open') event.currentTarget.style.visibility = 'hidden';
+            }}
             onToggle={event => {
                 const isOpen = event.newState === 'open';
                 setOpen(isOpen);
-                if (isOpen) panel.current?.focus({ preventScroll: true });
+                if (isOpen && panel.current) {
+                    positionPopover(trigger.current, panel.current);
+                    panel.current.style.visibility = 'visible';
+                    panel.current.focus({ preventScroll: true });
+                }
             }}
             onKeyDown={event => {
                 if (event.key === 'Escape') {
