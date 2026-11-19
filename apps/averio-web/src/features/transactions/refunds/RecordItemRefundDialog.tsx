@@ -138,7 +138,7 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
             </AverioCard>
             <AverioCard role="group" aria-labelledby={`${id}-step-3`} className="grid gap-4">
                 <div className="flex items-center justify-between gap-2">{stepHeading(3, t('itemRefunds.stepReview'))}<InfoPopover label={t('itemRefunds.stepReview')}><p>{t('itemRefunds.reviewHelp')}</p><p className="mt-3">{t('itemRefunds.noIncome')}</p></InfoPopover></div>
-                {valid && item ? <dl className="grid gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2 dark:bg-slate-900">
+                {valid && item ? <dl className="grid gap-3 rounded-xl border border-slate-300 bg-slate-200 p-4 text-sm sm:grid-cols-2 dark:border-slate-600 dark:bg-slate-800">
                     <div className="min-w-0"><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.item')}</dt><dd className="break-words font-semibold">{item.description}</dd></div>
                     <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.amount')}</dt><dd className="font-semibold">{money(value!)}</dd></div>
                     <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.date')}</dt><dd>{displayDate(mode === 'existing' ? credit!.occurredOn : date)}</dd></div>
