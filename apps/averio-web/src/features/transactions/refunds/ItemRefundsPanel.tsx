@@ -10,6 +10,7 @@ import { AverioCard } from '../../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { AverioDisclosure } from '../../../shared/components/ui/AverioDisclosure';
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { formatDecimalAmount, sumDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { itemRefundKeys, itemRefundQueries, itemRefundsApi } from './itemRefundQueries';
 
@@ -42,10 +43,9 @@ function SavedItemRefundsPanel(props: Props) {
     if (transaction.kind !== 'Expense') return null;
     return <AverioCard className="mb-4 grid gap-3" role="region" aria-label={t('itemRefunds.title')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-semibold">{t('itemRefunds.title')}</h3>
+            <div className="flex items-center gap-2"><h3 className="font-semibold">{t('itemRefunds.title')}</h3><InfoPopover label={t('itemRefunds.title')}><p>{t('itemRefunds.expenseHelp')}</p>{history && <p className="mt-3">{t('itemRefunds.protected')}</p>}</InfoPopover></div>
             {canModify && <AverioButton disabled={!hasAvailable || !records.isSuccess || props.hasUnsavedChanges} onClick={() => setAdding(true)}>{t('itemRefunds.add')}</AverioButton>}
         </div>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{t('itemRefunds.expenseHelp')}</p>
         {props.hasUnsavedChanges && <p className="text-sm text-amber-800 dark:text-amber-200">{t('itemRefunds.savedHelp')}</p>}
         {history && <>
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
@@ -53,7 +53,6 @@ function SavedItemRefundsPanel(props: Props) {
                 <div><dt>{t('itemRefunds.returned')}</dt><dd className="font-semibold">{money(returned)}</dd></div>
                 <div><dt>{t('itemRefunds.net')}</dt><dd data-testid="refund-net-expense" className="font-semibold">{money(transaction.amount)}</dd></div>
             </dl>
-            <p className="text-xs text-slate-600 dark:text-slate-300">{t('itemRefunds.protected')}</p>
         </>}
         {records.isPending && <p role="status">{t('common.status.loading')}</p>}
         {records.isError && <div role="alert"><p>{t('itemRefunds.error')}</p><AverioButton onClick={() => { void records.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
@@ -82,7 +81,7 @@ function RefundOrigin({ userId, householdId, transaction }: Props) {
     const { t } = useTranslation();
     const origin = useQuery({ queryKey: [...itemRefundKeys.receipt(userId, householdId, transaction.id), 'origin'],
         queryFn: ({ signal }) => itemRefundsApi.apiV1HouseholdsHouseholdIdTransactionsTransactionIdRefundsOriginGet({ householdId, transactionId: transaction.id }, { signal }) });
-    return <AverioCard className="grid gap-2"><h3 className="font-semibold">{t('itemRefunds.refund')}</h3><p className="text-sm">{t('itemRefunds.creditHelp')}</p>
+    return <AverioCard className="grid gap-2"><div className="flex items-center gap-2"><h3 className="font-semibold">{t('itemRefunds.refund')}</h3><InfoPopover label={t('itemRefunds.refund')}>{t('itemRefunds.creditHelp')}</InfoPopover></div>
         {origin.isPending && <p role="status">{t('common.status.loading')}</p>}{origin.isError && <p role="alert">{t('itemRefunds.error')}</p>}
         {origin.data && <Link to="/app/transactions" search={{ transaction: origin.data.transactionId }} className={linkClass}>{t('itemRefunds.viewOriginal')}</Link>}
     </AverioCard>;

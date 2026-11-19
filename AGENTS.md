@@ -170,6 +170,13 @@ Do not invent a second design language for new features.
 - Empty states combine a lightweight Averio illustration, localized title/help, and a contextual action. Distinguish first-use from no filter matches; never render failures or loading as empty results.
 - Cards follow the selected menu item's visual language: one rounded, subtly tinted surface with an emerald left accent. Keep related content and its footer together. Reuse `shared/components/ui/AverioCard` for form groups.
 
+### Helper text: always use the I component
+
+- Always present helper text through the shared `InfoPopover` I component beside its field label, section heading or relevant action. Do not add standalone explanatory paragraphs, inline hint subtitles, native title tooltips or a second help component for helper text.
+- Keep labels, entered/saved values, current status, validation errors, actionable warnings, required confirmations and primary empty-state instructions visible. These are task content, not optional helper text. Calculation definitions and background explanations belong in the I component.
+- Localize the help label and content in EN/DE/HU. Keep help triggers outside other buttons and implicit form labels; preserve accessible heading/legend names and keyboard behavior.
+- Apply this rule to new or changed UI. Follow `docs/ui/component-patterns.md` and `docs/ui/helper-text-audit.md` for placement and interaction.
+
 ## Localization
 
 Supported UI languages:

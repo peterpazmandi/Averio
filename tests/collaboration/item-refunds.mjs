@@ -151,6 +151,19 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
         const panel = page.getByRole('region', { name: copy.title, exact: true });
         await panel.getByRole('button', { name: copy.add, exact: true }).click();
         const adding = page.getByRole('dialog', { name: copy.add, exact: true });
+        const checkHelp = async (subject, explanation) => {
+            const help = adding.getByRole('dialog', { name: subject, exact: true, includeHidden: true });
+            const helpId = await help.getAttribute('id');
+            await adding.locator('button[popovertarget=' + JSON.stringify(helpId) + ']').click();
+            await help.waitFor({ state: 'visible' });
+            assert.ok((await help.textContent()).includes(explanation), 'The I component retains the explanation');
+            await help.press('Escape');
+            await help.waitFor({ state: 'hidden' });
+            assert.equal(await adding.isVisible(), true, 'Closing help must not close the refund form');
+        };
+        assert.equal(await adding.getByText(copy.existingHelp, { exact: true }).isVisible(), false, 'Helper text starts inside its I component');
+        await checkHelp(copy.mode, copy.existingHelp);
+        await checkHelp(copy.stepReview, copy.noIncome);
         await adding.getByLabel(new RegExp('^' + copy.amount)).fill('1');
         await adding.getByLabel(copy.received, { exact: true }).check();
         assert.equal(await adding.getByRole('button', { name: copy.record, exact: true }).isEnabled(), true);
@@ -159,6 +172,7 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
         await page.screenshot({ path: path.join(artifacts, `item-refund-${language}-${theme}-${width}.png`), fullPage: false });
         assert.equal(await adding.locator('form > [role=group]').count(), 3, 'The three numbered steps are separate accessible groups');
         await adding.getByLabel(copy.existingCredit, { exact: true }).check();
+        await checkHelp(copy.filters, copy.matchHelp.split('{{amount}}')[0]);
         await adding.locator('[data-credit-id="' + preview.id + '"] input[type=radio]').check();
         assert.equal(await adding.getByLabel(copy.received, { exact: true }).isChecked(), false, 'Changing the recording mode resets consent');
         const localizedToggle = adding.locator('button[aria-controls$="-filters"]');

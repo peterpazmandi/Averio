@@ -82,19 +82,22 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
             </AverioCard>
             <AverioCard role="group" aria-labelledby={`${id}-step-2`} className="grid gap-4">
                 {stepHeading(2, t('itemRefunds.stepMoney'))}
-                <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-2 text-sm font-semibold">{t('itemRefunds.mode')}</legend>
+                <fieldset className="grid gap-3 sm:grid-cols-2"><legend aria-label={t('itemRefunds.mode')} className="mb-2 w-full text-sm font-semibold"><span className="flex items-center justify-between gap-2"><span>{t('itemRefunds.mode')}</span><InfoPopover label={t('itemRefunds.mode')}>
+                    <p><strong>{t('itemRefunds.newCredit')}</strong><br />{t('itemRefunds.newHint')}</p>
+                    <p className="mt-3"><strong>{t('itemRefunds.existingCredit')}</strong><br />{t('itemRefunds.existingHint')}</p>
+                    <p className="mt-3">{t('itemRefunds.existingHelp')}</p>
+                </InfoPopover></span></legend>
                     {(['new', 'existing'] as const).map(v => <label key={v} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${mode === v ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : 'border-slate-200 dark:border-slate-700'}`}>
                         <input className="mt-1 size-4 shrink-0 accent-emerald-500" type="radio" name="refund-mode" value={v} checked={mode === v} aria-label={t(v === 'new' ? 'itemRefunds.newCredit' : 'itemRefunds.existingCredit')} disabled={mutation.isPending} onChange={() => { setMode(v); changed(); }} />
-                        <span className="grid gap-1"><span className="font-semibold">{t(v === 'new' ? 'itemRefunds.newCredit' : 'itemRefunds.existingCredit')}</span><span className="text-xs text-slate-600 dark:text-slate-300">{t(v === 'new' ? 'itemRefunds.newHint' : 'itemRefunds.existingHint')}</span></span>
+                        <span className="font-semibold">{t(v === 'new' ? 'itemRefunds.newCredit' : 'itemRefunds.existingCredit')}</span>
                     </label>)}
                 </fieldset>
                 {mode === 'new' ? <div className="grid gap-4 sm:grid-cols-2">
                     <AverioField>{t('itemRefunds.amount')} · {transaction.currency}<AverioInput required inputMode="decimal" value={amount} disabled={mutation.isPending} aria-invalid={!!amount && !validAmount || undefined} onChange={e => { setAmount(e.target.value.replace(',', '.')); changed(); }} /></AverioField>
                     <AverioField>{t('itemRefunds.date')}<AverioInput required type="date" min={transaction.occurredOn} max={today} value={date} disabled={mutation.isPending} aria-invalid={!validDate || undefined} onChange={e => { setDate(e.target.value); changed(); }} /></AverioField>
                 </div> : <div className="grid gap-4">
-                    <p className="text-sm">{t('itemRefunds.existingHelp')}</p>
                     <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold">{t('itemRefunds.filters')}</span>
+                        <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">{t('itemRefunds.filters')}</span><InfoPopover label={t('itemRefunds.filters')}>{t('itemRefunds.matchHelp', { amount: money(item?.amount ?? '0') })}</InfoPopover></div>
                         <AverioButton size="icon" className="relative aria-expanded:border-emerald-500 aria-expanded:bg-emerald-50 dark:aria-expanded:bg-emerald-950/40" disabled={mutation.isPending}
                             aria-label={t('transactionManagement.filters')} title={t('transactionManagement.filters')}
                             aria-expanded={filtersOpen} aria-controls={`${id}-filters`} aria-describedby={`${id}-filter-count`}
@@ -116,7 +119,6 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
                         </fieldset>
                     </div>
                     {!validRange ? <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.invalidDates')}</p> : <>
-                        <p className="text-xs text-slate-600 dark:text-slate-300">{t('itemRefunds.matchHelp', { amount: money(item?.amount ?? '0') })}</p>
                         {credits.isPending && <p role="status">{t('common.status.loading')}</p>}
                         {credits.isError && <p role="alert">{t('itemRefunds.error')}</p>}
                         {!!options.length && <fieldset className="grid min-w-0 gap-2"><legend className="mb-2 text-sm font-semibold">{t('itemRefunds.chooseCredit')}</legend>
@@ -135,15 +137,14 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
                 {mode === 'new' && !validDate && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.invalidDates')}</p>}
             </AverioCard>
             <AverioCard role="group" aria-labelledby={`${id}-step-3`} className="grid gap-4">
-                {stepHeading(3, t('itemRefunds.stepReview'))}
+                <div className="flex items-center justify-between gap-2">{stepHeading(3, t('itemRefunds.stepReview'))}<InfoPopover label={t('itemRefunds.stepReview')}><p>{t('itemRefunds.reviewHelp')}</p><p className="mt-3">{t('itemRefunds.noIncome')}</p></InfoPopover></div>
                 {valid && item ? <dl className="grid gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2 dark:bg-slate-900">
                     <div className="min-w-0"><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.item')}</dt><dd className="break-words font-semibold">{item.description}</dd></div>
                     <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.amount')}</dt><dd className="font-semibold">{money(value!)}</dd></div>
                     <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.date')}</dt><dd>{displayDate(mode === 'existing' ? credit!.occurredOn : date)}</dd></div>
                     <div><dt className="text-slate-600 dark:text-slate-300">{t('itemRefunds.netAfter')}</dt><dd className="font-semibold">{money(subtractDecimalAmounts(transaction.amount, value!))}</dd></div>
-                </dl> : <p className="text-sm text-slate-600 dark:text-slate-300">{t('itemRefunds.reviewHelp')}</p>}
-                <p className="text-sm">{t('itemRefunds.noIncome')}</p>
-                <div className="flex items-center gap-2 text-sm"><span>{t('personalMoney.itemAllocationTitle')}</span><InfoPopover label={t('itemRefunds.title')}>{t('itemRefunds.allowanceHelp')}</InfoPopover></div>
+                </dl> : null}
+                <div className="flex items-center gap-2 text-sm"><span>{t('personalMoney.itemAllocationTitle')}</span><InfoPopover label={t('personalMoney.itemAllocationTitle')}>{t('itemRefunds.allowanceHelp')}</InfoPopover></div>
                 <label className="flex min-h-11 items-start gap-3 rounded-xl border border-emerald-200 p-3 text-sm font-semibold dark:border-emerald-900"><input className="mt-1 size-4 shrink-0 accent-emerald-500" type="checkbox" checked={received} disabled={mutation.isPending || !valid} onChange={e => setReceived(e.target.checked)} />{t('itemRefunds.received')}</label>
             </AverioCard>
             {mutation.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{mutation.error.message}</p>}
