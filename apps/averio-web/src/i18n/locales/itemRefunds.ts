@@ -1,4 +1,5 @@
 export const itemRefundsEN = {
+    activeFilters: 'Active filters: {{count}}',
     step: "Step {{number}}",
     stepItem: "Choose the receipt item",
     stepMoney: "Choose the returned money",
@@ -36,6 +37,7 @@ export const itemRefundsEN = {
     error: 'Refunds could not be loaded.', creditHelp: 'This is returned money linked to an original receipt item. It reduces the original expense rather than adding income. Correct it from the original expense.',
 };
 export const itemRefundsDE = {
+    activeFilters: 'Aktive Filter: {{count}}',
     step: "Schritt {{number}}",
     stepItem: "Belegposition auswählen",
     stepMoney: "Zurückerhaltenes Geld auswählen",
@@ -73,6 +75,7 @@ export const itemRefundsDE = {
     error: 'Erstattungen konnten nicht geladen werden.', creditHelp: 'Dieses zurückerhaltene Geld ist mit einer ursprünglichen Belegposition verknüpft. Es reduziert die ursprüngliche Ausgabe statt Einnahmen zu erhöhen. Korrigiere es über die ursprüngliche Ausgabe.',
 };
 export const itemRefundsHU = {
+    activeFilters: 'Aktív szűrők: {{count}}',
     step: "{{number}}. lépés",
     stepItem: "Bizonylattétel kiválasztása",
     stepMoney: "Visszakapott pénz kiválasztása",

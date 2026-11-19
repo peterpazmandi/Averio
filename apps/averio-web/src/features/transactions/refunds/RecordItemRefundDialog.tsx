@@ -9,6 +9,7 @@ import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { AverioLogo } from '../../../shared/components/branding/AverioLogo';
+import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { itemRefundKeys, itemRefundsApi } from './itemRefundQueries';
 
@@ -30,10 +31,12 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
     const [search, setSearch] = useState('');
     const [from, setFrom] = useState(transaction.occurredOn);
     const [to, setTo] = useState(today);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const changed = () => { setOperationId(crypto.randomUUID()); setReceived(false); };
     const filtersChanged = () => { setCreditId(''); changed(); };
     const resetFilters = () => { setSearch(''); setFrom(transaction.occurredOn); setTo(today); filtersChanged(); };
     const filters = { search: search.trim(), from: from || transaction.occurredOn, to: to || today };
+    const filterCount = Number(!!filters.search) + Number(filters.from !== transaction.occurredOn) + Number(filters.to !== today);
     const validRange = filters.from >= transaction.occurredOn && filters.to <= today && filters.from <= filters.to;
     const credits = useInfiniteQuery({
         queryKey: [...itemRefundKeys.credits(userId, householdId, transaction.accountId), filters],
@@ -90,15 +93,28 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
                     <AverioField>{t('itemRefunds.date')}<AverioInput required type="date" min={transaction.occurredOn} max={today} value={date} disabled={mutation.isPending} aria-invalid={!validDate || undefined} onChange={e => { setDate(e.target.value); changed(); }} /></AverioField>
                 </div> : <div className="grid gap-4">
                     <p className="text-sm">{t('itemRefunds.existingHelp')}</p>
-                    <fieldset disabled={mutation.isPending} className="grid min-w-0 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
-                        <legend className="float-left mb-3 text-sm font-semibold">{t('itemRefunds.filters')}</legend>
-                        <AverioField className="clear-both">{t('itemRefunds.search')}<AverioInput type="search" maxLength={160} value={search} onChange={e => { setSearch(e.target.value); filtersChanged(); }} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} /></AverioField>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <AverioField>{t('itemRefunds.from')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={from} aria-invalid={!validRange || undefined} onChange={e => { setFrom(e.target.value); filtersChanged(); }} /></AverioField>
-                            <AverioField>{t('itemRefunds.to')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={to} aria-invalid={!validRange || undefined} onChange={e => { setTo(e.target.value); filtersChanged(); }} /></AverioField>
-                        </div>
-                        <div><AverioButton onClick={resetFilters}>{t('itemRefunds.resetFilters')}</AverioButton></div>
-                    </fieldset>
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold">{t('itemRefunds.filters')}</span>
+                        <AverioButton size="icon" className="relative aria-expanded:border-emerald-500 aria-expanded:bg-emerald-50 dark:aria-expanded:bg-emerald-950/40" disabled={mutation.isPending}
+                            aria-label={t('transactionManagement.filters')} title={t('transactionManagement.filters')}
+                            aria-expanded={filtersOpen} aria-controls={`${id}-filters`} aria-describedby={`${id}-filter-count`}
+                            onClick={() => setFiltersOpen(open => !open)}>
+                            <ConceptIcon name="filters" />
+                            {filterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white">{filterCount}</span>}
+                        </AverioButton>
+                        <span id={`${id}-filter-count`} className="sr-only">{t('itemRefunds.activeFilters', { count: filterCount })}</span>
+                    </div>
+                    <div id={`${id}-filters`} hidden={!filtersOpen}>
+                        <fieldset disabled={mutation.isPending} className="grid min-w-0 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
+                            <legend className="sr-only">{t('itemRefunds.filters')}</legend>
+                            <AverioField>{t('itemRefunds.search')}<AverioInput type="search" maxLength={160} value={search} onChange={e => { setSearch(e.target.value); filtersChanged(); }} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} /></AverioField>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <AverioField>{t('itemRefunds.from')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={from} aria-invalid={!validRange || undefined} onChange={e => { setFrom(e.target.value); filtersChanged(); }} /></AverioField>
+                                <AverioField>{t('itemRefunds.to')}<AverioInput type="date" min={transaction.occurredOn} max={today} value={to} aria-invalid={!validRange || undefined} onChange={e => { setTo(e.target.value); filtersChanged(); }} /></AverioField>
+                            </div>
+                            <div><AverioButton onClick={resetFilters}>{t('itemRefunds.resetFilters')}</AverioButton></div>
+                        </fieldset>
+                    </div>
                     {!validRange ? <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('itemRefunds.invalidDates')}</p> : <>
                         <p className="text-xs text-slate-600 dark:text-slate-300">{t('itemRefunds.matchHelp', { amount: money(item?.amount ?? '0') })}</p>
                         {credits.isPending && <p role="status">{t('common.status.loading')}</p>}
