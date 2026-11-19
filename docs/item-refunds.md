@@ -1,5 +1,7 @@
 # Received item refunds
 
+German UI: **Rückzahlungen**. Hungarian UI: **Pénzvisszatérítések**. These names distinguish returned expense payments from reimbursement claims; see [money-back terminology](ui/money-back-terminology.md).
+
 Open an ordinary expense and choose **Add refund** in **Item refunds**. Choose exactly one receipt item and either record returned money or link an existing unlinked incoming transaction. Confirm the money was actually received. Use the original account and currency, an actual receipt date from the purchase date through today, and an amount no greater than the item's remaining cost.
 
 For an existing recorded credit, select it instead of creating another movement. Its whole amount is reclassified as Refund, removing its income/category contribution. A returned-money transaction belongs to one item and cannot be selected twice. Income with existing Personal Money, receipt, recurring or reimbursement dependencies cannot be reused.

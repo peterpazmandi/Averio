@@ -342,7 +342,7 @@
   <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Erstelle zuerst eine Zuteilung, bevor du sie durch eine Umbuchung finanzierst.</value></data>
   <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>Die Umbuchung übersteigt den noch nicht privat finanzierten Betrag deiner Zuteilung.</value></data>
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Wähle einen gültigen Zweck für diese persönliche Umbuchung.</value></data>
-  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Wähle eine gebuchte Erstattung auf demselben Konto und in derselben Währung wie der zugeordnete Kauf. Erstattungen dürfen die Budgetbelastung nicht übersteigen.</value></data>
+  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Wähle eine gebuchte Rückzahlung auf demselben Konto und in derselben Währung wie der zugeordnete Kauf. Rückzahlungen dürfen die Budgetbelastung nicht übersteigen.</value></data>
   <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Du kannst nur ungenutztes, positives persönliches Budget zurückgeben.</value></data>
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Ungültiger monatlicher Personal-Money-Zeitplan. Prüfe Betrag, Zeitraum und Haushaltsmitglied.</value></data>
   <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>Monatliche Zuteilungen derzeit nicht verfügbar</value></data>
@@ -361,10 +361,10 @@
 <data name="Error_ImportMapping" xml:space="preserve"><value>Prüfe Kontowährungen, Sichtbarkeit und Kategoriezuordnungen und bestätige den Hinweis zu Salden und Überschneidungen.</value></data>
 <data name="Error_ImportReviewChanged" xml:space="preserve"><value>Die Importprüfung hat sich geändert. Aktualisiere sie und bestätige deine Auswahl erneut.</value></data>
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Dieser Zeitraum enthält zu viele Einträge. Exportiere einen kleineren Zeitraum.</value></data>
-<data name="Validation_Reimbursement" xml:space="preserve"><value>Prüfe Anbieter, Betrag, Konto und Daten. Bestätige vor dem Markieren, dass du den Beleg extern eingereicht hast.</value></data>
-<data name="Error_ReimbursementChanged" xml:space="preserve"><value>Diese Erstattung wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
-<data name="Validation_ItemRefund" xml:space="preserve"><value>Wähle eine Belegposition und eine erhaltene Erstattung auf demselben Konto und in derselben Währung. Die Erstattung darf die verbleibenden Kosten der Position nicht übersteigen. Bestehende Gutschriften müssen unzugeordnete, gebuchte Einnahmen mit passendem Betrag sein.</value></data>
-<data name="Error_ItemRefundLinked" xml:space="preserve"><value>Diese Transaktion hat Positionserstattungen. Konto, Typ, Sichtbarkeit, Datum und betroffene Positionen sind geschützt. Hebe aktive Erstattungen im Originalbeleg auf, bevor du ihn stornierst; Gutschriften werden ebenfalls dort korrigiert.</value></data>
+<data name="Validation_Reimbursement" xml:space="preserve"><value>Prüfe Kostenträger, Betrag, Konto und Daten. Bestätige vor dem Markieren, dass du den Beleg extern eingereicht hast.</value></data>
+<data name="Error_ReimbursementChanged" xml:space="preserve"><value>Diese Kostenerstattung wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
+<data name="Validation_ItemRefund" xml:space="preserve"><value>Wähle eine Belegposition und eine erhaltene Rückzahlung auf demselben Konto und in derselben Währung. Die Rückzahlung darf die verbleibenden Kosten der Position nicht übersteigen. Bestehende Gutschriften müssen unzugeordnete, gebuchte Einnahmen mit passendem Betrag sein.</value></data>
+<data name="Error_ItemRefundLinked" xml:space="preserve"><value>Diese Transaktion hat Rückzahlungen zu Belegpositionen. Konto, Typ, Sichtbarkeit, Datum und betroffene Positionen sind geschützt. Hebe aktive Rückzahlungen im Originalbeleg auf, bevor du ihn stornierst; Gutschriften werden ebenfalls dort korrigiert.</value></data>
 </root>
 
 

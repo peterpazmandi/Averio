@@ -1,5 +1,7 @@
 # Recurring mortgage reimbursements
 
+German UI: **Kostenerstattungen**. Hungarian UI: **Költségtérítések**. These are expense-coverage claims, distinct from received expense refunds; see [money-back terminology](ui/money-back-terminology.md).
+
 The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. A future payment-matching deliverable will link existing bank movements and introduce partially/fully received statuses.
 
 ## Workflow and privacy

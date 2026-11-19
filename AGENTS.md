@@ -187,6 +187,8 @@ Supported UI languages:
 
 Every static user-visible frontend string must use i18n. Backend validation/business errors must follow the localized resource strategy.
 
+Use `docs/ui/money-back-terminology.md` for refund/reimbursement wording. German uses Rückzahlung versus Kostenerstattung; Hungarian uses Pénzvisszatérítés versus Költségtérítés. Keep these workflows distinct in labels and help without renaming internal/API identifiers.
+
 ## API conventions
 
 Prefer resource-oriented REST endpoints using nouns, for example:

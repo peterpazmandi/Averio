@@ -148,7 +148,13 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
         await page.setViewportSize({ width, height: 1000 });
         await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
         const copy = localeFile('itemRefunds')['itemRefunds' + language.toUpperCase()];
+        const claimCopy = localeFile('reimbursements')['reimbursements' + language.toUpperCase()];
         const panel = page.getByRole('region', { name: copy.title, exact: true });
+        await panel.waitFor();
+        await page.getByRole('heading', { name: claimCopy.title, exact: true }).waitFor();
+        assert.notEqual(copy.title, claimCopy.title, 'Refunds and expense coverage claims need distinct names');
+        assert.equal(await panel.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Localized refund heading overflow');
+        await page.screenshot({ path: path.join(artifacts, `money-back-options-${language}-${theme}-${width}.png`), fullPage: false });
         await panel.getByRole('button', { name: copy.add, exact: true }).click();
         const adding = page.getByRole('dialog', { name: copy.add, exact: true });
         const checkHelp = async (subject, explanation) => {

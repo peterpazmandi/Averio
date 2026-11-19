@@ -342,7 +342,7 @@
   <data name="Error_PersonalMoneyGrantRequired" xml:space="preserve"><value>Előbb hozz létre keretjuttatást, és csak utána finanszírozd átvezetéssel.</value></data>
   <data name="Error_PersonalMoneyInsufficientUnfunded" xml:space="preserve"><value>Az átvezetés összege nagyobb a még nem finanszírozott személyes keretnél.</value></data>
   <data name="Error_PersonalMoneyPurposeInvalid" xml:space="preserve"><value>Válassz érvényes célt a személyes kerethez kapcsolódó átvezetéshez.</value></data>
-  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Válassz könyvelt visszatérítést ugyanazon a számlán és pénznemben, mint a kerethez kapcsolt vásárlás. A visszatérítés nem haladhatja meg az elszámolt összeget.</value></data>
+  <data name="Error_PersonalMoneyRefundInvalid" xml:space="preserve"><value>Válassz könyvelt pénzvisszatérítést ugyanazon a számlán és pénznemben, mint a kerethez kapcsolt vásárlás. A pénzvisszatérítés nem haladhatja meg az elszámolt összeget.</value></data>
   <data name="Error_PersonalMoneySurrenderInvalid" xml:space="preserve"><value>Csak a még fel nem használt, pozitív személyes pénzkeretből mondhatsz le.</value></data>
   <data name="Error_PersonalMoneyRecurringInvalid" xml:space="preserve"><value>Érvénytelen havi személyespénz-ütemezés. Ellenőrizd az összeget, a dátumokat és a háztartástagot.</value></data>
   <data name="Title_RecurringAllowanceUnavailable" xml:space="preserve"><value>A havi juttatások átmenetileg nem érhetők el</value></data>
@@ -361,10 +361,10 @@
 <data name="Error_ImportMapping" xml:space="preserve"><value>Ellenőrizd a számlák pénznemét, a láthatóságot és a kategóriapárosításokat, majd fogadd el az egyenlegekre és átfedésekre vonatkozó figyelmeztetést.</value></data>
 <data name="Error_ImportReviewChanged" xml:space="preserve"><value>Az import ellenőrzése megváltozott. Frissítsd, majd erősítsd meg újra a választásaidat.</value></data>
 <data name="Error_ImportReviewTooLarge" xml:space="preserve"><value>Az időszak túl sok tételt tartalmaz az ellenőrzéshez. Exportálj rövidebb időszakot.</value></data>
-<data name="Validation_Reimbursement" xml:space="preserve"><value>Ellenőrizd a szolgáltatót, az összeget, a számlát és a dátumokat. A beküldés jelölése előtt erősítsd meg, hogy a bizonylatot külső felületen beküldted.</value></data>
-<data name="Error_ReimbursementChanged" xml:space="preserve"><value>A visszatérítés megváltozott. Frissítsd a nézetet, és próbáld újra.</value></data>
-<data name="Validation_ItemRefund" xml:space="preserve"><value>Válassz egy bizonylattételt és ugyanarra a számlára, azonos pénznemben beérkezett visszatérítést. Az összeg nem haladhatja meg a tétel fennmaradó költségét. Meglévő jóváírás csak nem kapcsolt, könyvelt bevétel lehet, egyező összeggel.</value></data>
-<data name="Error_ItemRefundLinked" xml:space="preserve"><value>A tranzakciónak tételszintű visszatérítési előzménye van. A számla, típus, láthatóság, dátum és érintett tételek védettek. Sztornózás előtt az eredeti bizonylaton vond vissza az aktív visszatérítéseket; a jóváírások is ott javíthatók.</value></data>
+<data name="Validation_Reimbursement" xml:space="preserve"><value>Ellenőrizd a költségtérítés fizetőjét, az összeget, a számlát és a dátumokat. A beküldés jelölése előtt erősítsd meg, hogy a bizonylatot külső felületen beküldted.</value></data>
+<data name="Error_ReimbursementChanged" xml:space="preserve"><value>A költségtérítés megváltozott. Frissítsd a nézetet, és próbáld újra.</value></data>
+<data name="Validation_ItemRefund" xml:space="preserve"><value>Válassz egy bizonylattételt és ugyanarra a számlára, azonos pénznemben beérkezett pénzvisszatérítést. Az összeg nem haladhatja meg a tétel fennmaradó költségét. Meglévő jóváírás csak nem kapcsolt, könyvelt bevétel lehet, egyező összeggel.</value></data>
+<data name="Error_ItemRefundLinked" xml:space="preserve"><value>A tranzakciónak tételszintű pénzvisszatérítési előzménye van. A számla, típus, láthatóság, dátum és érintett tételek védettek. Sztornózás előtt az eredeti bizonylaton vond vissza az aktív pénzvisszatérítéseket; a jóváírások is ott javíthatók.</value></data>
 </root>
 
 
