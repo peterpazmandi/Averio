@@ -128,6 +128,48 @@ internal static class MerchantItemRefundVerification
         await Throws<BusinessRuleException>(()=>EditAllocation(unlink,10));
         await Cancel(unlinkId,(await Refunds(unlinkId)).Single(),unlink.UpdatedAt);
         Check(await Allowance()==beforeUnlink,"Cancelling a refund after unlink double-reversed private allowance");
+
+        // Another receipt item's allocation must never cover an unlinked item's refund.
+        var beforeMultiple = await Allowance();
+        var multipleId = await Post(TransactionKind.Expense,
+            [new("Allocated A",TestIds.Groceries,100,PersonalMoneyAmount:50),
+             new("Allocated B",categoryB,100,PersonalMoneyAmount:50)],day);
+        var multiple = await Read(multipleId);
+        var multipleA = multiple.Items.Single(x=>x.Description=="Allocated A").Id;
+        var multipleB = multiple.Items.Single(x=>x.Description=="Allocated B").Id;
+        await Record(multipleId,new(multipleA,100,day,Guid.NewGuid(),multiple.UpdatedAt,true));
+        multiple = await Read(multipleId);
+        await EditAllocation(multiple,0,multipleA);
+        Check(await Allowance()==beforeMultiple-50,"Another item's allocation retained the unlinked item's refund credit");
+        multiple = await Read(multipleId);
+        await Record(multipleId,new(multipleB,100,day,Guid.NewGuid(),multiple.UpdatedAt,true));
+        Check(await Allowance()==beforeMultiple,"The remaining item's refund was blocked by an unlinked item's old credit");
+        multiple = await Read(multipleId);
+        await Cancel(multipleId,(await Refunds(multipleId)).Single(x=>x.TransactionItemId==multipleA),multiple.UpdatedAt);
+        Check(await Allowance()==beforeMultiple,"Reversing an unlinked item's refund reduced another item's restored allowance");
+        multiple = await Read(multipleId);
+        await Cancel(multipleId,(await Refunds(multipleId)).Single(x=>x.TransactionItemId==multipleB),multiple.UpdatedAt);
+        Check(await Allowance()==beforeMultiple-50,"The retained item's refund did not reverse exactly once");
+
+        var beforePartial = await Allowance();
+        var partialId = await Post(TransactionKind.Expense,
+            [new("Partial A",TestIds.Groceries,100,PersonalMoneyAmount:40),
+             new("Partial B",categoryB,100,PersonalMoneyAmount:40)],day);
+        var partial = await Read(partialId);
+        var partialA = partial.Items.Single(x=>x.Description=="Partial A").Id;
+        var partialB = partial.Items.Single(x=>x.Description=="Partial B").Id;
+        await Record(partialId,new(partialA,25,day,Guid.NewGuid(),partial.UpdatedAt,true));
+        partial = await Read(partialId);
+        await Record(partialId,new(partialB,50,day,Guid.NewGuid(),partial.UpdatedAt,true));
+        partial = await Read(partialId);
+        await EditAllocation(partial,0,partialA);
+        Check(await Allowance()==beforePartial-20,"Unlinking one partially refunded item changed another item's refund attribution");
+        partial = await Read(partialId);
+        await Cancel(partialId,(await Refunds(partialId)).Single(x=>x.TransactionItemId==partialA),partial.UpdatedAt);
+        Check(await Allowance()==beforePartial-20,"An unlinked partial refund was reversed twice");
+        partial = await Read(partialId);
+        await Cancel(partialId,(await Refunds(partialId)).Single(x=>x.TransactionItemId==partialB),partial.UpdatedAt);
+        Check(await Allowance()==beforePartial-40,"A different item's partial refund was not retained for reversal");
         var beforeTiny = await Allowance();
         var tinyId = await Post(TransactionKind.Expense,[new("Precise share",TestIds.Groceries,0.001m,PersonalMoneyAmount:0.0004m)],day);
         for (var i=0;i<10;i++)
@@ -165,9 +207,9 @@ internal static class MerchantItemRefundVerification
             await using var s=services.CreateAsyncScope(); await s.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(new(f.HouseholdId,p.Id,p.AccountId,p.Kind,p.Visibility,"Edited merchant",null,p.OccurredOn,
                 p.Items.OrderBy(x=>x.Position).Select(x=>new TransactionItemInput(x.Description,x.CategoryId,sendNet?x.Amount:x.OriginalAmount,x.Id)).ToArray(),[],p.UpdatedAt),ct);
         }
-        async Task EditAllocation(Transaction p,decimal amount) {
+        async Task EditAllocation(Transaction p,decimal amount,Guid? itemId=null) {
             await using var s=services.CreateAsyncScope(); await s.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(new(f.HouseholdId,p.Id,p.AccountId,p.Kind,p.Visibility,p.Merchant,p.Note,p.OccurredOn,
-                p.Items.OrderBy(x=>x.Position).Select(x=>new TransactionItemInput(x.Description,x.CategoryId,x.OriginalAmount,x.Id,amount)).ToArray(),[],p.UpdatedAt),ct);
+                p.Items.OrderBy(x=>x.Position).Select(x=>new TransactionItemInput(x.Description,x.CategoryId,x.OriginalAmount,x.Id,itemId is null || x.Id==itemId ? amount : null)).ToArray(),[],p.UpdatedAt),ct);
         }
         async Task AssertAggregates(decimal expense,decimal a,decimal b) {
             await using var s=services.CreateAsyncScope(); var db=s.ServiceProvider.GetRequiredService<AverioDbContext>();

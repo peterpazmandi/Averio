@@ -548,6 +548,7 @@ public sealed class PersonalMoneyHandler(
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
         var projectedTotal = -entries.Where(IsCharge).Sum(x => x.Amount);
         var projectedOwnTotal = -entries.Where(x => IsCharge(x) && x.WalletId == wallet.Id).Sum(x => x.Amount);
+        var unlinkedItems = new HashSet<(Guid WalletId, Guid ItemId)>();
         foreach (var target in targets)
         {
             var amount = target.Amount!.Value;
@@ -569,6 +570,7 @@ public sealed class PersonalMoneyHandler(
             {
                 if (amount == 0)
                 {
+                    unlinkedItems.Add((wallet.Id, target.Item.Id));
                     // Unlink against the original classification even after account settings change.
                     foreach (var group in own.GroupBy(x => new { x.Kind, x.OccurredOn }))
                     {
@@ -588,10 +590,10 @@ public sealed class PersonalMoneyHandler(
             projectedTotal += amount - current;
             projectedOwnTotal += amount - current;
         }
-        if (projectedTotal - returned.Where(IsRefund).Sum(x => x.Amount) > record.Amount)
+        var retractedRefunds = await ReconcilePurchaseRefundsAsync(householdId, transactionId,
+            new Dictionary<Guid, decimal> { [wallet.Id] = projectedOwnTotal }, ct, unlinkedItems);
+        if (projectedTotal - returned.Where(IsRefund).Sum(x => x.Amount) + retractedRefunds > record.Amount)
             throw new ConflictException("transaction_changed", "Error_TransactionChanged");
-        await ReconcilePurchaseRefundsAsync(householdId, transactionId,
-            new Dictionary<Guid, decimal> { [wallet.Id] = projectedOwnTotal }, ct);
         await unitOfWork.SaveChangesAsync(ct);
     }
 
@@ -674,28 +676,34 @@ public sealed class PersonalMoneyHandler(
         await ReconcilePurchaseRefundsAsync(householdId, transaction.Id, remaining, ct);
     }
 
-    // Refunds are purchase-level credits. Keep them while the holder's remaining
-    // allocation covers them; otherwise retract that holder's refund attribution,
-    // retaining the real bank income and immutable audit history.
-    private async Task ReconcilePurchaseRefundsAsync(Guid householdId, Guid purchaseId,
-        IReadOnlyDictionary<Guid, decimal> remainingCharges, CancellationToken ct)
+    // Unlinking an item also retracts that item's refund attribution. Other item
+    // allocations cannot cover it. Legacy receipt-wide credits retain their
+    // purchase-level coverage rule. Bank movements and audit history are retained.
+    private async Task<decimal> ReconcilePurchaseRefundsAsync(Guid householdId, Guid purchaseId,
+        IReadOnlyDictionary<Guid, decimal> remainingCharges, CancellationToken ct,
+        IReadOnlySet<(Guid WalletId, Guid ItemId)>? unlinkedItems = null)
     {
         var refunds = await repository.GetRefundsOfPurchaseAsync(householdId, purchaseId, ct);
+        var retracted = 0m;
         foreach (var wallet in refunds.Where(IsRefund).GroupBy(x => x.WalletId))
         {
-            if (!remainingCharges.TryGetValue(wallet.Key, out var remaining)
-                || wallet.Sum(x => x.Amount) <= remaining) continue;
-            foreach (var group in wallet.GroupBy(x => new
+            if (!remainingCharges.TryGetValue(wallet.Key, out var remaining)) continue;
+            bool IsUnlinked(PersonalMoneyEntry entry) => entry.TransactionItemId is Guid itemId
+                && unlinkedItems?.Contains((wallet.Key, itemId)) == true;
+            var retainedTotal = wallet.Where(x => !IsUnlinked(x)).Sum(x => x.Amount);
+            foreach (var group in wallet.Where(x => IsUnlinked(x) || retainedTotal > remaining).GroupBy(x => new
                 { x.Kind, x.TransactionId, x.RelatedTransactionId, x.OccurredOn, x.TransactionItemId }))
             {
                 var net = group.Sum(x => x.Amount);
                 if (net == 0m) continue;
+                retracted += net;
                 repository.Add(PersonalMoneyEntry.Create(householdId, wallet.Key,
                     group.Key.Kind, -net, group.Key.OccurredOn, clock.GetUtcNow(),
                     transactionId: group.Key.TransactionId,
                     relatedTransactionId: group.Key.RelatedTransactionId, transactionItemId: group.Key.TransactionItemId));
             }
         }
+        return retracted;
     }
 
     // Source mutations retract an explicitly linked charge atomically; the user can relink the updated expense.
