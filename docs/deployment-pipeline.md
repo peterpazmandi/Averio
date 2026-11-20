@@ -120,16 +120,31 @@ factory; application runtime credentials remain in the existing application env 
 Never commit either file. Confirm Neon recovery/backup retention before the first release.
 
 Migrations execute in a short-lived, architecture-matched image before containers
-are replaced. A failure prevents application deployment. Existing apps continue
-running during migration, so migrations must be backward compatible. Destructive
-changes require a separate planned maintenance procedure.
+are replaced. A failure prevents application deployment. API, Worker and migrator
+images must declare the same `io.averio.schema-epoch` label (unlabelled historical
+images are epoch 0). Within an epoch, migrations must remain backward compatible.
+Increment all three labels for an incompatible schema or behavior change.
+The refund provenance release introduces epoch 1: the host stops both backends
+before migration and removes their stopped containers (retaining volumes), so old
+refund handlers cannot write against the new schema or restart after a host reboot.
+This introduces a maintenance window; retain a pre-upgrade backup.
+
+Before migration, the host persists `minimum-schema-epoch` beside `current.yml`.
+It rejects releases below this floor, even after a failed migration or a lost
+migrator response. An upgrade retry still stops backends when the recorded current
+pair is incompatible or cannot be verified. Stop failure prevents migration.
+Preserve this marker when backing up or replacing the host. Always use the updated
+deployment workflow/script, including when selecting historical release artifacts;
+old workflow revisions and direct Compose commands bypass this protection.
 
 The workflow preserves `/etc/averio/deploy-<environment>/current.yml` and
 `previous.yml`. It also retains content-addressed overlays under `history/`.
 Migration, Compose and startup failures leave both references untouched; rotation
 happens only after backend startup checks succeed. The host checks the new API's
 database health before replacing the Worker. On backend rollout failure, the host
-requests restoration of both images from `current.yml` when available. Failed
+requests restoration of both images from `current.yml` only when their image labels
+prove compatibility with the candidate epoch. Otherwise it stops both candidate
+services and remains in maintenance for a compatible forward retry. Failed
 candidates remain available for diagnosis. An unchanged retry preserves the previous
 reference. Public frontend checks run separately.
 
@@ -220,6 +235,9 @@ See [SSM recovery details](deployment-ssm-setup.md#interrupted-commands-and-reco
   the matching Cloudflare deployment.
   Otherwise follow the Neon recovery/maintenance procedure. A first automated release
   has no previous overlay: record the existing image digests and Pages deployment first.
+  Never delete/lower `minimum-schema-epoch` to force an older release onto an upgraded
+  database. Lowering it requires a reviewed restore of the matching database backup,
+  backend pair and frontend while all writers remain stopped (ADR-051).
 
 Public checks verify DB connectivity, API version/source identity, frontend identity,
 the served HTML, runtime API/environment settings, and the entry JS/CSS against the

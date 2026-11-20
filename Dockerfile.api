@@ -36,6 +36,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 ARG VCS_REF=unknown
 
 LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL io.averio.schema-epoch="1"
 
 WORKDIR /app
 

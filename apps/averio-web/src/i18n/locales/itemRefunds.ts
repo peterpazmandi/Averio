@@ -37,6 +37,8 @@ export const itemRefundsEN = {
     details: 'Receipt items and refund history', history: 'Refund history', reversed: 'Reversed', fully: 'Fully refunded',
     reverse: 'Reverse refund', reverseTitle: 'Reverse this refund?',
     reverseHelp: 'Use this to correct a mistaken refund. It restores the item’s expense, reverses any linked allowance credit and removes the returned-money credit from the account balance. History is retained.',
+    reverseExistingHelp: 'Restores the item’s expense and reverses any linked allowance credit. The existing bank credit stays posted as independent income with its original items and categories. The account balance stays unchanged. History is retained.',
+    reverseUnknownHelp: 'This historical refund has no reliable credit origin. Reversal is blocked to protect the recorded bank movement. Have its original credit verified before correcting it.',
     viewCredit: 'View returned money', viewOriginal: 'View original expense', protected: 'Refund-linked account, type, date and visibility are protected. Refunded items cannot be removed or have their original paid amount changed while refunds are active. Reverse active refunds here before voiding the expense.',
     error: 'Refunds could not be loaded.', creditHelp: 'This is returned money linked to an original receipt item. It reduces the original expense rather than adding income. Correct it from the original expense.',
 };
@@ -79,6 +81,8 @@ export const itemRefundsDE = {
     details: 'Belegpositionen und Rückzahlungsverlauf', history: 'Rückzahlungsverlauf', reversed: 'Aufgehoben', fully: 'Vollständig zurückgezahlt',
     reverse: 'Rückzahlung aufheben', reverseTitle: 'Diese Rückzahlung aufheben?',
     reverseHelp: 'Korrigiere damit eine irrtümliche Rückzahlung. Die Ausgabe der Position wird wiederhergestellt, eine zugehörige Budgetgutschrift rückgängig gemacht und die Gutschrift aus dem Kontostand entfernt. Der Verlauf bleibt erhalten.',
+    reverseExistingHelp: 'Stellt die Ausgabe der Position wieder her und macht eine zugehörige Budgetgutschrift rückgängig. Die bestehende Kontogutschrift bleibt mit ihren ursprünglichen Positionen und Kategorien als eigenständige Einnahme gebucht. Der Kontostand bleibt unverändert. Der Verlauf bleibt erhalten.',
+    reverseUnknownHelp: 'Für diese ältere Rückzahlung ist die Herkunft der Gutschrift nicht zuverlässig dokumentiert. Das Aufheben ist zum Schutz der erfassten Kontobewegung gesperrt. Lass die ursprüngliche Gutschrift vor einer Korrektur prüfen.',
     viewCredit: 'Gutschrift ansehen', viewOriginal: 'Ursprüngliche Ausgabe ansehen', protected: 'Konto, Typ, Datum und Sichtbarkeit sind bei verknüpften Rückzahlungen geschützt. Zurückgezahlte Positionen können nicht entfernt und ihre ursprünglichen Beträge bei aktiven Rückzahlungen nicht geändert werden. Hebe aktive Rückzahlungen hier auf, bevor du die Ausgabe stornierst.',
     error: 'Rückzahlungen konnten nicht geladen werden.', creditHelp: 'Dieses zurückerhaltene Geld ist mit einer ursprünglichen Belegposition verknüpft. Es reduziert die ursprüngliche Ausgabe statt Einnahmen zu erhöhen. Korrigiere es über die ursprüngliche Ausgabe.',
 };
@@ -121,6 +125,8 @@ export const itemRefundsHU = {
     details: 'Bizonylattételek és pénzvisszatérítési előzmények', history: 'Pénzvisszatérítési előzmények', reversed: 'Visszavonva', fully: 'Teljesen visszafizetve',
     reverse: 'Pénzvisszatérítés visszavonása', reverseTitle: 'Visszavonod ezt a pénzvisszatérítést?',
     reverseHelp: 'Tévesen rögzített pénzvisszatérítés javítására szolgál. Visszaállítja a tétel kiadását, visszavonja a kapcsolt keretjóváírást, és eltávolítja a visszakapott pénzt a számlaegyenlegből. Az előzmények megmaradnak.',
+    reverseExistingHelp: 'Visszaállítja a tétel kiadását és visszavonja a kapcsolt keretjóváírást. A meglévő banki jóváírás önálló bevételként, eredeti tételeivel és kategóriáival megmarad. A számlaegyenleg változatlan marad. Az előzmények megmaradnak.',
+    reverseUnknownHelp: 'Ennek a korábbi pénzvisszatérítésnek a jóváírási eredete nem állapítható meg megbízhatóan. A rögzített banki pénzmozgás védelmében a visszavonás le van tiltva. A javítás előtt ellenőriztetni kell az eredeti jóváírást.',
     viewCredit: 'Jóváírás megtekintése', viewOriginal: 'Eredeti kiadás megtekintése', protected: 'Kapcsolt pénzvisszatérítésnél a számla, típus, dátum és láthatóság védett. A részben vagy egészben visszafizetett tételek nem törölhetők, és aktív pénzvisszatérítés mellett az eredetileg fizetett összegük sem módosítható. A kiadás sztornózása előtt itt vond vissza az aktív pénzvisszatérítéseket.',
     error: 'A pénzvisszatérítések nem tölthetők be.', creditHelp: 'Ez a visszakapott pénz egy eredeti bizonylattételhez kapcsolódik. Az eredeti kiadást csökkenti, nem a bevételt növeli. Az eredeti kiadásnál javítható.',
 };

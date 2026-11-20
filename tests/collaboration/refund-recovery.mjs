@@ -92,6 +92,47 @@ export async function verifyRefundRecovery({ fixture: f, password, session, ok, 
         assert.equal((await source(purchase.id)).amount, '0');
         assert.equal((await source(records[0].creditTransactionId)).kind, 'Refund');
         await poll(() => page.getByRole('button', { name: 'Save transaction', exact: true }).isEnabled(), 'editor remains usable after recovered refund');
+        const creditBeforeReversal = await source(records[0].creditTransactionId);
+        const cashBefore = Number((await ok(page, base + '/accounts')).find(a => a.id === account.id).currentBalanceAmount);
+        await page.locator('[data-refund-id="' + records[0].id + '"]').getByRole('button', { name: 'Reverse refund', exact: true }).click();
+        const reversal = page.getByRole('dialog', { name: 'Reverse this refund?', exact: true });
+        await reversal.getByText(incoming ? /account balance stays unchanged/ : /removes the returned-money credit/).waitFor();
+        const cancelUrl = refundUrl + '/' + records[0].id + '/cancellation';
+        let originalCancel;
+        const loseCancellation = async route => {
+            originalCancel = route.request().postDataJSON();
+            if (scenario.committed) assert.equal((await route.fetch()).status(), 204);
+            await route.abort('failed');
+        };
+        await page.route(cancelUrl, loseCancellation);
+        await reversal.getByRole('button', { name: 'Reverse refund', exact: true }).click();
+        await reversal.getByRole('alert').waitFor();
+        await page.unroute(cancelUrl, loseCancellation);
+        // The same refund ID remains safe even when the first cancellation already committed.
+        await reversal.getByRole('button', { name: 'Reverse refund', exact: true }).click();
+        await reversal.waitFor({ state: 'hidden' });
+        await ok(page, base + '/transactions/' + purchase.id + '/refunds/' + records[0].id + '/cancellation',
+            { method: 'POST', body: originalCancel });
+        const afterCredit = await source(creditBeforeReversal.id);
+        assert.equal(afterCredit.status, incoming ? 'Posted' : 'Voided');
+        assert.equal(afterCredit.kind, incoming ? 'Income' : 'Refund');
+        assert.equal((await source(purchase.id)).amount, '100');
+        assert.equal(Number((await ok(page, base + '/accounts')).find(a => a.id === account.id).currentBalanceAmount),
+            cashBefore - (incoming ? 0 : 100));
+        if (incoming) {
+            assert.equal(afterCredit.items[0].categoryId, incomeCategory.id);
+            assert.equal(afterCredit.items[0].description, 'Returned item');
+            const relinkSource = await source(purchase.id);
+            const relink = await ok(page, base + '/transactions/' + purchase.id + '/refunds', { method: 'POST', body: {
+                transactionItemId: relinkSource.items[0].id, amount: '100', receivedOn: f.date, operationId: crypto.randomUUID(),
+                expectedUpdatedAt: relinkSource.updatedAt, moneyReceived: true, creditTransactionId: incoming.id,
+                expectedCreditUpdatedAt: afterCredit.updatedAt,
+            } });
+            await ok(page, base + '/transactions/' + purchase.id + '/refunds/' + records[0].id + '/cancellation',
+                { method: 'POST', body: originalCancel });
+            assert.equal((await source(incoming.id)).kind, 'Refund', 'A late old cancellation cannot undo a new link');
+            assert.notEqual(relink.id, records[0].id);
+        }
     }
 
     // A definitive 409 must release the snapshot and require a new confirmation.
@@ -123,5 +164,5 @@ export async function verifyRefundRecovery({ fixture: f, password, session, ok, 
     await dialog.waitFor({ state: 'hidden' });
     assert.equal((await source(rejected.id)).amount, '70');
     assert.equal((await ok(page, base + '/transactions/' + rejected.id + '/refunds')).length, 1);
-    console.log('PASS refund recovery: lost responses after commit for manual/full and existing-credit refunds, pre-write network failure, post-commit 503, stable payloads across reconnect, exactly one credit, and editable/reconfirmed 409 recovery');
+    console.log('PASS refund recovery: both reversal modes with lost committed/uncommitted responses, exact cash, late cancellation after relink; lost responses after commit for manual/full and existing-credit refunds, pre-write network failure, post-commit 503, stable payloads across reconnect, exactly one credit, and editable/reconfirmed 409 recovery');
 }

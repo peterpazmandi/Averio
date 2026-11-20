@@ -1,6 +1,6 @@
 # ADR-048: Received merchant refunds reduce individual expense items
 
-Status: Accepted
+Status: Accepted; reversal rule partially superseded by [ADR-050](ADR-050-existing-refund-credit-reversal.md).
 
 Date: 2026-11-18
 

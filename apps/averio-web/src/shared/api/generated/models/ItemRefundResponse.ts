@@ -55,6 +55,10 @@ export interface ItemRefundResponse {
      * 
      */
     version: string;
+    /**
+     * 
+     */
+    creditOrigin: string;
 }
 
 /**
@@ -70,6 +74,7 @@ export function instanceOfItemRefundResponse(value: object): value is ItemRefund
     if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
     if (!('cancelledAt' in value) || value['cancelledAt'] === undefined) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
+    if (!('creditOrigin' in value) || value['creditOrigin'] === undefined) return false;
     return true;
 }
 
@@ -92,6 +97,7 @@ export function ItemRefundResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'createdAt': json['createdAt'],
         'cancelledAt': json['cancelledAt'],
         'version': json['version'],
+        'creditOrigin': json['creditOrigin'],
     };
 }
 
@@ -115,6 +121,7 @@ export function ItemRefundResponseToJSONTyped(value?: ItemRefundResponse | null,
         'createdAt': value['createdAt'],
         'cancelledAt': value['cancelledAt'],
         'version': value['version'],
+        'creditOrigin': value['creditOrigin'],
     };
 }
 

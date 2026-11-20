@@ -371,3 +371,5 @@ Household UTC monthly receipt allowances, time-bounded operator-managed paid ent
 ### Received merchant item refunds
 
 `ItemRefund` links one actual Refund transaction to one stable original expense item. Expense item `Amount` is its net cost; `RefundedAmount` retains active returned value, so their sum preserves original payment. Receipt `Amount` sums net items and can reach zero after a full refund. Category and activity costs use net values; bank balances use the original gross debit plus the separately dated Refund credit. Refunds never contribute income. See [ADR-048](decisions/ADR-048-item-refunds-reduce-expenses.md) and [Item refunds](item-refunds.md).
+
+Item refund reversal preserves the credit’s provenance: newly created credits are voided, while existing Income credits are restored in place using a private original-item snapshot. Cancelled links remain history and only active links reserve a credit. Legacy links without evidence are marked Unknown and cannot be reversed automatically. See [ADR-050](decisions/ADR-050-existing-refund-credit-reversal.md).

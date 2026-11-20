@@ -365,6 +365,7 @@
 <data name="Error_ReimbursementChanged" xml:space="preserve"><value>Diese Kostenerstattung wurde geändert. Aktualisiere die Ansicht und versuche es erneut.</value></data>
 <data name="Validation_ItemRefund" xml:space="preserve"><value>Wähle eine Belegposition und eine erhaltene Rückzahlung auf demselben Konto und in derselben Währung. Die Rückzahlung darf die verbleibenden Kosten der Position nicht übersteigen. Bestehende Gutschriften müssen unzugeordnete, gebuchte Einnahmen mit passendem Betrag sein.</value></data>
 <data name="Error_ItemRefundLinked" xml:space="preserve"><value>Diese Transaktion hat Rückzahlungen zu Belegpositionen. Konto, Typ, Sichtbarkeit, Datum und betroffene Positionen sind geschützt. Hebe aktive Rückzahlungen im Originalbeleg auf, bevor du ihn stornierst; Gutschriften werden ebenfalls dort korrigiert.</value></data>
+  <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>Für diese ältere Rückzahlung ist die Herkunft der Gutschrift nicht zuverlässig dokumentiert. Das Aufheben ist zum Schutz der erfassten Kontobewegung gesperrt. Lass die ursprüngliche Gutschrift vor einer Korrektur prüfen.</value></data>
 </root>
 
 

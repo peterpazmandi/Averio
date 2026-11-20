@@ -38,7 +38,8 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
     public async Task<ItemRefund> OriginAsync(Guid h, Guid creditId, CancellationToken ct)
     {
         var member = await Member(h, ct);
-        await Source(h, creditId, member, false, ct);
+        var credit = await Source(h, creditId, member, false, ct);
+        if (credit.Kind != TransactionKind.Refund) throw new NotFoundException("refund", creditId);
         var refund = await refunds.ByCreditAsync(h, creditId, ct) ?? throw new NotFoundException("refund", creditId);
         await Source(h, refund.TransactionId, member, false, ct);
         return refund;
@@ -64,6 +65,7 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
             || decimal.Round(request.Amount, 4) != request.Amount || request.OperationId == Guid.Empty)
             throw Invalid();
         Transaction credit;
+        RefundIncomeSnapshot? originalIncome = null;
         if (request.CreditTransactionId is Guid creditId)
         {
             credit = await Source(h, creditId, member, true, ct);
@@ -72,6 +74,7 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
                 || credit.AccountId != purchase.AccountId || credit.Currency != purchase.Currency || credit.Visibility != purchase.Visibility
                 || credit.Amount != request.Amount || credit.OccurredOn != request.ReceivedOn
                 || await refunds.CreditHasDependenciesAsync(h, creditId, ct)) throw Invalid();
+            originalIncome = RefundIncomeSnapshot.Capture(credit);
             await aggregates.ApplyAsync(credit, -1, ct);
             await transactions.StageItemPositionsAsync(credit, 1, ct);
             credit.ClassifyAsRefund(item, clock.GetUtcNow());
@@ -84,7 +87,7 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
             transactions.Add(credit);
         }
         ItemRefund refund;
-        try { refund = ItemRefund.Create(purchase, item.Id, credit, request.OperationId, member.Id, clock.GetUtcNow(), fingerprint); }
+        try { refund = ItemRefund.Create(purchase, item.Id, credit, request.OperationId, member.Id, clock.GetUtcNow(), fingerprint, originalIncome); }
         catch (ArgumentException) { throw Invalid(); }
         await personalMoney.ApplyItemRefundWithinTransactionAsync(purchase, item, credit, ct);
         await aggregates.ApplyAsync(purchase, -1, ct);
@@ -106,13 +109,22 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
         if (refund.Version != version || purchase.UpdatedAt != expectedUpdatedAt) throw Changed();
         var credit = await Source(h, refund.CreditTransactionId, member, true, ct);
         if (credit.Kind != TransactionKind.Refund || credit.Status != TransactionStatus.Posted) throw Invalid();
+        if (refund.CreditOrigin == RefundCreditOrigin.Unknown)
+            throw new BusinessRuleException("item_refund_origin_unknown", "Error_ItemRefundOriginUnknown");
         await aggregates.ApplyAsync(purchase, -1, ct);
         purchase.ApplyItemRefund(refund.TransactionItemId, -refund.Amount, clock.GetUtcNow());
         await personalMoney.ReverseTransactionChargeAsync(h, credit.Id, ct);
-        credit.Void(clock.GetUtcNow());
+        if (refund.CreditOrigin == RefundCreditOrigin.ExistingIncome)
+        {
+            var snapshot = refund.ReadOriginalIncome();
+            await transactions.StageItemPositionsAsync(credit, snapshot.Items.Length, ct);
+            credit.RestoreRefundIncome(snapshot, clock.GetUtcNow());
+        }
+        else credit.Void(clock.GetUtcNow());
         refund.Cancel(member.Id, clock.GetUtcNow());
         await uow.SaveChangesAsync(ct);
         await aggregates.ApplyAsync(purchase, 1, ct);
+        if (refund.CreditOrigin == RefundCreditOrigin.ExistingIncome) await aggregates.ApplyAsync(credit, 1, ct);
         await tx.CommitAsync(ct);
     }
     private static BusinessRuleException Invalid() => new("item_refund_invalid", "Validation_ItemRefund");

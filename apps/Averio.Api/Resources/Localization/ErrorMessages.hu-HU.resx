@@ -365,6 +365,7 @@
 <data name="Error_ReimbursementChanged" xml:space="preserve"><value>A költségtérítés megváltozott. Frissítsd a nézetet, és próbáld újra.</value></data>
 <data name="Validation_ItemRefund" xml:space="preserve"><value>Válassz egy bizonylattételt és ugyanarra a számlára, azonos pénznemben beérkezett pénzvisszatérítést. Az összeg nem haladhatja meg a tétel fennmaradó költségét. Meglévő jóváírás csak nem kapcsolt, könyvelt bevétel lehet, egyező összeggel.</value></data>
 <data name="Error_ItemRefundLinked" xml:space="preserve"><value>A tranzakciónak tételszintű pénzvisszatérítési előzménye van. A számla, típus, láthatóság, dátum és érintett tételek védettek. Sztornózás előtt az eredeti bizonylaton vond vissza az aktív pénzvisszatérítéseket; a jóváírások is ott javíthatók.</value></data>
+  <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>Ennek a korábbi pénzvisszatérítésnek a jóváírási eredete nem állapítható meg megbízhatóan. A rögzített banki pénzmozgás védelmében a visszavonás le van tiltva. A javítás előtt ellenőriztetni kell az eredeti jóváírást.</value></data>
 </root>
 
 

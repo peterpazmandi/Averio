@@ -33,6 +33,25 @@ aws ecr get-login-password --region "$region" | docker login --username AWS --pa
 docker pull "$api_image"
 docker pull "$worker_image"
 docker pull "$migrator_image"
+# Immutable image metadata defines which binaries may share a migrated database.
+# Images released before this protocol belong to epoch zero.
+image_epoch() {
+  local value
+  value=$(docker image inspect --format '{{index .Config.Labels "io.averio.schema-epoch"}}' "$1") || return 1
+  if [[ -z "$value" || "$value" == '<no value>' ]]; then value=0; fi
+  [[ "$value" =~ ^(0|[1-9][0-9]{0,5})$ ]] || return 1
+  printf '%s\n' "$value"
+}
+epoch=$(image_epoch "$api_image")
+[[ "$(image_epoch "$worker_image")" == "$epoch" && "$(image_epoch "$migrator_image")" == "$epoch" ]] || {
+  echo 'Backend images have incompatible schema epochs.' >&2; exit 1;
+}
+floor=0
+if [[ -e "$state/minimum-schema-epoch" ]]; then
+  floor=$(cat "$state/minimum-schema-epoch")
+  [[ "$floor" =~ ^(0|[1-9][0-9]{0,5})$ ]] || { echo 'Invalid schema compatibility marker.' >&2; exit 1; }
+fi
+((epoch >= floor)) || { echo 'This database cannot run the selected older backend images. Use a forward release.' >&2; exit 1; }
 candidate="$state/candidate.yml"
 printf 'services:\n  webapi:\n    image: %s\n  worker:\n    image: %s\n' "$api_image" "$worker_image" > "$candidate"
 compose=(docker compose --project-name "$project" --env-file "$env_file" -f "$compose_file")
@@ -42,10 +61,33 @@ if [[ -f "$state/current.yml" ]]; then
   snapshot=$(sha256sum "$state/current.yml" | cut -d ' ' -f 1)
   if [[ ! -f "$state/history/$snapshot.yml" ]]; then cp "$state/current.yml" "$state/history/$snapshot.yml"; fi
 fi
+# Only a verified pair from the same epoch is eligible for automatic recovery.
+# Missing/pruned images and a missing overlay fail closed, including upgrade retries.
+can_restore=false
+if [[ -f "$state/current.yml" ]]; then
+  mapfile -t previous_images < <(sed -n 's/^    image: //p' "$state/current.yml")
+  if [[ ${#previous_images[@]} == 2 ]] &&
+    previous_api_epoch=$(image_epoch "${previous_images[0]}") &&
+    previous_worker_epoch=$(image_epoch "${previous_images[1]}") &&
+    [[ "$previous_api_epoch" == "$epoch" && "$previous_worker_epoch" == "$epoch" ]]; then
+    can_restore=true
+  fi
+fi
+if ((epoch > floor)) || [[ "$can_restore" != true ]]; then
+  echo 'Entering maintenance: stopping both backends before migration.'
+  "${compose[@]}" -f "$candidate" stop webapi worker
+  # A daemon reboot must not restart obsolete containers via restart: always.
+  # Remove stopped containers only; retain every volume and the recovery overlays.
+  "${compose[@]}" -f "$candidate" rm -f webapi worker
+fi
+# Fence BEFORE migration: a failed/lost migrator response does not prove rollback.
+# Keep this marker on failures; only a reviewed, consistent DB restore can lower it.
+printf '%s\n' "$epoch" > "$state/minimum-schema-epoch.next"
+mv "$state/minimum-schema-epoch.next" "$state/minimum-schema-epoch"
 # Explicit migration failure stops deployment. Never automatically downgrade the database.
 docker run --rm --env-file "$migration_env" "$migrator_image"
-# Compose retains unchanged services. Start and verify the API with the old Worker
-# still available before removing its receipt extraction loop.
+# Outside maintenance, Compose retains unchanged services and keeps the compatible
+# old Worker available until the new API passes readiness checks.
 start_service() {
   local overlay=$1 service=$2 expected=$3 container restart_count binding attempt status
   "${compose[@]}" -f "$overlay" up -d --no-build --no-deps "$service" || return 1
@@ -75,13 +117,16 @@ start_service() {
 
 if ! start_service "$candidate" webapi "$api_image" || ! start_service "$candidate" worker "$worker_image"; then
   echo 'Backend startup failed.' >&2
-  if [[ -f "$state/current.yml" ]]; then
+  if [[ "$can_restore" == true ]]; then
     # Restore the last deployed backend pair together. Migrations stay applied.
     if "${compose[@]}" -f "$state/current.yml" up -d --no-build --no-deps webapi worker; then
       echo 'Requested restoration of both backend containers from current.yml.' >&2
     else
       echo 'Restore both backend containers from current.yml before retrying.' >&2
     fi
+  else
+    "${compose[@]}" -f "$candidate" stop webapi worker
+    echo 'Backends remain stopped: previous images are incompatible or unverified. Retry a compatible forward release.' >&2
   fi
   exit 1
 fi

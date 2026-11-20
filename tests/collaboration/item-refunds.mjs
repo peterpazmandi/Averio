@@ -230,8 +230,12 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
     await region().waitFor();
-    assert.equal(await balance(), '-15');
-    assert.equal((await ok(page, base + '/transactions/' + incoming.id)).status, 'Voided');
+    assert.equal(await balance(), '0', 'Unlinking existing bank credit must preserve cash');
+    const restoredIncome = await ok(page, base + '/transactions/' + incoming.id);
+    assert.equal(restoredIncome.status, 'Posted');
+    assert.equal(restoredIncome.kind, 'Income');
+    assert.equal(restoredIncome.items[0].description, 'Recorded bank return');
+    assert.equal(restoredIncome.items[0].categoryId, incomeCategory.id);
     await region().locator('[data-refund-id="' + initialRefund.id + '"]').getByRole('link', { name: 'View returned money', exact: true }).click();
     await page.getByRole('link', { name: 'View original expense', exact: true }).waitFor();
     assert.equal(await page.getByRole('dialog').getByText('Income', { exact: true }).count(), 0);
@@ -240,7 +244,7 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     const final = await stats();
     assert.equal(categoryAmount(final, categoryA.id) - categoryAmount(beforeStats, categoryA.id), 0);
     assert.equal(categoryAmount(final, categoryB.id) - categoryAmount(beforeStats, categoryB.id), 15);
-    assert.equal(incomeTotal(final), incomeTotal(beforeStats));
+    assert.equal(incomeTotal(final), incomeTotal(beforeStats) + 15);
     // The fixture clock is frozen: make the preview newer than the voided credits
     // so UUID tie ordering cannot push it beyond the first result page.
     await control('/advance', { seconds: 1 });

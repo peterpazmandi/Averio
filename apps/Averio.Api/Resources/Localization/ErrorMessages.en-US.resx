@@ -365,6 +365,7 @@
 <data name="Error_ReimbursementChanged" xml:space="preserve"><value>This reimbursement changed. Refresh it and try again.</value></data>
 <data name="Validation_ItemRefund" xml:space="preserve"><value>Choose one receipt item and a received refund on the same account and in the same currency. The refund cannot exceed the item’s remaining cost. Existing credits must be unlinked, posted incoming transactions, with an amount matching this refund.</value></data>
 <data name="Error_ItemRefundLinked" xml:space="preserve"><value>This transaction has item refund history. Keep its account, type, visibility, date and refunded items unchanged. Reverse active refunds from the original receipt before voiding it; refund credits are corrected there too.</value></data>
+  <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>This historical refund has no reliable credit origin. Reversal is blocked to protect the recorded bank movement. Have its original credit verified before correcting it.</value></data>
 </root>
 
 
