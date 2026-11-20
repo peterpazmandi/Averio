@@ -118,7 +118,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_accounts_scope", "scope IN ('Household', 'Personal')");
 
-                            t.HasCheckConstraint("ck_accounts_scope_visibility", "(scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)\nOR\n(scope = 'Personal' AND (visibility <> 'Private' OR NOT include_in_household_reports))");
+                            t.HasCheckConstraint("ck_accounts_scope_visibility", "(scope = 'Household' AND visibility = 'Household' AND include_in_household_reports)\r\nOR\r\n(scope = 'Personal' AND (visibility <> 'Private' OR NOT include_in_household_reports))");
 
                             t.HasCheckConstraint("ck_accounts_status", "status IN ('Active', 'Archived')");
 
@@ -446,11 +446,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.ToTable("households", null, t =>
                         {
-                            t.HasCheckConstraint("ck_households_completed_onboarding_profile", "onboarding_completed_at_utc IS NULL\nOR (\n    name IS NOT NULL\n    AND length(btrim(name)) >= 2\n    AND country_code IS NOT NULL\n    AND preferred_currency IS NOT NULL\n)");
+                            t.HasCheckConstraint("ck_households_completed_onboarding_profile", "onboarding_completed_at_utc IS NULL\r\nOR (\r\n    name IS NOT NULL\r\n    AND length(btrim(name)) >= 2\r\n    AND country_code IS NOT NULL\r\n    AND preferred_currency IS NOT NULL\r\n)");
 
-                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\nOR country_code ~ '^[A-Z]{2}$'");
+                            t.HasCheckConstraint("ck_households_country_code", "country_code IS NULL\r\nOR country_code ~ '^[A-Z]{2}$'");
 
-                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
+                            t.HasCheckConstraint("ck_households_preferred_currency", "preferred_currency IS NULL\r\nOR preferred_currency IN ('HUF', 'EUR', 'USD')");
                         });
                 });
 
@@ -583,7 +583,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_invitation_expiry", "\"ExpiresAt\" > \"CreatedAt\" AND \"SendCount\" > 0");
 
-                            t.HasCheckConstraint("ck_invitation_lifecycle_metadata", "(\"State\" = 'Pending'\n    AND \"AcceptedAt\" IS NULL\n    AND \"AcceptedByUserId\" IS NULL\n    AND \"SourceHouseholdId\" IS NULL\n    AND \"RevokedAt\" IS NULL)\n    OR\n(\"State\" = 'Accepted'\n    AND \"AcceptedAt\" IS NOT NULL\n    AND \"AcceptedByUserId\" IS NOT NULL\n    AND \"SourceHouseholdId\" IS NOT NULL\n    AND \"RevokedAt\" IS NULL)\n    OR\n(\"State\" = 'Revoked'\n    AND \"AcceptedAt\" IS NULL\n    AND \"AcceptedByUserId\" IS NULL\n    AND \"SourceHouseholdId\" IS NULL\n    AND \"RevokedAt\" IS NOT NULL)");
+                            t.HasCheckConstraint("ck_invitation_lifecycle_metadata", "(\"State\" = 'Pending'\r\n    AND \"AcceptedAt\" IS NULL\r\n    AND \"AcceptedByUserId\" IS NULL\r\n    AND \"SourceHouseholdId\" IS NULL\r\n    AND \"RevokedAt\" IS NULL)\r\n    OR\r\n(\"State\" = 'Accepted'\r\n    AND \"AcceptedAt\" IS NOT NULL\r\n    AND \"AcceptedByUserId\" IS NOT NULL\r\n    AND \"SourceHouseholdId\" IS NOT NULL\r\n    AND \"RevokedAt\" IS NULL)\r\n    OR\r\n(\"State\" = 'Revoked'\r\n    AND \"AcceptedAt\" IS NULL\r\n    AND \"AcceptedByUserId\" IS NULL\r\n    AND \"SourceHouseholdId\" IS NULL\r\n    AND \"RevokedAt\" IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_invitation_state", "\"State\" IN ('Pending','Accepted','Revoked')");
                         });
@@ -866,7 +866,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_personal_money_entry_kind", "kind IN ('Grant','Funding','PrivateCharge','SharedCharge','PrivateRefund','SharedRefund','Surrender')");
 
-                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND (kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND (related_transaction_id IS NULL OR transaction_id IS NOT NULL) AND (recurring_allowance_rule_id IS NULL OR kind = 'Grant') AND (transaction_item_id IS NULL OR (transaction_id IS NOT NULL AND kind IN ('PrivateCharge','SharedCharge')))");
+                            t.HasCheckConstraint("ck_personal_money_entry_source", "(transfer_id IS NULL OR transaction_id IS NULL) AND (kind <> 'Funding' OR transfer_id IS NOT NULL) AND (kind NOT IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund') OR transaction_id IS NOT NULL) AND (kind NOT IN ('PrivateRefund','SharedRefund') OR related_transaction_id IS NOT NULL) AND (related_transaction_id IS NULL OR transaction_id IS NOT NULL) AND (recurring_allowance_rule_id IS NULL OR kind = 'Grant') AND (transaction_item_id IS NULL OR (transaction_id IS NOT NULL AND kind IN ('PrivateCharge','SharedCharge','PrivateRefund','SharedRefund')))");
                         });
                 });
 
@@ -1560,10 +1560,6 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaimEvent", b =>
                 {
-                    b.Property<int?>("Sequence")
-                        .HasColumnType("integer")
-                        .HasColumnName("sequence");
-
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
@@ -1616,6 +1612,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)")
                         .HasColumnName("reference");
 
+                    b.Property<int?>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(24)
@@ -1637,6 +1637,97 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasIndex("HouseholdId", "ClaimId");
 
                     b.ToTable("reimbursement_claim_events", (string)null);
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.ItemRefund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<Guid?>("CancelledByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancelled_by_member_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_member_id");
+
+                    b.Property<Guid>("CreditTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_transaction_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<DateOnly>("ReceivedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("received_on");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<Guid>("TransactionItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_item_id");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditTransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "CancelledByMemberId");
+
+                    b.HasIndex("HouseholdId", "CreatedByMemberId");
+
+                    b.HasIndex("HouseholdId", "CreditTransactionId");
+
+                    b.HasIndex("HouseholdId", "OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "TransactionId");
+
+                    b.HasIndex("HouseholdId", "TransactionId", "TransactionItemId");
+
+                    b.ToTable("item_refunds", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_item_refunds_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_item_refunds_cancellation", "(cancelled_at IS NULL) = (cancelled_by_member_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_item_refunds_distinct", "transaction_id <> credit_transaction_id");
+                        });
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.SavedTransactionView", b =>
@@ -1810,11 +1901,11 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.ToTable("transactions", null, t =>
                         {
-                            t.HasCheckConstraint("ck_transactions_amount", "amount > 0");
+                            t.HasCheckConstraint("ck_transactions_amount", "amount >= 0 AND (kind = 'Expense' OR amount > 0)");
 
                             t.HasCheckConstraint("ck_transactions_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
 
-                            t.HasCheckConstraint("ck_transactions_kind", "kind IN ('Income', 'Expense')");
+                            t.HasCheckConstraint("ck_transactions_kind", "kind IN ('Income', 'Expense', 'Refund')");
 
                             t.HasCheckConstraint("ck_transactions_status", "status IN ('Posted', 'Voided')");
 
@@ -1926,6 +2017,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)")
                         .HasColumnName("description");
 
+                    b.Property<bool>("HasRefundHistory")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_refund_history");
+
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
@@ -1933,6 +2030,13 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Property<int>("Position")
                         .HasColumnType("integer")
                         .HasColumnName("position");
+
+                    b.Property<decimal>("RefundedAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("refunded_amount");
 
                     b.Property<Guid>("TransactionId")
                         .HasColumnType("uuid")
@@ -1949,7 +2053,7 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                     b.ToTable("transaction_items", null, t =>
                         {
-                            t.HasCheckConstraint("ck_transaction_items_amount", "amount > 0");
+                            t.HasCheckConstraint("ck_transaction_items_amount", "amount >= 0 AND refunded_amount >= 0 AND amount + refunded_amount > 0");
 
                             t.HasCheckConstraint("ck_transaction_items_position", "position >= 0");
                         });
@@ -2749,6 +2853,36 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .WithMany("Events")
                         .HasForeignKey("HouseholdId", "ClaimId")
                         .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Transactions.ItemRefund", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "CancelledByMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "CreatedByMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "CreditTransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.TransactionItem", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "TransactionId", "TransactionItemId")
+                        .HasPrincipalKey("HouseholdId", "TransactionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

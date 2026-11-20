@@ -82,7 +82,8 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
         await page.goto('http://localhost:5173/app');
         for (const width of [375, 1440]) {
             await page.setViewportSize({ width, height: 1000 });
-            const name = { en: 'Reimbursements', de: 'Erstattungen', hu: 'Visszatérítések' }[language];
+            const copy = localeFile('reimbursements')['reimbursements' + language.toUpperCase()];
+            const name = copy.title;
             const region = page.getByRole('region', { name, exact: true });
             await region.waitFor();
             assert.ok((await region.boundingBox()).width >= 300, 'Reimbursement section collapsed in dashboard grid');
@@ -93,9 +94,8 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
             const editName = { en: 'Edit schedule', de: 'Zeitplan bearbeiten', hu: 'Ütemezés szerkesztése' }[language];
             await page.getByRole('article', { name: rule.name, exact: true }).getByRole('button', { name: editName, exact: true }).click();
             const editing = page.getByRole('dialog', { name: editName, exact: true });
-            const settingsName = { en: 'Reimbursement settings', de: 'Erstattungseinstellungen', hu: 'Visszatérítési beállítások' }[language];
+            const settingsName = copy.settings;
             const settings = editing.getByRole('heading', { name: settingsName, exact: true }).locator('../..');
-            const copy = localeFile('reimbursements')['reimbursements' + language.toUpperCase()];
             const about = localeFile(language)[language].common.infoAbout;
             for (const [subject, explanation] of [[copy.provider, copy.providerHelp], [copy.edit.paymentTiming, copy.edit.paymentTimingHelp]]) {
                 await editing.getByRole('button', { name: about.replace('{{subject}}', subject), exact: true }).click();

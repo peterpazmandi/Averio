@@ -1,7 +1,7 @@
 # Averio Implementation Rules
 
 **Status:** Authoritative implementation guidance  
-**Updated:** 2026-09-16
+**Updated:** 2026-11-19
 
 ## Goal
 
@@ -114,6 +114,12 @@ Do not hard-delete ledger history casually.
 - generated OpenAPI client
 - react-i18next
 - date-fns
+
+### Helper text
+
+Always use the shared `InfoPopover` I component for helper text, beside the relevant field, heading or action. Use it for definitions, calculation explanations and secondary guidance instead of visible hint paragraphs, choice subtitles or native title tooltips. Localize both its label and content in English, German and Hungarian. Do not nest its trigger inside another interactive control or implicit form label.
+
+Labels, financial values, current state, validation errors, actionable warnings, required confirmations and primary empty-state instructions remain visible. They are task content rather than helper text. Apply this convention whenever UI is added or changed; see `ui/component-patterns.md` and `ui/helper-text-audit.md`.
 
 ### Query management
 

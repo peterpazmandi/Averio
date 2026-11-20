@@ -51,3 +51,7 @@ Mutations acquire the existing household transaction lock (and existing transfer
 ### Explicit initial limits
 
 Refund attribution requires the same source account, so cross-account/multi-currency reimbursements are deferred. Shared charge assignment in PR 2 is initiated by the member whose entitlement is used; no member may charge another wallet. Historical household cutover snapshots require a separate privacy-aware extension before publishing wallet history for departed memberships. Dates are reporting dates, not bank settlement guarantees.
+
+## Item refund follow-up
+
+The merchant-refund-as-income convention is superseded for new item refunds by [ADR-048](ADR-048-item-refunds-reduce-expenses.md). Received refunds reduce their original item and category expense; historical allowance-only attributions remain unchanged. Other decisions in this ADR remain in force.

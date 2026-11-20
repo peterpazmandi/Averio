@@ -367,3 +367,7 @@ A RecurringOccurrence receipt is uniquely identified by rule/date and belongs to
 ## Receipt rollout controls (PR 3)
 
 Household UTC monthly receipt allowances, time-bounded operator-managed paid entitlements, uploader-only exact-photo duplicate warnings, opt-in retained posted photos and content-free metrics are implemented. Posted-photo deletion preserves the financial transaction and immutable confirmation identity. No new schema migration is needed. See [ADR-037](decisions/ADR-037-receipt-rollout-quotas-and-retention.md) and [rollout/benchmark instructions](receipt-scanning.md). Real provider accuracy and production storage checks remain release gates; checkout/billing is not implemented.
+
+### Received merchant item refunds
+
+`ItemRefund` links one actual Refund transaction to one stable original expense item. Expense item `Amount` is its net cost; `RefundedAmount` retains active returned value, so their sum preserves original payment. Receipt `Amount` sums net items and can reach zero after a full refund. Category and activity costs use net values; bank balances use the original gross debit plus the separately dated Refund credit. Refunds never contribute income. See [ADR-048](decisions/ADR-048-item-refunds-reduce-expenses.md) and [Item refunds](item-refunds.md).

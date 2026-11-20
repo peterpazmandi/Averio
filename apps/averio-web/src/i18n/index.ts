@@ -1,3 +1,4 @@
+import { itemRefundsEN, itemRefundsDE, itemRefundsHU } from './locales/itemRefunds';
 import { reimbursementsEN, reimbursementsDE, reimbursementsHU } from './locales/reimbursements';
 import { environmentEN, environmentDE, environmentHU } from './locales/environment';
 import { importToolsEN, importToolsDE, importToolsHU } from './locales/importTools';
@@ -44,15 +45,15 @@ void i18n
         resources: {
             en: {
                 translation: { ...en, profile: profileEN, environment: environmentEN, importTools: importToolsEN, imports: importsEN, importHistory: importHistoryEN, landing: landingEN, receipts: receiptsEN, transactionLinks: transactionLinksEN,
-            reimbursements: reimbursementsEN, recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, personalMoney: personalMoneyEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
+            itemRefunds: itemRefundsEN, reimbursements: reimbursementsEN, recurring: recurringEN, savedViews: savedViewsEN, categorySpending: categorySpendingEN, invitations: invitationsEN, householdSettings: householdSettingsEN, activities: activitiesEN, iconNames: iconNamesEN, accountOwnership: accountOwnershipEN, accountManagement: accountManagementEN, transactionManagement: transactionManagementEN, transfers: transfersEN, personalMoney: personalMoneyEN, categoryManagement: categoryManagementEN, systemCategories: systemCategoriesEN, concept: conceptEN },
             },
             de: {
                 translation: { ...de, profile: profileDE, environment: environmentDE, importTools: importToolsDE, imports: importsDE, importHistory: importHistoryDE, landing: landingDE, receipts: receiptsDE, transactionLinks: transactionLinksDE,
-            reimbursements: reimbursementsDE, recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, personalMoney: personalMoneyDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
+            itemRefunds: itemRefundsDE, reimbursements: reimbursementsDE, recurring: recurringDE, savedViews: savedViewsDE, categorySpending: categorySpendingDE, invitations: invitationsDE, householdSettings: householdSettingsDE, activities: activitiesDE, iconNames: iconNamesDE, accountOwnership: accountOwnershipDE, accountManagement: accountManagementDE, transactionManagement: transactionManagementDE, transfers: transfersDE, personalMoney: personalMoneyDE, categoryManagement: categoryManagementDE, systemCategories: systemCategoriesDE, concept: conceptDE },
             },
             hu: {
                 translation: { ...hu, profile: profileHU, environment: environmentHU, importTools: importToolsHU, imports: importsHU, importHistory: importHistoryHU, landing: landingHU, receipts: receiptsHU, transactionLinks: transactionLinksHU,
-            reimbursements: reimbursementsHU, recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, personalMoney: personalMoneyHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
+            itemRefunds: itemRefundsHU, reimbursements: reimbursementsHU, recurring: recurringHU, savedViews: savedViewsHU, categorySpending: categorySpendingHU, invitations: invitationsHU, householdSettings: householdSettingsHU, activities: activitiesHU, iconNames: iconNamesHU, accountOwnership: accountOwnershipHU, accountManagement: accountManagementHU, transactionManagement: transactionManagementHU, transfers: transfersHU, personalMoney: personalMoneyHU, categoryManagement: categoryManagementHU, systemCategories: systemCategoriesHU, concept: conceptHU },
             },
         },
 

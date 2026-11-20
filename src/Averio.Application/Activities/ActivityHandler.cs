@@ -60,6 +60,8 @@ public sealed class ActivityHandler(ICurrentUser currentUser, IHouseholdReposito
                 ?? throw new NotFoundException("transaction", change.TransactionId);
             if (transaction.Status != TransactionStatus.Posted)
                 throw new ConflictException("transaction_voided", "Error_TransactionVoided");
+            if (activityId is not null && transaction.Kind == TransactionKind.Refund)
+                throw new BusinessRuleException("activity_selection_invalid", "Validation_ActivitySelection");
             await AssignWithinTransactionAsync(householdId, memberId, transaction.Id,
                 new ActivityAssignmentInput(activityId, change.ExpectedVersion), ct);
         }

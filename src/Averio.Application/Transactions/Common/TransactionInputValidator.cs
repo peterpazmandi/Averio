@@ -27,7 +27,7 @@ public sealed class TransactionInputValidator : AbstractValidator<TransactionInp
             .WithErrorCode("Validation_TransactionAccountRequired");
 
         RuleFor(x => x.Kind)
-            .IsInEnum()
+            .Must(kind => kind is TransactionKind.Income or TransactionKind.Expense)
             .WithErrorCode("Validation_TransactionKindInvalid");
 
         RuleFor(x => x.Visibility)

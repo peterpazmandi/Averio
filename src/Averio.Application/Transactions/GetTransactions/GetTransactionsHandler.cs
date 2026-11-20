@@ -71,7 +71,7 @@ public sealed record TransactionItemResult(
     Guid CategoryId,
     string CategoryName,
     string CategoryIcon,
-    decimal Amount);
+    decimal Amount, decimal RefundedAmount = 0, bool HasRefundHistory = false);
 
 public sealed record TransactionLabelResult(
     Guid Id,
@@ -122,7 +122,7 @@ public sealed record TransactionResult(
             item.CategoryId,
             item.CategoryName,
             item.CategoryIcon,
-            item.Amount)).ToArray(),
+            item.Amount, item.RefundedAmount, item.HasRefundHistory)).ToArray(),
         model.Labels.Select(label => new TransactionLabelResult(
             label.Id,
             label.Name,

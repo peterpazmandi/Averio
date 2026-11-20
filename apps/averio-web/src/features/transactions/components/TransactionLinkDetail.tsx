@@ -1,3 +1,4 @@
+import { ItemRefundsPanel } from '../refunds/ItemRefundsPanel';
 import { ReimbursementsPanel } from '../../reimbursements/ReimbursementsPanel';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -32,9 +33,10 @@ export function TransactionLinkDetail({ query, onClose, personalRelation, userId
             <dl className="grid grid-cols-2 gap-3">
                 <dt>{t('transactionManagement.account')}</dt><dd className="break-words">{transaction.accountName}</dd>
                 <dt>{t('transactionManagement.date')}</dt><dd>{new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(transaction.occurredOn + 'T00:00:00Z'))}</dd>
-                <dt>{t('transactionManagement.type')}</dt><dd>{t(transaction.kind === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}</dd>
+                <dt>{t('transactionManagement.type')}</dt><dd>{t(transaction.kind === 'Refund' ? 'itemRefunds.refund' : transaction.kind === 'Income' ? 'transactionManagement.income' : 'transactionManagement.expense')}</dd>
                 <dt>{t('transactionManagement.amount')}</dt><dd className="break-all font-semibold tabular-nums">{money(transaction.amount)}</dd>
             </dl>
+            <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} />
             <ReimbursementsPanel userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} />
             {transaction.status === 'Voided' && <p>{t('transactionManagement.voided')}</p>}
             {transaction.note && <p className="whitespace-pre-wrap break-words">{transaction.note}</p>}

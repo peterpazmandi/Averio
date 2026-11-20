@@ -1,7 +1,7 @@
 # Averio UI component patterns
 
 **Status:** Accepted implementation guidance  
-**Updated:** 2026-10-09
+**Updated:** 2026-11-20
 
 These patterns record the agreed transfer UI refinements and apply to new or changed empty states and cards across Averio. They extend the canonical HTML concept. Existing screens can migrate when touched; this is not a requirement to restyle the whole application at once.
 
@@ -35,12 +35,16 @@ Use `AverioCategorySelect` for every category choice, including parent selection
 Use `AverioIconPicker` for icon selection: localized named tiles, name search, current selection preview, native radio keyboard behavior and clear focus states. Preserve saved icons missing from the current catalog. New catalog entries need meaningful API names and EN/DE/HU translations.
 
 
-## Optional explanatory help
+## Helper text: always use the I component
 
-Use `InfoPopover` beside a heading or label for optional definitions, calculation scope and secondary explanations. Keep validation, required formats, empty-state instructions, financial consequences and privacy choices visible. The [page-by-page helper text audit](helper-text-audit.md) records the current decisions.
+Always use the shared `InfoPopover` I component beside the relevant heading, label or action for helper text: definitions, calculation scope and secondary explanations. Do not replace it with standalone explanatory paragraphs, choice subtitles, native title tooltips or a separate help implementation. Apply this to all new or changed UI.
+
+Keep actual labels, values, current state, validation, required formats, primary empty-state instructions, actionable financial/privacy warnings and required confirmations visible. These are task content, not helper text. General explanations of calculations or financial behavior belong in the I component; a decision's warning or confirmation must remain visible. The [page-by-page helper text audit](helper-text-audit.md) records the current decisions.
 
 Use localized `label` and children; the component supplies the translated accessible “About …” name. The native non-modal popover opens on click/tap/keyboard, supports outside dismissal and Escape, and uses a 44px trigger, visible focus states, viewport-aware positioning, scrolling and light/dark styling. It can be used inside the existing AverioDialog without opening another modal. Do not nest the trigger inside another interactive element or an implicit input label. Keep long tutorials and primary task content on the page.
 
 When help is inside a heading or legend, give the heading/legend its own localized accessible name (matching its visible title). The information button and open explanation must not become part of that name. Keep the help button independently accessible.
 
 For field help, the optional InfoPopover id belongs to its explanatory text. Use that ID in the control’s aria-describedby. The dialog keeps a separate generated ID for popoverTarget and aria-controls; referencing the labeled dialog would replace the explanation with its title in the control’s accessible description.
+
+Position help before its first visible frame, including repeated openings inside scrolled dialogs. Do not expose default or stale coordinates while waiting for the native opening event. Measure the final width before wrapping/placement calculations, preserve page/editor/help scroll positions, and retain native keyboard and light-dismiss behavior. The shared browser checks sample opening frames to prevent the top-left flash from returning.

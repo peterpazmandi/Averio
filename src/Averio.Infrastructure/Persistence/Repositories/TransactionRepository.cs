@@ -243,7 +243,7 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                         item.CategoryId,
                         item.CategoryName,
                         item.CategoryIcon,
-                        item.Amount))
+                        item.Amount, item.RefundedAmount, item.HasRefundHistory))
                     .ToArray());
 
         var labelsByTransaction = labels

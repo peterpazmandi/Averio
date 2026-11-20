@@ -21,7 +21,7 @@ internal sealed partial class ImportRepository
         var transactions = await (from t in db.VisibleTransactions(householdId, memberId).AsNoTracking()
             join a in db.Accounts on t.AccountId equals a.Id
             where accountIds.Contains(t.AccountId) && t.Status == TransactionStatus.Posted && t.OccurredOn >= start && t.OccurredOn <= end
-            select new ImportExistingRecord(t.Id, t.Kind.ToString(), t.AccountId, null, t.OccurredOn, t.Amount, null, t.Description, t.UpdatedAt, a.Currency.Value, null))
+            select new ImportExistingRecord(t.Id, t.Kind.ToString(), t.AccountId, null, t.OccurredOn, t.Amount + (t.Kind == TransactionKind.Expense ? t.Items.Sum(i => i.RefundedAmount) : 0m), null, t.Description, t.UpdatedAt, a.Currency.Value, null))
             .Take(100001).ToArrayAsync(ct);
         var visible = db.Accounts.Where(a => a.HouseholdId == householdId && (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId)));
         var transfers = await (from t in db.Transfers.AsNoTracking()
@@ -44,7 +44,9 @@ internal sealed partial class ImportRepository
             .Select(e => new { e.TransactionId, e.RelatedTransactionId, e.TransferId }).ToArrayAsync(ct);
         var receipts = await db.Set<Averio.Domain.Receipts.ReceiptScan>().Where(x => x.HouseholdId == householdId && ids.Contains(x.PostedTransactionId ?? Guid.Empty)).Select(x => x.PostedTransactionId!.Value).ToArrayAsync(ct);
         var recurring = await db.Set<Averio.Domain.Recurring.RecurringOccurrence>().Where(x => x.HouseholdId == householdId && ids.Contains(x.TransactionId ?? Guid.Empty)).Select(x => x.TransactionId!.Value).ToArrayAsync(ct);
-        return activities.Concat(receipts).Concat(recurring).Concat(money.SelectMany(e => new[] { e.TransactionId, e.RelatedTransactionId, e.TransferId }).OfType<Guid>()).ToHashSet();
+        var refunds = await db.Set<ItemRefund>().Where(x => x.HouseholdId == householdId && (ids.Contains(x.TransactionId) || ids.Contains(x.CreditTransactionId)))
+            .Select(x => new { x.TransactionId, x.CreditTransactionId }).ToArrayAsync(ct);
+        return refunds.SelectMany(x => new[] { x.TransactionId, x.CreditTransactionId }).Concat(activities).Concat(receipts).Concat(recurring).Concat(money.SelectMany(e => new[] { e.TransactionId, e.RelatedTransactionId, e.TransferId }).OfType<Guid>()).ToHashSet();
     }
     public async Task VoidRecordsAsync(Guid householdId, Guid[] transactionIds, Guid[] transferIds, DateTimeOffset now, CancellationToken ct)
     {

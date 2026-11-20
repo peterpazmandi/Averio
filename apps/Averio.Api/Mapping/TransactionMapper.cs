@@ -74,7 +74,7 @@ internal static class TransactionMapper
             item.CategoryId,
             item.CategoryName,
             item.CategoryIcon,
-            DecimalAmountMapper.Format(item.Amount))).ToArray(),
+            DecimalAmountMapper.Format(item.Amount), DecimalAmountMapper.Format(item.RefundedAmount), item.HasRefundHistory)).ToArray(),
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
             label.Name,
@@ -104,7 +104,7 @@ internal static class TransactionMapper
             item.CategoryId,
             item.CategoryName,
             item.CategoryIcon,
-            DecimalAmountMapper.Format(item.Amount))).ToArray(),
+            DecimalAmountMapper.Format(item.Amount), DecimalAmountMapper.Format(item.RefundedAmount), item.HasRefundHistory)).ToArray(),
         result.Labels.Select(label => new TransactionLabelResponse(
             label.Id,
             label.Name,

@@ -47,7 +47,7 @@ public sealed class RecurringRule
         RecurringFrequency frequency, DateOnly startsOn, DateOnly? endsOn, bool automatic, DateTimeOffset now)
     {
         if (household == Guid.Empty || member == Guid.Empty || account == Guid.Empty || category == Guid.Empty
-            || !Enum.IsDefined(frequency) || !Enum.IsDefined(kind) || !Enum.IsDefined(visibility)
+            || !Enum.IsDefined(frequency) || kind is not (TransactionKind.Income or TransactionKind.Expense) || !Enum.IsDefined(visibility)
             || startsOn == default) throw new ArgumentException("Invalid recurring rule.");
         var r = new RecurringRule { Id = Guid.NewGuid(), HouseholdId = household, HouseholdMemberId = member,
             AccountId = account, Kind = kind, Visibility = visibility, Frequency = frequency,

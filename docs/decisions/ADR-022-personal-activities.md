@@ -42,3 +42,7 @@ of monetization gates; future planning and exports can be evaluated separately.
 
 Apply AddActivities explicitly before deploying the API. No existing ledger rows,
 account balances, category snapshots or reporting aggregates are rewritten.
+
+## Item refund follow-up
+
+The merchant-refund-as-income convention is superseded for new item refunds by [ADR-048](ADR-048-item-refunds-reduce-expenses.md). Received refunds reduce their original item and category expense; historical allowance-only attributions remain unchanged. Other decisions in this ADR remain in force.

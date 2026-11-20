@@ -12,11 +12,15 @@ public sealed class TransactionItemConfiguration
     {
         builder.ToTable("transaction_items", table =>
         {
-            table.HasCheckConstraint("ck_transaction_items_amount", "amount > 0");
+            table.HasCheckConstraint("ck_transaction_items_amount", "amount >= 0 AND refunded_amount >= 0 AND amount + refunded_amount > 0");
             table.HasCheckConstraint("ck_transaction_items_position", "position >= 0");
         });
 
         builder.HasKey(x => x.Id);
+        builder.Ignore(x => x.OriginalAmount);
+        builder.HasAlternateKey(x => new { x.HouseholdId, x.TransactionId, x.Id });
+        builder.Property(x => x.RefundedAmount).HasColumnName("refunded_amount").HasPrecision(19,4).HasDefaultValue(0m);
+        builder.Property(x => x.HasRefundHistory).HasColumnName("has_refund_history").HasDefaultValue(false);
         builder.Property(x => x.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();

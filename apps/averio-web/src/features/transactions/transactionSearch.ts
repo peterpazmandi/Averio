@@ -1,12 +1,13 @@
 export const datePresets = ['this-month', 'last-month', 'previous-3-full-months', 'this-year', 'last-year', 'last-12-months', 'all', 'custom'] as const;
 export type DatePreset = typeof datePresets[number];
 export type TransactionSearch = {
-    account?: string; kind?: 'Expense' | 'Income'; from?: string; to?: string;
+    account?: string; kind?: 'Expense' | 'Income' | 'Refund'; from?: string; to?: string;
     period?: DatePreset; labels?: string[]; dates?: 'all'; activity?: string; transaction?: string;
     create?: boolean; createKind?: 'Expense' | 'Income';
 };
 const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : undefined;
-const kind = (value: unknown) => value === 'Expense' || value === 'Income' ? value : undefined;
+const kind = (value: unknown) => value === 'Expense' || value === 'Income' || value === 'Refund' ? value : undefined;
+const createKind = (value: unknown) => value === 'Expense' || value === 'Income' ? value : undefined;
 function date(value: unknown) {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
     const parsed = new Date(value + 'T00:00:00Z');
@@ -20,5 +21,5 @@ export function transactionSearch(search: Record<string, unknown>): TransactionS
     return { period, labels: labels.length ? labels : undefined, account: uuid(search.account), activity: uuid(search.activity), transaction,
         kind: kind(search.kind), from: period && period !== 'custom' ? undefined : date(search.from), to: period && period !== 'custom' ? undefined : date(search.to),
         dates: search.dates === 'all' ? 'all' : undefined, create,
-        createKind: create ? kind(search.createKind) : undefined };
+        createKind: create ? createKind(search.createKind) : undefined };
 }

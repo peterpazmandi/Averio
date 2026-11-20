@@ -13,13 +13,16 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
     {
         builder.ToTable("transactions", table =>
         {
-            table.HasCheckConstraint("ck_transactions_kind", "kind IN ('Income', 'Expense')");
+            table.HasCheckConstraint("ck_transactions_kind", "kind IN ('Income', 'Expense', 'Refund')");
             table.HasCheckConstraint("ck_transactions_visibility", "visibility IN ('Household', 'Private')");
             table.HasCheckConstraint("ck_transactions_status", "status IN ('Posted', 'Voided')");
-            table.HasCheckConstraint("ck_transactions_amount", "amount > 0");
+            table.HasCheckConstraint("ck_transactions_amount", "amount >= 0 AND (kind = 'Expense' OR amount > 0)");
             table.HasCheckConstraint("ck_transactions_currency", "currency_code IN ('EUR', 'USD', 'HUF')");
         });
 
+        builder.Ignore(x => x.RefundedAmount);
+        builder.Ignore(x => x.OriginalAmount);
+        builder.Ignore(x => x.HasRefundHistory);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ImportBatchId).HasColumnName("import_batch_id");
         builder.HasOne<Averio.Domain.Imports.ImportBatch>().WithMany()

@@ -81,7 +81,7 @@ public sealed partial class ImportHandler
         var map = mappings.ToDictionary(m => m.Source, m => m.AccountId);
         IReadOnlyList<ImportExistingRecord> candidates = rows.Length == 0 ? []
             : await imports.FindOverlapAsync(householdId, memberId, map.Values.ToArray(), rows.Min(r => r.Date), rows.Max(r => r.Date), ct);
-        var lookup = candidates.GroupBy(c => (c.AccountId, c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
+        var lookup = candidates.GroupBy(c => (c.AccountId, Kind: c.Kind == "Refund" ? "Income" : c.Kind, c.Date, c.Amount, c.DestinationId, c.ReceivedAmount))
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Matches: g.OrderBy(c => c.Id).Take(3)
                 .Select(c => new ImportOverlapMatch(c.Id, c.Kind, c.Description, c.Date, Amount(c.Amount),
                     c.ReceivedAmount is null ? null : Amount(c.ReceivedAmount.Value), c.ReceivedCurrency)).ToArray()));

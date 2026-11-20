@@ -1,5 +1,7 @@
 # Recurring mortgage reimbursements
 
+German UI: **Kostenerstattungen**. Hungarian UI: **Költségtérítések**. These are expense-coverage claims, distinct from received expense refunds; see [money-back terminology](ui/money-back-terminology.md).
+
 The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. A future payment-matching deliverable will link existing bank movements and introduce partially/fully received statuses.
 
 ## Workflow and privacy
@@ -71,6 +73,4 @@ Manual creation and individual claim edits reject a fixed estimate above the ori
 
 Reimbursements are not limited to health funds. The receipt instructions, provider help and external-submission confirmation use general wording for the organisation or person paying the money back. Submission may happen through any process that provider accepts; adding or scanning a receipt in Averio never submits it externally.
 
-For a merchant refund already received on an ordinary purchase, keep the original expense and record the money received as a separate Income transaction on the receiving account, dated when it arrived. If the incoming transaction was imported already, use that record rather than creating a duplicate. Use its description or note to identify the original purchase. Do not void a real purchase merely because it was later refunded.
-
-General expense-to-refund linking and reimbursement payment matching are not implemented in this slice. The refund therefore remains income in category reports; it does not reduce the original expense category. An Activity can group the expense and refund to display their net result. Existing Personal Money refund attribution applies only to purchases already charged to the member's allowance, with its own same-account/currency rules. External receipt confirmation records submission, never receipt of the refund.
+Received merchant refunds now use the item-refund workflow in [Item refunds](item-refunds.md) and [ADR-048](decisions/ADR-048-item-refunds-reduce-expenses.md). Select one original receipt item and either record received money or explicitly reclassify an existing credit. The item's expense and category totals decrease; the returned amount is a Refund, never income. Multiple item refunds are supported, with exact item-level caps and retained history. Expected third-party claims and their external-submission confirmation remain separate from received refunds.

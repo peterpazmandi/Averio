@@ -47,6 +47,14 @@ export interface TransactionItemResponse {
      * 
      */
     amount: string;
+    /**
+     * 
+     */
+    refundedAmount?: string;
+    /**
+     * 
+     */
+    hasRefundHistory?: boolean;
 }
 
 /**
@@ -80,6 +88,8 @@ export function TransactionItemResponseFromJSONTyped(json: any, ignoreDiscrimina
         'categoryName': json['categoryName'],
         'categoryIcon': json['categoryIcon'],
         'amount': json['amount'],
+        'refundedAmount': json['refundedAmount'] == null ? undefined : json['refundedAmount'],
+        'hasRefundHistory': json['hasRefundHistory'] == null ? undefined : json['hasRefundHistory'],
     };
 }
 
@@ -101,6 +111,8 @@ export function TransactionItemResponseToJSONTyped(value?: TransactionItemRespon
         'categoryName': value['categoryName'],
         'categoryIcon': value['categoryIcon'],
         'amount': value['amount'],
+        'refundedAmount': value['refundedAmount'],
+        'hasRefundHistory': value['hasRefundHistory'],
     };
 }
 

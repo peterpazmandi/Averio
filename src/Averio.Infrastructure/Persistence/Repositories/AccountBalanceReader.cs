@@ -57,7 +57,7 @@ internal sealed class AccountBalanceReader(AverioDbContext dbContext)
             {
                 transaction.AccountId,
                 transaction.Kind,
-                transaction.Amount,
+                Amount = transaction.Amount + (transaction.Kind == TransactionKind.Expense ? transaction.Items.Sum(i => i.RefundedAmount) : 0m),
             })
             .ToListAsync(cancellationToken);
 
@@ -66,7 +66,7 @@ internal sealed class AccountBalanceReader(AverioDbContext dbContext)
             if (!balances.TryGetValue(movement.AccountId, out var balance))
                 continue;
 
-            balances[movement.AccountId] = movement.Kind == TransactionKind.Income
+            balances[movement.AccountId] = movement.Kind != TransactionKind.Expense
                 ? balance + movement.Amount
                 : balance - movement.Amount;
         }

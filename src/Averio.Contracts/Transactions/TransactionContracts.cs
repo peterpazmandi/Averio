@@ -43,7 +43,7 @@ public sealed record TransactionItemResponse(
     Guid CategoryId,
     string CategoryName,
     string CategoryIcon,
-    string Amount);
+    string Amount, string RefundedAmount = "0", bool HasRefundHistory = false);
 
 public sealed record TransactionLabelResponse(
     Guid Id,

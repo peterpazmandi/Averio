@@ -64,6 +64,9 @@ public sealed class VoidTransactionHandler(
 
 
 
+        if (transaction.Kind == TransactionKind.Refund || transaction.RefundedAmount > 0)
+            throw new BusinessRuleException("item_refund_linked", "Error_ItemRefundLinked");
+
         try
         {
             await personalMoney.ReverseTransactionChargeAsync(household.Id, transaction.Id, cancellationToken);

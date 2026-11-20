@@ -4,7 +4,11 @@ Reviewed against develop on 2026-10-25 and the canonical application HTML concep
 
 ## Rule
 
-Move optional explanations to `InfoPopover` beside the subject. Keep required input formats, validation, current state, empty-state actions, privacy decisions and financial consequences visible. Do not hide user-entered descriptions, account names, date ranges or currencies.
+Always use the shared `InfoPopover` I component for helper text beside its subject. Definitions, calculation rules and secondary explanations must not be rendered as standalone paragraphs, choice subtitles, native title tooltips or a different helper component. Apply this rule to every new or changed UI.
+
+Keep labels, values, required input formats, validation, current state, primary empty-state instructions/actions, actionable financial/privacy warnings and required confirmations visible. These are task content rather than helper text. Do not hide user-entered descriptions, account names, date ranges or currencies. General financial explanations belong in the I component; the warning or consent needed to perform an action remains visible.
+
+The 2026-11-19 refund follow-up makes this convention explicit in `AGENTS.md`, the implementation rules and component patterns. Earlier page decisions below are historical guidance; interpret their financial-consequence entries as actionable warnings/confirmations, not permission to add generic helper paragraphs.
 
 ## Page-by-page decisions
 
@@ -15,6 +19,7 @@ Move optional explanations to `InfoPopover` beside the subject. Keep required in
 | Account create/edit | Basics-section introduction; existing locked-field explanations now share InfoPopover via AccountFieldHelp | Balance setup instructions, ownership/holder guidance, private/shared consequences, fixed badges, missing holders, unsaved changes and validation |
 | Transactions overview | Page introduction; label-filter explanation | Active filters, loaded-record limitation, transaction data and empty/error states |
 | Transaction create/edit | Basics, labels and receipt-item section explanations | Account currency, required input guidance, private visibility, recurring behavior, allowance links, allocation consequences and destructive confirmations |
+| Item refund creation/details | Receipt scope, recording-mode explanations, existing-credit linking rules, search/date scope, net-cost explanation, allowance calculation and protected-field explanation | Receipt items, accounts/currency, remaining amounts, selected credit, review amounts/dates, active-filter state, blocking draft warning, validation, required money-received consent and reversal warning |
 | Transfers overview | Page introduction | Filter limitations, empty-state actions, redacted-side explanations |
 | Transfer create/edit | No additional hiding | FX amounts, balance effects, private funding/return consequences, privacy, conflicts, archived accounts and void confirmation |
 | Activities overview/chart | Purpose and total-calculation rules combined beside the page title; chart scope beside chart label | Currency and actual dates, privacy, date semantics in the editor, closed-state guidance, assignment replacement and empty states |
