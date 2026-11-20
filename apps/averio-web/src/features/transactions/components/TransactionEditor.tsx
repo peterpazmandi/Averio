@@ -25,7 +25,7 @@ import { formatDecimalAmount, subtractDecimalAmounts, sumDecimalAmounts } from '
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
-import { createLabel } from '../api/transactionApi';
+import { createLabel, getTransaction } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { CategoryPicker } from './CategoryPicker';
 import { resolveItemCategory } from '../resolveItemCategory';
@@ -106,6 +106,27 @@ function scaledToAmount(value: bigint) {
     return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
+function savedEditorItems(transaction: TransactionDto): EditorItem[] {
+    return [...transaction.items].sort((a, b) => a.position - b.position).map(item => ({
+        key: item.id,
+        description: item.description,
+        categoryId: item.categoryId,
+        amount: sumDecimalAmounts([item.amount, item.refundedAmount ?? '0']),
+        personalAmount: null,
+    }));
+}
+
+function editorSnapshot(values: {
+    accountId: string; kind: TransactionKind; merchant: string; note: string; activityId: string;
+    occurredOn: string; items: EditorItem[]; selectedLabelIds: string[];
+    visibility: TransactionVisibility; receiptCurrency: string; reviewedTotal: string;
+}) {
+    const { accountId, kind, merchant, note, activityId, occurredOn, items, selectedLabelIds,
+        visibility, receiptCurrency, reviewedTotal } = values;
+    return JSON.stringify({ accountId, kind, merchant, note, activityId, occurredOn, items,
+        selectedLabelIds, visibility, receiptCurrency, reviewedTotal });
+}
+
 export function TransactionEditor({
     userId,
     householdId,
@@ -125,8 +146,9 @@ export function TransactionEditor({
 }: Props) {
     // Keep the draft and all concurrency tokens from the same editing session.
     // The parent keys this component by transaction ID and unmounts it on close.
-    const [transaction] = useState(initialTransaction);
-    const [refundChanged, setRefundChanged] = useState(false);
+    const [transaction, setTransaction] = useState(initialTransaction);
+    const [refundRefresh, setRefundRefresh] = useState<'idle' | 'pending' | 'failed'>('idle');
+    const refundLocked = refundRefresh !== 'idle';
     const [rule] = useState(initialRule);
     const [recurring, setRecurring] = useState(!!initialRule || initialRecurring);
     const [scheduleName, setScheduleName] = useState(initialRule?.name ?? '');
@@ -136,7 +158,7 @@ export function TransactionEditor({
     const [stopped, setStopped] = useState(initialRule?.isStopped ?? false);
     const [stopConsent, setStopConsent] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const busy = parentBusy || submitting;
+    const busy = parentBusy || submitting || refundRefresh === 'pending';
     const { t, i18n } = useTranslation();
     const queryClient = useQueryClient();
     const [receiptCurrency, setReceiptCurrency] = useState(receiptDraft?.currency ?? '');
@@ -169,15 +191,7 @@ export function TransactionEditor({
     const [occurredOn, setOccurredOn] = useState(rule?.startsOn ?? transaction?.occurredOn ?? receiptDraft?.date ?? (receiptDraft ? '' : initialRecurring ? new Date().toISOString().slice(0, 10) : todayIso()));
     const [items, setItems] = useState<EditorItem[]>(() =>
         receiptDraft && receiptItems(receiptDraft).length ? receiptItems(receiptDraft).map(item => ({ ...item, key: itemKey(), personalAmount: null })) : rule ? rule.items.map(item => ({ key: itemKey(), ...item, personalAmount: null })) : transaction?.items.length
-            ? [...transaction.items]
-                .sort((a, b) => a.position - b.position)
-                .map(item => ({
-                    key: item.id || itemKey(),
-                    description: item.description,
-                    categoryId: item.categoryId,
-                    amount: sumDecimalAmounts([item.amount, item.refundedAmount ?? '0']),
-                    personalAmount: null,
-                }))
+            ? savedEditorItems(transaction)
             : [{
                 key: itemKey(),
                 description: '',
@@ -186,8 +200,8 @@ export function TransactionEditor({
                 personalAmount: null,
             }],
     );
-    const refundProtected = (initialTransaction ?? transaction)?.items.some(i => i.hasRefundHistory) ?? false;
-    const refundedTotal = sumDecimalAmounts((initialTransaction ?? transaction)?.items.map(i => i.refundedAmount ?? '0') ?? []);
+    const refundProtected = transaction?.items.some(i => i.hasRefundHistory) ?? false;
+    const refundedTotal = sumDecimalAmounts(transaction?.items.map(i => i.refundedAmount ?? '0') ?? []);
     const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
         () => rule?.labelIds ?? transaction?.labels.map(label => label.id) ?? [],
     );
@@ -231,7 +245,7 @@ export function TransactionEditor({
         return item.personalAmount ?? storedPersonalAmount(item);
     }
     function hasActiveItemRefunds(item: EditorItem): boolean {
-        return (amountToScaled((initialTransaction ?? transaction)?.items.find(i => i.id === item.key)?.refundedAmount ?? '0') ?? 0n) > 0n;
+        return (amountToScaled(transaction?.items.find(i => i.id === item.key)?.refundedAmount ?? '0') ?? 0n) > 0n;
     }
     function canManagePersonalMoney(item: EditorItem): boolean {
         if (hasActiveItemRefunds(item) && (amountToScaled(storedPersonalAmount(item)) ?? 0n) === 0n) return false;
@@ -361,8 +375,48 @@ export function TransactionEditor({
             : [...current, id]);
     }
 
-    const editSnapshot = JSON.stringify({ accountId, merchant, note, activityId, occurredOn, items, selectedLabelIds, visibility, receiptCurrency, reviewedTotal });
-    const [initialSnapshot] = useState(editSnapshot);
+    const editSnapshot = editorSnapshot({ accountId, kind, merchant, note, activityId, occurredOn, items, selectedLabelIds, visibility, receiptCurrency, reviewedTotal });
+    const [initialSnapshot, setInitialSnapshot] = useState(editSnapshot);
+    async function refreshAfterRefund() {
+        if (!transaction) return;
+        setRefundRefresh('pending');
+        const detailKey = transactionQueryKeys.detail(userId, householdId, transaction.id);
+        const walletQuery = personalMoneyQueries.mine(userId, householdId);
+        const sameKey = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((value, index) => value === b[index]);
+        try {
+            // A background response must not replace this explicit post-write read.
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: detailKey, exact: true }),
+                queryClient.cancelQueries({ queryKey: walletQuery.queryKey, exact: true }),
+            ]);
+            const [saved] = await Promise.all([
+                getTransaction(householdId, transaction.id),
+                queryClient.fetchQuery({ ...walletQuery, staleTime: 0, retry: false }),
+                queryClient.invalidateQueries({ predicate: query => !sameKey(query.queryKey, detailKey)
+                    && !sameKey(query.queryKey, walletQuery.queryKey) }),
+            ]);
+            const values = {
+                accountId: saved.accountId, kind: saved.kind, merchant: saved.merchant ?? '', note: saved.note ?? '',
+                activityId: saved.activityId ?? '', occurredOn: saved.occurredOn, items: savedEditorItems(saved),
+                selectedLabelIds: saved.labels.map(label => label.id), visibility: saved.visibility,
+                receiptCurrency: '', reviewedTotal: '',
+            };
+            // Only our own refund action resets a clean draft. Background updates
+            // retain the original revision and still fail safely on a stale save.
+            setTransaction(saved);
+            setAccountId(values.accountId); setKind(values.kind); setMerchant(values.merchant); setNote(values.note);
+            setActivityId(values.activityId); setOccurredOn(values.occurredOn); setItems(values.items);
+            setSelectedLabelIds(values.selectedLabelIds); setVisibility(values.visibility);
+            setReceiptCurrency(''); setReviewedTotal(''); setAllowanceItemKey(null); setExpandedItems(new Set());
+            setNewLabelOpen(false); setNewLabelName(''); setError('');
+            setInitialSnapshot(editorSnapshot(values));
+            queryClient.setQueryData(detailKey, saved);
+            setRefundRefresh('idle');
+        } catch {
+            // The money write already succeeded. Retry only this read, never the refund.
+            setRefundRefresh('failed');
+        }
+    }
     const dirty = Boolean(receiptDraft || receiptEvidence) && editSnapshot !== initialSnapshot;
     const [confirmClose, setConfirmClose] = useState(false);
     function dismiss() { if (dirty) setConfirmClose(true); else onCancel(); }
@@ -392,7 +446,7 @@ export function TransactionEditor({
 
     async function submit(event: React.FormEvent) {
         event.preventDefault();
-        if (busy) return;
+        if (busy || refundLocked) return;
         setError('');
 
         if (!receiptValid) { setError(t('receipts.reconcileHelp')); return; }
@@ -502,13 +556,13 @@ export function TransactionEditor({
                 <span className={difference === '0' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200'}>{t(difference === '0' ? 'receipts.reconciled' : 'receipts.ux.checkTotal')}</span>
                 {!resolvedAccountId && <span className="block">{t('receipts.ux.chooseAccount')}</span>}
             </div>}
-            {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy}
+            {transaction && onArchive && transaction.status === 'Posted' && <AverioButton disabled={busy || refundLocked}
                 onClick={() => {
                     if (window.confirm(t(transaction.isArchived ? 'transactionManagement.restoreConfirm' : 'transactionManagement.archiveConfirm')))
                         void onArchive(!transaction.isArchived, transaction.updatedAt).catch(reason =>
                             setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
                 }}>{t(transaction.isArchived ? 'transactionManagement.restore' : 'transactionManagement.archive')}</AverioButton>}
-            {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy || refundChanged || refundedTotal !== '0'} onClick={() => {
+            {transaction && onVoid && transaction.status === 'Posted' && <AverioButton variant="danger" disabled={busy || refundLocked || refundedTotal !== '0'} onClick={() => {
                 if (window.confirm(t('transactionManagement.voidConfirm'))) {
                     void onVoid(transaction.updatedAt).catch(reason => setError(reason instanceof Error ? reason.message : t('errors.genericDescription')));
                 }
@@ -516,16 +570,19 @@ export function TransactionEditor({
             {receiptPhotoAction}
             <AverioButton disabled={busy} onClick={dismiss}>{t('common.actions.cancel')}</AverioButton>
             <AverioButton type="submit" form="transaction-editor" variant={stopped ? 'danger' : 'primary'}
-                disabled={busy || refundChanged || !receiptValid || !resolvedAccountId || (!!receiptDraft && (!occurredOn || resolvedItems.some(item => !item.description.trim() || !validReceiptAmount(item.amount)))) || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
+                disabled={busy || refundLocked || !receiptValid || !resolvedAccountId || (!!receiptDraft && (!occurredOn || resolvedItems.some(item => !item.description.trim() || !validReceiptAmount(item.amount)))) || (Boolean(receiptDraft) && (accounts.isError || owners.isError || categories.isError)) || writableAccounts.length === 0 || categories.isPending || (stopped && !stopConsent)}>
                 {t(busy ? 'transactionManagement.saving' : receiptDraft ? 'receipts.confirm' : recurring ? 'recurring.save' : 'transactionManagement.save')}
             </AverioButton>
         </>}>
         <div className={receiptComparison ? 'grid items-start gap-5 xl:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.6fr)]' : ''}>
         {receiptComparison && <aside className="hidden xl:sticky xl:top-0 xl:block">{receiptComparison}</aside>}
-        {transaction && <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} hasUnsavedChanges={editSnapshot !== initialSnapshot && !refundChanged} onChanged={() => setRefundChanged(true)} />}
-        {transaction && <ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={initialTransaction ?? transaction} />}
-        {refundChanged && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t('itemRefunds.reopen')}</p>}
-        <form id="transaction-editor" inert={refundChanged} className="grid gap-4" onSubmit={submit}
+        {transaction && <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} disabled={busy || refundLocked} hasUnsavedChanges={editSnapshot !== initialSnapshot} onChanged={refreshAfterRefund} />}
+        {transaction && <div inert={refundLocked}><ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} /></div>}
+        {refundLocked && <div role={refundRefresh === 'failed' ? 'alert' : 'status'} className="mb-4 grid gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <p>{t(refundRefresh === 'failed' ? 'itemRefunds.refreshFailed' : 'itemRefunds.refreshing')}</p>
+            {refundRefresh === 'failed' && <div><AverioButton onClick={() => void refreshAfterRefund()}>{t('itemRefunds.retryRefresh')}</AverioButton></div>}
+        </div>}
+        <form id="transaction-editor" inert={refundLocked} className="grid gap-4" onSubmit={submit}
             onChangeCapture={event => {
                 // Any edited field invalidates the reviewed intent, including
                 // account changes that also change visibility or allocations.

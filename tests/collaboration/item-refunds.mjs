@@ -28,6 +28,13 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
     const region = () => page.getByRole('region', { name: 'Item refunds', exact: true });
     const merchant = page.getByRole('dialog', { name: 'Edit transaction', exact: true }).getByLabel('Merchant / Store', { exact: true });
+    const editor = page.getByRole('dialog', { name: 'Edit transaction', exact: true });
+    const saveButton = () => editor.getByRole('button', { name: 'Save transaction', exact: true });
+    const markEditor = () => editor.evaluate(el => { el.dataset.refundSession = 'kept-open'; });
+    const assertEditorKeptOpen = async () => assert.equal(await editor.getAttribute('data-refund-session'), 'kept-open', 'Refund changes must keep the same dialog mounted');
+    await editor.getByRole('radio', { name: 'Income', exact: true }).check();
+    assert.equal(await region().getByRole('button', { name: 'Add refund', exact: true }).isDisabled(), true, 'An unsaved transaction type change also blocks refunds');
+    await editor.getByRole('radio', { name: 'Expense', exact: true }).check();
     await merchant.fill('Unsaved receipt edit');
     assert.equal(await region().getByRole('button', { name: 'Add refund', exact: true }).isDisabled(), true, 'Save the editing draft before changing its refund revision');
     await merchant.fill('Refund browser shop');
@@ -37,12 +44,61 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     await dialog.getByLabel(/^Refund amount/).fill('20');
     assert.equal(await dialog.getByRole('button', { name: 'Record refund', exact: true }).isDisabled(), true, 'Actual receipt confirmation is required');
     await dialog.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
+    await markEditor();
+    let failRefresh = true;
+    const detailRoute = '**/api/v1/households/' + f.householdId + '/transactions/' + original.id;
+    const unavailableDetail = route => route.request().method() === 'GET' && failRefresh
+        ? route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Temporary refresh failure', status: 503 }) })
+        : route.continue();
+    await page.route(detailRoute, unavailableDetail);
+    let recordWrites = 0, reversalWrites = 0;
+    page.on('request', request => {
+        if (request.method() !== 'POST') return;
+        if (request.url().endsWith('/transactions/' + original.id + '/refunds')) recordWrites++;
+        if (request.url().includes('/transactions/' + original.id + '/refunds/') && request.url().endsWith('/cancellation')) reversalWrites++;
+    });
     const sent = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/transactions/' + original.id + '/refunds'));
     await dialog.getByRole('button', { name: 'Record refund', exact: true }).click();
     const payload = (await sent).postDataJSON();
     await dialog.waitFor({ state: 'hidden' });
+    const refreshFailed = 'Refund changes are saved, but transaction details could not be refreshed. Retry loading them to continue editing.';
+    await editor.getByRole('alert').filter({ hasText: refreshFailed }).waitFor();
+    await assertEditorKeptOpen();
+    assert.equal((await refundList()).length, 1, 'Failed refresh must not repeat the money write');
+    assert.equal(await saveButton().isDisabled(), true);
+    assert.equal(await editor.locator('#transaction-editor').evaluate(form => form.inert), true);
+    assert.equal(await region().getByRole('button', { name: 'Add refund', exact: true }).isDisabled(), true);
+    failRefresh = false;
+    const walletRoute = '**/api/v1/households/' + f.householdId + '/personal-money/me';
+    const unavailableWallet = route => route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Temporary wallet failure', status: 503 }) });
+    await page.route(walletRoute, unavailableWallet);
+    const walletRetry = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/personal-money/me') && r.status() === 503);
+    await editor.getByRole('button', { name: 'Retry refresh', exact: true }).click();
+    await walletRetry;
+    await editor.getByRole('button', { name: 'Retry refresh', exact: true }).waitFor();
+    assert.equal(await saveButton().isDisabled(), true, 'Wait for fresh Personal Money as well as the source revision');
+    assert.equal((await refundList()).length, 1);
+    await page.unroute(walletRoute, unavailableWallet);
+    await editor.getByRole('button', { name: 'Retry refresh', exact: true }).click();
+    await poll(() => saveButton().isEnabled(), 'retry unlocks the refreshed transaction');
+    assert.equal(recordWrites, 1, 'Refresh retries only read saved state, never repost the refund');
+    await assertEditorKeptOpen();
+    await page.unroute(detailRoute, unavailableDetail);
     await poll(async () => (await region().getByTestId('refund-net-expense').textContent()).replace(/\s/g, '') === '€180.00', 'net receipt after first item refund');
-    assert.equal(await page.getByRole('button', { name: 'Save transaction', exact: true }).isDisabled(), true, 'An old editing draft must not overwrite a refund');
+    assert.equal(await editor.locator('#transaction-editor').evaluate(form => form.inert), false);
+    saved = await source();
+    await merchant.fill('Edited after refund');
+    const updatedAfterRefund = page.waitForRequest(r => r.method() === 'PUT' && r.url().endsWith('/transactions/' + original.id));
+    await saveButton().click();
+    const editedRequest = (await updatedAfterRefund).postDataJSON();
+    assert.equal(editedRequest.expectedUpdatedAt, saved.updatedAt, 'Ordinary edits must use the refreshed refund revision');
+    assert.deepEqual(editedRequest.items.map(i => i.existingItemId), [a, b]);
+    assert.deepEqual(editedRequest.items.map(i => i.amount), ['120', '80'], 'Saving metadata retains original paid amounts');
+    await editor.waitFor({ state: 'hidden' });
+    assert.equal((await source()).merchant, 'Edited after refund');
+    assert.equal((await source()).amount, '180');
+    await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
+    await region().waitFor();
     const initialRefund = (await refundList())[0];
     const retried = await ok(page, base + '/transactions/' + original.id + '/refunds', { method: 'POST', body: payload });
     assert.equal(retried.id, initialRefund.id); assert.equal((await refundList()).length, 1);
@@ -125,11 +181,55 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
     const records = await refundList();
     assert.equal(records.length, 4); assert.equal(new Set(records.map(r => r.creditTransactionId)).size, 4);
     const linked = records.find(r => r.creditTransactionId === incoming.id);
+    await merchant.fill('Unsaved before reversal');
+    assert.equal(await region().locator('[data-refund-id="' + linked.id + '"]').getByRole('button', { name: 'Reverse refund', exact: true }).isDisabled(), true);
+    await merchant.fill('Edited after refund');
+    await markEditor();
+    failRefresh = true;
+    await page.route(detailRoute, unavailableDetail);
     await region().locator('[data-refund-id="' + linked.id + '"]').getByRole('button', { name: 'Reverse refund', exact: true }).click();
     const reversal = page.getByRole('dialog', { name: 'Reverse this refund?', exact: true });
     await reversal.getByRole('button', { name: 'Reverse refund', exact: true }).click();
     await reversal.waitFor({ state: 'hidden' });
+    await editor.getByRole('alert').filter({ hasText: refreshFailed }).waitFor();
+    await assertEditorKeptOpen();
+    const cancelledVersion = (await refundList()).find(r => r.id === linked.id).version;
+    failRefresh = false;
+    await editor.getByRole('button', { name: 'Retry refresh', exact: true }).click();
+    await poll(() => saveButton().isEnabled(), 'reversal retry unlocks ordinary edits');
+    await assertEditorKeptOpen();
+    await page.unroute(detailRoute, unavailableDetail);
+    assert.equal((await refundList()).find(r => r.id === linked.id).version, cancelledVersion, 'Retrying refresh must not repeat a reversal');
+    assert.equal(reversalWrites, 1, 'Refresh retries must not repost the cancellation');
     await poll(async () => (await source()).amount === '15', 'reversal restores original item cost');
+    saved = await source();
+    await merchant.fill('Edited after reversal');
+    const updatedAfterReversal = page.waitForRequest(r => r.method() === 'PUT' && r.url().endsWith('/transactions/' + original.id));
+    await saveButton().click();
+    assert.equal((await updatedAfterReversal).postDataJSON().expectedUpdatedAt, saved.updatedAt);
+    await editor.waitFor({ state: 'hidden' });
+    assert.equal((await source()).merchant, 'Edited after reversal');
+    assert.equal((await source()).amount, '15');
+    await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
+    await region().waitFor();
+    await merchant.fill('Keep my concurrent draft');
+    saved = await source();
+    await control('/advance', { seconds: 1 });
+    await ok(page, base + '/transactions/' + original.id, { method: 'PUT', body: {
+        accountId: saved.accountId, kind: saved.kind, visibility: saved.visibility, merchant: saved.merchant,
+        note: 'Saved by another session', occurredOn: saved.occurredOn, labelIds: saved.labels.map(label => label.id),
+        expectedUpdatedAt: saved.updatedAt, items: saved.items.map(item => ({ existingItemId: item.id,
+            description: item.description, categoryId: item.categoryId, amount: String(Number(item.amount) + Number(item.refundedAmount ?? '0')) })),
+    } });
+    const conflictedSave = page.waitForResponse(r => r.request().method() === 'PUT' && r.url().endsWith('/transactions/' + original.id) && r.status() === 409);
+    await saveButton().click();
+    await conflictedSave;
+    await editor.getByRole('alert').waitFor();
+    assert.equal(await merchant.inputValue(), 'Keep my concurrent draft', 'External changes must not replace typed edits or silently advance their revision');
+    assert.equal((await source()).merchant, 'Edited after reversal');
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.goto('http://localhost:5173/app/transactions?transaction=' + original.id);
+    await region().waitFor();
     assert.equal(await balance(), '-15');
     assert.equal((await ok(page, base + '/transactions/' + incoming.id)).status, 'Voided');
     await region().locator('[data-refund-id="' + initialRefund.id + '"]').getByRole('link', { name: 'View returned money', exact: true }).click();
@@ -199,5 +299,5 @@ export async function verifyItemRefunds({ fixture: f, password, session, api, ok
         await page.screenshot({ path: path.join(artifacts, `item-refund-filter-${language}-${theme}-${width}.png`), fullPage: false });
         await adding.getByRole('button', { name: { en: 'Cancel', de: 'Abbrechen', hu: 'Mégse' }[language], exact: true }).click();
     }
-    console.log('PASS item refund UI: manual/link existing credit, actual-money confirmation, different receipt items, caps, full zero expense, net categories/no income, exact balances, duplicate retry, reversal, origin navigation and EN/DE/HU responsive themes');
+    console.log('PASS item refund UI: manual/link existing credit, confirmation, different receipt items, caps, zero expense, net categories/no income, balances, idempotence, automatic editor refresh/new save revisions, failed reload retries without repeating writes, draft protection, reversal, origin navigation and EN/DE/HU responsive themes');
 }

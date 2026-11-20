@@ -13,7 +13,7 @@ import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { itemRefundKeys, itemRefundsApi } from './itemRefundQueries';
 
-type Props = { userId: string; householdId: string; transaction: TransactionDto; onClose: () => void; onChanged?: () => void };
+type Props = { userId: string; householdId: string; transaction: TransactionDto; onClose: () => void; onChanged?: () => Promise<void> };
 const isPositive = (value: string) => subtractDecimalAmounts(value, '0') !== '0' && !value.startsWith('-');
 
 export function RecordItemRefundDialog({ userId, householdId, transaction, onClose, onChanged }: Props) {
@@ -65,7 +65,10 @@ export function RecordItemRefundDialog({ userId, householdId, transaction, onClo
         householdId, transactionId: transaction.id, recordItemRefundRequest: { transactionItemId: itemId, amount: value!, receivedOn: mode === 'existing' ? credit!.occurredOn : date,
             operationId, expectedUpdatedAt: transaction.updatedAt, moneyReceived: received,
             creditTransactionId: mode === 'existing' ? credit!.id : null, expectedCreditUpdatedAt: mode === 'existing' ? credit!.updatedAt : null },
-    }), onSuccess: async () => { await client.invalidateQueries(); onChanged?.(); onClose(); } });
+    }), onSuccess: async () => {
+        if (onChanged) await onChanged(); else await client.invalidateQueries();
+        onClose();
+    } });
     const stepHeading = (step: number, title: string) => <h3 id={`${id}-step-${step}`} className="flex items-center gap-3 text-base font-semibold">
         <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{step}</span>
         <span><span className="sr-only">{t('itemRefunds.step', { number: step })} · </span>{title}</span>
