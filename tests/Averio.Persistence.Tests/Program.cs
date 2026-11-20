@@ -214,6 +214,7 @@ static async Task RunVerificationAsync(string connectionString)
     await ActivityVerification.RunAsync(provider, currentUser, fixture, clock);
     await ReimbursementVerification.RunAsync(provider, currentUser, fixture, clock);
     await ManualReimbursementVerification.RunAsync(provider, currentUser, fixture, clock);
+    await RefundCreditReversalVerification.RunAsync(provider, currentUser, fixture, clock);
     await MerchantItemRefundVerification.RunAsync(provider, currentUser, fixture, clock);
     await RecurringVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);

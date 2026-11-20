@@ -27,8 +27,19 @@ internal static class MerchantRefundChecks
         Check(purchase.Amount == 30,"Metadata edit applied refunds twice");
         var income = Transaction.Create(h,a,m,TransactionKind.Income,purchase.Visibility,purchase.Currency,"Bank credit",null,new(2026,11,18),
             [new("Incoming",Guid.NewGuid(),"Other income","money",10)],[],now);
+        var original = RefundIncomeSnapshot.Capture(income);
+        var importId = Guid.NewGuid();
+        income.SetImportOrigin(importId);
         income.ClassifyAsRefund(shoes,now);
         Check(income.Kind == TransactionKind.Refund && income.Amount == 10,"Existing credit was still income");
+        Throws(() => income.RestoreRefundIncome(original with { SchemaVersion = 2 }, now));
+        Throws(() => income.RestoreRefundIncome(original with { TransactionId = Guid.NewGuid() }, now));
+        income.RestoreRefundIncome(original, now);
+        Check(income.Kind == TransactionKind.Income && income.Status == TransactionStatus.Posted
+            && income.Items.Single().Id == original.Items.Single().ExistingItemId
+            && income.Items.Single().CategoryId == original.Items.Single().CategoryId
+            && income.ImportBatchId == importId && income.Amount == 10, "Restored income lost identity/classification");
+        Throws(() => income.RestoreRefundIncome(original, now));
     }
     private static void Check(bool ok,string message) { if(!ok)throw new Exception(message); }
     private static void Throws(Action action) { try{action();}catch(ArgumentException){return;}throw new Exception("Expected invalid item refund"); }

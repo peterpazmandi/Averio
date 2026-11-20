@@ -1667,6 +1667,12 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_member_id");
 
+                    b.Property<string>("CreditOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("credit_origin");
+
                     b.Property<Guid>("CreditTransactionId")
                         .HasColumnType("uuid")
                         .HasColumnName("credit_transaction_id");
@@ -1678,6 +1684,10 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uuid")
                         .HasColumnName("operation_id");
+
+                    b.Property<string>("OriginalIncomeJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("original_income_json");
 
                     b.Property<DateOnly>("ReceivedOn")
                         .HasColumnType("date")
@@ -1705,7 +1715,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreditTransactionId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("cancelled_at IS NULL");
 
                     b.HasIndex("HouseholdId", "CancelledByMemberId");
 
@@ -1727,6 +1738,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_item_refunds_cancellation", "(cancelled_at IS NULL) = (cancelled_by_member_id IS NULL)");
 
                             t.HasCheckConstraint("ck_item_refunds_distinct", "transaction_id <> credit_transaction_id");
+
+                            t.HasCheckConstraint("ck_item_refunds_origin", "(credit_origin IN ('Unknown', 'Created') AND original_income_json IS NULL) OR (credit_origin = 'ExistingIncome' AND original_income_json IS NOT NULL AND jsonb_typeof(original_income_json) = 'object')");
                         });
                 });
 

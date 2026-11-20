@@ -61,6 +61,21 @@ public sealed class Transaction
         UpdatedAt = NextVersion(now);
     }
 
+    public void RestoreRefundIncome(RefundIncomeSnapshot snapshot, DateTimeOffset now)
+    {
+        if (Kind != TransactionKind.Refund || Status != TransactionStatus.Posted || snapshot.SchemaVersion != 1
+            || snapshot.TransactionId != Id || snapshot.Items.Length is < 1 or > 100
+            || snapshot.Items.Sum(x => x.Amount) != Amount
+            || snapshot.Items.Any(x => x.ExistingItemId is null || x.ExistingItemId == Guid.Empty)
+            || snapshot.Items.Select(x => x.ExistingItemId).Distinct().Count() != snapshot.Items.Length)
+            throw new ArgumentException("Invalid original income snapshot.");
+        var restored = snapshot.Items.Select((draft, position) => TransactionItem.Create(HouseholdId, Id, position, draft)).ToArray();
+        _items.Clear();
+        _items.AddRange(restored);
+        Kind = TransactionKind.Income;
+        UpdatedAt = NextVersion(now);
+    }
+
     public static Transaction Create(
         Guid householdId,
         Guid accountId,

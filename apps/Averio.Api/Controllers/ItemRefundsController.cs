@@ -13,12 +13,12 @@ public sealed class ItemRefundsController(ItemRefundHandler handler) : Controlle
     {
         var x = await handler.OriginAsync(householdId, transactionId, ct);
         return Ok(new ItemRefundResponse(x.Id, x.TransactionId, x.TransactionItemId, x.CreditTransactionId,
-            DecimalAmountMapper.Format(x.Amount), x.ReceivedOn, x.CreatedAt, x.CancelledAt, x.Version));
+            DecimalAmountMapper.Format(x.Amount), x.ReceivedOn, x.CreatedAt, x.CancelledAt, x.Version, x.CreditOrigin.ToString()));
     }
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ItemRefundResponse>>> List(Guid householdId, Guid transactionId, CancellationToken ct)
         => Ok((await handler.ListAsync(householdId, transactionId, ct)).Select(x => new ItemRefundResponse(x.Id, x.TransactionId,
-            x.TransactionItemId, x.CreditTransactionId, DecimalAmountMapper.Format(x.Amount), x.ReceivedOn, x.CreatedAt, x.CancelledAt, x.Version)).ToArray());
+            x.TransactionItemId, x.CreditTransactionId, DecimalAmountMapper.Format(x.Amount), x.ReceivedOn, x.CreatedAt, x.CancelledAt, x.Version, x.CreditOrigin.ToString())).ToArray());
     [HttpPost]
     public async Task<ActionResult<RecordItemRefundResponse>> Record(Guid householdId, Guid transactionId, RecordItemRefundRequest request, CancellationToken ct)
         => Ok(new RecordItemRefundResponse(await handler.RecordAsync(householdId, transactionId,

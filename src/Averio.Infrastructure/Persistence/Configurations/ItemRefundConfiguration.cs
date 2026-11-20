@@ -8,6 +8,7 @@ internal sealed class ItemRefundConfiguration : IEntityTypeConfiguration<ItemRef
     public void Configure(EntityTypeBuilder<ItemRefund> b)
     {
         b.ToTable("item_refunds", t => {
+            t.HasCheckConstraint("ck_item_refunds_origin", "(credit_origin IN ('Unknown', 'Created') AND original_income_json IS NULL) OR (credit_origin = 'ExistingIncome' AND original_income_json IS NOT NULL AND jsonb_typeof(original_income_json) = 'object')");
             t.HasCheckConstraint("ck_item_refunds_amount", "amount > 0");
             t.HasCheckConstraint("ck_item_refunds_distinct", "transaction_id <> credit_transaction_id");
             t.HasCheckConstraint("ck_item_refunds_cancellation", "(cancelled_at IS NULL) = (cancelled_by_member_id IS NULL)");
@@ -18,6 +19,8 @@ internal sealed class ItemRefundConfiguration : IEntityTypeConfiguration<ItemRef
         b.Property(x => x.TransactionId).HasColumnName("transaction_id");
         b.Property(x => x.TransactionItemId).HasColumnName("transaction_item_id");
         b.Property(x => x.CreditTransactionId).HasColumnName("credit_transaction_id");
+        b.Property(x => x.CreditOrigin).HasColumnName("credit_origin").HasConversion<string>().HasMaxLength(32);
+        b.Property(x => x.OriginalIncomeJson).HasColumnName("original_income_json").HasColumnType("jsonb");
         b.Property(x => x.OperationId).HasColumnName("operation_id");
         b.Property(x => x.CreatedByMemberId).HasColumnName("created_by_member_id");
         b.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19,4);
@@ -36,7 +39,7 @@ internal sealed class ItemRefundConfiguration : IEntityTypeConfiguration<ItemRef
         b.HasOne<HouseholdMember>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.CancelledByMemberId })
             .HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.HouseholdId, x.OperationId }).IsUnique();
-        b.HasIndex(x => x.CreditTransactionId).IsUnique();
+        b.HasIndex(x => x.CreditTransactionId).IsUnique().HasFilter("cancelled_at IS NULL");
         b.HasIndex(x => new { x.HouseholdId, x.TransactionId });
     }
 }

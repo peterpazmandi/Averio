@@ -74,8 +74,8 @@ function SavedItemRefundsPanel(props: Props) {
         </AverioDisclosure>}
         {adding && <RecordItemRefundDialog {...props} onClose={() => setAdding(false)} />}
         {reversing && <AverioDialog open title={t('itemRefunds.reverseTitle')} closeLabel={t('common.actions.close')} busy={reverse.isPending} onDismiss={() => setReversing(null)}
-            actions={<><AverioButton disabled={reverse.isPending} onClick={() => setReversing(null)}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="danger" disabled={reverse.isPending} onClick={() => reverse.mutate()}>{t('itemRefunds.reverse')}</AverioButton></>}>
-            <p>{t('itemRefunds.reverseHelp')}</p>{reverse.isError && <p role="alert">{reverse.error.message}</p>}
+            actions={<><AverioButton disabled={reverse.isPending} onClick={() => setReversing(null)}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="danger" disabled={reverse.isPending || (reversing.creditOrigin !== 'Created' && reversing.creditOrigin !== 'ExistingIncome')} onClick={() => reverse.mutate()}>{t('itemRefunds.reverse')}</AverioButton></>}>
+            <p>{t(reversing.creditOrigin === 'ExistingIncome' ? 'itemRefunds.reverseExistingHelp' : reversing.creditOrigin === 'Created' ? 'itemRefunds.reverseHelp' : 'itemRefunds.reverseUnknownHelp')}</p>{reverse.isError && <p role="alert">{reverse.error.message}</p>}
         </AverioDialog>}
     </AverioCard>;
 }
