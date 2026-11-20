@@ -1,4 +1,5 @@
 import { verifyItemRefunds } from './item-refunds.mjs';
+import { verifyRefundRecovery } from './refund-recovery.mjs';
 import { verifyManualReimbursements } from './manual-reimbursements.mjs';
 import { verifyReimbursements } from './reimbursements.mjs';
 import { verifyRecurring } from './recurring.mjs';
@@ -140,6 +141,7 @@ try {
     await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts, localeFile });
     await verifyManualReimbursements({ fixture: fixture.manual, password, session, api, ok, artifacts });
     await verifyItemRefunds({ fixture: fixture.refunds, password, session, api, ok, poll, localeFile, artifacts, control });
+    await verifyRefundRecovery({ fixture: fixture.refunds, password, session, ok, poll });
     const owner = await session(f.email, password);
     await owner.goto(ui + '/app/household');
     await owner.locator('a[href="#household-invitations"]').waitFor();
