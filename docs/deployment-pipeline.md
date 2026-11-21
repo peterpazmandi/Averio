@@ -127,6 +127,8 @@ Increment all three labels for an incompatible schema or behavior change.
 The refund provenance release introduces epoch 1: the host stops both backends
 before migration and removes their stopped containers (retaining volumes), so old
 refund handlers cannot write against the new schema or restart after a host reboot.
+Reimbursement settlement introduces epoch 2 because older binaries do not understand
+received statuses or protect matched transactions.
 This introduces a maintenance window; retain a pre-upgrade backup.
 
 Before migration, the host persists `minimum-schema-epoch` beside `current.yml`.

@@ -1,12 +1,16 @@
 using Averio.Domain.Transactions;
 namespace Averio.Domain.Recurring;
 
-public enum ReimbursementStatus { NeedsSubmission, Submitted, Rejected, Cancelled }
+public enum ReimbursementStatus { NeedsSubmission, Submitted, Rejected, Cancelled, PartiallyReceived, Received }
 
 public sealed class ReimbursementClaim
 {
     private ReimbursementClaim() { }
     private readonly List<ReimbursementClaimEvent> _events = [];
+    private readonly List<ReimbursementPayment> _payments = [];
+    public IReadOnlyCollection<ReimbursementPayment> Payments => _payments.AsReadOnly();
+    public decimal ReceivedAmount => _payments.Where(p => p.UnlinkedAt is null).Sum(p => p.Amount);
+    public decimal OutstandingAmount => Math.Max(0, ExpectedAmount - ReceivedAmount);
     public IReadOnlyCollection<ReimbursementClaimEvent> Events => _events.AsReadOnly();
     public Guid Id { get; private set; }
     public Guid HouseholdId { get; private set; }
@@ -29,7 +33,7 @@ public sealed class ReimbursementClaim
     public Guid Version { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
-    public decimal ExpectedAmount => Status == ReimbursementStatus.Submitted ? PotentialAmount : 0m;
+    public decimal ExpectedAmount => Status is ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived or ReimbursementStatus.Received ? PotentialAmount : 0m;
 
     public static ReimbursementClaim Create(RecurringRule rule, Transaction payment, DateTimeOffset now)
     {
@@ -70,7 +74,8 @@ public sealed class ReimbursementClaim
         if (configuration.Calculation == ReimbursementCalculation.Fixed && configuration.Value > OriginalPaymentAmount)
             throw new ArgumentException("The claim estimate cannot exceed the recorded expense.");
         var amount = configuration.Estimate(OriginalPaymentAmount);
-        if (amount <= 0 || (SubmittedOn is DateOnly submitted && submitted.DayNumber > DateOnly.MaxValue.DayNumber - configuration.PaymentDelayDays))
+        if (amount < ReceivedAmount || (ReceivedAmount > 0 && configuration.DestinationAccountId != DestinationAccountId)
+            || amount <= 0 || (SubmittedOn is DateOnly submitted && submitted.DayNumber > DateOnly.MaxValue.DayNumber - configuration.PaymentDelayDays))
             throw new ArgumentException("Invalid claim estimate.");
         var reminder = configuration.SubmissionReminderDays is int days ? DateOnly.FromDateTime(CreatedAt.UtcDateTime).AddDays(days) : (DateOnly?)null;
         // Preserve pre-edit details even for claims created before snapshot events existed.
@@ -78,6 +83,7 @@ public sealed class ReimbursementClaim
         Provider = configuration.Provider; PotentialAmount = amount; DestinationAccountId = configuration.DestinationAccountId;
         PaymentDelayDays = configuration.PaymentDelayDays; SubmissionReminderOn = reminder;
         ExpectedOn = SubmittedOn?.AddDays(PaymentDelayDays);
+        RefreshReceivedStatus();
         Record(actor, now, "Updated");
     }
     public void Submit(bool confirmed, DateOnly submittedOn, string? reference, Guid actor, DateTimeOffset now)
@@ -92,10 +98,38 @@ public sealed class ReimbursementClaim
     }
     public void Close(ReimbursementStatus status, Guid actor, DateTimeOffset now)
     {
-        if (status is not (ReimbursementStatus.Cancelled or ReimbursementStatus.Rejected)
+        if (ReceivedAmount > 0 || status is not (ReimbursementStatus.Cancelled or ReimbursementStatus.Rejected)
             || Status == ReimbursementStatus.Cancelled || (status == ReimbursementStatus.Rejected && Status != ReimbursementStatus.Submitted))
             throw new ArgumentException("Invalid claim transition.");
         Status = status; Record(actor, now);
+    }
+    public ReimbursementPayment LinkPayment(Transaction credit, Guid operationId, string fingerprint, Guid actor, DateTimeOffset now)
+    {
+        if (Status is not (ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived)
+            || credit.HouseholdId != HouseholdId || credit.AccountId != DestinationAccountId || credit.Currency.Value != Currency
+            || credit.Kind != TransactionKind.Income || credit.Status != TransactionStatus.Posted || credit.IsArchived
+            || credit.OccurredOn < PaymentOn || credit.OccurredOn > DateOnly.FromDateTime(now.UtcDateTime)
+            || credit.Amount <= 0 || credit.Amount > OutstandingAmount || actor != HouseholdMemberId
+            || _payments.Any(p => p.CreditTransactionId == credit.Id && p.UnlinkedAt is null))
+            throw new ArgumentException("Invalid reimbursement payment.");
+        var payment = ReimbursementPayment.Create(this, credit, operationId, fingerprint, actor, now);
+        _payments.Add(payment);
+        RefreshReceivedStatus(); Record(actor, now, "PaymentLinked");
+        return payment;
+    }
+    public void UnlinkPayment(Guid paymentId, Guid actor, DateTimeOffset now)
+    {
+        var payment = _payments.SingleOrDefault(p => p.Id == paymentId) ?? throw new ArgumentException("Unknown payment.");
+        if (actor != HouseholdMemberId) throw new ArgumentException("Invalid actor.");
+        if (payment.UnlinkedAt is not null) return;
+        payment.Unlink(actor, now);
+        RefreshReceivedStatus(); Record(actor, now, "PaymentUnlinked");
+    }
+    private void RefreshReceivedStatus()
+    {
+        if (Status is ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived or ReimbursementStatus.Received)
+            Status = ReceivedAmount == 0 ? ReimbursementStatus.Submitted
+                : ReceivedAmount < PotentialAmount ? ReimbursementStatus.PartiallyReceived : ReimbursementStatus.Received;
     }
     private void Record(Guid actor, DateTimeOffset now, string changeKind = "StatusChanged")
     {

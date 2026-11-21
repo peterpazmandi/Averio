@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 export function ReimbursementBadge({ status }: { status?: string | null }) {
     const { t } = useTranslation();
-    if (!status || !['NeedsSubmission', 'Submitted', 'Rejected', 'Cancelled'].includes(status)) return null;
+    if (!status || !['NeedsSubmission', 'Submitted', 'Rejected', 'Cancelled', 'PartiallyReceived', 'Received'].includes(status)) return null;
     const tone = status === 'NeedsSubmission' ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200'
         : status === 'Submitted' ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
         : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';

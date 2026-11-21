@@ -46,7 +46,11 @@ internal sealed partial class ImportRepository
         var recurring = await db.Set<Averio.Domain.Recurring.RecurringOccurrence>().Where(x => x.HouseholdId == householdId && ids.Contains(x.TransactionId ?? Guid.Empty)).Select(x => x.TransactionId!.Value).ToArrayAsync(ct);
         var refunds = await db.Set<ItemRefund>().Where(x => x.HouseholdId == householdId && (ids.Contains(x.TransactionId) || ids.Contains(x.CreditTransactionId)))
             .Select(x => new { x.TransactionId, x.CreditTransactionId }).ToArrayAsync(ct);
-        return refunds.SelectMany(x => new[] { x.TransactionId, x.CreditTransactionId }).Concat(activities).Concat(receipts).Concat(recurring).Concat(money.SelectMany(e => new[] { e.TransactionId, e.RelatedTransactionId, e.TransferId }).OfType<Guid>()).ToHashSet();
+        var reimbursementSources = await db.Set<Averio.Domain.Recurring.ReimbursementClaim>()
+            .Where(c => c.HouseholdId == householdId && ids.Contains(c.TransactionId)).Select(c => c.TransactionId).ToArrayAsync(ct);
+        var reimbursementCredits = await db.Set<Averio.Domain.Recurring.ReimbursementPayment>()
+            .Where(p => p.HouseholdId == householdId && ids.Contains(p.CreditTransactionId)).Select(p => p.CreditTransactionId).ToArrayAsync(ct);
+        return reimbursementSources.Concat(reimbursementCredits).Concat(refunds.SelectMany(x => new[] { x.TransactionId, x.CreditTransactionId })).Concat(activities).Concat(receipts).Concat(recurring).Concat(money.SelectMany(e => new[] { e.TransactionId, e.RelatedTransactionId, e.TransferId }).OfType<Guid>()).ToHashSet();
     }
     public async Task VoidRecordsAsync(Guid householdId, Guid[] transactionIds, Guid[] transferIds, DateTimeOffset now, CancellationToken ct)
     {

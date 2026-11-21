@@ -52,6 +52,29 @@ internal static class ReimbursementChecks
         Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 0, null, rule.AccountId, 7, 2));
         Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 366, 2));
         Throws(() => RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 1, null, rule.AccountId, 7, -1));
+        var settled = ReimbursementClaim.CreateManual(payment, member, config, new string('C', 64), now);
+        Transaction Credit(decimal amount) => Transaction.Create(payment.HouseholdId, payment.AccountId, member, TransactionKind.Income,
+            TransactionVisibility.Household, payment.Currency, "Provider", "Original note", day,
+            [new("Received", rule.CategoryId, "Income", "money", amount)], [], now);
+        var first = Credit(10000); var second = Credit(20000);
+        Throws(() => settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now));
+        settled.Submit(true, day, null, member, now);
+        var match = settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now);
+        Check(settled.Status == ReimbursementStatus.PartiallyReceived && settled.ReceivedAmount == 10000 && settled.OutstandingAmount == 20000, "Partial settlement");
+        Throws(() => settled.Close(ReimbursementStatus.Cancelled, member, now));
+        Throws(() => settled.LinkPayment(first, Guid.NewGuid(), new string('E',64), member, now));
+        Throws(() => settled.LinkPayment(Credit(20000.0001m), Guid.NewGuid(), new string('E',64), member, now));
+        Throws(() => settled.Update(RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 9999, null, rule.AccountId, 0, null), member, now));
+        settled.LinkPayment(second, Guid.NewGuid(), new string('E',64), member, now);
+        Check(settled.Status == ReimbursementStatus.Received && settled.OutstandingAmount == 0, "Full settlement");
+        settled.UnlinkPayment(match.Id, member, now);
+        var unlinkedVersion = settled.Version;
+        settled.UnlinkPayment(match.Id, member, now);
+        Check(settled.Version == unlinkedVersion && settled.ReceivedAmount == 20000, "Repeated unlink mutated claim");
+        Check(first.Kind == TransactionKind.Income && first.Amount == 10000 && first.Status == TransactionStatus.Posted && first.Note == "Original note", "Matching mutated bank movement");
+        settled.LinkPayment(first, Guid.NewGuid(), new string('F',64), member, now);
+        settled.UnlinkPayment(match.Id, member, now);
+        Check(settled.Status == ReimbursementStatus.Received && settled.Payments.Count == 3, "Old unlink affected new match");
         using var db = new AverioDbContext(new DbContextOptionsBuilder<AverioDbContext>().UseNpgsql("Host=localhost;Database=unused").Options);
         var entity = db.Model.FindEntityType(typeof(ReimbursementClaim))!;
         Check(entity.GetIndexes().Any(i => i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == nameof(ReimbursementClaim.TransactionId)), "Missing idempotency index");

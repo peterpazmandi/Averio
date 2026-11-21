@@ -2,7 +2,7 @@
 
 German UI: **Kostenerstattungen**. Hungarian UI: **Költségtérítések**. These are expense-coverage claims, distinct from received expense refunds; see [money-back terminology](ui/money-back-terminology.md).
 
-The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. A future payment-matching deliverable will link existing bank movements and introduce partially/fully received statuses.
+The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. Received-payment reconciliation now links existing bank movements and tracks partially/fully received statuses; see the settlement section below.
 
 ## Workflow and privacy
 
@@ -23,7 +23,7 @@ Claims are private to the recurring-rule creator, with additional server-side ch
 
 Every state change records the actor, status, submission date/reference and timestamp. Optimistic version checks reject stale updates. Scanning a receipt does not change claim status. There is no provider upload or automated receipt submission.
 
-Dashboard and transaction detail cards show original/potential/expected amounts separately. Currency totals are never combined. In-app reminders appear when an unsubmitted claim reaches its reminder date or a submitted claim passes its expected date. They send no email or push notification, and never advance payment status. Received/linked amount remains zero in this deliverable; the UI explains that bank-payment linking is not yet available.
+Dashboard and transaction detail cards show original/potential/expected amounts separately. Currency totals are never combined. In-app reminders appear when an unsubmitted claim reaches its reminder date or a submitted claim passes its expected date. They send no email or push notification, and never advance payment status. Received/linked and outstanding totals now reflect active payment matches; full receipt stops the overdue reminder.
 
 ## API and deployment
 
@@ -74,3 +74,15 @@ Manual creation and individual claim edits reject a fixed estimate above the ori
 Reimbursements are not limited to health funds. The receipt instructions, provider help and external-submission confirmation use general wording for the organisation or person paying the money back. Submission may happen through any process that provider accepts; adding or scanning a receipt in Averio never submits it externally.
 
 Received merchant refunds now use the item-refund workflow in [Item refunds](item-refunds.md) and [ADR-048](decisions/ADR-048-item-refunds-reduce-expenses.md). Select one original receipt item and either record received money or explicitly reclassify an existing credit. The item's expense and category totals decrease; the returned amount is a Refund, never income. Multiple item refunds are supported, with exact item-level caps and retained history. Expected third-party claims and their external-submission confirmation remain separate from received refunds.
+
+## Receive and reconcile payments
+
+After confirming external submission, choose **Link received payment**. Search for a recorded Income credit in the destination account and currency, select it, and confirm that it was received for this claim. Missing income must first be recorded under Transactions. The full credit must fit the remaining claim and current net expense. Several credits can settle one claim; a pooled credit cannot yet be divided across claims.
+
+The claim shows received and outstanding amounts, **Partially received** or **Fully received**, and retained payment history. Linking changes claim coverage only: the expense, income, bank balances, activity statistics and Personal Money remain unchanged. Reimbursements do not use merchant-refund expense reduction.
+
+Use **Unlink payment** to correct a match. It reopens the outstanding amount while preserving the Income credit and the old link in history. Unlink first before cancelling a claim, editing/voiding linked transactions, or refunding the source expense. The estimate cannot be reduced below received money, and the destination cannot change while receipts remain linked. Import undo protects historical claims and links even after unlinking.
+
+A lost response can be retried with the same operation; the UI retains the original request. Before closing and starting a different match, refresh and inspect saved history. The claim remains private to its creator and is hidden when any referenced source/destination/credit becomes inaccessible. See ADR-052 for concurrency, migration, privacy and accounting rules.
+
+Apply migration AddReimbursementPayments using the epoch-2 deployment images. Existing claims start with no matches; no credits are guessed or automatically backfilled. Preserve a backup; downgrade refuses to discard payment history.
