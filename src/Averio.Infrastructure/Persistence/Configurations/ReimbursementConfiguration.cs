@@ -14,8 +14,8 @@ public sealed class ReimbursementClaimConfiguration : IEntityTypeConfiguration<R
             t.HasCheckConstraint("ck_claim_amount", "potential_amount > 0 AND original_payment_amount >= potential_amount");
             t.HasCheckConstraint("ck_claim_provider", "length(btrim(provider)) > 0");
             t.HasCheckConstraint("ck_claim_currency", "currency IN ('EUR','USD','HUF')");
-            t.HasCheckConstraint("ck_claim_status", "status IN ('NeedsSubmission','Submitted','Rejected','Cancelled')");
-            t.HasCheckConstraint("ck_claim_submission", "(status NOT IN ('Submitted','Rejected') OR (submitted_on IS NOT NULL AND expected_on IS NOT NULL)) AND (submitted_on IS NULL OR submitted_on >= payment_on) AND (expected_on IS NULL OR expected_on >= submitted_on) AND payment_delay_days BETWEEN 0 AND 365");
+            t.HasCheckConstraint("ck_claim_status", "status IN ('NeedsSubmission','Submitted','Rejected','Cancelled','PartiallyReceived','Received')");
+            t.HasCheckConstraint("ck_claim_submission", "(status NOT IN ('Submitted','Rejected','PartiallyReceived','Received') OR (submitted_on IS NOT NULL AND expected_on IS NOT NULL)) AND (submitted_on IS NULL OR submitted_on >= payment_on) AND (expected_on IS NULL OR expected_on >= submitted_on) AND payment_delay_days BETWEEN 0 AND 365");
         });
         b.HasKey(x => x.Id);
         b.HasAlternateKey(x => new { x.HouseholdId, x.Id });
@@ -41,6 +41,9 @@ public sealed class ReimbursementClaimConfiguration : IEntityTypeConfiguration<R
         b.Property(x => x.CreatedAt).HasColumnName("created_at");
         b.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         b.Ignore(x => x.ExpectedAmount);
+        b.Ignore(x => x.ReceivedAmount);
+        b.Ignore(x => x.OutstandingAmount);
+        b.Navigation(x => x.Payments).UsePropertyAccessMode(PropertyAccessMode.Field);
         b.Navigation(x => x.Events).UsePropertyAccessMode(PropertyAccessMode.Field);
         b.HasOne<RecurringRule>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.RuleId }).HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Transaction>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.TransactionId }).HasPrincipalKey(x => new { x.HouseholdId, x.Id }).OnDelete(DeleteBehavior.Restrict);

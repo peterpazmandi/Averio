@@ -165,7 +165,11 @@ internal static class RefundCreditReversalVerification
                 throw new Exception("Downgrade discarded durable provenance");
             }
             catch (Npgsql.PostgresException ex) when (ex.SqlState == "P0001" && ex.MessageText.Contains("Cannot discard refund provenance")) { }
-            Check(!(await db.Database.GetPendingMigrationsAsync()).Any(), "Rejected downgrade changed migration history");
+            // EF can finish newer, empty-schema downgrades before reaching this guard.
+            // The provenance migration itself and its data must remain intact.
+            Check((await db.Database.GetAppliedMigrationsAsync()).Any(x => x.EndsWith("_PreserveRefundCreditOrigin")), "Rejected downgrade removed provenance migration");
+            await db.Database.MigrateAsync();
+            Check(!(await db.Database.GetPendingMigrationsAsync()).Any(), "Could not restore later migrations after guarded downgrade");
             Check((await db.Set<ItemRefund>().SingleAsync(x => x.Id == refund.Id)).OriginalIncomeJson != null, "Rejected downgrade lost snapshot");
         }
         Console.WriteLine("PASS refund provenance: populated migration, legacy safeguard, imported split credit restoration, aggregates/cash, Personal Money, competing relinks, stale retries, created-credit voiding and privacy");

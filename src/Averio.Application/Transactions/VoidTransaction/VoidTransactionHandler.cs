@@ -14,7 +14,8 @@ public sealed class VoidTransactionHandler(
     TransactionAggregateWriter aggregateWriter,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
-    PersonalMoneyHandler personalMoney)
+    PersonalMoneyHandler personalMoney,
+    Averio.Application.Recurring.IReimbursementRepository reimbursementClaims)
 {
     public async Task HandleAsync(
         Guid householdId,
@@ -66,6 +67,9 @@ public sealed class VoidTransactionHandler(
 
         if (transaction.Kind == TransactionKind.Refund || transaction.RefundedAmount > 0)
             throw new BusinessRuleException("item_refund_linked", "Error_ItemRefundLinked");
+
+        if (await reimbursementClaims.HasActivePaymentAsync(household.Id, transaction.Id, cancellationToken))
+            throw new BusinessRuleException("transaction_linked", "Error_TransactionLinked");
 
         try
         {

@@ -1,3 +1,4 @@
+import { verifyReimbursementPayments } from './reimbursement-payments.mjs';
 import { verifyItemRefunds } from './item-refunds.mjs';
 import { verifyRefundRecovery } from './refund-recovery.mjs';
 import { verifyManualReimbursements } from './manual-reimbursements.mjs';
@@ -137,6 +138,8 @@ try {
     await poll(async () => (await fetch(ui)).ok, 'built frontend');
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const { owner: f, existing: old, password } = fixture;
+    await verifyReimbursementPayments({ fixture: fixture.payments, password, session, api, ok, poll, localeFile, artifacts });
+    if (process.env.AVERIO_BROWSER_SUITE !== 'reimbursement-payments') {
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts, localeFile });
     await verifyManualReimbursements({ fixture: fixture.manual, password, session, api, ok, artifacts });
@@ -325,6 +328,7 @@ try {
         '--port', '5173', '--strictPort'], web, 'web-development');
     await poll(async () => (await fetch(ui)).ok, 'development frontend');
     await verifyRefresh({ session, email: fixture.dashboard.email, password, development: true });
+    }
     assert.deepEqual(errors, []);
 } catch (error) {
     for (const name of ['api', 'web', 'web-development']) {

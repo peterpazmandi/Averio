@@ -29,15 +29,88 @@ import {
     CreateReimbursementClaimResponseToJSON,
 } from '../models/CreateReimbursementClaimResponse';
 import {
+    type LinkReimbursementPaymentRequest,
+    LinkReimbursementPaymentRequestFromJSON,
+    LinkReimbursementPaymentRequestToJSON,
+} from '../models/LinkReimbursementPaymentRequest';
+import {
+    type LinkReimbursementPaymentResponse,
+    LinkReimbursementPaymentResponseFromJSON,
+    LinkReimbursementPaymentResponseToJSON,
+} from '../models/LinkReimbursementPaymentResponse';
+import {
     type ReimbursementClaimResponse,
     ReimbursementClaimResponseFromJSON,
     ReimbursementClaimResponseToJSON,
 } from '../models/ReimbursementClaimResponse';
 import {
+    type ReimbursementPaymentCandidatesResponse,
+    ReimbursementPaymentCandidatesResponseFromJSON,
+    ReimbursementPaymentCandidatesResponseToJSON,
+} from '../models/ReimbursementPaymentCandidatesResponse';
+import {
+    type UnlinkReimbursementPaymentRequest,
+    UnlinkReimbursementPaymentRequestFromJSON,
+    UnlinkReimbursementPaymentRequestToJSON,
+} from '../models/UnlinkReimbursementPaymentRequest';
+import {
     type UpdateReimbursementClaimRequest,
     UpdateReimbursementClaimRequestFromJSON,
     UpdateReimbursementClaimRequestToJSON,
 } from '../models/UpdateReimbursementClaimRequest';
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    claimId: string;
+    /**
+     * 
+     */
+    search?: string;
+    /**
+     * 
+     */
+    offset?: number;
+}
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    claimId: string;
+    /**
+     * 
+     */
+    paymentId: string;
+    /**
+     * 
+     */
+    unlinkReimbursementPaymentRequest: UnlinkReimbursementPaymentRequest;
+}
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    claimId: string;
+    /**
+     * 
+     */
+    linkReimbursementPaymentRequest: LinkReimbursementPaymentRequest;
+}
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPutRequest {
     /**
@@ -95,6 +168,194 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsPostRequest {
  * 
  */
 export class ReimbursementsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGet().'
+            );
+        }
+
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/{claimId}/payment-candidates`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{claimId}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReimbursementPaymentCandidatesResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ReimbursementPaymentCandidatesResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGet(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReimbursementPaymentCandidatesResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost().'
+            );
+        }
+
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost().'
+            );
+        }
+
+        if (requestParameters['paymentId'] == null) {
+            throw new runtime.RequiredError(
+                'paymentId',
+                'Required parameter "paymentId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost().'
+            );
+        }
+
+        if (requestParameters['unlinkReimbursementPaymentRequest'] == null) {
+            throw new runtime.RequiredError(
+                'unlinkReimbursementPaymentRequest',
+                'Required parameter "unlinkReimbursementPaymentRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/{claimId}/payments/{paymentId}/unlink`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{claimId}', encodeURIComponent(String(requestParameters['claimId'])));
+        urlPath = urlPath.replace('{paymentId}', encodeURIComponent(String(requestParameters['paymentId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UnlinkReimbursementPaymentRequestToJSON(requestParameters['unlinkReimbursementPaymentRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost().'
+            );
+        }
+
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost().'
+            );
+        }
+
+        if (requestParameters['linkReimbursementPaymentRequest'] == null) {
+            throw new runtime.RequiredError(
+                'linkReimbursementPaymentRequest',
+                'Required parameter "linkReimbursementPaymentRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/{claimId}/payments`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{claimId}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: LinkReimbursementPaymentRequestToJSON(requestParameters['linkReimbursementPaymentRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LinkReimbursementPaymentResponse>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => LinkReimbursementPaymentResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LinkReimbursementPaymentResponse> {
+        const response = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut without sending the request

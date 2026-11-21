@@ -325,3 +325,7 @@ Received refunds can be recorded or linked from an existing incoming credit to o
 ## Existing-credit refund reversal — 2026-11-20
 
 Existing recorded/imported credits now restore as independent posted Income when an item-refund link is reversed, preserving original item identity/classification, metadata and import origin. Newly created refund credits still void. Migration `PreserveRefundCreditOrigin` adds private snapshot provenance and an active-only unique credit index; pre-upgrade links remain Unknown and require evidence before reversal. Repeated cancellation, re-linking, Personal Money and privacy are covered by unit/PostgreSQL/browser regression tests. See [ADR-050](decisions/ADR-050-existing-refund-credit-reversal.md).
+
+## Reimbursement payment reconciliation — 2026-11-20
+
+Submitted claims can match whole existing Income credits in their destination account/currency, with multiple receipts, partial/full statuses, remaining totals and retained unlink history. Bank transactions, income/expense statistics, activities and Personal Money stay unchanged. Privacy, import dependencies, late/concurrent retries and active transaction protection apply. AddReimbursementPayments requires compatibility epoch 2; see ADR-052 and mortgage-reimbursements.md. Pooled credits, currency conversion and automatic matching remain deferred.

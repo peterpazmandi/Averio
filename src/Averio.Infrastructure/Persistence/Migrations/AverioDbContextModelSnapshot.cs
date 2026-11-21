@@ -1552,9 +1552,9 @@ namespace Averio.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_claim_provider", "length(btrim(provider)) > 0");
 
-                            t.HasCheckConstraint("ck_claim_status", "status IN ('NeedsSubmission','Submitted','Rejected','Cancelled')");
+                            t.HasCheckConstraint("ck_claim_status", "status IN ('NeedsSubmission','Submitted','Rejected','Cancelled','PartiallyReceived','Received')");
 
-                            t.HasCheckConstraint("ck_claim_submission", "(status NOT IN ('Submitted','Rejected') OR (submitted_on IS NOT NULL AND expected_on IS NOT NULL)) AND (submitted_on IS NULL OR submitted_on >= payment_on) AND (expected_on IS NULL OR expected_on >= submitted_on) AND payment_delay_days BETWEEN 0 AND 365");
+                            t.HasCheckConstraint("ck_claim_submission", "(status NOT IN ('Submitted','Rejected','PartiallyReceived','Received') OR (submitted_on IS NOT NULL AND expected_on IS NOT NULL)) AND (submitted_on IS NULL OR submitted_on >= payment_on) AND (expected_on IS NULL OR expected_on >= submitted_on) AND payment_delay_days BETWEEN 0 AND 365");
                         });
                 });
 
@@ -1637,6 +1637,84 @@ namespace Averio.Infrastructure.Persistence.Migrations
                     b.HasIndex("HouseholdId", "ClaimId");
 
                     b.ToTable("reimbursement_claim_events", (string)null);
+                });
+
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claim_id");
+
+                    b.Property<Guid>("CreditTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_transaction_id");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<Guid>("LinkedByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_by_member_id");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<DateOnly>("ReceivedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("received_on");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<DateTimeOffset?>("UnlinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("unlinked_at");
+
+                    b.Property<Guid?>("UnlinkedByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unlinked_by_member_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditTransactionId")
+                        .IsUnique()
+                        .HasFilter("unlinked_at IS NULL");
+
+                    b.HasIndex("HouseholdId", "ClaimId");
+
+                    b.HasIndex("HouseholdId", "CreditTransactionId");
+
+                    b.HasIndex("HouseholdId", "LinkedByMemberId");
+
+                    b.HasIndex("HouseholdId", "OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "UnlinkedByMemberId");
+
+                    b.ToTable("reimbursement_payments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_reimbursement_payment_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_reimbursement_payment_unlink", "(unlinked_at IS NULL) = (unlinked_by_member_id IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.ItemRefund", b =>
@@ -2870,6 +2948,36 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementPayment", b =>
+                {
+                    b.HasOne("Averio.Domain.Recurring.ReimbursementClaim", null)
+                        .WithMany("Payments")
+                        .HasForeignKey("HouseholdId", "ClaimId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Transactions.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "CreditTransactionId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "LinkedByMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "UnlinkedByMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Averio.Domain.Transactions.ItemRefund", b =>
                 {
                     b.HasOne("Averio.Domain.Households.HouseholdMember", null)
@@ -3109,6 +3217,8 @@ namespace Averio.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Averio.Domain.Recurring.ReimbursementClaim", b =>
                 {
                     b.Navigation("Events");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>

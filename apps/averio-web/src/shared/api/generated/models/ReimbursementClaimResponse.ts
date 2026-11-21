@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ReimbursementPaymentResponse } from './ReimbursementPaymentResponse';
+import {
+    ReimbursementPaymentResponseFromJSON,
+    ReimbursementPaymentResponseFromJSONTyped,
+    ReimbursementPaymentResponseToJSON,
+    ReimbursementPaymentResponseToJSONTyped,
+} from './ReimbursementPaymentResponse';
 import type { ReimbursementEventResponse } from './ReimbursementEventResponse';
 import {
     ReimbursementEventResponseFromJSON,
@@ -131,6 +138,10 @@ export interface ReimbursementClaimResponse {
      * 
      */
     submissionReminderDays: number | null;
+    /**
+     * 
+     */
+    payments: Array<ReimbursementPaymentResponse>;
 }
 
 /**
@@ -163,6 +174,7 @@ export function instanceOfReimbursementClaimResponse(value: object): value is Re
     if (!('events' in value) || value['events'] === undefined) return false;
     if (!('paymentDelayDays' in value) || value['paymentDelayDays'] === undefined) return false;
     if (!('submissionReminderDays' in value) || value['submissionReminderDays'] === undefined) return false;
+    if (!('payments' in value) || value['payments'] === undefined) return false;
     return true;
 }
 
@@ -202,6 +214,7 @@ export function ReimbursementClaimResponseFromJSONTyped(json: any, ignoreDiscrim
         'events': ((json['events'] as Array<any>).map(ReimbursementEventResponseFromJSON)),
         'paymentDelayDays': json['paymentDelayDays'],
         'submissionReminderDays': json['submissionReminderDays'],
+        'payments': ((json['payments'] as Array<any>).map(ReimbursementPaymentResponseFromJSON)),
     };
 }
 
@@ -242,6 +255,7 @@ export function ReimbursementClaimResponseToJSONTyped(value?: ReimbursementClaim
         'events': ((value['events'] as Array<any>).map(ReimbursementEventResponseToJSON)),
         'paymentDelayDays': value['paymentDelayDays'],
         'submissionReminderDays': value['submissionReminderDays'],
+        'payments': ((value['payments'] as Array<any>).map(ReimbursementPaymentResponseToJSON)),
     };
 }
 

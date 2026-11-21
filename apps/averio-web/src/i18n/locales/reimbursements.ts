@@ -19,7 +19,7 @@ export const reimbursementsEN = {
     "estimateHelp": "The estimate is capped at the recorded payment. Changes apply to future occurrences. Reminders appear in Averio; no messages are sent.",
     "loading": "Loading reimbursements…",
     "loadError": "Reimbursements could not be loaded.",
-    "balanceHelp": "Estimates do not change balances. No incoming payment is created. Linking received bank payments will be available in a later update.",
+    "balanceHelp": "Estimates do not change balances. Matching a recorded Income payment tracks claim coverage only; the original expense, income, statistics and Personal Money stay unchanged.",
     "potential": "Potential, not yet submitted",
     "outstanding": "Awaiting payment (estimate)",
     "received": "Received and linked",
@@ -43,7 +43,9 @@ export const reimbursementsEN = {
         "NeedsSubmission": "Needs submission",
         "Submitted": "Submitted",
         "Rejected": "Rejected",
-        "Cancelled": "Cancelled"
+        "Cancelled": "Cancelled",
+        "PartiallyReceived": "Partially received",
+        "Received": "Fully received"
     },
     "creation": {
         "title": "Choose a recurring transaction",
@@ -84,6 +86,27 @@ export const reimbursementsEN = {
         "updated": "Reimbursement updated",
         "before": "Before update",
         "help": "Changes apply only to this claim. The saved estimate opens as a fixed amount and remains capped at the original expense. Your recurring schedule, submission date and reference stay as recorded. Payment timing is counted from submission; reminder timing is counted from when this claim was created."
+    },
+    "payments": {
+        "link": "Link received payment",
+        "unlink": "Unlink payment",
+        "choose": "Choose a recorded payment",
+        "search": "Search received payments",
+        "help": "Choose an unlinked Income credit in the destination account and currency, dated from the original expense through today. The whole credit must fit the outstanding amount. Several credits may settle one claim. Record missing bank income in Transactions first.",
+        "empty": "No eligible payments found",
+        "emptyHelp": "Record the incoming payment in Transactions, or clear the search. Credits already linked elsewhere or exceeding the remaining claim are excluded.",
+        "reset": "Clear search",
+        "more": "Load more payments",
+        "confirm": "I confirm that this money was received for this reimbursement claim.",
+        "remaining": "Outstanding after linking:",
+        "uncertain": "The result is not yet known. Retry sends exactly the same request. Close and check the saved claim before starting a different match.",
+        "error": "Could not confirm the result. Retry or close and refresh the claim.",
+        "unlinkHelp": "This removes only the claim match. The recorded Income, bank balance and statistics stay unchanged. The claim will show the amount as outstanding again.",
+        "history": "Received payment history",
+        "linked": "Payment linked",
+        "unlinked": "Payment unlinked",
+        "view": "View bank credit",
+        "protected": "Unlink received payments before cancelling the claim or editing, voiding or refunding the source transaction. The estimate cannot be lowered below received money, and the destination cannot change while payments are linked."
     }
 };
 export const reimbursementsDE = {
@@ -107,7 +130,7 @@ export const reimbursementsDE = {
     "estimateHelp": "Die Schätzung ist auf die erfasste Zahlung begrenzt. Änderungen gelten für zukünftige Zahlungen. Erinnerungen erscheinen in Averio; es werden keine Nachrichten versendet.",
     "loading": "Kostenerstattungen werden geladen…",
     "loadError": "Kostenerstattungen konnten nicht geladen werden.",
-    "balanceHelp": "Schätzungen ändern keine Kontostände. Es wird kein Zahlungseingang erstellt. Das Verknüpfen eingegangener Bankzahlungen folgt in einem späteren Update.",
+    "balanceHelp": "Schätzungen ändern keine Kontostände. Das Zuordnen eines erfassten Geldeingangs erfasst nur die Deckung des Anspruchs; Ausgabe, Einnahme, Statistiken und persönliches Budget bleiben unverändert.",
     "potential": "Möglich, noch nicht eingereicht",
     "outstanding": "Ausstehende Zahlung (Schätzung)",
     "received": "Eingegangen und verknüpft",
@@ -131,7 +154,9 @@ export const reimbursementsDE = {
         "NeedsSubmission": "Einreichung erforderlich",
         "Submitted": "Eingereicht",
         "Rejected": "Abgelehnt",
-        "Cancelled": "Storniert"
+        "Cancelled": "Storniert",
+        "PartiallyReceived": "Teilweise eingegangen",
+        "Received": "Vollständig eingegangen"
     },
     "creation": {
         "title": "Wiederkehrende Transaktion wählen",
@@ -172,6 +197,27 @@ export const reimbursementsDE = {
         "updated": "Kostenerstattung aktualisiert",
         "before": "Vor der Änderung",
         "help": "Änderungen gelten nur für diesen Anspruch. Die gespeicherte Schätzung wird als fester Betrag geöffnet und bleibt auf die ursprüngliche Ausgabe begrenzt. Zeitplan, Einreichungsdatum und Referenz bleiben erhalten. Die Zahlungsfrist beginnt mit der Einreichung, die Erinnerung mit der Erstellung dieses Anspruchs."
+    },
+    "payments": {
+        "link": "Eingegangene Zahlung zuordnen",
+        "unlink": "Zahlungszuordnung aufheben",
+        "choose": "Erfasste Zahlung auswählen",
+        "search": "Eingegangene Zahlungen suchen",
+        "help": "Wähle eine freie Einnahme auf dem Zielkonto in derselben Währung, datiert ab der ursprünglichen Ausgabe bis heute. Der gesamte Betrag muss in den offenen Anspruch passen. Mehrere Zahlungen können einen Anspruch decken. Fehlende Einnahmen zuerst unter Buchungen erfassen.",
+        "empty": "Keine geeigneten Zahlungen gefunden",
+        "emptyHelp": "Erfasse den Geldeingang unter Buchungen oder lösche die Suche. Bereits zugeordnete oder zu hohe Beträge sind ausgeschlossen.",
+        "reset": "Suche löschen",
+        "more": "Weitere Zahlungen laden",
+        "confirm": "Ich bestätige, dass dieses Geld für diesen Erstattungsanspruch eingegangen ist.",
+        "remaining": "Offen nach Zuordnung:",
+        "uncertain": "Das Ergebnis ist noch unklar. Erneut versuchen sendet dieselbe Anfrage. Schließe den Dialog und prüfe den gespeicherten Anspruch vor einer anderen Zuordnung.",
+        "error": "Das Ergebnis konnte nicht bestätigt werden. Versuche es erneut oder lade den Anspruch neu.",
+        "unlinkHelp": "Nur die Zuordnung wird aufgehoben. Einnahme, Kontostand und Statistiken bleiben unverändert. Der Betrag wird im Anspruch wieder als offen angezeigt.",
+        "history": "Zahlungsverlauf",
+        "linked": "Zahlung zugeordnet",
+        "unlinked": "Zuordnung aufgehoben",
+        "view": "Geldeingang anzeigen",
+        "protected": "Hebe die Zahlungszuordnungen auf, bevor du den Anspruch stornierst oder die ursprüngliche Buchung bearbeitest, stornierst oder eine Rückzahlung erfasst. Die Schätzung darf nicht unter dem erhaltenen Betrag liegen; das Zielkonto bleibt bei zugeordneten Zahlungen unverändert."
     }
 };
 export const reimbursementsHU = {
@@ -195,7 +241,7 @@ export const reimbursementsHU = {
     "estimateHelp": "A becslés legfeljebb a rögzített kifizetés összege. A módosítások a jövőbeli alkalmakra vonatkoznak. Az emlékeztetők az Averióban jelennek meg; nem küldünk üzenetet.",
     "loading": "Költségtérítések betöltése…",
     "loadError": "A költségtérítések nem tölthetők be.",
-    "balanceHelp": "A becslések nem módosítják az egyenlegeket. Nem jön létre beérkező kifizetés. A tényleges banki jóváírások összekapcsolása egy későbbi frissítésben válik elérhetővé.",
+    "balanceHelp": "A becslések nem módosítják az egyenlegeket. A rögzített bevétel összekapcsolása csak az igény fedezetét követi; a kiadás, bevétel, statisztikák és személyes keret változatlan marad.",
     "potential": "Lehetséges, még nincs beküldve",
     "outstanding": "Várt kifizetés (becslés)",
     "received": "Beérkezett és összekapcsolt",
@@ -219,7 +265,9 @@ export const reimbursementsHU = {
         "NeedsSubmission": "Beküldés szükséges",
         "Submitted": "Beküldve",
         "Rejected": "Elutasítva",
-        "Cancelled": "Lezárva"
+        "Cancelled": "Lezárva",
+        "PartiallyReceived": "Részben beérkezett",
+        "Received": "Teljesen beérkezett"
     },
     "creation": {
         "title": "Ismétlődő tranzakció kiválasztása",
@@ -260,5 +308,26 @@ export const reimbursementsHU = {
         "updated": "Költségtérítés módosítva",
         "before": "Módosítás előtt",
         "help": "A módosítások csak erre az igényre vonatkoznak. A mentett becslés fix összegként nyílik meg, és nem haladhatja meg az eredeti kiadást. Az ismétlődő ütemezés, a beküldés dátuma és az azonosító megmarad. A kifizetés ideje a beküldéstől, az emlékeztető az igény létrehozásától számít."
+    },
+    "payments": {
+        "link": "Beérkezett kifizetés összekapcsolása",
+        "unlink": "Kifizetés leválasztása",
+        "choose": "Rögzített kifizetés kiválasztása",
+        "search": "Beérkezett kifizetések keresése",
+        "help": "Válassz szabad bevételt a célszámlán, azonos pénznemben, az eredeti kiadás dátuma és a mai nap között. A teljes jóváírásnak bele kell férnie a fennmaradó összegbe. Egy igényt több kifizetés is fedezhet. A hiányzó bevételt előbb rögzítsd a Tranzakciók között.",
+        "empty": "Nincs megfelelő kifizetés",
+        "emptyHelp": "Rögzítsd a beérkező pénzt a Tranzakciók között, vagy töröld a keresést. A már kapcsolt és a fennmaradó összegnél nagyobb jóváírások nem választhatók.",
+        "reset": "Keresés törlése",
+        "more": "További kifizetések",
+        "confirm": "Megerősítem, hogy ez a pénz ehhez a költségtérítési igényhez érkezett.",
+        "remaining": "Összekapcsolás után fennmarad:",
+        "uncertain": "Az eredmény még nem ismert. Az újrapróbálás ugyanazt a kérést küldi el. Másik összekapcsolás előtt zárd be az ablakot és ellenőrizd a mentett igényt.",
+        "error": "Az eredmény nem erősíthető meg. Próbáld újra, vagy zárd be és frissítsd az igényt.",
+        "unlinkHelp": "Csak az igény kapcsolata szűnik meg. A bevétel, az egyenleg és a statisztikák változatlanok maradnak. Az összeg ismét fennmaradóként jelenik meg az igényen.",
+        "history": "Beérkezett kifizetések előzményei",
+        "linked": "Kifizetés összekapcsolva",
+        "unlinked": "Kifizetés leválasztva",
+        "view": "Jóváírás megtekintése",
+        "protected": "Az igény visszavonása vagy az eredeti tranzakció módosítása, érvénytelenítése, pénzvisszatérítése előtt válaszd le a kifizetéseket. A becslés nem csökkenthető a beérkezett összeg alá, és kapcsolt kifizetés mellett a célszámla nem módosítható."
     }
 };
