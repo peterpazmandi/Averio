@@ -48,7 +48,7 @@ export function RecordItemRefundDialog({ userId, householdId, transaction: saved
         queryKey: [...itemRefundKeys.credits(userId, householdId, transaction.accountId), filters],
         initialPageParam: undefined as Pick<TransactionFilters, 'cursorDate' | 'cursorCreatedAt' | 'cursorId'> | undefined,
         queryFn: ({ pageParam, signal }) => getTransactions(householdId, {
-            accountId: transaction.accountId, kind: 'Income', pageSize: 25, ...filters, ...pageParam,
+            accountId: transaction.accountId, kind: 'Income', refundEligibleOnly: true, pageSize: 25, ...filters, ...pageParam,
         }, signal),
         getNextPageParam: page => { const last = page.items.at(-1); return page.hasMore && last ? { cursorDate: last.occurredOn, cursorCreatedAt: last.createdAt, cursorId: last.id } : undefined; },
         enabled: mode === 'existing' && validRange && !submission,

@@ -127,3 +127,5 @@ The dedicated navigation household verifies the filter/detail contract described
 ## Saved transaction views
 
 A dedicated two-member household verifies saved-view persistence, member isolation, date-preset semantics, all-label matching before pagination, optimistic concurrency and loss of account/label access. See [saved transaction views](saved-transaction-views.md).
+
+Payment access recovery is also exercised with a joint personal account: its other owner removes the claim creator's access, the dashboard exposes only a recovery warning, and confirmed removal retains bank balances and history. Committed and uncommitted lost responses retry the identical link IDs. The refund picker excludes an already matched Income credit and permits it again after unlinking.

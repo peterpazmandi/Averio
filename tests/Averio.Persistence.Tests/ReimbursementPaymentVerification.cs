@@ -115,7 +115,68 @@ internal static class ReimbursementPaymentVerification
         raceClaim = await Claim(raceSource); claim = await Claim(source);
         var race = await Task.WhenAll(TryLink(claim), TryLink(raceClaim));
         Check(race.Count(x => x) == 1, "Competing claims both allocated the same credit");
+        // Recovery exposes only opaque IDs for the creator's inaccessible links.
+        Check((await Recovery()).Count == 0, "Accessible links incorrectly need recovery");
+        Check((await RefundCandidates()).Items.All(t => t.Id != c1), "Refund picker offered a matched reimbursement credit");
+        await SetCreditPrivacy(true);
+        var recoverable = await Recovery();
+        Check(recoverable.Count == 1, "Hidden active link has no recovery path");
+        var recoverySnapshot = await FinancialSnapshot();
+        user.UserId = f.MemberUserId;
+        Check((await Recovery()).Count == 0, "Recovery exposed another member's links");
+        await Throws<NotFoundException>(() => Recover(recoverable));
+        user.UserId = f.OwnerUserId;
+        await Throws<NotFoundException>(() => Recover([recoverable[0], new(recoverable[0].ClaimId, Guid.NewGuid())]));
+        Check((await Recovery()).Count == 1, "Failed batch partially removed a link");
+        await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Recover(recoverable)));
+        Check((await Recovery()).Count == 0, "Recovery did not release hidden link");
+        Check(await FinancialSnapshot() == recoverySnapshot, "Recovery changed bank transactions, aggregates or Personal Money");
+        await using (var scope = provider.CreateAsyncScope()) {
+            var repo = scope.ServiceProvider.GetRequiredService<IReimbursementRepository>();
+            Check(!await repo.HasActivePaymentAsync(f.HouseholdId, c1, ct), "Credit remained protected after recovery");
+            var history = await repo.GetOwnedAsync(f.HouseholdId, f.OwnerMemberId, recoverable[0].ClaimId, ct);
+            Check(history!.Payments.Single(p => p.Id == recoverable[0].PaymentId).UnlinkedAt != null, "Recovery erased history");
+            Check(await repo.GetAsync(f.HouseholdId, f.OwnerMemberId, history.Id, ct) == null, "Recovery revealed hidden history");
+            Check((await scope.ServiceProvider.GetRequiredService<IImportRepository>().LinkedRecordsAsync(f.HouseholdId, [c1], ct)).Contains(c1), "Recovery dropped import history protection");
+        }
+        await SetCreditPrivacy(false);
+        Check((await RefundCandidates()).Items.Any(t => t.Id == c1), "Recovered credit unavailable for a refund");
+        ReimbursementClaim recovered;
+        await using (var scope = provider.CreateAsyncScope()) recovered = (await scope.ServiceProvider.GetRequiredService<IReimbursementRepository>().GetOwnedAsync(f.HouseholdId, f.OwnerMemberId, recoverable[0].ClaimId, ct))!;
+        var replacement = await Link(recovered.Id, new(c1, Guid.NewGuid(), recovered.Version, credit.UpdatedAt, true));
+        await Recover(recoverable); // Late response/retry must never unlink the replacement.
+        await using (var scope = provider.CreateAsyncScope()) {
+            var latest = (await scope.ServiceProvider.GetRequiredService<IReimbursementRepository>().GetOwnedAsync(f.HouseholdId, f.OwnerMemberId, recovered.Id, ct))!;
+            Check(latest.Payments.Single(p => p.Id == replacement).UnlinkedAt == null, "Late recovery removed a replacement link");
+        }
+        // Keyset pages contain eligible rows, not pages emptied by client-side dependency filtering.
+        var pagedIds = new List<Guid>(); TransactionReadModel? cursor = null;
+        for (var n = 0; n < 100; n++) {
+            await using var scope = provider.CreateAsyncScope();
+            var page = await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId,
+                new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 1, cursor?.OccurredOn, cursor?.CreatedAt, cursor?.Id, RefundEligibleOnly: true), ct);
+            Check(page.Items.Count == 1 || !page.HasMore, "Eligibility filtering produced an empty intermediate page");
+            pagedIds.AddRange(page.Items.Select(t => t.Id));
+            if (!page.HasMore) break;
+            cursor = page.Items.Single();
+        }
+        Check(pagedIds.SequenceEqual((await RefundCandidates()).Items.Select(t => t.Id)) && !pagedIds.Contains(c1), "Eligibility/keyset pagination mismatch");
+        await Throws<BusinessRuleException>(() => Recover([]));
+        await Throws<BusinessRuleException>(() => Recover([recoverable[0], recoverable[0]]));
+        // Household administration never grants authority over another creator's attribution.
+        user.UserId = f.MemberUserId;
+        var memberSource = await Post(TransactionKind.Expense, 100, true); var memberClaim = await Claim(memberSource);
+        await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, memberClaim.Id, memberClaim.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+        memberClaim = await Claim(memberSource);
+        var memberLink = await Link(memberClaim.Id, new(c2, Guid.NewGuid(), memberClaim.Version, (await Transaction(c2)).UpdatedAt, true));
+        user.UserId = f.OwnerUserId;
+        await Throws<NotFoundException>(() => Recover([new(memberClaim.Id, memberLink)]));
+        Console.WriteLine("PASS refund candidate filtering and privacy-safe recovery, atomicity, concurrent retries, history and relinking");
         Console.WriteLine("PASS reimbursement payment settlement, retries, dependencies, privacy and unchanged finances");
+        async Task<IReadOnlyList<ReimbursementRecoveryLink>> Recovery() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().RecoveryLinksAsync(f.HouseholdId, ct); }
+        Task Recover(IReadOnlyList<ReimbursementRecoveryLink> links) => Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, links, ct));
+        async Task<TransactionReadPage> RefundCandidates() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId, new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 100, null, null, null, RefundEligibleOnly: true), ct); }
+
         async Task<bool> TryLink(ReimbursementClaim candidate) {
             try { await Link(candidate.Id, new(c1, Guid.NewGuid(), candidate.Version, credit.UpdatedAt, true)); return true; }
             catch (BusinessRuleException) { return false; } catch (ConflictException) { return false; }

@@ -114,7 +114,7 @@ internal static class BrowserHost
         household.CompleteFinancialSetup(now);
         var member = household.Members.Single().Id;
         string? peerEmail = null;
-        if (email is "views@collaboration.test" or "recurring@collaboration.test")
+        if (email is "views@collaboration.test" or "recurring@collaboration.test" or "payments@collaboration.test")
         {
             peerEmail = email.Replace("@", "-peer@");
             var peer = await identity.CreateUserAsync(peerEmail, "Browser-test-password-123!", "en-US", default);
@@ -153,7 +153,7 @@ internal static class BrowserHost
         await aggregates.ApplyAsync(sharedTransaction, 1, default);
         await aggregates.ApplyAsync(personalIncome, 1, default);
         await transaction.CommitAsync();
-        return new { userId, email, peerEmail, householdId = household.Id, sharedAccountId = shared.Id,
+        return new { userId, email, peerEmail, memberId = member, peerMemberId = household.Members.Where(m => m.Id != member).Select(m => (Guid?)m.Id).FirstOrDefault(), householdId = household.Id, sharedAccountId = shared.Id,
             personalAccountId = personal.Id, privateAccountId = secret.Id, privateTransactionId = privateTransaction.Id,
             sharedTransactionId = sharedTransaction.Id, privateTransferId = transfer.Id, privateActivityId = activity.Id,
             date = today.ToString("yyyy-MM-dd") };

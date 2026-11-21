@@ -23,7 +23,7 @@ public sealed class GetTransactionsHandler(
         Guid? cursorId,
         CancellationToken cancellationToken,
         Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null,
-        bool includeArchived = false, bool importedOnly = false)
+        bool includeArchived = false, bool importedOnly = false, bool refundEligibleOnly = false)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -50,7 +50,7 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly),
+                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly, refundEligibleOnly),
             cancellationToken);
 
         var statuses = await reimbursements.StatusesAsync(household.Id, membership.Id, page.Items.Select(t => t.Id).ToArray(), cancellationToken);

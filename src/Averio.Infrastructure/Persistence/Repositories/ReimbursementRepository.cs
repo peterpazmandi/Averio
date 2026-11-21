@@ -48,5 +48,19 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
         if (!string.IsNullOrWhiteSpace(search)) q = q.Where(t => t.Description.Contains(search) || (t.Merchant != null && t.Merchant.Contains(search)) || (t.Note != null && t.Note.Contains(search)));
         return await q.OrderByDescending(t => t.OccurredOn).ThenByDescending(t => t.CreatedAt).ThenBy(t => t.Id).Skip(offset).Take(21).ToArrayAsync(ct);
     }
+    public Task<ReimbursementClaim?> GetOwnedAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
+        => db.Set<ReimbursementClaim>().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
+            .SingleOrDefaultAsync(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId && c.Id == id, ct);
+    public async Task<IReadOnlyList<ReimbursementRecoveryLink>> RecoveryLinksAsync(Guid householdId, Guid memberId, CancellationToken ct)
+    {
+        var visible = Visible(householdId, memberId);
+        return await db.Set<ReimbursementClaim>()
+            .Where(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId
+                && (!visible.Any(v => v.Id == c.Id)
+                    || !db.Transactions.Any(t => t.Id == c.TransactionId && db.Accounts.Any(a => a.Id == t.AccountId
+                        && a.CutoverAtUtc == null && (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId))))))
+            .SelectMany(c => c.Payments.Where(p => p.UnlinkedAt == null).Select(p => new { ClaimId = c.Id, PaymentId = p.Id }))
+            .OrderBy(p => p.ClaimId).ThenBy(p => p.PaymentId).Take(100).Select(p => new ReimbursementRecoveryLink(p.ClaimId, p.PaymentId)).ToArrayAsync(ct);
+    }
     public void Add(ReimbursementClaim claim) => db.Add(claim);
 }

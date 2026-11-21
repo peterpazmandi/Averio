@@ -69,6 +69,7 @@ export interface TransactionFilters {
     search?: string;
     includeArchived?: boolean;
     importedOnly?: boolean;
+    refundEligibleOnly?: boolean;
     pageSize?: number;
     cursorDate?: string;
     cursorCreatedAt?: string;

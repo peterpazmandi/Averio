@@ -1,4 +1,14 @@
 export const reimbursementsEN = {
+    recovery: {
+        "title": "Recover inaccessible payment links",
+        "warning": "Some of your reimbursement payment links can no longer be managed with your current access. Their financial details remain private.",
+        "review": "Review link recovery",
+        "loadError": "Payment-link recovery could not be loaded.",
+        "confirm": "Remove the {{count}} listed payment links? This clears their claim coverage without changing bank transactions, balances or Personal Money. History is retained. Claims may remain hidden until access is restored.",
+        "acknowledge": "I understand that these payments will no longer count toward my claims.",
+        "remove": "Remove listed links",
+        "retryHelp": "Recovery could not be confirmed. Try again to safely retry the same links, or close and check whether recovery is still needed."
+    },
     "title": "Reimbursements",
     "settings": "Reimbursement settings",
     "enable": "Track reimbursement for this payment",
@@ -110,6 +120,16 @@ export const reimbursementsEN = {
     }
 };
 export const reimbursementsDE = {
+    recovery: {
+        "title": "Nicht zugängliche Zahlungsverknüpfungen lösen",
+        "warning": "Einige deiner Kostenerstattungszahlungen lassen sich mit deinen aktuellen Zugriffsrechten nicht mehr verwalten. Ihre Finanzdetails bleiben privat.",
+        "review": "Wiederherstellung prüfen",
+        "loadError": "Die Wiederherstellung der Zahlungsverknüpfungen konnte nicht geladen werden.",
+        "confirm": "Die {{count}} aufgeführten Zahlungsverknüpfungen entfernen? Dadurch entfällt ihre Zuordnung zu deinen Anträgen. Bankbuchungen, Kontostände und persönliches Geld bleiben unverändert. Der Verlauf bleibt erhalten. Anträge können bis zur Wiederherstellung des Zugriffs ausgeblendet bleiben.",
+        "acknowledge": "Ich verstehe, dass diese Zahlungen nicht mehr auf meine Anträge angerechnet werden.",
+        "remove": "Aufgeführte Verknüpfungen entfernen",
+        "retryHelp": "Die Wiederherstellung konnte nicht bestätigt werden. Wiederhole denselben Vorgang sicher oder schließe den Dialog und prüfe, ob die Wiederherstellung noch nötig ist."
+    },
     "title": "Kostenerstattungen",
     "settings": "Kostenerstattung einrichten",
     "enable": "Kostenerstattung für diese Zahlung verfolgen",
@@ -221,6 +241,16 @@ export const reimbursementsDE = {
     }
 };
 export const reimbursementsHU = {
+    recovery: {
+        "title": "Nem elérhető fizetési kapcsolatok feloldása",
+        "warning": "Néhány költségtérítési fizetési kapcsolatodat a jelenlegi hozzáféréseddel már nem tudod kezelni. A pénzügyi részleteik továbbra is privátak.",
+        "review": "Helyreállítás áttekintése",
+        "loadError": "A fizetési kapcsolatok helyreállítása nem tölthető be.",
+        "confirm": "Eltávolítod a felsorolt {{count}} fizetési kapcsolatot? Ezek többé nem számítanak bele az igényeid teljesítésébe. A banki tranzakciók, egyenlegek és a személyes pénz változatlanok maradnak. Az előzmények megmaradnak. Az igények a hozzáférés visszaállításáig rejtve maradhatnak.",
+        "acknowledge": "Megértettem, hogy ezek a fizetések többé nem számítanak bele az igényeim teljesítésébe.",
+        "remove": "Felsorolt kapcsolatok eltávolítása",
+        "retryHelp": "A helyreállítás eredménye nem erősíthető meg. Biztonságosan újrapróbálhatod ugyanezeket a kapcsolatokat, vagy bezárhatod az ablakot és ellenőrizheted, szükséges-e még a helyreállítás."
+    },
     "title": "Költségtérítések",
     "settings": "Költségtérítési beállítások",
     "enable": "Költségtérítés követése ehhez a kifizetéshez",

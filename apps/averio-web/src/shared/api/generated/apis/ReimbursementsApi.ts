@@ -39,6 +39,11 @@ import {
     LinkReimbursementPaymentResponseToJSON,
 } from '../models/LinkReimbursementPaymentResponse';
 import {
+    type RecoverReimbursementPaymentsRequest,
+    RecoverReimbursementPaymentsRequestFromJSON,
+    RecoverReimbursementPaymentsRequestToJSON,
+} from '../models/RecoverReimbursementPaymentsRequest';
+import {
     type ReimbursementClaimResponse,
     ReimbursementClaimResponseFromJSON,
     ReimbursementClaimResponseToJSON,
@@ -48,6 +53,11 @@ import {
     ReimbursementPaymentCandidatesResponseFromJSON,
     ReimbursementPaymentCandidatesResponseToJSON,
 } from '../models/ReimbursementPaymentCandidatesResponse';
+import {
+    type ReimbursementRecoveryLinkResponse,
+    ReimbursementRecoveryLinkResponseFromJSON,
+    ReimbursementRecoveryLinkResponseToJSON,
+} from '../models/ReimbursementRecoveryLinkResponse';
 import {
     type UnlinkReimbursementPaymentRequest,
     UnlinkReimbursementPaymentRequestFromJSON,
@@ -151,6 +161,24 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsGetRequest {
      * 
      */
     transactionId?: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    recoverReimbursementPaymentsRequest: RecoverReimbursementPaymentsRequest;
 }
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsPostRequest {
@@ -522,6 +550,101 @@ export class ReimbursementsApi extends runtime.BaseAPI {
     async apiV1HouseholdsHouseholdIdReimbursementsGet(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ReimbursementClaimResponse>> {
         const response = await this.apiV1HouseholdsHouseholdIdReimbursementsGetRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/payment-recovery`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ReimbursementRecoveryLinkResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ReimbursementRecoveryLinkResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGet(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ReimbursementRecoveryLinkResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPost without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPost().'
+            );
+        }
+
+        if (requestParameters['recoverReimbursementPaymentsRequest'] == null) {
+            throw new runtime.RequiredError(
+                'recoverReimbursementPaymentsRequest',
+                'Required parameter "recoverReimbursementPaymentsRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/payment-recovery`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: RecoverReimbursementPaymentsRequestToJSON(requestParameters['recoverReimbursementPaymentsRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPost(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdReimbursementsPaymentRecoveryPostRaw(requestParameters, initOverrides);
     }
 
     /**

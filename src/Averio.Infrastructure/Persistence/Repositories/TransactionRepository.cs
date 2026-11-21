@@ -55,6 +55,14 @@ internal sealed class TransactionRepository(AverioDbContext dbContext)
                     Account = account
                 });
 
+        var protectedCredits = RefundCreditEligibility.WithDependencies(dbContext, householdId);
+        if (query.RefundEligibleOnly)
+            filtered = filtered.Where(item => item.Transaction.Kind == TransactionKind.Income
+                && item.Transaction.Status == TransactionStatus.Posted && !item.Transaction.IsArchived
+                && item.Account.Status == AccountStatus.Active && item.Account.CutoverAtUtc == null
+                && (item.Account.Scope == AccountScope.Household || item.Account.Owners.Any(o => o.HouseholdMemberId == householdMemberId))
+                && !protectedCredits.Any(t => t.Id == item.Transaction.Id));
+
         if (query.ImportedOnly)
             filtered = filtered.Where(item => item.Transaction.ImportBatchId != null);
 

@@ -74,6 +74,37 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
         claim.UnlinkPayment(paymentId, member.Id, clock.GetUtcNow());
         await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
     }
+    private async Task<HouseholdMember> RecoveryMember(Guid householdId, CancellationToken ct)
+    {
+        var uid = user.UserId ?? throw new AuthenticationFailedException();
+        var household = await households.GetByIdForUserAsync(householdId, uid, ct) ?? throw new NotFoundException("household", householdId);
+        if (!household.IsFinancialSetupCompleted) throw new OnboardingRequiredException();
+        return household.Members.Single(m => m.UserId == uid && m.LeftAtUtc == null);
+    }
+    public async Task<IReadOnlyList<ReimbursementRecoveryLink>> RecoveryLinksAsync(Guid householdId, CancellationToken ct)
+    {
+        var member = await RecoveryMember(householdId, ct);
+        return await claims.RecoveryLinksAsync(householdId, member.Id, ct);
+    }
+    public async Task RecoverAsync(Guid householdId, IReadOnlyList<ReimbursementRecoveryLink> links, CancellationToken ct)
+    {
+        if (links.Count is < 1 or > 100 || links.Distinct().Count() != links.Count) throw Invalid();
+        await using var tx = await uow.BeginTransactionAsync(ct);
+        var member = await RecoveryMember(householdId, ct);
+        foreach (var group in links.GroupBy(p => p.ClaimId))
+        {
+            // Removing the creator's own attribution is allowed without access to bank details.
+            // Exact, never-reused payment IDs make retries safe even after a later relink.
+            var claim = await claims.GetOwnedAsync(householdId, member.Id, group.Key, ct)
+                ?? throw new NotFoundException("reimbursement", group.Key);
+            foreach (var link in group)
+            {
+                if (!claim.Payments.Any(p => p.Id == link.PaymentId)) throw new NotFoundException("payment", link.PaymentId);
+                claim.UnlinkPayment(link.PaymentId, member.Id, clock.GetUtcNow());
+            }
+        }
+        await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+    }
     private static BusinessRuleException Invalid() => new("reimbursement_payment_invalid", "Validation_ReimbursementPayment");
     private static ConflictException Changed() => new("reimbursement_changed", "Error_ReimbursementChanged");
 }

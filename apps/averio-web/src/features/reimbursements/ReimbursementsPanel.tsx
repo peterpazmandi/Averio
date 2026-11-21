@@ -1,3 +1,4 @@
+import { ReimbursementRecoveryPanel } from './ReimbursementRecoveryPanel';
 import { PaymentDialog } from './PaymentDialog';
 import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import type { ReimbursementPaymentResponse } from '../../shared/api/generated';
@@ -17,7 +18,7 @@ import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormC
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
 
-export function ReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; className?: string }) {
+function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; className?: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
@@ -110,4 +111,8 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
             {mutation.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('reimbursements.saveError')}</p>}
         </form>
     </AverioDialog>;
+}
+
+export function ReimbursementsPanel(props: Parameters<typeof VisibleReimbursementsPanel>[0]) {
+    return <>{!props.transactionId && <ReimbursementRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} />}<VisibleReimbursementsPanel {...props} /></>;
 }

@@ -9,6 +9,15 @@ namespace Averio.Api.Controllers;
 [Authorize, ApiController, Route("api/v1/households/{householdId:guid}/reimbursements")]
 public sealed class ReimbursementsController(ReimbursementHandler handler, ReimbursementPaymentHandler payments, TimeProvider clock) : ControllerBase
 {
+    [HttpGet("payment-recovery")]
+    public async Task<ActionResult<IReadOnlyList<ReimbursementRecoveryLinkResponse>>> RecoveryLinks(Guid householdId, CancellationToken ct)
+        => Ok((await payments.RecoveryLinksAsync(householdId, ct)).Select(p => new ReimbursementRecoveryLinkResponse(p.ClaimId, p.PaymentId)).ToArray());
+    [HttpPost("payment-recovery")]
+    public async Task<IActionResult> Recover(Guid householdId, RecoverReimbursementPaymentsRequest request, CancellationToken ct)
+    {
+        await payments.RecoverAsync(householdId, request.Links.Select(p => new ReimbursementRecoveryLink(p.ClaimId, p.PaymentId)).ToArray(), ct);
+        return NoContent();
+    }
     [HttpPost]
     public async Task<ActionResult<CreateReimbursementClaimResponse>> Create(Guid householdId, CreateReimbursementClaimRequest request, CancellationToken ct)
     {
