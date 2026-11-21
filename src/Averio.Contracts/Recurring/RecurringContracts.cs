@@ -26,10 +26,17 @@ public sealed record ReimbursementClaimResponse(Guid Id, Guid TransactionId, str
     string OriginalPaymentAmount, DateOnly PaymentOn, Guid DestinationAccountId, string Status,
     DateOnly? SubmissionReminderOn, DateOnly? SubmittedOn, DateOnly? ExpectedOn, string? Reference, Guid Version,
     bool CanModify, bool PaymentUnavailable, bool PaymentChanged, bool SubmissionReminderDue, bool PaymentFollowUpDue,
-    IReadOnlyList<ReimbursementEventResponse> Events, int PaymentDelayDays, int? SubmissionReminderDays);
+    IReadOnlyList<ReimbursementEventResponse> Events, int PaymentDelayDays, int? SubmissionReminderDays, IReadOnlyList<ReimbursementPaymentResponse> Payments);
 public sealed record ReimbursementEventResponse(string Status, DateOnly? SubmittedOn, string? Reference, DateTimeOffset RecordedAt,
     string? ChangeKind, string? Provider, string? PotentialAmount, Guid? DestinationAccountId, int? PaymentDelayDays, DateOnly? SubmissionReminderOn, DateOnly? ExpectedOn);
 public sealed record UpdateReimbursementClaimRequest(Guid ExpectedVersion, RecurringReimbursementConfiguration Configuration);
 
 public sealed record CreateReimbursementClaimRequest(Guid TransactionId, DateTimeOffset ExpectedUpdatedAt, RecurringReimbursementConfiguration Configuration);
 public sealed record CreateReimbursementClaimResponse(Guid Id);
+
+public sealed record LinkReimbursementPaymentRequest(Guid CreditTransactionId, Guid OperationId, Guid ExpectedVersion, DateTimeOffset ExpectedCreditUpdatedAt, bool MoneyReceived);
+public sealed record LinkReimbursementPaymentResponse(Guid Id);
+public sealed record UnlinkReimbursementPaymentRequest(Guid ExpectedVersion);
+public sealed record ReimbursementPaymentResponse(Guid Id, Guid CreditTransactionId, string Amount, DateOnly ReceivedOn, DateTimeOffset LinkedAt, DateTimeOffset? UnlinkedAt);
+public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt);
+public sealed record ReimbursementPaymentCandidatesResponse(IReadOnlyList<ReimbursementPaymentCandidateResponse> Items, bool HasMore);

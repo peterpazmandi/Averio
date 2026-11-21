@@ -29,7 +29,7 @@ public sealed record PersonalMoneyEvent(Guid Id, string Kind, decimal Amount, Da
 public sealed class PersonalMoneyHandler(
     ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
     ITransactionRepository transactions, IPersonalMoneyRepository repository,
-    IUnitOfWork unitOfWork, TimeProvider clock)
+    IUnitOfWork unitOfWork, TimeProvider clock, Averio.Application.Recurring.IReimbursementRepository reimbursementClaims)
 {
     public async Task<PersonalMoneySummary?> GetMySummaryAsync(Guid householdId, CancellationToken ct)
     {
@@ -278,6 +278,8 @@ public sealed class PersonalMoneyHandler(
         var charge = await repository.GetTransactionEntriesAsync(householdId, purchaseId, ct);
         var mine = charge.Where(x => x.WalletId == wallet.Id && IsCharge(x)).ToArray();
         var charged = -mine.Sum(x => x.Amount);
+        if (await reimbursementClaims.HasActivePaymentAsync(householdId, refundTransactionId, ct))
+            throw new BusinessRuleException("transaction_linked", "Error_TransactionLinked");
         var refundEntries = await repository.GetTransactionEntriesAsync(householdId, refundTransactionId, ct);
         var previousRefunds = await repository.GetRefundsOfPurchaseAsync(householdId, purchaseId, ct);
         if (charged <= 0 || refundEntries.Where(IsRefund).Sum(x => x.Amount) != 0m

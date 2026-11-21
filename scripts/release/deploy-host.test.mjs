@@ -166,11 +166,24 @@ for (const missing of ['overlay', 'image']) {
   });
 }
 
-test('all shipped backend images declare the refund provenance compatibility epoch', () => {
+test('all shipped backend images declare the reimbursement settlement compatibility epoch', () => {
   for (const component of ['api', 'worker', 'migrator']) {
     const dockerfile = readFileSync(new URL(`../../Dockerfile.${component}`, import.meta.url), 'utf8');
-    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="1"/);
+    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="2"/);
   }
+});
+
+test('settlement epoch 2 upgrades epoch 1 and prevents refund-only binary rollback', { skip: !linux }, () => {
+  const f = fixture('1');
+  try {
+    const upgraded = f.run('c', 'c', '', { c: '2', d: '2' });
+    assert.equal(upgraded.status, 0, upgraded.stderr);
+    assert.equal(readFileSync(join(f.state, 'minimum-schema-epoch'), 'utf8'), '2\n');
+    assert.match(readFileSync(join(f.root, 'calls'), 'utf8'), / rm -f webapi worker\n[\s\S]*run --rm/);
+    writeFileSync(join(f.root, 'calls'), '');
+    assert.notEqual(f.run('b', 'b').status, 0);
+    assert.doesNotMatch(readFileSync(join(f.root, 'calls'), 'utf8'), /run --rm| up /);
+  } finally { f.cleanup(); }
 });
 test('frontend-only rollout allows Compose to retain unchanged backends', { skip: !linux }, () => {
   const f = fixture();

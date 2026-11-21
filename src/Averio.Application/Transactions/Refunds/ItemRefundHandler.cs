@@ -12,7 +12,7 @@ public sealed record RecordItemRefund(Guid TransactionItemId, decimal Amount, Da
 
 public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
     ITransactionRepository transactions, IItemRefundRepository refunds, TransactionAggregateWriter aggregates,
-    PersonalMoneyHandler personalMoney, IUnitOfWork uow, TimeProvider clock)
+    PersonalMoneyHandler personalMoney, Averio.Application.Recurring.IReimbursementRepository reimbursementClaims, IUnitOfWork uow, TimeProvider clock)
 {
     private async Task<HouseholdMember> Member(Guid householdId, CancellationToken ct)
     {
@@ -57,6 +57,8 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
             if (previous.CreatedByMemberId != member.Id || previous.RequestFingerprint != fingerprint) throw Changed();
             return previous.Id;
         }
+        if (await reimbursementClaims.HasActivePaymentAsync(h, purchase.Id, ct))
+            throw new BusinessRuleException("transaction_linked", "Error_TransactionLinked");
         if (purchase.UpdatedAt != request.ExpectedUpdatedAt) throw Changed();
         var item = purchase.Items.SingleOrDefault(x => x.Id == request.TransactionItemId);
         if (!request.MoneyReceived || purchase.Kind != TransactionKind.Expense || purchase.Status != TransactionStatus.Posted

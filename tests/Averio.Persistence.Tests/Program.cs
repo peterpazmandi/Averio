@@ -156,6 +156,11 @@ static async Task RunVerificationAsync(string connectionString)
     var fixture = await SeedFixtureAsync(provider, clock.GetUtcNow());
     currentUser.UserId = fixture.OwnerUserId;
 
+    if (Environment.GetEnvironmentVariable("AVERIO_PERSISTENCE_SUITE") == "reimbursement-payments")
+    {
+        await ReimbursementPaymentVerification.RunAsync(provider, currentUser, fixture, clock);
+        return;
+    }
     await ReceiptVerification.RunAsync(provider, currentUser, fixture, clock.GetUtcNow());
 
     await SchemaConstraintVerification.RunAsync(provider, fixture, clock.GetUtcNow());
@@ -216,6 +221,7 @@ static async Task RunVerificationAsync(string connectionString)
     await ManualReimbursementVerification.RunAsync(provider, currentUser, fixture, clock);
     await RefundCreditReversalVerification.RunAsync(provider, currentUser, fixture, clock);
     await MerchantItemRefundVerification.RunAsync(provider, currentUser, fixture, clock);
+    await ReimbursementPaymentVerification.RunAsync(provider, currentUser, fixture, clock);
     await RecurringVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
     await InvitationVerification.RunAsync(provider, fixture, clock);

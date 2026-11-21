@@ -58,12 +58,13 @@ internal static class BrowserHost
             var navigation = await Seed(factory.Services, clock, "navigation@collaboration.test", "Navigation home");
             var savedViews = await Seed(factory.Services, clock, "views@collaboration.test", "Saved views home");
             var refunds = await Seed(factory.Services, clock, "refunds@collaboration.test", "Item refunds home");
+            var payments = await Seed(factory.Services, clock, "payments@collaboration.test", "Settlement home");
             var manual = await Seed(factory.Services, clock, "manual@collaboration.test", "Manual claims home");
             var recurring = await Seed(factory.Services, clock, "recurring@collaboration.test", "Recurring home");
             var control = WebApplication.CreateBuilder();
             control.WebHost.UseUrls("http://127.0.0.1:5181");
             await using var app = control.Build();
-            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, savedViews, recurring, manual, refunds, password = "Browser-test-password-123!" });
+            app.MapGet("/ready", () => new { owner, existing, dashboard, navigation, savedViews, recurring, manual, refunds, payments, password = "Browser-test-password-123!" });
             app.MapGet("/mail", (string email, string kind) => inbox.Messages.TryGetValue((email, kind), out var mail)
                 ? Results.Ok(mail) : Results.NotFound());
             app.MapPost("/delivery", (Delivery input) => { inbox.FailedEmail = input.FailedEmail; return Results.NoContent(); });

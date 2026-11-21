@@ -33,7 +33,8 @@ public sealed class UpdateTransactionHandler(
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     Averio.Application.Activities.ActivityHandler activities,
-    PersonalMoneyHandler personalMoney)
+    PersonalMoneyHandler personalMoney,
+    Averio.Application.Recurring.IReimbursementRepository reimbursementClaims)
 {
     public async Task HandleAsync(
         UpdateTransactionCommand command,
@@ -132,6 +133,9 @@ public sealed class UpdateTransactionHandler(
                 !command.Items.Any(i => i.ExistingItemId == item.Id && i.Amount >= item.RefundedAmount
                     && (item.RefundedAmount == 0 || i.Amount == item.OriginalAmount)))))
             throw new BusinessRuleException("item_refund_linked", "Error_ItemRefundLinked");
+
+        if (await reimbursementClaims.HasActivePaymentAsync(household.Id, transaction.Id, cancellationToken))
+            throw new BusinessRuleException("transaction_linked", "Error_TransactionLinked");
 
         var items = await referenceResolver.ResolveItemsAsync(
             household.Id,

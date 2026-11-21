@@ -15,7 +15,7 @@ RUN case "$TARGETARCH" in amd64) rid=linux-x64 ;; arm64) rid=linux-arm64 ;; *) e
       --configuration Release --self-contained --target-runtime "$rid" \
       --output /out/efbundle
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
-LABEL io.averio.schema-epoch="1"
+LABEL io.averio.schema-epoch="2"
 WORKDIR /app
 COPY --from=build /out/efbundle /app/efbundle
 ENTRYPOINT ["/app/efbundle"]
