@@ -3,6 +3,7 @@ namespace Averio.Application.Recurring;
 public interface IReimbursementRepository
 {
     Task<ReimbursementPayment?> PaymentByOperationAsync(Guid householdId, Guid operationId, CancellationToken ct);
+    Task<IReadOnlySet<Guid>> PaymentProtectedIdsAsync(Guid householdId, IReadOnlyList<Guid> transactionIds, CancellationToken ct);
     Task<bool> HasActivePaymentAsync(Guid householdId, Guid transactionId, CancellationToken ct);
     Task<IReadOnlyList<Averio.Domain.Transactions.Transaction>> PaymentCandidatesAsync(Guid householdId, Guid memberId, ReimbursementClaim claim, decimal available, string? search, int offset, DateOnly today, CancellationToken ct);
     Task<IReadOnlyList<ReimbursementRecoveryLink>> RecoveryLinksAsync(Guid householdId, Guid memberId, CancellationToken ct);

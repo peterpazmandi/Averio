@@ -1,4 +1,12 @@
 export const transactionManagementEN = {
+    paymentProtection: {
+        "title": "Linked payment protection",
+        "locked": "Account, type, date, visibility, item amounts and structure, Personal Money allocation and voiding are protected because this transaction has linked payments. Unlink those payments before changing these details.",
+        "allowed": "You can still edit the merchant, notes, item descriptions, categories, labels and activity. Payment links are saved immediately; no transaction save is needed just to keep a link.",
+        "saveFirst": "Save or discard transaction edits before linking or unlinking payments.",
+        "refreshing": "The link change is saved. Refreshing transaction details…",
+        "refreshFailed": "The link change is saved, but transaction details could not be refreshed. Retry refreshing before editing."
+    },
     includeArchived: "Include archived transactions",
     archive: "Archive transaction",
     restore: "Restore transaction",
@@ -103,6 +111,14 @@ export const transactionManagementEN = {
 };
 
 export const transactionManagementDE = {
+    paymentProtection: {
+        "title": "Schutz verknüpfter Zahlungen",
+        "locked": "Konto, Art, Datum, Sichtbarkeit, Positionsbeträge und -struktur, persönliche Geldzuordnung und Stornierung sind durch verknüpfte Zahlungen geschützt. Löse diese Zuordnungen, bevor du diese Angaben änderst.",
+        "allowed": "Händler, Notizen, Positionsbeschreibungen, Kategorien, Labels und Aktivität bleiben bearbeitbar. Zahlungsverknüpfungen werden sofort gespeichert; dafür musst du die Buchung nicht zusätzlich speichern.",
+        "saveFirst": "Speichere oder verwerfe Buchungsänderungen, bevor du Zahlungen verknüpfst oder Zuordnungen löst.",
+        "refreshing": "Die Verknüpfungsänderung ist gespeichert. Buchungsdetails werden aktualisiert…",
+        "refreshFailed": "Die Verknüpfungsänderung ist gespeichert, aber die Buchungsdetails konnten nicht aktualisiert werden. Versuche die Aktualisierung vor dem Bearbeiten erneut."
+    },
     includeArchived: "Archivierte Buchungen anzeigen",
     archive: "Buchung archivieren",
     restore: "Buchung wiederherstellen",
@@ -207,6 +223,14 @@ export const transactionManagementDE = {
 };
 
 export const transactionManagementHU = {
+    paymentProtection: {
+        "title": "Kapcsolt fizetések védelme",
+        "locked": "A számla, típus, dátum, láthatóság, tételösszegek és tételszerkezet, személyes pénz hozzárendelése és az érvénytelenítés védett, mert a tranzakcióhoz fizetések kapcsolódnak. Ezek módosítása előtt válaszd le a fizetéseket.",
+        "allowed": "A kereskedő, megjegyzések, tételleírások, kategóriák, címkék és tevékenység továbbra is szerkeszthetők. A fizetési kapcsolatok azonnal mentésre kerülnek; ehhez nem kell külön mentened a tranzakciót.",
+        "saveFirst": "Fizetések kapcsolása vagy leválasztása előtt mentsd vagy vesd el a tranzakció módosításait.",
+        "refreshing": "A kapcsolat módosítása mentve. A tranzakció adatainak frissítése…",
+        "refreshFailed": "A kapcsolat módosítása mentve, de a tranzakció adatait nem sikerült frissíteni. Szerkesztés előtt próbáld újra a frissítést."
+    },
     includeArchived: "Archivált tranzakciók megjelenítése",
     archive: "Tranzakció archiválása",
     restore: "Tranzakció visszaállítása",

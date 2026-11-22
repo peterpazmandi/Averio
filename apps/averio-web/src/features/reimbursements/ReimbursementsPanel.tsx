@@ -18,7 +18,7 @@ import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormC
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
 
-function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; className?: string }) {
+function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, onChanged, hasUnsavedChanges = false, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; onChanged?: () => Promise<void>; hasUnsavedChanges?: boolean; className?: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
@@ -42,6 +42,7 @@ function VisibleReimbursementsPanel({ userId, householdId, transactionId, source
             <p>{t('reimbursements.potential')} <strong>{money(sumDecimalAmounts(query.data.filter(c => c.currency === currency && !c.paymentUnavailable && c.status === 'NeedsSubmission').map(c => c.potentialAmount)), currency)}</strong></p>
             <p>{t('reimbursements.outstanding')} <strong>{money(sumDecimalAmounts(query.data.filter(c => c.currency === currency).map(c => c.outstandingAmount)), currency)}</strong></p>
         </AverioCard>)}</div>}
+        {hasUnsavedChanges && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('transactionManagement.paymentProtection.saveFirst')}</p>}
         {query.data.map(claim => <AverioCard key={claim.id} className="grid gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="break-words font-semibold">{claim.description}</h3><p className="break-words text-sm">{claim.provider} · {date(claim.paymentOn)}</p></div>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{t('reimbursements.status.' + claim.status)}</span></div>
@@ -61,7 +62,7 @@ function VisibleReimbursementsPanel({ userId, householdId, transactionId, source
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
                 {!transactionId && <Link className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-emerald-700 underline focus-visible:outline-2 dark:text-emerald-300" to="/app/transactions" search={{ transaction: claim.transactionId }}>{t('reimbursements.viewPayment')}</Link>}
                 {claim.canModify && <>
-                    {!claim.paymentUnavailable && ['Submitted', 'PartiallyReceived'].includes(claim.status) && <AverioButton variant="primary" onClick={() => setMatching({ claim })}>{t('reimbursements.payments.link')}</AverioButton>}
+                    {!claim.paymentUnavailable && ['Submitted', 'PartiallyReceived'].includes(claim.status) && <AverioButton variant="primary" disabled={hasUnsavedChanges} onClick={() => setMatching({ claim })}>{t('reimbursements.payments.link')}</AverioButton>}
                     {!claim.paymentUnavailable && claim.status !== 'Cancelled' && <AverioButton onClick={() => setEditing(claim)}>{t('reimbursements.edit.title')}</AverioButton>}
                     {!claim.paymentUnavailable && ['NeedsSubmission', 'Rejected'].includes(claim.status) && <AverioButton variant="primary" onClick={() => setSelected({ claim, status: 'Submitted' })}>{t('reimbursements.markSubmitted')}</AverioButton>}
                     {claim.status === 'Submitted' && claim.receivedAmount === '0' && <AverioButton onClick={() => setSelected({ claim, status: 'Rejected' })}>{t('reimbursements.reject')}</AverioButton>}
@@ -72,12 +73,12 @@ function VisibleReimbursementsPanel({ userId, householdId, transactionId, source
             {claim.payments.length > 0 && <div className="grid gap-2"><h4 className="text-sm font-semibold">{t('reimbursements.payments.history')}</h4>{claim.payments.map(payment => <div key={payment.id} data-payment-id={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 py-2 text-sm dark:border-slate-700">
                 <span>{date(payment.receivedOn)} · {money(payment.amount, claim.currency)} · {t(payment.unlinkedAt ? 'reimbursements.payments.unlinked' : 'reimbursements.payments.linked')}</span>
                 <div className="flex flex-wrap gap-2"><Link className="inline-flex min-h-11 items-center px-3 text-emerald-700 underline dark:text-emerald-300" to="/app/transactions" search={{ transaction: payment.creditTransactionId }}>{t('reimbursements.payments.view')}</Link>
-                {claim.canModify && !payment.unlinkedAt && <AverioButton onClick={() => setMatching({ claim, payment })}>{t('reimbursements.payments.unlink')}</AverioButton>}</div>
+                {claim.canModify && !payment.unlinkedAt && <AverioButton disabled={hasUnsavedChanges} onClick={() => setMatching({ claim, payment })}>{t('reimbursements.payments.unlink')}</AverioButton>}</div>
             </div>)}</div>}
             {transactionId && <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('reimbursements.history')}</summary><ul className="space-y-2 text-sm">{claim.events.map((event, index) => <li key={index}>{t(event.changeKind === 'PaymentLinked' ? 'reimbursements.payments.linked' : event.changeKind === 'PaymentUnlinked' ? 'reimbursements.payments.unlinked' : event.changeKind === 'Updated' ? 'reimbursements.edit.updated' : event.changeKind === 'BeforeUpdate' ? 'reimbursements.edit.before' : 'reimbursements.status.' + event.status)} · {date(event.recordedAt.slice(0, 10))}{event.reference ? ' · ' + event.reference : ''}
                 {event.provider && event.potentialAmount && <span className="block">{event.provider} · {money(event.potentialAmount, claim.currency)}</span>}</li>)}</ul></details>}
         </AverioCard>)}
-        {matching && <PaymentDialog userId={userId} householdId={householdId} claim={matching.claim} payment={matching.payment} onClose={() => setMatching(null)} />}
+        {matching && <PaymentDialog userId={userId} householdId={householdId} claim={matching.claim} payment={matching.payment} onChanged={onChanged} onClose={() => setMatching(null)} />}
         {editing && <EditClaimDialog userId={userId} householdId={householdId} claim={editing} onClose={() => setEditing(null)} />}
         {selected && <ClaimStatusDialog key={selected.claim.id + selected.status} userId={userId} householdId={householdId} claim={selected.claim} status={selected.status} onClose={() => setSelected(null)} />}
     </section>;

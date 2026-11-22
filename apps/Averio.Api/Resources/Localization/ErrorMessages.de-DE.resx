@@ -368,6 +368,7 @@
   <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>Für diese ältere Rückzahlung ist die Herkunft der Gutschrift nicht zuverlässig dokumentiert. Das Aufheben ist zum Schutz der erfassten Kontobewegung gesperrt. Lass die ursprüngliche Gutschrift vor einer Korrektur prüfen.</value></data>
   <data name="Validation_ReimbursementPayment" xml:space="preserve"><value>Wähle einen geeigneten erfassten Geldeingang auf dem Zielkonto. Bestätige den Eingang und prüfe den Restbetrag; lade geänderte Daten neu.</value></data>
   <data name="Error_TransactionLinked" xml:space="preserve"><value>Diese Buchung hat geschützte Verknüpfungen. Entferne sie vor dem Bearbeiten, Stornieren oder Erfassen einer Rückzahlung.</value></data>
+  <data name="Error_PaymentDetailsLocked" xml:space="preserve"><value>Konto, Art, Datum, Sichtbarkeit, Positionsbeträge und -struktur, persönliche Geldzuordnung und Stornierung sind durch verknüpfte Zahlungen geschützt. Löse diese Zuordnungen, bevor du diese Angaben änderst.</value></data>
 </root>
 
 

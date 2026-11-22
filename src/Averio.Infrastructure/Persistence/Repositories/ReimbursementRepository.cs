@@ -29,6 +29,14 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
     }
     public Task<ReimbursementPayment?> PaymentByOperationAsync(Guid h, Guid operation, CancellationToken ct)
         => db.Set<ReimbursementPayment>().SingleOrDefaultAsync(p => p.HouseholdId == h && p.OperationId == operation, ct);
+    public async Task<IReadOnlySet<Guid>> PaymentProtectedIdsAsync(Guid householdId, IReadOnlyList<Guid> transactionIds, CancellationToken ct)
+    {
+        if (transactionIds.Count == 0) return new HashSet<Guid>();
+        return (await db.Transactions.Where(t => t.HouseholdId == householdId && transactionIds.Contains(t.Id)
+            && db.Set<ReimbursementPayment>().Any(p => p.HouseholdId == householdId && p.UnlinkedAt == null
+                && (p.CreditTransactionId == t.Id || db.Set<ReimbursementClaim>().Any(c => c.Id == p.ClaimId && c.TransactionId == t.Id))))
+            .Select(t => t.Id).ToArrayAsync(ct)).ToHashSet();
+    }
     public Task<bool> HasActivePaymentAsync(Guid h, Guid transactionId, CancellationToken ct)
         => db.Set<ReimbursementPayment>().AnyAsync(p => p.HouseholdId == h && p.UnlinkedAt == null
             && (p.CreditTransactionId == transactionId || db.Set<ReimbursementClaim>().Any(c => c.Id == p.ClaimId && c.TransactionId == transactionId)), ct);

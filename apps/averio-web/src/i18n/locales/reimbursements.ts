@@ -116,7 +116,7 @@ export const reimbursementsEN = {
         "linked": "Payment linked",
         "unlinked": "Payment unlinked",
         "view": "View bank credit",
-        "protected": "Unlink received payments before cancelling the claim or editing, voiding or refunding the source transaction. The estimate cannot be lowered below received money, and the destination cannot change while payments are linked."
+        "protected": "Unlink received payments before cancelling the claim or changing protected financial details, voiding or refunding the source transaction. The estimate cannot be lowered below received money, and the destination cannot change while payments are linked."
     }
 };
 export const reimbursementsDE = {
@@ -237,7 +237,7 @@ export const reimbursementsDE = {
         "linked": "Zahlung zugeordnet",
         "unlinked": "Zuordnung aufgehoben",
         "view": "Geldeingang anzeigen",
-        "protected": "Hebe die Zahlungszuordnungen auf, bevor du den Anspruch stornierst oder die ursprüngliche Buchung bearbeitest, stornierst oder eine Rückzahlung erfasst. Die Schätzung darf nicht unter dem erhaltenen Betrag liegen; das Zielkonto bleibt bei zugeordneten Zahlungen unverändert."
+        "protected": "Hebe die Zahlungszuordnungen auf, bevor du den Anspruch stornierst oder geschützte Finanzangaben der ursprünglichen Buchung änderst, sie stornierst oder eine Rückzahlung erfasst. Die Schätzung darf nicht unter dem erhaltenen Betrag liegen; das Zielkonto bleibt bei zugeordneten Zahlungen unverändert."
     }
 };
 export const reimbursementsHU = {
@@ -358,6 +358,6 @@ export const reimbursementsHU = {
         "linked": "Kifizetés összekapcsolva",
         "unlinked": "Kifizetés leválasztva",
         "view": "Jóváírás megtekintése",
-        "protected": "Az igény visszavonása vagy az eredeti tranzakció módosítása, érvénytelenítése, pénzvisszatérítése előtt válaszd le a kifizetéseket. A becslés nem csökkenthető a beérkezett összeg alá, és kapcsolt kifizetés mellett a célszámla nem módosítható."
+        "protected": "Az igény visszavonása vagy az eredeti tranzakció védett pénzügyi adatainak módosítása, érvénytelenítése, pénzvisszatérítése előtt válaszd le a kifizetéseket. A becslés nem csökkenthető a beérkezett összeg alá, és kapcsolt kifizetés mellett a célszámla nem módosítható."
     }
 };

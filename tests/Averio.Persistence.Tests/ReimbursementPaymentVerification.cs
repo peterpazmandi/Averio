@@ -54,7 +54,7 @@ internal static class ReimbursementPaymentVerification
         var sourceRecord = await Transaction(source);
         await Throws<BusinessRuleException>(() => Use<VoidTransactionHandler>(h => h.HandleAsync(f.HouseholdId, source, sourceRecord.UpdatedAt, ct)));
         await Throws<BusinessRuleException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(new(f.HouseholdId, c1, credit.AccountId, credit.Kind, credit.Visibility,
-            credit.Merchant, "Edited", credit.OccurredOn, credit.Items.Select(i => new TransactionItemInput(i.Description, i.CategoryId, i.Amount, i.Id)).ToArray(), [], credit.UpdatedAt), ct)));
+            credit.Merchant, "Edited", credit.OccurredOn, credit.Items.Select(i => new TransactionItemInput(i.Description, i.CategoryId, i.Amount + 1, i.Id)).ToArray(), [], credit.UpdatedAt), ct)));
         await Throws<BusinessRuleException>(() => Use<ItemRefundHandler>(async h => { await h.RecordAsync(f.HouseholdId, source,
             new(sourceRecord.Items.First().Id, 1, today, Guid.NewGuid(), sourceRecord.UpdatedAt, true), ct); }));
         // Another claim cannot reuse an already allocated credit, even with a fresh version.
@@ -171,12 +171,91 @@ internal static class ReimbursementPaymentVerification
         var memberLink = await Link(memberClaim.Id, new(c2, Guid.NewGuid(), memberClaim.Version, (await Transaction(c2)).UpdatedAt, true));
         user.UserId = f.OwnerUserId;
         await Throws<NotFoundException>(() => Recover([new(memberClaim.Id, memberLink)]));
+        await VerifySafeEdits();
         Console.WriteLine("PASS refund candidate filtering and privacy-safe recovery, atomicity, concurrent retries, history and relinking");
         Console.WriteLine("PASS reimbursement payment settlement, retries, dependencies, privacy and unchanged finances");
         async Task<IReadOnlyList<ReimbursementRecoveryLink>> Recovery() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().RecoveryLinksAsync(f.HouseholdId, ct); }
         Task Recover(IReadOnlyList<ReimbursementRecoveryLink> links) => Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, links, ct));
         async Task<TransactionReadPage> RefundCandidates() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId, new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 100, null, null, null, RefundEligibleOnly: true), ct); }
 
+        async Task VerifySafeEdits() {
+            var expenseId = await Post(TransactionKind.Expense, 100, true);
+            var expense = await Transaction(expenseId);
+            // A prior merchant refund means edit inputs carry original item amounts, not net cost.
+            await Use<ItemRefundHandler>(async h => { await h.RecordAsync(f.HouseholdId, expenseId,
+                new(expense.Items.Single().Id, 20, today, Guid.NewGuid(), expense.UpdatedAt, true), ct); });
+            var receiptId = await Post(TransactionKind.Income, 30);
+            var c = await Claim(expenseId);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, c.Id, c.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+            c = await Claim(expenseId);
+            var paymentId = await Link(c.Id, new(receiptId, Guid.NewGuid(), c.Version, (await Transaction(receiptId)).UpdatedAt, true));
+            c = await Claim(expenseId);
+            var claimVersion = c.Version;
+            var alternate = Averio.Domain.Accounts.Account.Create(f.HouseholdId, [], "Alternative account", Averio.Domain.Accounts.AccountType.Cash,
+                Averio.Domain.Accounts.AccountScope.Household, Averio.Domain.Accounts.AccountVisibility.Household, true, Averio.Domain.Common.CurrencyCode.From("EUR"), 0, today, clock.GetUtcNow());
+            await using (var scope = provider.CreateAsyncScope()) { var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>(); db.Add(alternate); await db.SaveChangesAsync(); }
+            var cashBefore = await StableFinancials();
+            foreach (var id in new[] { expenseId, receiptId }) {
+                var row = await Transaction(id);
+                var command = new UpdateTransactionCommand(f.HouseholdId, id, row.AccountId, row.Kind, row.Visibility,
+                    "Corrected merchant", "Corrected note", row.OccurredOn,
+                    row.Items.Select(i => new TransactionItemInput("Corrected item", i.CategoryId, i.OriginalAmount, i.Id)).ToArray(), [], row.UpdatedAt);
+                await using (var scope = provider.CreateAsyncScope()) {
+                    var detail = await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>().HandleAsync(f.HouseholdId, id, ct);
+                    Check(detail.PaymentDetailsLocked, "Detail omitted immediate payment protection");
+                }
+                foreach (var invalid in new[] {
+                    command with { OccurredOn = today.AddDays(-1) },
+                    command with { AccountId = alternate.Id },
+                    command with { Visibility = TransactionVisibility.Private },
+                    command with { Kind = row.Kind == TransactionKind.Income ? TransactionKind.Expense : TransactionKind.Income },
+                    command with { Items = command.Items.Select(i => i with { Amount = i.Amount + 1 }).ToArray() },
+                    command with { Items = command.Items.Select(i => i with { ExistingItemId = null }).ToArray() },
+                    command with { Items = command.Items.Select(i => i with { PersonalMoneyAmount = 0 }).ToArray() },
+                    command with { Items = [..command.Items, new TransactionItemInput("New item", row.Items.Single().CategoryId, 1)] }
+                }) await Throws<BusinessRuleException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(invalid, ct)));
+                await Use<UpdateTransactionHandler>(h => h.HandleAsync(command, ct));
+                var updated = await Transaction(id);
+                Check(updated.Note == "Corrected note" && updated.Merchant == "Corrected merchant" && updated.Items.Single().Description == "Corrected item", "Safe edits did not persist");
+                Check(updated.Amount == row.Amount && updated.Items.Single().Id == row.Items.Single().Id, "Safe edit changed monetary value or item identity");
+                await Throws<ConflictException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(command, ct)));
+                // Saving an unchanged transaction is valid too.
+                await Use<UpdateTransactionHandler>(h => h.HandleAsync(command with { ExpectedUpdatedAt = updated.UpdatedAt }, ct));
+            }
+            Check(await StableFinancials() == cashBefore, "Descriptive edits changed cash, totals or Personal Money");
+            var after = await Claim(expenseId);
+            Check(after.Version == claimVersion && after.ReceivedAmount == 30 && after.Payments.Single().Id == paymentId, "Safe edits changed reconciliation");
+            // A category correction moves category totals but leaves account totals and coverage intact.
+            Guid category;
+            await using (var scope = provider.CreateAsyncScope()) category = await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Categories
+                .Where(x => x.IsBase && x.Kind == Averio.Domain.Categories.CategoryKind.Expense && x.Id != TestIds.Groceries).Select(x => x.Id).FirstAsync();
+            var original = await Transaction(expenseId);
+            decimal priorCategory;
+            await using (var scope = provider.CreateAsyncScope()) priorCategory = await scope.ServiceProvider.GetRequiredService<AverioDbContext>().TransactionAggregates
+                .Where(a => a.HouseholdId == f.HouseholdId && a.AccountId == f.HouseholdAccountId && a.DimensionType == TransactionAggregateDimension.Category && a.DimensionId == category && a.Period == TransactionAggregatePeriod.Day).SumAsync(a => a.ExpenseAmount);
+            await Use<UpdateTransactionHandler>(h => h.HandleAsync(new(f.HouseholdId, expenseId, original.AccountId, original.Kind, original.Visibility, original.Merchant, original.Note, original.OccurredOn,
+                [new("Corrected item", category, original.Items.Single().OriginalAmount, original.Items.Single().Id)], [], original.UpdatedAt), ct));
+            await using (var scope = provider.CreateAsyncScope()) {
+                var total = await scope.ServiceProvider.GetRequiredService<AverioDbContext>().TransactionAggregates
+                    .Where(a => a.HouseholdId == f.HouseholdId && a.AccountId == f.HouseholdAccountId && a.DimensionType == TransactionAggregateDimension.Category && a.DimensionId == category && a.Period == TransactionAggregatePeriod.Day).SumAsync(a => a.ExpenseAmount);
+                Check(total == priorCategory + 80, "Category correction did not move net expense");
+            }
+            Check(await StableFinancials() == cashBefore, "Recategorization changed account totals or Personal Money");
+            await Unlink(c.Id, paymentId, after.Version);
+            await using (var scope = provider.CreateAsyncScope()) {
+                var detail = await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>().HandleAsync(f.HouseholdId, receiptId, ct);
+                Check(!detail.PaymentDetailsLocked, "Unlink retained protection");
+            }
+            Console.WriteLine("PASS linked source/credit safe edits, protected fields, unchanged saves, stale edits, refund net values and category totals");
+        }
+        async Task<string> StableFinancials() {
+            await using var scope = provider.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            return System.Text.Json.JsonSerializer.Serialize(new {
+                Rows = await db.Transactions.OrderBy(t => t.Id).Select(t => new {t.Id,t.AccountId,t.Kind,t.Amount,t.Status,t.OccurredOn,t.Visibility,t.ImportBatchId}).ToArrayAsync(),
+                Totals = await db.TransactionAggregates.Where(a => a.DimensionType == TransactionAggregateDimension.Account).OrderBy(a => a.AccountId).ThenBy(a => a.Period).ThenBy(a => a.PeriodStart).Select(a => new {a.AccountId,a.Period,a.PeriodStart,a.IncomeAmount,a.ExpenseAmount,a.EntryCount}).ToArrayAsync(),
+                Money = await db.PersonalMoneyEntries.OrderBy(p => p.Id).ToArrayAsync()
+            });
+        }
         async Task<bool> TryLink(ReimbursementClaim candidate) {
             try { await Link(candidate.Id, new(c1, Guid.NewGuid(), candidate.Version, credit.UpdatedAt, true)); return true; }
             catch (BusinessRuleException) { return false; } catch (ConflictException) { return false; }

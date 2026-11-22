@@ -47,7 +47,7 @@ function SavedItemRefundsPanel(props: Props) {
     return <AverioCard className="mb-4 grid gap-3" role="region" aria-label={t('itemRefunds.title')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2"><h3 className="font-semibold">{t('itemRefunds.title')}</h3><InfoPopover label={t('itemRefunds.title')}><p>{t('itemRefunds.expenseHelp')}</p>{history && <p className="mt-3">{t('itemRefunds.protected')}</p>}</InfoPopover></div>
-            {canModify && <AverioButton disabled={props.disabled || !hasAvailable || !records.isSuccess || props.hasUnsavedChanges} onClick={() => setAdding(true)}>{t('itemRefunds.add')}</AverioButton>}
+            {canModify && <AverioButton disabled={props.disabled || transaction.paymentDetailsLocked || !hasAvailable || !records.isSuccess || props.hasUnsavedChanges} onClick={() => setAdding(true)}>{t('itemRefunds.add')}</AverioButton>}
         </div>
         {props.hasUnsavedChanges && <p className="text-sm text-amber-800 dark:text-amber-200">{t('itemRefunds.savedHelp')}</p>}
         {history && <>

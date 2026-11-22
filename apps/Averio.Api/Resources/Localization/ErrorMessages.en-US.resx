@@ -368,6 +368,7 @@
   <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>This historical refund has no reliable credit origin. Reversal is blocked to protect the recorded bank movement. Have its original credit verified before correcting it.</value></data>
   <data name="Validation_ReimbursementPayment" xml:space="preserve"><value>Choose an eligible recorded income in the claim destination account. Confirm receipt and check the remaining amount; refresh if the records changed.</value></data>
   <data name="Error_TransactionLinked" xml:space="preserve"><value>This transaction has protected links. Remove the links before editing, voiding or refunding it.</value></data>
+  <data name="Error_PaymentDetailsLocked" xml:space="preserve"><value>Account, type, date, visibility, item amounts and structure, Personal Money allocation and voiding are protected because this transaction has linked payments. Unlink those payments before changing these details.</value></data>
 </root>
 
 

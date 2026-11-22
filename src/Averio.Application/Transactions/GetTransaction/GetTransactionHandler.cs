@@ -92,7 +92,8 @@ public sealed class GetTransactionHandler(
                     label.Scope))
                 .ToArray(), assignment?.ActivityId, assignment?.ActivityName, assignment?.Version ?? Guid.Empty,
             transaction.IsArchived, transaction.ImportBatchId != null,
-            transaction.CreatedByHouseholdMemberId == membership.Id ? transaction.ImportBatchId : null, statuses.GetValueOrDefault(transaction.Id));
+            transaction.CreatedByHouseholdMemberId == membership.Id ? transaction.ImportBatchId : null, statuses.GetValueOrDefault(transaction.Id),
+            TransactionAccess.CanModify(account, membership) && await reimbursements.HasActivePaymentAsync(household.Id, transaction.Id, cancellationToken));
     }
 }
 
@@ -115,4 +116,4 @@ public sealed record TransactionDetailResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null, bool PaymentDetailsLocked = false);
