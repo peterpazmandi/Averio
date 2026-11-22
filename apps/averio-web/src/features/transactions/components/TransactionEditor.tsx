@@ -221,7 +221,7 @@ export function TransactionEditor({
             : account?.scope === 'Household'
                 ? 'Household'
                 : undefined;
-    const effectiveVisibility = rule ? visibility : forcedVisibility ?? visibility;
+    const effectiveVisibility = paymentProtected ? transaction!.visibility : rule ? visibility : forcedVisibility ?? visibility;
     const currency = account?.currency ?? rule?.currency ?? transaction?.currency ?? '';
     const language = i18n.resolvedLanguage ?? i18n.language;
 
@@ -770,11 +770,14 @@ export function TransactionEditor({
             <AverioDisclosure title={t('transactionManagement.detailsPrivacy')} defaultOpen={false} summary={t(effectiveVisibility === 'Private' ? 'transactionManagement.private' : 'transactionManagement.household') + (note ? ' · ' + note : '')}>
                 <p className="text-xs">{t('transactionManagement.detailsPrivacyHelp')}</p>
                 <AverioField>{t('transactionManagement.note')}<AverioTextarea aria-label={t('transactionManagement.note')} value={note} maxLength={500} disabled={busy} onChange={e => setNote(e.target.value)} placeholder={t('transactionManagement.notePlaceholder')} /></AverioField>
-                <AverioField>{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
-                    disabled={busy || refundProtected || paymentProtected || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
-                    <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
-                    <option value="Private" disabled={forcedVisibility === 'Household'}>{t('transactionManagement.private')}</option>
-                </AverioSelect></AverioField>
+                <div className="flex items-start gap-2">
+                    <AverioField className="min-w-0 flex-1">{t('transactionManagement.visibility')}<AverioSelect aria-label={t('transactionManagement.visibility')} value={effectiveVisibility}
+                        disabled={busy || refundProtected || paymentProtected || (forcedVisibility !== undefined && (!rule || visibility === forcedVisibility))} onChange={e => setVisibility(e.target.value as TransactionVisibility)}>
+                        <option value="Household" disabled={forcedVisibility === 'Private'}>{t('transactionManagement.household')}</option>
+                        <option value="Private" disabled={forcedVisibility === 'Household'}>{t('transactionManagement.private')}</option>
+                    </AverioSelect></AverioField>
+                    {paymentProtected && <InfoPopover label={t('transactionManagement.visibility')}>{t('transactionManagement.paymentProtection.visibilityHelp')}</InfoPopover>}
+                </div>
                 {effectiveVisibility === 'Private' && <p className="text-xs">{t('transactionManagement.privateHelp')}</p>}
                 {recurring && <p className="text-xs">{t('recurring.privacyHelp')}</p>}
                 <p className="text-xs">{t('transactionManagement.currencyLocked')}</p>

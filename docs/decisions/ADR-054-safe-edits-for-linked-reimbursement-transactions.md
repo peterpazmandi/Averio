@@ -14,6 +14,8 @@ The account, kind, date and visibility must remain identical. All existing item 
 
 Category and activity corrections may change their respective reporting breakdowns. Account totals, bank movements, reimbursement amount/date snapshots, claim status/coverage and Personal Money remain unchanged. Category aggregates are reversed and reapplied through the ordinary writer; they are not frozen or silently left stale.
 
+If a personal account becomes private after linking, descriptive edits preserve the transaction’s stored visibility even when it is Household. Account privacy continues to restrict reads and writes to authorized owners. The exception requires an active payment link, the same account and exactly the stored visibility; it does not permit visibility changes or creating Household-visible transactions in a private account. The editor preserves that stored value and explains the account privacy override in EN/DE/HU. PostgreSQL and browser regressions cover both source and Income after this transition, unchanged finances/coverage and denied access for another member.
+
 ## UI and privacy
 
 Transaction detail and list responses include a generic paymentDetailsLocked flag for visible, modifiable transactions. It communicates an editing restriction without identifying a claim, creator, provider, credit, received amount or private history. It does not grant permission to access claims or relax ordinary transaction visibility.

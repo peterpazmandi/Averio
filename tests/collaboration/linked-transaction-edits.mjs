@@ -80,5 +80,42 @@ export async function verifyLinkedTransactionEdits({ fixture: f, password, sessi
     assert.equal(await editor.getByText('Linked payment protection', { exact: true }).count(), 0);
     assert.equal((await claimFor()).receivedAmount, '0');
     assert.equal((await ok(page, base + '/transactions/' + credit.id)).paymentDetailsLocked, false);
+
+    // Retaining account ownership while making it private must not prevent safe edits.
+    const privateAccount = await ok(page, base + '/accounts', { method: 'POST', body: { name: 'Linked visibility regression', type: 'Cash', scope: 'Personal', ownerHouseholdMemberIds: [f.memberId], visibility: 'Household', includeInHouseholdReports: true, currency: 'EUR', balanceAnchorAmount: '0', balanceAnchorDate: f.date } });
+    const privatePost = (kind, amount) => ok(page, base + '/transactions', { method: 'POST', body: { accountId: privateAccount.id, kind, visibility: 'Household', merchant: 'Before privacy change', occurredOn: f.date, labelIds: [], items: [{ description: kind, categoryId: kind === 'Expense' ? ec : ic, amount }] } });
+    const privateSource = await privatePost('Expense', '100');
+    const privateCredit = await privatePost('Income', '10');
+    const sourceDetail = await ok(page, base + '/transactions/' + privateSource.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: privateSource.id, expectedUpdatedAt: sourceDetail.updatedAt, configuration: { provider: 'Privacy regression', calculation: 'Fixed', value: '10', destinationAccountId: privateAccount.id, paymentDelayDays: 0 } } });
+    const privateClaim = async () => (await ok(page, base + '/reimbursements?transactionId=' + privateSource.id))[0];
+    let pc = await privateClaim();
+    await ok(page, base + '/reimbursements/' + pc.id + '/status', { method: 'PUT', body: { expectedVersion: pc.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    pc = await privateClaim();
+    const creditDetail = await ok(page, base + '/transactions/' + privateCredit.id);
+    await ok(page, base + '/reimbursements/' + pc.id + '/payments', { method: 'POST', body: { creditTransactionId: privateCredit.id, operationId: crypto.randomUUID(), expectedVersion: pc.version, expectedCreditUpdatedAt: creditDetail.updatedAt, moneyReceived: true } });
+    const coverageBefore = await privateClaim();
+    const accountBefore = (await ok(page, base + '/accounts')).find(a => a.id === privateAccount.id);
+    await ok(page, base + '/accounts/' + privateAccount.id, { method: 'PUT', body: { name: accountBefore.name, type: accountBefore.type, ownerHouseholdMemberIds: [f.memberId], visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: accountBefore.updatedAt } });
+    const peer = await session(f.peerEmail, password);
+    for (const record of [privateSource, privateCredit]) {
+        await page.goto('http://localhost:5173/app/transactions?transaction=' + record.id);
+        editor = page.getByRole('dialog', { name: 'Edit transaction', exact: true });
+        await editor.getByText('Linked payment protection', { exact: true }).waitFor();
+        await assertLocked();
+        await editor.getByLabel('Merchant / Store', { exact: true }).fill('Saved after account became private');
+        await editor.getByRole('button', { name: 'Save transaction', exact: true }).click();
+        await editor.waitFor({ state: 'hidden' });
+        const after = await ok(page, base + '/transactions/' + record.id);
+        assert.equal(after.merchant, 'Saved after account became private');
+        assert.equal(after.visibility, 'Household');
+        assert.equal(after.paymentDetailsLocked, true);
+        assert.equal((await api(peer, base + '/transactions/' + record.id)).status, 404);
+    }
+    assert.deepEqual(await privateClaim(), { ...coverageBefore, description: 'Saved after account became private' });
+    const accountAfter = (await ok(page, base + '/accounts')).find(a => a.id === privateAccount.id);
+    assert.equal(accountAfter.currentBalanceAmount, accountBefore.currentBalanceAmount);
+    assert.equal(accountAfter.visibility, 'Private');
+    console.log('PASS linked source and Income descriptive saves after account privacy change, preserved coverage/balance and private reads');
     console.log('PASS linked transaction edits: immediate protection, source/Income metadata saves, dirty draft guard, refresh failure/retry, unlink unlock and EN/DE/HU layouts');
 }

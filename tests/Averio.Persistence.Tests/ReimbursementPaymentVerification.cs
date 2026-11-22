@@ -172,12 +172,55 @@ internal static class ReimbursementPaymentVerification
         user.UserId = f.OwnerUserId;
         await Throws<NotFoundException>(() => Recover([new(memberClaim.Id, memberLink)]));
         await VerifySafeEdits();
+        await VerifyVisibilityTransition();
         Console.WriteLine("PASS refund candidate filtering and privacy-safe recovery, atomicity, concurrent retries, history and relinking");
         Console.WriteLine("PASS reimbursement payment settlement, retries, dependencies, privacy and unchanged finances");
         async Task<IReadOnlyList<ReimbursementRecoveryLink>> Recovery() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().RecoveryLinksAsync(f.HouseholdId, ct); }
         Task Recover(IReadOnlyList<ReimbursementRecoveryLink> links) => Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, links, ct));
         async Task<TransactionReadPage> RefundCandidates() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId, new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 100, null, null, null, RefundEligibleOnly: true), ct); }
 
+        async Task VerifyVisibilityTransition() {
+            var account = Averio.Domain.Accounts.Account.Create(f.HouseholdId, [f.OwnerMemberId], "Visibility transition", Averio.Domain.Accounts.AccountType.Cash,
+                Averio.Domain.Accounts.AccountScope.Personal, Averio.Domain.Accounts.AccountVisibility.Household, true, Averio.Domain.Common.CurrencyCode.From("EUR"), 0, today, clock.GetUtcNow());
+            await using (var scope = provider.CreateAsyncScope()) { var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>(); db.Add(account); await db.SaveChangesAsync(); }
+            Guid expenseId, creditId;
+            await using (var scope = provider.CreateAsyncScope()) expenseId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(
+                new(f.HouseholdId, account.Id, TransactionKind.Expense, TransactionVisibility.Household, "Visibility test", null, today, [new("Visibility test", TestIds.Groceries, 100)], [],
+                    Reimbursement: RecurringReimbursementRule.Create("Visibility test", ReimbursementCalculation.Fixed, 10, null, account.Id, 0, null)), ct);
+            await using (var scope = provider.CreateAsyncScope()) creditId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(
+                new(f.HouseholdId, account.Id, TransactionKind.Income, TransactionVisibility.Household, "Visibility credit", null, today, [new("Visibility credit", TestIds.Salary, 10)], []), ct);
+            var c = await Claim(expenseId);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, c.Id, c.Version, true, today, null, ReimbursementStatus.Submitted, ct)); c = await Claim(expenseId);
+            await Link(c.Id, new(creditId, Guid.NewGuid(), c.Version, (await Transaction(creditId)).UpdatedAt, true));
+            c = await Claim(expenseId);
+            await Use<Averio.Application.Accounts.UpdateAccount.UpdateAccountHandler>(h => h.HandleAsync(new(f.HouseholdId, account.Id, account.Name, account.Type, [f.OwnerMemberId], Averio.Domain.Accounts.AccountVisibility.Private, false, account.UpdatedAt), ct));
+            var before = await StableFinancials();
+            foreach (var id in new[] { expenseId, creditId }) {
+                var row = await Transaction(id);
+                var command = new UpdateTransactionCommand(f.HouseholdId, id, account.Id, row.Kind, row.Visibility, row.Merchant, "Only a note", row.OccurredOn,
+                    row.Items.Select(i => new TransactionItemInput(i.Description,i.CategoryId,i.OriginalAmount,i.Id)).ToArray(), [],row.UpdatedAt);
+                await Use<UpdateTransactionHandler>(h => h.HandleAsync(command, ct));
+                var updated = await Transaction(id);
+                Check(updated.Note == "Only a note" && updated.Visibility == TransactionVisibility.Household, "Private account prevented safe edit or rewrote stored visibility");
+                command = command with { ExpectedUpdatedAt = updated.UpdatedAt };
+                await Throws<BusinessRuleException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(command with { Visibility = TransactionVisibility.Private }, ct)));
+                await Throws<BusinessRuleException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(command with { Items = command.Items.Select(i => i with { Amount = i.Amount + 1 }).ToArray() }, ct)));
+                user.UserId = f.MemberUserId;
+                await Throws<NotFoundException>(() => Use<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>(async h => { await h.HandleAsync(f.HouseholdId,id,ct); }));
+                await Throws<NotFoundException>(() => Use<UpdateTransactionHandler>(h => h.HandleAsync(command, ct)));
+                await using (var scope = provider.CreateAsyncScope()) {
+                    var page = await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.MemberId, new(null,null,account.Id,null,null,100,null,null,null),ct);
+                    Check(page.Items.Count == 0, "Preserved visibility exposed private account rows");
+                }
+                user.UserId = f.OwnerUserId;
+            }
+            Check(await StableFinancials() == before, "Visibility transition edits changed finances");
+            var after = await Claim(expenseId);
+            Check(after.Version == c.Version && after.ReceivedAmount == c.ReceivedAmount, "Visibility transition edits changed claim coverage");
+            await using (var scope = provider.CreateAsyncScope()) await Throws<BusinessRuleException>(() => scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(
+                new(f.HouseholdId, account.Id, TransactionKind.Income, TransactionVisibility.Household, "Invalid new credit", null, today, [new("Invalid new credit", TestIds.Salary, 10)], []),ct));
+            Console.WriteLine("PASS safe edits after account privacy change: preserved visibility, protected amounts, private reads/writes and unchanged coverage/finances");
+        }
         async Task VerifySafeEdits() {
             var expenseId = await Post(TransactionKind.Expense, 100, true);
             var expense = await Transaction(expenseId);

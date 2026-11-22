@@ -1,5 +1,6 @@
 export const transactionManagementEN = {
     paymentProtection: {
+        visibilityHelp: "The saved transaction visibility is preserved while payments are linked. Account privacy still applies: a private account remains visible only to its owners.",
         "title": "Linked payment protection",
         "locked": "Account, type, date, visibility, item amounts and structure, Personal Money allocation and voiding are protected because this transaction has linked payments. Unlink those payments before changing these details.",
         "allowed": "You can still edit the merchant, notes, item descriptions, categories, labels and activity. Payment links are saved immediately; no transaction save is needed just to keep a link.",
@@ -112,6 +113,7 @@ export const transactionManagementEN = {
 
 export const transactionManagementDE = {
     paymentProtection: {
+        visibilityHelp: "Solange Zahlungen verknüpft sind, bleibt die gespeicherte Sichtbarkeit der Buchung erhalten. Die Kontoprivatsphäre gilt weiterhin: Ein privates Konto ist nur für seine Eigentümer sichtbar.",
         "title": "Schutz verknüpfter Zahlungen",
         "locked": "Konto, Art, Datum, Sichtbarkeit, Positionsbeträge und -struktur, persönliche Geldzuordnung und Stornierung sind durch verknüpfte Zahlungen geschützt. Löse diese Zuordnungen, bevor du diese Angaben änderst.",
         "allowed": "Händler, Notizen, Positionsbeschreibungen, Kategorien, Labels und Aktivität bleiben bearbeitbar. Zahlungsverknüpfungen werden sofort gespeichert; dafür musst du die Buchung nicht zusätzlich speichern.",
@@ -224,6 +226,7 @@ export const transactionManagementDE = {
 
 export const transactionManagementHU = {
     paymentProtection: {
+        visibilityHelp: "Kapcsolt fizetések mellett a tranzakció mentett láthatósága változatlan marad. A számla adatvédelme továbbra is érvényes: a privát számlát csak a tulajdonosai láthatják.",
         "title": "Kapcsolt fizetések védelme",
         "locked": "A számla, típus, dátum, láthatóság, tételösszegek és tételszerkezet, személyes pénz hozzárendelése és az érvénytelenítés védett, mert a tranzakcióhoz fizetések kapcsolódnak. Ezek módosítása előtt válaszd le a fizetéseket.",
         "allowed": "A kereskedő, megjegyzések, tételleírások, kategóriák, címkék és tevékenység továbbra is szerkeszthetők. A fizetési kapcsolatok azonnal mentésre kerülnek; ehhez nem kell külön mentened a tranzakciót.",

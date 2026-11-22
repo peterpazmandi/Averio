@@ -118,7 +118,12 @@ public sealed class UpdateTransactionHandler(
                 "Error_TransactionCurrencyChangeNotAllowed");
         }
 
-        if (!TransactionAccess.IsVisibilityAllowed(targetAccount, command.Visibility))
+        var paymentProtected = await reimbursementClaims.HasActivePaymentAsync(household.Id, transaction.Id, cancellationToken);
+        // Account privacy still controls reads. A linked transaction may retain its
+        // historical visibility during a descriptive edit after its account turns private.
+        var preservesLinkedVisibility = paymentProtected && command.AccountId == transaction.AccountId
+            && command.Visibility == transaction.Visibility;
+        if (!preservesLinkedVisibility && !TransactionAccess.IsVisibilityAllowed(targetAccount, command.Visibility))
         {
             throw new BusinessRuleException(
                 "transaction_visibility_not_allowed",
@@ -134,7 +139,7 @@ public sealed class UpdateTransactionHandler(
                     && (item.RefundedAmount == 0 || i.Amount == item.OriginalAmount)))))
             throw new BusinessRuleException("item_refund_linked", "Error_ItemRefundLinked");
 
-        if (await reimbursementClaims.HasActivePaymentAsync(household.Id, transaction.Id, cancellationToken)
+        if (paymentProtected
             && (command.AccountId != transaction.AccountId || command.Kind != transaction.Kind
                 || command.Visibility != transaction.Visibility || command.OccurredOn != transaction.OccurredOn
                 || command.Items.Count != transaction.Items.Count
