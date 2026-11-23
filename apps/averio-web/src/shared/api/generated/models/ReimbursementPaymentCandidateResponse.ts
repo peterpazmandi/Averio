@@ -39,6 +39,9 @@ export interface ReimbursementPaymentCandidateResponse {
      * 
      */
     updatedAt: string;
+    /**
+     * 
+     */
     availableAmount: string;
 }
 
