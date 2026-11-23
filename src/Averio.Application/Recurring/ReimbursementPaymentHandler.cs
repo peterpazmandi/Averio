@@ -58,6 +58,11 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
         if (credit.UpdatedAt != request.ExpectedCreditUpdatedAt) throw Changed();
         if (!request.MoneyReceived || source.Status != TransactionStatus.Posted || source.Kind != TransactionKind.Expense || source.IsArchived
             || claim.ReceivedAmount + credit.Amount > source.Amount || await dependencies.CreditHasDependenciesAsync(h, credit.Id, ct)) throw Invalid();
+        // The household write lock is held: read current allocations before consuming this credit.
+        var allocations = await claims.ActiveCreditAllocationsAsync(h, credit.Id, ct);
+        try { ReceivedCreditAllocationRule.ValidateNew(credit.Amount, allocations, credit.Amount,
+            Math.Min(claim.OutstandingAmount, source.Amount - claim.ReceivedAmount)); }
+        catch (ArgumentException) { throw Invalid(); }
         ReimbursementPayment payment;
         try { payment = claim.LinkPayment(credit, request.OperationId, fingerprint, member.Id, clock.GetUtcNow()); }
         catch (ArgumentException) { throw Invalid(); }
@@ -108,3 +113,4 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
     private static BusinessRuleException Invalid() => new("reimbursement_payment_invalid", "Validation_ReimbursementPayment");
     private static ConflictException Changed() => new("reimbursement_changed", "Error_ReimbursementChanged");
 }
+
