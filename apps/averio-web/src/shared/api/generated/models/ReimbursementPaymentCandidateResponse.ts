@@ -96,3 +96,4 @@ export function ReimbursementPaymentCandidateResponseToJSONTyped(value?: Reimbur
         'availableAmount': value['availableAmount'],
     };
 }
+
