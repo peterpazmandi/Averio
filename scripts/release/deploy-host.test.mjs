@@ -166,10 +166,10 @@ for (const missing of ['overlay', 'image']) {
   });
 }
 
-test('all shipped backend images declare the reimbursement settlement compatibility epoch', () => {
+test('all shipped backend images declare the pooled reimbursement compatibility epoch', () => {
   for (const component of ['api', 'worker', 'migrator']) {
     const dockerfile = readFileSync(new URL(`../../Dockerfile.${component}`, import.meta.url), 'utf8');
-    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="2"/);
+    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="3"/);
   }
 });
 
@@ -196,3 +196,4 @@ test('frontend-only rollout allows Compose to retain unchanged backends', { skip
     assert.equal(readFileSync(join(f.state, 'previous.yml'), 'utf8'), f.overlay('a', 'a'));
   } finally { f.cleanup(); }
 });
+
