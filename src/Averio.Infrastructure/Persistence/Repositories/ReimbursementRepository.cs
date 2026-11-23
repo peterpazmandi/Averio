@@ -43,12 +43,14 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
     public Task<bool> HasActivePaymentAsync(Guid h, Guid transactionId, CancellationToken ct)
         => db.Set<ReimbursementPayment>().AnyAsync(p => p.HouseholdId == h && p.UnlinkedAt == null
             && (p.CreditTransactionId == transactionId || db.Set<ReimbursementClaim>().Any(c => c.Id == p.ClaimId && c.TransactionId == transactionId)), ct);
-    public async Task<IReadOnlyList<Averio.Domain.Transactions.Transaction>> PaymentCandidatesAsync(Guid h, Guid member, ReimbursementClaim claim, decimal available, string? search, int offset, DateOnly today, CancellationToken ct)
+    public async Task<IReadOnlyList<ReimbursementCreditCandidate>> PaymentCandidatesAsync(Guid h, Guid member, ReimbursementClaim claim, decimal available, string? search, int offset, DateOnly today, CancellationToken ct)
     {
         var q = db.VisibleTransactions(h, member).AsNoTracking().Where(t => t.AccountId == claim.DestinationAccountId
             && t.Kind == Averio.Domain.Transactions.TransactionKind.Income && t.Status == Averio.Domain.Transactions.TransactionStatus.Posted
-            && !t.IsArchived && t.OccurredOn >= claim.PaymentOn && t.OccurredOn <= today && t.Amount <= available
-            && !db.Set<ReimbursementPayment>().Any(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)
+            && !t.IsArchived && t.OccurredOn >= claim.PaymentOn && t.OccurredOn <= today && available > 0
+            && t.Amount > (db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)
+                .Sum(p => (decimal?)p.Amount) ?? 0m)
+            && !db.Set<ReimbursementPayment>().Any(p => p.HouseholdId == h && p.ClaimId == claim.Id && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)
             && !db.Set<Averio.Domain.Transactions.ItemRefund>().Any(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.CancelledAt == null)
             && !db.Set<Averio.Domain.Recurring.RecurringOccurrence>().Any(p => p.TransactionId == t.Id)
             && !db.Set<Averio.Domain.Receipts.ReceiptScan>().Any(p => p.PostedTransactionId == t.Id)
@@ -57,7 +59,11 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
                 .GroupBy(p => new { p.WalletId, p.Kind, p.OccurredOn, p.TransactionId, p.RelatedTransactionId, p.TransactionItemId })
                 .Any(g => g.Sum(p => p.Amount) != 0));
         if (!string.IsNullOrWhiteSpace(search)) q = q.Where(t => t.Description.Contains(search) || (t.Merchant != null && t.Merchant.Contains(search)) || (t.Note != null && t.Note.Contains(search)));
-        return await q.OrderByDescending(t => t.OccurredOn).ThenByDescending(t => t.CreatedAt).ThenBy(t => t.Id).Skip(offset).Take(21).ToArrayAsync(ct);
+        var rows = await q.OrderByDescending(t => t.OccurredOn).ThenByDescending(t => t.CreatedAt).ThenBy(t => t.Id)
+            .Skip(offset).Take(21).Select(t => new { Credit = t,
+                Allocated = db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)
+                    .Sum(p => (decimal?)p.Amount) ?? 0m }).ToArrayAsync(ct);
+        return rows.Select(r => new ReimbursementCreditCandidate(r.Credit, r.Credit.Amount - r.Allocated)).ToArray();
     }
     public Task<ReimbursementClaim?> GetOwnedAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
         => db.Set<ReimbursementClaim>().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
