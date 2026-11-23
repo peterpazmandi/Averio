@@ -90,6 +90,7 @@ internal static class ReimbursementPaymentVerification
         Check((await Claim(thirdSource)).ReceivedAmount == 19m, "Unlink changed another claim's allocation");
         Check((await Transaction(tooBig)).Amount == 31m, "Pooling changed bank credit");
         Check(secondAllocation != firstAllocation && pooledBefore != await FinancialSnapshot(), "Expected independent claim source was not recorded");
+        before = await FinancialSnapshot();
         user.UserId = f.MemberUserId;
         Check((await List(source)).Count == 0, "Other member saw private claim");
         await Throws<NotFoundException>(() => Candidates(claim.Id));
