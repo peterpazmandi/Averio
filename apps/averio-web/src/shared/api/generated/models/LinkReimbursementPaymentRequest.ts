@@ -39,6 +39,7 @@ export interface LinkReimbursementPaymentRequest {
      * 
      */
     moneyReceived: boolean;
+    amount?: string | null;
 }
 
 /**
@@ -68,6 +69,7 @@ export function LinkReimbursementPaymentRequestFromJSONTyped(json: any, ignoreDi
         'expectedVersion': json['expectedVersion'],
         'expectedCreditUpdatedAt': json['expectedCreditUpdatedAt'],
         'moneyReceived': json['moneyReceived'],
+        'amount': json['amount'],
     };
 }
 
@@ -87,6 +89,8 @@ export function LinkReimbursementPaymentRequestToJSONTyped(value?: LinkReimburse
         'expectedVersion': value['expectedVersion'],
         'expectedCreditUpdatedAt': value['expectedCreditUpdatedAt'],
         'moneyReceived': value['moneyReceived'],
+        'amount': value['amount'],
     };
 }
+
 
