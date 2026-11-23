@@ -27,6 +27,9 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
             .Select(c => new { c.TransactionId, c.Status }).ToArrayAsync(ct);
         return rows.ToDictionary(c => c.TransactionId, c => c.Status.ToString());
     }
+    public async Task<IReadOnlyList<decimal>> ActiveCreditAllocationsAsync(Guid householdId, Guid creditId, CancellationToken ct)
+        => await db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == householdId && p.CreditTransactionId == creditId && p.UnlinkedAt == null)
+            .Select(p => p.Amount).ToArrayAsync(ct);
     public Task<ReimbursementPayment?> PaymentByOperationAsync(Guid h, Guid operation, CancellationToken ct)
         => db.Set<ReimbursementPayment>().SingleOrDefaultAsync(p => p.HouseholdId == h && p.OperationId == operation, ct);
     public async Task<IReadOnlySet<Guid>> PaymentProtectedIdsAsync(Guid householdId, IReadOnlyList<Guid> transactionIds, CancellationToken ct)
@@ -72,3 +75,4 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
     }
     public void Add(ReimbursementClaim claim) => db.Add(claim);
 }
+
