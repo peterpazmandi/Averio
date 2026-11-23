@@ -1,3 +1,5 @@
+import { verifyLinkedTransactionEdits } from './linked-transaction-edits.mjs';
+import { verifyPaymentAccessRecovery } from './payment-access-recovery.mjs';
 import { verifyReimbursementPayments } from './reimbursement-payments.mjs';
 import { verifyItemRefunds } from './item-refunds.mjs';
 import { verifyRefundRecovery } from './refund-recovery.mjs';
@@ -138,8 +140,10 @@ try {
     await poll(async () => (await fetch(ui)).ok, 'built frontend');
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const { owner: f, existing: old, password } = fixture;
-    await verifyReimbursementPayments({ fixture: fixture.payments, password, session, api, ok, poll, localeFile, artifacts });
-    if (process.env.AVERIO_BROWSER_SUITE !== 'reimbursement-payments') {
+    if (!['payment-access-recovery', 'linked-edits'].includes(process.env.AVERIO_BROWSER_SUITE)) await verifyReimbursementPayments({ fixture: fixture.payments, password, session, api, ok, poll, localeFile, artifacts });
+    if (process.env.AVERIO_BROWSER_SUITE !== 'linked-edits') await verifyPaymentAccessRecovery({ fixture: fixture.payments, password, session, api, ok, poll, localeFile, artifacts });
+    await verifyLinkedTransactionEdits({ fixture: fixture.payments, password, session, api, ok, poll, localeFile, artifacts });
+    if (!['reimbursement-payments', 'payment-access-recovery', 'linked-edits'].includes(process.env.AVERIO_BROWSER_SUITE)) {
     await verifyRecurring({ fixture: fixture.recurring, password, session, api, ok, poll, artifacts, localeFile });
     await verifyReimbursements({ fixture: fixture.recurring, password, session, api, ok, artifacts, localeFile });
     await verifyManualReimbursements({ fixture: fixture.manual, password, session, api, ok, artifacts });

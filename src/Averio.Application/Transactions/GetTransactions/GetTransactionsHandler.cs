@@ -23,7 +23,7 @@ public sealed class GetTransactionsHandler(
         Guid? cursorId,
         CancellationToken cancellationToken,
         Guid? activityId = null, IReadOnlyList<Guid>? labelIds = null,
-        bool includeArchived = false, bool importedOnly = false)
+        bool includeArchived = false, bool importedOnly = false, bool refundEligibleOnly = false)
     {
         var userId = currentUser.UserId
             ?? throw new AuthenticationFailedException();
@@ -50,12 +50,13 @@ public sealed class GetTransactionsHandler(
                 size,
                 cursorDate,
                 cursorCreatedAt,
-                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly),
+                cursorId, activityId, labelIds?.Distinct().ToArray(), includeArchived, importedOnly, refundEligibleOnly),
             cancellationToken);
 
         var statuses = await reimbursements.StatusesAsync(household.Id, membership.Id, page.Items.Select(t => t.Id).ToArray(), cancellationToken);
+        var protectedIds = await reimbursements.PaymentProtectedIdsAsync(household.Id, page.Items.Where(t => t.CanModify).Select(t => t.Id).ToArray(), cancellationToken);
         return new TransactionPageResult(
-            page.Items.Select(t => TransactionResult.From(t) with { ReimbursementStatus = statuses.GetValueOrDefault(t.Id) }).ToArray(),
+            page.Items.Select(t => TransactionResult.From(t) with { ReimbursementStatus = statuses.GetValueOrDefault(t.Id), PaymentDetailsLocked = protectedIds.Contains(t.Id) }).ToArray(),
             page.HasMore);
     }
 }
@@ -97,7 +98,7 @@ public sealed record TransactionResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null)
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null, bool PaymentDetailsLocked = false)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,

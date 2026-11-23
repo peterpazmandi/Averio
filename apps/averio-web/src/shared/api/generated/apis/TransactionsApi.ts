@@ -101,6 +101,10 @@ export interface ApiV1HouseholdsHouseholdIdTransactionsGetRequest {
      * 
      */
     importedOnly?: boolean;
+    /**
+     * 
+     */
+    refundEligibleOnly?: boolean;
 }
 
 export interface ApiV1HouseholdsHouseholdIdTransactionsPostRequest {
@@ -238,6 +242,10 @@ export class TransactionsApi extends runtime.BaseAPI {
 
         if (requestParameters['importedOnly'] != null) {
             queryParameters['importedOnly'] = requestParameters['importedOnly'];
+        }
+
+        if (requestParameters['refundEligibleOnly'] != null) {
+            queryParameters['refundEligibleOnly'] = requestParameters['refundEligibleOnly'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

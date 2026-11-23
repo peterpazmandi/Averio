@@ -56,7 +56,7 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
         claim = await claimFor(source.id);
         assert.equal(claim.status, 'Received'); assert.equal(claim.outstandingAmount, '0'); assert.equal(claim.paymentFollowUpDue, false);
         assert.deepEqual(await ok(page, base + '/accounts'), beforeAccounts);
-        assert.deepEqual(await ok(page, base + '/transactions/' + credit.id), beforeCredit);
+        assert.deepEqual(await ok(page, base + '/transactions/' + credit.id), { ...beforeCredit, paymentDetailsLocked: true });
         assert.equal((await api(page, base + '/transactions/' + credit.id + '?expectedUpdatedAt=' + encodeURIComponent(beforeCredit.updatedAt), { method: 'DELETE' })).status, 422);
         panel = await open(source.id);
         await panel.locator('[data-payment-id="' + firstLink.id + '"]').getByRole('button', { name: 'Unlink payment', exact: true }).click();

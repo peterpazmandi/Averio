@@ -368,6 +368,7 @@
   <data name="Error_ItemRefundOriginUnknown" xml:space="preserve"><value>Ennek a korábbi pénzvisszatérítésnek a jóváírási eredete nem állapítható meg megbízhatóan. A rögzített banki pénzmozgás védelmében a visszavonás le van tiltva. A javítás előtt ellenőriztetni kell az eredeti jóváírást.</value></data>
   <data name="Validation_ReimbursementPayment" xml:space="preserve"><value>Válassz megfelelő rögzített bevételt az igény célkontóján. Erősítsd meg a beérkezést és ellenőrizd a fennmaradó összeget; változás esetén frissíts.</value></data>
   <data name="Error_TransactionLinked" xml:space="preserve"><value>A tranzakció védett kapcsolatokkal rendelkezik. Módosítás, érvénytelenítés vagy pénzvisszatérítés előtt távolítsd el őket.</value></data>
+  <data name="Error_PaymentDetailsLocked" xml:space="preserve"><value>A számla, típus, dátum, láthatóság, tételösszegek és tételszerkezet, személyes pénz hozzárendelése és az érvénytelenítés védett, mert a tranzakcióhoz fizetések kapcsolódnak. Ezek módosítása előtt válaszd le a fizetéseket.</value></data>
 </root>
 
 

@@ -40,7 +40,7 @@ public sealed record TransactionQuery(
     DateTimeOffset? CursorCreatedAt,
     Guid? CursorId,
     Guid? ActivityId = null, IReadOnlyList<Guid>? LabelIds = null,
-    bool IncludeArchived = false, bool ImportedOnly = false);
+    bool IncludeArchived = false, bool ImportedOnly = false, bool RefundEligibleOnly = false);
 
 public sealed record TransactionReadPage(
     IReadOnlyList<TransactionReadModel> Items,

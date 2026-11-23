@@ -40,3 +40,7 @@ public sealed record UnlinkReimbursementPaymentRequest(Guid ExpectedVersion);
 public sealed record ReimbursementPaymentResponse(Guid Id, Guid CreditTransactionId, string Amount, DateOnly ReceivedOn, DateTimeOffset LinkedAt, DateTimeOffset? UnlinkedAt);
 public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt);
 public sealed record ReimbursementPaymentCandidatesResponse(IReadOnlyList<ReimbursementPaymentCandidateResponse> Items, bool HasMore);
+
+// Opaque references only: never expose inaccessible financial details through recovery.
+public sealed record ReimbursementRecoveryLinkResponse(Guid ClaimId, Guid PaymentId);
+public sealed record RecoverReimbursementPaymentsRequest(IReadOnlyList<ReimbursementRecoveryLinkResponse> Links);

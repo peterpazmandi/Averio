@@ -29,6 +29,14 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
     }
     public Task<ReimbursementPayment?> PaymentByOperationAsync(Guid h, Guid operation, CancellationToken ct)
         => db.Set<ReimbursementPayment>().SingleOrDefaultAsync(p => p.HouseholdId == h && p.OperationId == operation, ct);
+    public async Task<IReadOnlySet<Guid>> PaymentProtectedIdsAsync(Guid householdId, IReadOnlyList<Guid> transactionIds, CancellationToken ct)
+    {
+        if (transactionIds.Count == 0) return new HashSet<Guid>();
+        return (await db.Transactions.Where(t => t.HouseholdId == householdId && transactionIds.Contains(t.Id)
+            && db.Set<ReimbursementPayment>().Any(p => p.HouseholdId == householdId && p.UnlinkedAt == null
+                && (p.CreditTransactionId == t.Id || db.Set<ReimbursementClaim>().Any(c => c.Id == p.ClaimId && c.TransactionId == t.Id))))
+            .Select(t => t.Id).ToArrayAsync(ct)).ToHashSet();
+    }
     public Task<bool> HasActivePaymentAsync(Guid h, Guid transactionId, CancellationToken ct)
         => db.Set<ReimbursementPayment>().AnyAsync(p => p.HouseholdId == h && p.UnlinkedAt == null
             && (p.CreditTransactionId == transactionId || db.Set<ReimbursementClaim>().Any(c => c.Id == p.ClaimId && c.TransactionId == transactionId)), ct);
@@ -47,6 +55,20 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
                 .Any(g => g.Sum(p => p.Amount) != 0));
         if (!string.IsNullOrWhiteSpace(search)) q = q.Where(t => t.Description.Contains(search) || (t.Merchant != null && t.Merchant.Contains(search)) || (t.Note != null && t.Note.Contains(search)));
         return await q.OrderByDescending(t => t.OccurredOn).ThenByDescending(t => t.CreatedAt).ThenBy(t => t.Id).Skip(offset).Take(21).ToArrayAsync(ct);
+    }
+    public Task<ReimbursementClaim?> GetOwnedAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
+        => db.Set<ReimbursementClaim>().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
+            .SingleOrDefaultAsync(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId && c.Id == id, ct);
+    public async Task<IReadOnlyList<ReimbursementRecoveryLink>> RecoveryLinksAsync(Guid householdId, Guid memberId, CancellationToken ct)
+    {
+        var visible = Visible(householdId, memberId);
+        return await db.Set<ReimbursementClaim>()
+            .Where(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId
+                && (!visible.Any(v => v.Id == c.Id)
+                    || !db.Transactions.Any(t => t.Id == c.TransactionId && db.Accounts.Any(a => a.Id == t.AccountId
+                        && a.CutoverAtUtc == null && (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId))))))
+            .SelectMany(c => c.Payments.Where(p => p.UnlinkedAt == null).Select(p => new { ClaimId = c.Id, PaymentId = p.Id }))
+            .OrderBy(p => p.ClaimId).ThenBy(p => p.PaymentId).Take(100).Select(p => new ReimbursementRecoveryLink(p.ClaimId, p.PaymentId)).ToArrayAsync(ct);
     }
     public void Add(ReimbursementClaim claim) => db.Add(claim);
 }

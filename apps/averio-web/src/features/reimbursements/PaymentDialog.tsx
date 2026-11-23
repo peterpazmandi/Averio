@@ -13,8 +13,8 @@ import { formatDecimalAmount, subtractDecimalAmounts } from '../../shared/money/
 import { reimbursementKeys, reimbursementsApi } from './reimbursementQueries';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 
-type Props = { userId: string; householdId: string; claim: ReimbursementClaimResponse; payment?: ReimbursementPaymentResponse; onClose: () => void };
-export function PaymentDialog({ userId, householdId, claim, payment, onClose }: Props) {
+type Props = { userId: string; householdId: string; claim: ReimbursementClaimResponse; payment?: ReimbursementPaymentResponse; onClose: () => void; onChanged?: () => Promise<void> };
+export function PaymentDialog({ userId, householdId, claim, payment, onClose, onChanged }: Props) {
     const { t, i18n } = useTranslation();
     const client = useQueryClient();
     const form = useId();
@@ -33,7 +33,8 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose }: 
     const rows = candidates.data?.pages.flatMap(p => p.items) ?? [];
     const credit = rows.find(c => c.id === creditId);
     const refresh = async () => {
-        await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
+        if (onChanged) await onChanged();
+        else await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
             client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]);
         onClose();
     };
@@ -50,12 +51,16 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose }: 
     const unlink = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost({
         householdId, claimId: claim.id, paymentId: payment!.id, unlinkReimbursementPaymentRequest: { expectedVersion: claim.version },
     }), onSuccess: refresh });
+    const dismiss = async () => {
+        if (onChanged && (submission?.unknown || unlink.isError)) await onChanged();
+        onClose();
+    };
     const pending = link.isPending || unlink.isPending;
     const locked = pending || submission !== null;
     const error = payment ? unlink.error : link.error;
     return <AverioDialog open title={t(payment ? 'reimbursements.payments.unlink' : 'reimbursements.payments.link')} closeLabel={t('common.actions.close')}
-        onDismiss={onClose} busy={pending} actions={<>
-            <AverioButton disabled={pending} onClick={onClose}>{t('common.actions.close')}</AverioButton>
+        onDismiss={() => { void dismiss(); }} busy={pending} actions={<>
+            <AverioButton disabled={pending} onClick={() => { void dismiss(); }}>{t('common.actions.close')}</AverioButton>
             <AverioButton type="submit" form={form} variant={payment ? 'danger' : 'primary'} disabled={pending || (!payment && !submission && (!confirmed || !credit))}>
                 {t(error && (submission || payment) ? 'common.actions.retry' : payment ? 'reimbursements.payments.unlink' : 'reimbursements.payments.link')}
             </AverioButton></>}>

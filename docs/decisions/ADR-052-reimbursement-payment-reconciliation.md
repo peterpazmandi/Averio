@@ -25,3 +25,5 @@ AddReimbursementPayments adds a table and expands allowed claim states; existing
 EN/DE/HU matching dialogs search and paginate eligible credits, show the resulting outstanding amount, require receipt confirmation and retain original requests after uncertain outcomes. Payment history exposes explicit bank-credit links and unlink confirmation. Closing a dialog does not cancel an in-flight server operation; users must check saved history before starting a different match.
 
 Unit, PostgreSQL and browser tests cover partial/full receipt, unchanged financial records and totals, exclusivity, concurrent retries, unlink/relink, privacy, protected transactions/imports, migration history guards and uncertain responses. Provider submission, automatic matching, FX, and pooled-credit allocation remain outside this increment.
+
+The blanket ordinary-edit restriction is superseded by [ADR-054](ADR-054-safe-edits-for-linked-reimbursement-transactions.md), which permits descriptive edits while protecting financial fields.
