@@ -42,12 +42,12 @@ internal static class ReimbursementPaymentVerification
         await Throws<BusinessRuleException>(() => Link(claim.Id, request with { MoneyReceived = false }));
         await Throws<ConflictException>(() => Link(claim.Id, request with { ExpectedCreditUpdatedAt = credit.UpdatedAt.AddSeconds(-1) }));
         var options = await Candidates(claim.Id);
-        Check(options.Any(t => t.Id == c1) && options.Any(t => t.Id == c2) && options.All(t => t.Id != tooBig), "Candidate eligibility");
+        Check(options.Any(t => t.Credit.Id == c1) && options.Any(t => t.Credit.Id == c2) && options.Any(t => t.Credit.Id == tooBig && t.AvailableAmount == 31), "Candidate eligibility");
         var ids = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Link(claim.Id, request)));
         Check(ids.Distinct().Count() == 1, "Concurrent retry duplicated payment");
         claim = await Claim(source);
         Check(claim.Status == ReimbursementStatus.PartiallyReceived && claim.ReceivedAmount == 10 && claim.OutstandingAmount == 20, "Partial receipt persisted");
-        Check((await Candidates(claim.Id)).All(t => t.Id != c1), "Matched credit still selectable");
+        Check((await Candidates(claim.Id)).All(t => t.Credit.Id != c1), "Matched credit still selectable");
         await Throws<ConflictException>(() => Link(claim.Id, request with { OperationId = Guid.NewGuid() }));
         await Throws<BusinessRuleException>(() => Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, claim.Id, claim.Version, false, null, null, ReimbursementStatus.Cancelled, ct)));
         await Throws<BusinessRuleException>(() => Use<VoidTransactionHandler>(h => h.HandleAsync(f.HouseholdId, c1, credit.UpdatedAt, ct)));
@@ -69,6 +69,27 @@ internal static class ReimbursementPaymentVerification
         claim = await Claim(source);
         Check(claim.Status == ReimbursementStatus.Received && claim.OutstandingAmount == 0, "Full receipt persisted");
         Check(await FinancialSnapshot() == before, "Matching changed bank movements, aggregates or Personal Money");
+        // One posted credit can cover two claims without a second cash movement.
+        var pooledCredit = await Transaction(tooBig);
+        var pooledBefore = await FinancialSnapshot();
+        var firstAllocation = await Link(other.Id, new(tooBig, Guid.NewGuid(), other.Version, pooledCredit.UpdatedAt, true, 12m));
+        other = await Claim(otherSource);
+        Check(other.ReceivedAmount == 12m && (await Candidates(other.Id)).All(c => c.Credit.Id != tooBig), "Claim reused its own active credit");
+        var thirdSource = await Post(TransactionKind.Expense, 100, true);
+        var third = await Claim(thirdSource);
+        await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, third.Id, third.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+        third = await Claim(thirdSource);
+        var remaining = (await Candidates(third.Id)).Single(c => c.Credit.Id == tooBig);
+        Check(remaining.AvailableAmount == 19m, "Candidate did not show unallocated credit");
+        await Throws<BusinessRuleException>(() => Link(third.Id, new(tooBig, Guid.NewGuid(), third.Version, pooledCredit.UpdatedAt, true, 19.0001m)));
+        var secondAllocation = await Link(third.Id, new(tooBig, Guid.NewGuid(), third.Version, pooledCredit.UpdatedAt, true, 19m));
+        third = await Claim(thirdSource);
+        Check(third.ReceivedAmount == 19m && (await Candidates(other.Id)).All(c => c.Credit.Id != tooBig), "Overallocated pooled credit");
+        await Unlink(other.Id, firstAllocation, other.Version);
+        Check((await Candidates(other.Id)).Any(c => c.Credit.Id == tooBig && c.AvailableAmount == 12m), "Unlink did not release only its allocation");
+        Check((await Claim(thirdSource)).ReceivedAmount == 19m, "Unlink changed another claim's allocation");
+        Check((await Transaction(tooBig)).Amount == 31m, "Pooling changed bank credit");
+        Check(secondAllocation != firstAllocation && pooledBefore != await FinancialSnapshot(), "Expected independent claim source was not recorded");
         user.UserId = f.MemberUserId;
         Check((await List(source)).Count == 0, "Other member saw private claim");
         await Throws<NotFoundException>(() => Candidates(claim.Id));
@@ -319,7 +340,7 @@ internal static class ReimbursementPaymentVerification
         async Task<Transaction> Transaction(Guid id) { await using var s = provider.CreateAsyncScope(); return await s.ServiceProvider.GetRequiredService<AverioDbContext>().Transactions.AsNoTracking().Include(t=>t.Items).SingleAsync(t=>t.Id==id); }
         async Task<IReadOnlyList<ReimbursementResult>> List(Guid id) { await using var s = provider.CreateAsyncScope(); return await s.ServiceProvider.GetRequiredService<ReimbursementHandler>().ListAsync(f.HouseholdId,id,ct); }
         async Task<ReimbursementClaim> Claim(Guid id) => (await List(id)).Single().Claim;
-        async Task<IReadOnlyList<Transaction>> Candidates(Guid id) { await using var s = provider.CreateAsyncScope(); return await s.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().CandidatesAsync(f.HouseholdId,id,null,0,ct); }
+        async Task<IReadOnlyList<ReimbursementCreditCandidate>> Candidates(Guid id) { await using var s = provider.CreateAsyncScope(); return await s.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().CandidatesAsync(f.HouseholdId,id,null,0,ct); }
         async Task<Guid> Link(Guid id, LinkReimbursementPayment req) { await using var s = provider.CreateAsyncScope(); return await s.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().LinkAsync(f.HouseholdId,id,req,ct); }
         Task Unlink(Guid id,Guid payment,Guid version) => Use<ReimbursementPaymentHandler>(h=>h.UnlinkAsync(f.HouseholdId,id,payment,version,ct));
         async Task<string> FinancialSnapshot() {
@@ -331,3 +352,4 @@ internal static class ReimbursementPaymentVerification
     private static void Check(bool ok,string message) { if(!ok)throw new Exception(message); }
     private static async Task Throws<T>(Func<Task> action) where T:Exception { try { await action(); } catch(T) { return; } throw new Exception("Expected "+typeof(T).Name); }
 }
+
