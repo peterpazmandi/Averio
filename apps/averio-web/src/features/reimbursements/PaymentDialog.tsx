@@ -13,6 +13,8 @@ import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } fr
 import { reimbursementKeys, reimbursementsApi } from './reimbursementQueries';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 
+const MetaSeparator = () => <span aria-hidden="true" className="mx-1">·</span>;
+
 type Props = { userId: string; householdId: string; claim: ReimbursementClaimResponse; payment?: ReimbursementPaymentResponse; onClose: () => void; onChanged?: () => Promise<void> };
 export function PaymentDialog({ userId, householdId, claim, payment, onClose, onChanged }: Props) {
     const { t, i18n } = useTranslation();
@@ -77,9 +79,9 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
                 expectedVersion: claim.version, operationId: crypto.randomUUID(), moneyReceived: true, amount: allocation! } };
             setSubmission(next); link.mutate(next.request);
         }}>
-            <AverioCard className="space-y-2"><h3 className="font-semibold">{claim.provider} · {claim.description}</h3>
+            <AverioCard className="space-y-2"><h3 className="font-semibold">{claim.provider}<MetaSeparator />{claim.description}</h3>
                 <p>{t('reimbursements.outstanding')} <strong>{money(claim.outstandingAmount)}</strong></p>
-                {payment && <p>{t('reimbursements.received')} <strong>{money(payment.amount)}</strong> · {payment.receivedOn}</p>}
+                {payment && <p>{t('reimbursements.received')} <strong>{money(payment.amount)}</strong><MetaSeparator />{payment.receivedOn}</p>}
             </AverioCard>
             {payment ? <p>{t('reimbursements.payments.unlinkHelp')}</p> : <>
                 <AverioCard className="grid gap-3">
@@ -91,14 +93,14 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
                         {search && <AverioButton onClick={() => { setSearch(''); setCreditId(''); setAmount(''); setConfirmed(false); }}>{t('reimbursements.payments.reset')}</AverioButton>}</div>}
                     {rows.map(row => <label key={row.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                         <input type="radio" name={form + '-credit'} className="size-4 shrink-0 accent-emerald-500" value={row.id} checked={creditId === row.id} disabled={locked} onChange={() => { setCreditId(row.id); setAmount(subtractDecimalAmounts(row.availableAmount, claim.outstandingAmount).startsWith('-') ? row.availableAmount : claim.outstandingAmount); setConfirmed(false); }} />
-                        <span className="min-w-0 break-words">{row.description} · {row.receivedOn} · <strong>{money(row.amount)}</strong></span>
+                        <span className="min-w-0 break-words">{row.description}<MetaSeparator />{row.receivedOn}<MetaSeparator /><strong>{money(row.amount)}</strong></span>
                     </label>)}
                     {(candidates.hasNextPage || candidates.isError) && <AverioButton disabled={locked || candidates.isFetching} onClick={() => { void (candidates.isError ? candidates.refetch() : candidates.fetchNextPage()); }}>{t(candidates.isError ? 'common.actions.retry' : 'reimbursements.payments.more')}</AverioButton>}
                 </AverioCard>
                 {credit && <AverioField>{t('reimbursements.payments.allocate')}<AverioInput inputMode="decimal" value={amount} disabled={locked} onChange={e => { setAmount(e.target.value); setConfirmed(false); }} /></AverioField>}
                 {credit && <p>{t('reimbursements.payments.creditAvailable')} <strong>{money(credit.availableAmount)}</strong></p>}
                 {credit && !validAmount && <p role="alert" className="text-red-700 dark:text-red-300">{t('reimbursements.payments.amountInvalid')}</p>}
-                {credit && validAmount && <p>{t('reimbursements.payments.remaining')} <strong>{money(subtractDecimalAmounts(claim.outstandingAmount, allocation!))}</strong> · {t('reimbursements.payments.creditAfter')}: <strong>{money(subtractDecimalAmounts(credit.availableAmount, allocation!))}</strong></p>}
+                {credit && validAmount && <p>{t('reimbursements.payments.remaining')} <strong>{money(subtractDecimalAmounts(claim.outstandingAmount, allocation!))}</strong><MetaSeparator />{t('reimbursements.payments.creditAfter')}: <strong>{money(subtractDecimalAmounts(credit.availableAmount, allocation!))}</strong></p>}
                 <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="size-4 shrink-0 accent-emerald-500" checked={confirmed} disabled={locked} onChange={e => setConfirmed(e.target.checked)} />{t('reimbursements.payments.confirm')}</label>
             </>}
             {submission?.unknown && <p role="status" className="text-amber-800 dark:text-amber-200">{t('reimbursements.payments.uncertain')}</p>}
