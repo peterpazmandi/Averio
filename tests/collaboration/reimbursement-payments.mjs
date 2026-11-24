@@ -135,6 +135,38 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     await ok(page, base + '/reimbursements/' + firstPooled.id + '/payments/' + firstPooled.payments[0].id + '/unlink', {
         method: 'POST', body: { expectedVersion: firstPooled.version } });
     assert.equal((await claimFor(sources[1].id)).receivedAmount, '19');
+    // Backward-compatible API contract: omitting amount allocates the whole credit.
+    const legacyExpense = await post('Expense', '40', 'Legacy whole-credit claim');
+    const legacyCredit = await post('Income', '7', 'Legacy whole-credit payment');
+    const legacyRecord = await ok(page, base + '/transactions/' + legacyExpense.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: legacyExpense.id, expectedUpdatedAt: legacyRecord.updatedAt,
+        configuration: { provider: 'Legacy provider', calculation: 'Fixed', value: '7', maximumAmount: null, destinationAccountId: account.id, paymentDelayDays: 0, submissionReminderDays: null } } });
+    let legacyClaim = await claimFor(legacyExpense.id);
+    await ok(page, base + '/reimbursements/' + legacyClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: legacyClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    const legacyCreditRecord = await ok(page, base + '/transactions/' + legacyCredit.id);
+    const legacyLink = await ok(page, base + '/reimbursements/' + legacyClaim.id + '/payments', { method: 'POST',
+        body: { creditTransactionId: legacyCredit.id, operationId: crypto.randomUUID(), expectedVersion: legacyClaim.version,
+            expectedCreditUpdatedAt: legacyCreditRecord.updatedAt, moneyReceived: true } });
+    assert.ok(legacyLink.id);
+    assert.equal((await claimFor(legacyExpense.id)).receivedAmount, '7');
+
+    // Amount parsing rejects values with more than four decimals and non-numeric input at the API boundary.
+    const malformedExpense = await post('Expense', '40', 'Malformed amount claim');
+    const malformedCredit = await post('Income', '7', 'Malformed amount payment');
+    const malformedRecord = await ok(page, base + '/transactions/' + malformedExpense.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: malformedExpense.id, expectedUpdatedAt: malformedRecord.updatedAt,
+        configuration: { provider: 'Malformed provider', calculation: 'Fixed', value: '7', maximumAmount: null, destinationAccountId: account.id, paymentDelayDays: 0, submissionReminderDays: null } } });
+    let malformedClaim = await claimFor(malformedExpense.id);
+    await ok(page, base + '/reimbursements/' + malformedClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: malformedClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    const malformedCreditRecord = await ok(page, base + '/transactions/' + malformedCredit.id);
+    const malformedRequest = { creditTransactionId: malformedCredit.id, operationId: crypto.randomUUID(), expectedVersion: malformedClaim.version,
+        expectedCreditUpdatedAt: malformedCreditRecord.updatedAt, moneyReceived: true };
+    assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
+        body: { ...malformedRequest, amount: '1.00001' } })).status, 422);
+    assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
+        body: { ...malformedRequest, amount: 'not-a-number' } })).status, 422);
     await poll(async () => !(await page.getByRole('alert').count()), 'no lingering settlement errors');
     console.log('PASS reimbursement payments: partial/full receipt, matching and unlink lost responses, unchanged cash/credits, relinking and EN/DE/HU responsive layouts');
 }
