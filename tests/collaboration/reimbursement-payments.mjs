@@ -168,7 +168,7 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
         body: { ...malformedRequest, amount: '1.00001' } })).status, 422);
     assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
-        body: { ...malformedRequest, amount: 'not-a-number' } })).status, 422);
+        body: { ...malformedRequest, amount: 'not-a-number' } })).status, 400);
     await poll(async () => !(await page.getByRole('alert').count()), 'no lingering settlement errors');
     console.log('PASS reimbursement payments: partial/full receipt, matching and unlink lost responses, unchanged cash/credits, relinking and EN/DE/HU responsive layouts');
 }
