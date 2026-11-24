@@ -13,7 +13,6 @@
  */
 
 import { mapValues } from '../runtime';
-
 /**
  * 
  * @export
@@ -146,3 +145,4 @@ export function MoneyBackItemResponseToJSONTyped(value?: MoneyBackItemResponse |
         'canModify': value['canModify'],
     };
 }
+
