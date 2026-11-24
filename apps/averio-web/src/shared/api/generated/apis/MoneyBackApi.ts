@@ -98,4 +98,3 @@ export class MoneyBackApi extends runtime.BaseAPI {
         return await response.value();
     }
 }
-
