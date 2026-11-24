@@ -145,5 +145,3 @@ export function MoneyBackItemResponseToJSONTyped(value?: MoneyBackItemResponse |
         'canModify': value['canModify'],
     };
 }
-
-
