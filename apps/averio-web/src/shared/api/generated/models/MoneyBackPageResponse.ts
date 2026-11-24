@@ -13,6 +13,7 @@
  */
 
 import { mapValues } from '../runtime';
+import type { MoneyBackItemResponse } from './MoneyBackItemResponse';
 import {
     MoneyBackItemResponseFromJSON,
     MoneyBackItemResponseFromJSONTyped,
