@@ -97,5 +97,6 @@ export class MoneyBackApi extends runtime.BaseAPI {
         const response = await this.apiV1HouseholdsHouseholdIdMoneyBackGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
+
 }
 
