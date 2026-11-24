@@ -144,6 +144,7 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     let legacyClaim = await claimFor(legacyExpense.id);
     await ok(page, base + '/reimbursements/' + legacyClaim.id + '/status', { method: 'PUT',
         body: { expectedVersion: legacyClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    legacyClaim = await claimFor(legacyExpense.id);
     const legacyCreditRecord = await ok(page, base + '/transactions/' + legacyCredit.id);
     const legacyLink = await ok(page, base + '/reimbursements/' + legacyClaim.id + '/payments', { method: 'POST',
         body: { creditTransactionId: legacyCredit.id, operationId: crypto.randomUUID(), expectedVersion: legacyClaim.version,
@@ -160,6 +161,7 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     let malformedClaim = await claimFor(malformedExpense.id);
     await ok(page, base + '/reimbursements/' + malformedClaim.id + '/status', { method: 'PUT',
         body: { expectedVersion: malformedClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    malformedClaim = await claimFor(malformedExpense.id);
     const malformedCreditRecord = await ok(page, base + '/transactions/' + malformedCredit.id);
     const malformedRequest = { creditTransactionId: malformedCredit.id, operationId: crypto.randomUUID(), expectedVersion: malformedClaim.version,
         expectedCreditUpdatedAt: malformedCreditRecord.updatedAt, moneyReceived: true };
