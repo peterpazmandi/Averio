@@ -1,2 +1,9 @@
-Eë(–÷jØKŠwµå§@–PrµëzÊ%½ãÚ¶©¦ÏÚ½êâ£›şÊÜşÈZ­çj˜¿éŞ­«^wù¨	©ç¢×âÚZ¶”±êì=ë^¬ö³™©İ‰Ê{!jØ)¶šèç-²
-z÷^Ûï­ôsw<×İ|u÷;{§í½:ï¶«yû§uÊŞv+kz÷«±©Z¦›½êâ£›jšlj÷«ŠŒnÊÜ²«yÖ©Š§z¶­yÙ¨uél2‰ŞÈœö y¬¦‰ìzÛyÆ®±è­v‡¬‹^Æ+-1ëa¡Ò'¾‡¶*'¦Ø¨œ¸§{^B¢{Ş®Ôè«ë„­®)à áb•ä^iĞ%”­zÄ^²‰oxö­…ªi°L\z›b¢w–X§št	e+^³­‡V«‚éÛ…ëÚ–çœjyèµ·šé©·+-®)à=ªÚ™ë^®–­
+/* tslint:disable */
+/* eslint-disable */
+import type { MoneyBackItemResponse } from './MoneyBackItemResponse';
+import { MoneyBackItemResponseFromJSON, MoneyBackItemResponseToJSON } from './MoneyBackItemResponse';
+export interface MoneyBackPageResponse { items: Array<MoneyBackItemResponse>; hasMore: boolean; offset: number; limit: number; }
+export function instanceOfMoneyBackPageResponse(value: object): value is MoneyBackPageResponse { return 'items' in value && 'hasMore' in value && 'offset' in value && 'limit' in value; }
+export function MoneyBackPageResponseFromJSON(json: any): MoneyBackPageResponse { return MoneyBackPageResponseFromJSONTyped(json, false); }
+export function MoneyBackPageResponseFromJSONTyped(json: any, _ignoreDiscriminator: boolean): MoneyBackPageResponse { if (json == null) return json; return { items: (json.items as Array<any>).map(MoneyBackItemResponseFromJSON), hasMore: json.hasMore, offset: json.offset, limit: json.limit }; }
+export function MoneyBackPageResponseToJSON(value?: MoneyBackPageResponse | null): any { if (value == null) return value; return { items: value.items.map(MoneyBackItemResponseToJSON), hasMore: value.hasMore, offset: value.offset, limit: value.limit }; }
