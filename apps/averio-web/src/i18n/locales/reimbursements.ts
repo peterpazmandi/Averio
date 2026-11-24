@@ -224,7 +224,7 @@ export const reimbursementsDE = {
     },
     "payments": {
         "allocate": "Betrag für diesen Anspruch",
-        "creditAvailable": "Verf�gbarer Gutschriftbetrag",
+        "creditAvailable": "Verfügbarer Gutschriftbetrag",
         "creditAfter": "Nicht zugeordneter Restbetrag",
         "amountInvalid": "Gib einen positiven Betrag ein, der höchstens der verfügbaren Gutschrift und dem offenen Anspruch entspricht.",
         "link": "Eingegangene Zahlung zuordnen",
