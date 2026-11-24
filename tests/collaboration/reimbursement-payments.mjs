@@ -166,7 +166,7 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     const malformedRequest = { creditTransactionId: malformedCredit.id, operationId: crypto.randomUUID(), expectedVersion: malformedClaim.version,
         expectedCreditUpdatedAt: malformedCreditRecord.updatedAt, moneyReceived: true };
     assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
-        body: { ...malformedRequest, amount: '1.00001' } })).status, 422);
+        body: { ...malformedRequest, amount: '1.00001' } })).status, 400);
     assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
         body: { ...malformedRequest, amount: 'not-a-number' } })).status, 400);
     await poll(async () => !(await page.getByRole('alert').count()), 'no lingering settlement errors');
