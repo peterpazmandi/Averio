@@ -101,7 +101,6 @@ export * from './ImportUndoSummary';
 export * from './InvitationPreviewResponse';
 export * from './InvitationResponse';
 export * from './InvitationTokenRequest';
-export * from './InvitationVersionRequest';
 export * from './ItemRefundResponse';
 export * from './LabelResponse';
 export * from './LinkReimbursementPaymentRequest';
