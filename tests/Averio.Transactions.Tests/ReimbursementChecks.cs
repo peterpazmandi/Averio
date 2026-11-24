@@ -79,8 +79,12 @@ internal static class ReimbursementChecks
         var entity = db.Model.FindEntityType(typeof(ReimbursementClaim))!;
         Check(entity.GetIndexes().Any(i => i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == nameof(ReimbursementClaim.TransactionId)), "Missing idempotency index");
         Check(entity.FindProperty(nameof(ReimbursementClaim.Version))!.IsConcurrencyToken, "Missing concurrency token");
+        Check(Averio.Domain.Transactions.ReceivedCreditAllocationRule.Remaining(31m, [12m, 19m]) == 0m, "Pooled credit remaining amount");
+        Throws(() => Averio.Domain.Transactions.ReceivedCreditAllocationRule.ValidateNew(31m, [12m], 19.0001m, 30m));
+        Throws(() => Averio.Domain.Transactions.ReceivedCreditAllocationRule.ValidateNew(31m, [12m], 20m, 30m));
     }
     private static void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
     private static void Throws(Action action) { try { action(); } catch (ArgumentException) { return; } throw new Exception("Expected invalid reimbursement"); }
 }
+
 

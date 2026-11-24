@@ -103,16 +103,17 @@ public sealed class ReimbursementClaim
             throw new ArgumentException("Invalid claim transition.");
         Status = status; Record(actor, now);
     }
-    public ReimbursementPayment LinkPayment(Transaction credit, Guid operationId, string fingerprint, Guid actor, DateTimeOffset now)
+    public ReimbursementPayment LinkPayment(Transaction credit, Guid operationId, string fingerprint, Guid actor, DateTimeOffset now, decimal? allocatedAmount = null)
     {
+        var amount = allocatedAmount ?? credit.Amount;
         if (Status is not (ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived)
             || credit.HouseholdId != HouseholdId || credit.AccountId != DestinationAccountId || credit.Currency.Value != Currency
             || credit.Kind != TransactionKind.Income || credit.Status != TransactionStatus.Posted || credit.IsArchived
             || credit.OccurredOn < PaymentOn || credit.OccurredOn > DateOnly.FromDateTime(now.UtcDateTime)
-            || credit.Amount <= 0 || credit.Amount > OutstandingAmount || actor != HouseholdMemberId
+            || amount <= 0 || decimal.Round(amount, 4) != amount || amount > credit.Amount || amount > OutstandingAmount || actor != HouseholdMemberId
             || _payments.Any(p => p.CreditTransactionId == credit.Id && p.UnlinkedAt is null))
             throw new ArgumentException("Invalid reimbursement payment.");
-        var payment = ReimbursementPayment.Create(this, credit, operationId, fingerprint, actor, now);
+        var payment = ReimbursementPayment.Create(this, credit, operationId, fingerprint, actor, now, amount);
         _payments.Add(payment);
         RefreshReceivedStatus(); Record(actor, now, "PaymentLinked");
         return payment;
@@ -164,3 +165,4 @@ public sealed class ReimbursementClaimEvent
         Sequence = sequence, ChangeKind = changeKind, Provider = claim.Provider, PotentialAmount = claim.PotentialAmount, DestinationAccountId = claim.DestinationAccountId,
         PaymentDelayDays = claim.PaymentDelayDays, SubmissionReminderOn = claim.SubmissionReminderOn, ExpectedOn = claim.ExpectedOn };
 }
+

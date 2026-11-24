@@ -57,12 +57,14 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, Reimb
     public async Task<ActionResult<ReimbursementPaymentCandidatesResponse>> Candidates(Guid householdId, Guid claimId, [FromQuery] string? search, [FromQuery] int offset = 0, CancellationToken ct = default)
     {
         var rows = await payments.CandidatesAsync(householdId, claimId, search, offset, ct);
-        return Ok(new ReimbursementPaymentCandidatesResponse(rows.Take(20).Select(t => new ReimbursementPaymentCandidateResponse(t.Id, t.Description, DecimalAmountMapper.Format(t.Amount), t.OccurredOn, t.UpdatedAt)).ToArray(), rows.Count > 20));
+        return Ok(new ReimbursementPaymentCandidatesResponse(rows.Take(20).Select(c => new ReimbursementPaymentCandidateResponse(c.Credit.Id, c.Credit.Description,
+            DecimalAmountMapper.Format(c.Credit.Amount), c.Credit.OccurredOn, c.Credit.UpdatedAt, DecimalAmountMapper.Format(c.AvailableAmount))).ToArray(), rows.Count > 20));
     }
     [HttpPost("{claimId:guid}/payments")]
     public async Task<ActionResult<LinkReimbursementPaymentResponse>> LinkPayment(Guid householdId, Guid claimId, LinkReimbursementPaymentRequest request, CancellationToken ct)
         => Ok(new LinkReimbursementPaymentResponse(await payments.LinkAsync(householdId, claimId,
-            new(request.CreditTransactionId, request.OperationId, request.ExpectedVersion, request.ExpectedCreditUpdatedAt, request.MoneyReceived), ct)));
+            new(request.CreditTransactionId, request.OperationId, request.ExpectedVersion, request.ExpectedCreditUpdatedAt, request.MoneyReceived,
+                request.Amount is null ? null : DecimalAmountMapper.ParseTransactionAmount(request.Amount)), ct)));
     [HttpPost("{claimId:guid}/payments/{paymentId:guid}/unlink")]
     public async Task<IActionResult> UnlinkPayment(Guid householdId, Guid claimId, Guid paymentId, UnlinkReimbursementPaymentRequest request, CancellationToken ct)
     {
@@ -77,3 +79,4 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, Reimb
         return NoContent();
     }
 }
+

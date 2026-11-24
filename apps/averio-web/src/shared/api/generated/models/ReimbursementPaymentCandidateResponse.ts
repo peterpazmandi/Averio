@@ -39,6 +39,10 @@ export interface ReimbursementPaymentCandidateResponse {
      * 
      */
     updatedAt: string;
+    /**
+     * 
+     */
+    availableAmount: string;
 }
 
 /**
@@ -50,6 +54,7 @@ export function instanceOfReimbursementPaymentCandidateResponse(value: object): 
     if (!('amount' in value) || value['amount'] === undefined) return false;
     if (!('receivedOn' in value) || value['receivedOn'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
+    if (!('availableAmount' in value) || value['availableAmount'] === undefined) return false;
     return true;
 }
 
@@ -68,6 +73,7 @@ export function ReimbursementPaymentCandidateResponseFromJSONTyped(json: any, ig
         'amount': json['amount'],
         'receivedOn': json['receivedOn'],
         'updatedAt': json['updatedAt'],
+        'availableAmount': json['availableAmount'],
     };
 }
 
@@ -87,6 +93,7 @@ export function ReimbursementPaymentCandidateResponseToJSONTyped(value?: Reimbur
         'amount': value['amount'],
         'receivedOn': value['receivedOn'],
         'updatedAt': value['updatedAt'],
+        'availableAmount': value['availableAmount'],
     };
 }
 

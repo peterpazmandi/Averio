@@ -94,6 +94,82 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
         }
         assert.equal((await ok(page, base + '/transactions/' + second.id)).kind, 'Income');
     }
+    const pooled = await post('Income', '31', 'Pooled provider payment');
+    const sources = await Promise.all([post('Expense', '100', 'Pooled claim A'), post('Expense', '100', 'Pooled claim B')]);
+    const claims = [];
+    for (const source of sources) {
+        const record = await ok(page, base + '/transactions/' + source.id);
+        await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: source.id, expectedUpdatedAt: record.updatedAt,
+            configuration: { provider: 'Pooled provider', calculation: 'Fixed', value: '30', maximumAmount: null,
+                destinationAccountId: account.id, paymentDelayDays: 0, submissionReminderDays: null } } });
+        const claim = await claimFor(source.id);
+        await ok(page, base + '/reimbursements/' + claim.id + '/status', { method: 'PUT',
+            body: { expectedVersion: claim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+        claims.push(await claimFor(source.id));
+    }
+    const bankBefore = await ok(page, base + '/accounts');
+    await open(sources[0].id);
+    await page.getByRole('region', { name: 'Reimbursements', exact: true }).getByRole('button', { name: 'Link received payment' }).click();
+    let pooledDialog = page.getByRole('dialog', { name: 'Link received payment' });
+    await pooledDialog.getByLabel('Search received payments').fill('Pooled provider payment');
+    await pooledDialog.getByRole('radio').check();
+    await pooledDialog.getByLabel('Amount to allocate to this claim').fill('12');
+    await pooledDialog.getByRole('checkbox').check();
+    await pooledDialog.getByRole('button', { name: 'Link received payment' }).click();
+    await pooledDialog.waitFor({ state: 'hidden' });
+    const firstPooled = await claimFor(sources[0].id);
+    assert.equal(firstPooled.receivedAmount, '12');
+    await open(sources[1].id);
+    await page.getByRole('region', { name: 'Reimbursements', exact: true }).getByRole('button', { name: 'Link received payment' }).click();
+    pooledDialog = page.getByRole('dialog', { name: 'Link received payment' });
+    await pooledDialog.getByLabel('Search received payments').fill('Pooled provider payment');
+    await pooledDialog.getByRole('radio').check();
+    await pooledDialog.getByText('Credit available').waitFor();
+    await pooledDialog.getByLabel('Amount to allocate to this claim').fill('19');
+    await pooledDialog.getByRole('checkbox').check();
+    await pooledDialog.getByRole('button', { name: 'Link received payment' }).click();
+    await pooledDialog.waitFor({ state: 'hidden' });
+    assert.equal((await claimFor(sources[1].id)).receivedAmount, '19');
+    assert.equal((await ok(page, base + '/transactions/' + pooled.id)).amount, '31');
+    assert.deepEqual(await ok(page, base + '/accounts'), bankBefore);
+    await ok(page, base + '/reimbursements/' + firstPooled.id + '/payments/' + firstPooled.payments[0].id + '/unlink', {
+        method: 'POST', body: { expectedVersion: firstPooled.version } });
+    assert.equal((await claimFor(sources[1].id)).receivedAmount, '19');
+    // Backward-compatible API contract: omitting amount allocates the whole credit.
+    const legacyExpense = await post('Expense', '40', 'Legacy whole-credit claim');
+    const legacyCredit = await post('Income', '7', 'Legacy whole-credit payment');
+    const legacyRecord = await ok(page, base + '/transactions/' + legacyExpense.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: legacyExpense.id, expectedUpdatedAt: legacyRecord.updatedAt,
+        configuration: { provider: 'Legacy provider', calculation: 'Fixed', value: '7', maximumAmount: null, destinationAccountId: account.id, paymentDelayDays: 0, submissionReminderDays: null } } });
+    let legacyClaim = await claimFor(legacyExpense.id);
+    await ok(page, base + '/reimbursements/' + legacyClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: legacyClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    legacyClaim = await claimFor(legacyExpense.id);
+    const legacyCreditRecord = await ok(page, base + '/transactions/' + legacyCredit.id);
+    const legacyLink = await ok(page, base + '/reimbursements/' + legacyClaim.id + '/payments', { method: 'POST',
+        body: { creditTransactionId: legacyCredit.id, operationId: crypto.randomUUID(), expectedVersion: legacyClaim.version,
+            expectedCreditUpdatedAt: legacyCreditRecord.updatedAt, moneyReceived: true } });
+    assert.ok(legacyLink.id);
+    assert.equal((await claimFor(legacyExpense.id)).receivedAmount, '7');
+
+    // Amount parsing rejects values with more than four decimals and non-numeric input at the API boundary.
+    const malformedExpense = await post('Expense', '40', 'Malformed amount claim');
+    const malformedCredit = await post('Income', '7', 'Malformed amount payment');
+    const malformedRecord = await ok(page, base + '/transactions/' + malformedExpense.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: malformedExpense.id, expectedUpdatedAt: malformedRecord.updatedAt,
+        configuration: { provider: 'Malformed provider', calculation: 'Fixed', value: '7', maximumAmount: null, destinationAccountId: account.id, paymentDelayDays: 0, submissionReminderDays: null } } });
+    let malformedClaim = await claimFor(malformedExpense.id);
+    await ok(page, base + '/reimbursements/' + malformedClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: malformedClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    malformedClaim = await claimFor(malformedExpense.id);
+    const malformedCreditRecord = await ok(page, base + '/transactions/' + malformedCredit.id);
+    const malformedRequest = { creditTransactionId: malformedCredit.id, operationId: crypto.randomUUID(), expectedVersion: malformedClaim.version,
+        expectedCreditUpdatedAt: malformedCreditRecord.updatedAt, moneyReceived: true };
+    assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
+        body: { ...malformedRequest, amount: '1.00001' } })).status, 400);
+    assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
+        body: { ...malformedRequest, amount: 'not-a-number' } })).status, 400);
     await poll(async () => !(await page.getByRole('alert').count()), 'no lingering settlement errors');
     console.log('PASS reimbursement payments: partial/full receipt, matching and unlink lost responses, unchanged cash/credits, relinking and EN/DE/HU responsive layouts');
 }
+

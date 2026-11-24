@@ -36,7 +36,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 ARG VCS_REF=unknown
 
 LABEL org.opencontainers.image.revision="${VCS_REF}"
-LABEL io.averio.schema-epoch="2"
+LABEL io.averio.schema-epoch="3"
 
 WORKDIR /app
 
@@ -47,4 +47,5 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Averio.Api.dll"]
+
 

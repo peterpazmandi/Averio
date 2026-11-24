@@ -99,10 +99,14 @@ export const reimbursementsEN = {
     },
     "payments": {
         "link": "Link received payment",
+        "allocate": "Amount to allocate to this claim",
+        "creditAvailable": "Credit available",
+        "creditAfter": "Credit left unallocated",
+        "amountInvalid": "Enter a positive amount within both the available credit and the outstanding claim.",
         "unlink": "Unlink payment",
         "choose": "Choose a recorded payment",
         "search": "Search received payments",
-        "help": "Choose an unlinked Income credit in the destination account and currency, dated from the original expense through today. The whole credit must fit the outstanding amount. Several credits may settle one claim. Record missing bank income in Transactions first.",
+        "help": "Choose an Income credit in the destination account and currency, dated from the original expense through today. Allocate up to its unallocated amount and this claim's outstanding balance. One credit can cover multiple claims without creating another bank movement.",
         "empty": "No eligible payments found",
         "emptyHelp": "Record the incoming payment in Transactions, or clear the search. Credits already linked elsewhere or exceeding the remaining claim are excluded.",
         "reset": "Clear search",
@@ -219,6 +223,10 @@ export const reimbursementsDE = {
         "help": "Änderungen gelten nur für diesen Anspruch. Die gespeicherte Schätzung wird als fester Betrag geöffnet und bleibt auf die ursprüngliche Ausgabe begrenzt. Zeitplan, Einreichungsdatum und Referenz bleiben erhalten. Die Zahlungsfrist beginnt mit der Einreichung, die Erinnerung mit der Erstellung dieses Anspruchs."
     },
     "payments": {
+        "allocate": "Betrag für diesen Anspruch",
+        "creditAvailable": "Verfügbarer Gutschriftbetrag",
+        "creditAfter": "Nicht zugeordneter Restbetrag",
+        "amountInvalid": "Gib einen positiven Betrag ein, der höchstens der verfügbaren Gutschrift und dem offenen Anspruch entspricht.",
         "link": "Eingegangene Zahlung zuordnen",
         "unlink": "Zahlungszuordnung aufheben",
         "choose": "Erfasste Zahlung auswählen",
@@ -340,6 +348,10 @@ export const reimbursementsHU = {
         "help": "A módosítások csak erre az igényre vonatkoznak. A mentett becslés fix összegként nyílik meg, és nem haladhatja meg az eredeti kiadást. Az ismétlődő ütemezés, a beküldés dátuma és az azonosító megmarad. A kifizetés ideje a beküldéstől, az emlékeztető az igény létrehozásától számít."
     },
     "payments": {
+        "allocate": "Ehhez az igényhez rendelt összeg",
+        "creditAvailable": "Felhasználható jóváírás",
+        "creditAfter": "Fel nem osztott jóváírás",
+        "amountInvalid": "Pozitív összeget adj meg, amely nem haladja meg a felhasználható jóváírást és a fennmaradó igényt.",
         "link": "Beérkezett kifizetés összekapcsolása",
         "unlink": "Kifizetés leválasztása",
         "choose": "Rögzített kifizetés kiválasztása",
@@ -361,3 +373,4 @@ export const reimbursementsHU = {
         "protected": "Az igény visszavonása vagy az eredeti tranzakció védett pénzügyi adatainak módosítása, érvénytelenítése, pénzvisszatérítése előtt válaszd le a kifizetéseket. A becslés nem csökkenthető a beérkezett összeg alá, és kapcsolt kifizetés mellett a célszámla nem módosítható."
     }
 };
+

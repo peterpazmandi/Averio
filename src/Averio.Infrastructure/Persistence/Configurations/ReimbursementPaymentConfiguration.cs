@@ -26,10 +26,12 @@ public sealed class ReimbursementPaymentConfiguration : IEntityTypeConfiguration
         b.Property(x => x.UnlinkedByMemberId).HasColumnName("unlinked_by_member_id");
         b.Property(x => x.UnlinkedAt).HasColumnName("unlinked_at");
         b.HasIndex(x => new { x.HouseholdId, x.OperationId }).IsUnique();
-        b.HasIndex(x => x.CreditTransactionId).IsUnique().HasFilter("unlinked_at IS NULL");
+        b.HasIndex(x => x.CreditTransactionId).HasFilter("unlinked_at IS NULL");
+        b.HasIndex(x => new { x.ClaimId, x.CreditTransactionId }).IsUnique().HasFilter("unlinked_at IS NULL");
         b.HasOne<ReimbursementClaim>().WithMany(c => c.Payments).HasForeignKey(x => new { x.HouseholdId, x.ClaimId }).HasPrincipalKey(c => new { c.HouseholdId, c.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Transaction>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.CreditTransactionId }).HasPrincipalKey(c => new { c.HouseholdId, c.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<HouseholdMember>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.LinkedByMemberId }).HasPrincipalKey(c => new { c.HouseholdId, c.Id }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<HouseholdMember>().WithMany().HasForeignKey(x => new { x.HouseholdId, x.UnlinkedByMemberId }).HasPrincipalKey(c => new { c.HouseholdId, c.Id }).OnDelete(DeleteBehavior.Restrict);
     }
 }
+

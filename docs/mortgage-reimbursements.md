@@ -1,12 +1,12 @@
 # Recurring mortgage reimbursements
 
-German UI: **Kostenerstattungen**. Hungarian UI: **Költségtérítések**. These are expense-coverage claims, distinct from received expense refunds; see [money-back terminology](ui/money-back-terminology.md).
+German UI: **Kostenerstattungen**. Hungarian UI: **K�lts�gt�r�t�sek**. These are expense-coverage claims, distinct from received expense refunds; see [money-back terminology](ui/money-back-terminology.md).
 
 The first two reimbursement deliverables add optional estimates to expense schedules and manual external-submission tracking. They do not create incoming transactions, transfers, payment allocations, or changes to account balances or financial aggregates. Received-payment reconciliation now links existing bank movements and tracks partially/fully received statuses; see the settlement section below.
 
 ## Workflow and privacy
 
-Enable reimbursement tracking in the shared transaction/recurring editor. Choose the provider, fixed amount or percentage, optional cap, same-currency destination account, estimated payment delay (0–365 days), and optional submission reminder (0–365 days after recording). Estimates cannot exceed the recorded expense. Amounts retain four decimal places. The percentage uses the actual recorded item total, not the template total.
+Enable reimbursement tracking in the shared transaction/recurring editor. Choose the provider, fixed amount or percentage, optional cap, same-currency destination account, estimated payment delay (0-365 days), and optional submission reminder (0-365 days after recording). Estimates cannot exceed the recorded expense. Amounts retain four decimal places. The percentage uses the actual recorded item total, not the template total.
 
 Saving a rule or reaching a scheduled date does not create a claim. Recording an occurrence creates the expense, occurrence receipt and one claim in the same database transaction. Opt-in automatic expense recording uses this same path. A skipped occurrence creates neither an expense nor a claim. Retrying an occurrence returns the previous transaction; household locking and a unique claim transaction index prevent duplicate claims. Failed postings roll back all three records. No historical occurrences are backfilled.
 
@@ -77,12 +77,13 @@ Received merchant refunds now use the item-refund workflow in [Item refunds](ite
 
 ## Receive and reconcile payments
 
-After confirming external submission, choose **Link received payment**. Search for a recorded Income credit in the destination account and currency, select it, and confirm that it was received for this claim. Missing income must first be recorded under Transactions. The full credit must fit the remaining claim and current net expense. Several credits can settle one claim; a pooled credit cannot yet be divided across claims.
+After confirming external submission, choose **Link received payment**. Search for a recorded Income credit in the destination account and currency, select it, enter the amount to allocate, and confirm that it was received for this claim. Missing income must first be recorded under Transactions. The allocation must fit the credit's unallocated amount, the remaining claim and the current net expense. Several credits can settle one claim, and one pooled credit can cover several claims without creating another bank movement. One claim can have only one active link to a particular credit; unlink it before replacing that allocation.
 
 The claim shows received and outstanding amounts, **Partially received** or **Fully received**, and retained payment history. Linking changes claim coverage only: the expense, income, bank balances, activity statistics and Personal Money remain unchanged. Reimbursements do not use merchant-refund expense reduction.
 
-Use **Unlink payment** to correct a match. It reopens the outstanding amount while preserving the Income credit and the old link in history. Unlink first before cancelling a claim, editing/voiding linked transactions, or refunding the source expense. The estimate cannot be reduced below received money, and the destination cannot change while receipts remain linked. Import undo protects historical claims and links even after unlinking.
+Use **Unlink payment** to correct a match. It reopens only that allocation's outstanding amount while preserving the Income credit, other claims' allocations and the old link in history. Unlink first before cancelling a claim, editing/voiding linked transactions, or refunding the source expense. The estimate cannot be reduced below received money, and the destination cannot change while receipts remain linked. Import undo protects historical claims and links even after unlinking.
 
 A lost response can be retried with the same operation; the UI retains the original request. Before closing and starting a different match, refresh and inspect saved history. The claim remains private to its creator and is hidden when any referenced source/destination/credit becomes inaccessible. See ADR-052 for concurrency, migration, privacy and accounting rules.
 
-Apply migration AddReimbursementPayments using the epoch-2 deployment images. Existing claims start with no matches; no credits are guessed or automatically backfilled. Preserve a backup; downgrade refuses to discard payment history.
+Apply migrations AddReimbursementPayments and AllowPooledReimbursementCredits using the epoch-3 deployment images. Existing full-credit matches retain their amounts; no credits are guessed or automatically backfilled. Preserve a backup; downgrade refuses to discard payment history or restore the exclusive index while a credit has multiple active allocations. See ADR-055.
+

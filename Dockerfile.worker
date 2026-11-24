@@ -30,11 +30,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
 ARG VCS_REF=unknown
 LABEL org.opencontainers.image.revision="${VCS_REF}"
-LABEL io.averio.schema-epoch="2"
+LABEL io.averio.schema-epoch="3"
 
 WORKDIR /app
 
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "Averio.Worker.dll"]
+
 

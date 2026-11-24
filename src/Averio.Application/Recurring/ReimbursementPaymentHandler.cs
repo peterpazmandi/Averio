@@ -9,7 +9,7 @@ using Averio.Domain.Transactions;
 namespace Averio.Application.Recurring;
 
 public sealed record LinkReimbursementPayment(Guid CreditTransactionId, Guid OperationId, Guid ExpectedVersion,
-    DateTimeOffset ExpectedCreditUpdatedAt, bool MoneyReceived);
+    DateTimeOffset ExpectedCreditUpdatedAt, bool MoneyReceived, decimal? Amount = null);
 public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRepository households, IAccountRepository accounts,
     ITransactionRepository transactions, IReimbursementRepository claims, IItemRefundRepository dependencies, IUnitOfWork uow, TimeProvider clock)
 {
@@ -25,7 +25,7 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
         if (write && !TransactionAccess.CanModify(account, member)) throw new ForbiddenException();
         return (member, claim, source);
     }
-    public async Task<IReadOnlyList<Transaction>> CandidatesAsync(Guid h, Guid id, string? search, int offset, CancellationToken ct)
+    public async Task<IReadOnlyList<ReimbursementCreditCandidate>> CandidatesAsync(Guid h, Guid id, string? search, int offset, CancellationToken ct)
     {
         var (member, claim, source) = await Context(h, id, true, ct);
         if (offset < 0 || offset > 100000 || search?.Length > 160) throw Invalid();
@@ -57,9 +57,15 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
         var credit = await transactions.GetVisibleByIdAsync(h, member.Id, request.CreditTransactionId, ct) ?? throw new NotFoundException("transaction", request.CreditTransactionId);
         if (credit.UpdatedAt != request.ExpectedCreditUpdatedAt) throw Changed();
         if (!request.MoneyReceived || source.Status != TransactionStatus.Posted || source.Kind != TransactionKind.Expense || source.IsArchived
-            || claim.ReceivedAmount + credit.Amount > source.Amount || await dependencies.CreditHasDependenciesAsync(h, credit.Id, ct)) throw Invalid();
+            || claim.ReceivedAmount + (request.Amount ?? credit.Amount) > source.Amount) throw Invalid();
+        // The household write lock is held: read current allocations before consuming this credit.
+        var allocations = await claims.ActiveCreditAllocationsAsync(h, credit.Id, ct);
+        if (allocations.Count == 0 && await dependencies.CreditHasDependenciesAsync(h, credit.Id, ct)) throw Invalid();
+        try { ReceivedCreditAllocationRule.ValidateNew(credit.Amount, allocations, request.Amount ?? credit.Amount,
+            Math.Min(claim.OutstandingAmount, source.Amount - claim.ReceivedAmount)); }
+        catch (ArgumentException) { throw Invalid(); }
         ReimbursementPayment payment;
-        try { payment = claim.LinkPayment(credit, request.OperationId, fingerprint, member.Id, clock.GetUtcNow()); }
+        try { payment = claim.LinkPayment(credit, request.OperationId, fingerprint, member.Id, clock.GetUtcNow(), request.Amount); }
         catch (ArgumentException) { throw Invalid(); }
         await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return payment.Id;
@@ -108,3 +114,4 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
     private static BusinessRuleException Invalid() => new("reimbursement_payment_invalid", "Validation_ReimbursementPayment");
     private static ConflictException Changed() => new("reimbursement_changed", "Error_ReimbursementChanged");
 }
+
