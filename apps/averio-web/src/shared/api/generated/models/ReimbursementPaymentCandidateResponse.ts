@@ -44,7 +44,7 @@ export interface ReimbursementPaymentCandidateResponse {
      */
     availableAmount: string;
     /**
-     *
+     * 
      */
     maximumAllocation: string;
 }

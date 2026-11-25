@@ -23,6 +23,17 @@ const activities = load('../src/features/activities/activityQueries.ts', {
     '../../shared/api/generated': { ActivitiesApi: class {} },
     '../../shared/api/generatedApiConfiguration': { generatedApiConfiguration: {} },
 });
+const refunds = load('../src/features/transactions/refunds/itemRefundQueries.ts', {
+    '@tanstack/react-query': { queryOptions },
+    '../../../shared/api/generated': { ItemRefundsApi: class {} },
+    '../../../shared/api/generatedApiConfiguration': { generatedApiConfiguration: {} },
+});
+const reimbursements = load('../src/features/reimbursements/reimbursementQueries.ts', {
+    '@tanstack/react-query': { queryOptions },
+    '../../shared/api/generated': { ReimbursementsApi: class {} },
+    '../../shared/api/generatedApiConfiguration': { generatedApiConfiguration: {} },
+});
+const moneyBack = load('../src/features/money-back/moneyBackQueryKeys.ts', {});
 
 test('quick-create activity submit is isolated from its ancestor transaction form, including while saving', () => {
     let saves = 0;
@@ -58,7 +69,7 @@ test('quick-create activity submit is isolated from its ancestor transaction for
     assert.equal(saves, 1, 'A second submit during an in-flight save must not create another activity');
 });
 
-test('account changes invalidate personal activity totals and timeline descendants without touching other members', async () => {
+test('account changes invalidate activity and money-back queries only in the current household context', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: false } } });
     const { useAccountMutations } = load('../src/features/accounts/api/useAccountMutations.ts', {
         '@tanstack/react-query': { useQueryClient: () => client, useMutation: options => options },
@@ -67,19 +78,37 @@ test('account changes invalidate personal activity totals and timeline descendan
         '../../../shared/api/ApiError': { ApiError: class extends Error {} },
         './accountsQueryKeys': { accountsQueryKeys: { household: () => ['accounts'] } },
         '../../dashboard/api/dashboardQueryKeys': { dashboardQueryKeys: { household: () => ['dashboard'] } },
+        '../../transactions/refunds/itemRefundQueries': refunds,
+        '../../reimbursements/reimbursementQueries': reimbursements,
+        '../../money-back/moneyBackQueryKeys': moneyBack,
         './accountsApi': {},
     });
     const totals = activities.activityQueries.list('u', 'h').queryKey;
     const timeline = activities.activityQueries.timeline('u', 'h', 'a').queryKey;
     const other = activities.activityQueries.list('other', 'h').queryKey;
+    const financialKeys = [
+        refunds.itemRefundKeys.credits('u', 'h', 'account'),
+        [...reimbursements.reimbursementKeys.household('u', 'h'), 'destination-recovery'],
+        [...moneyBack.moneyBackQueryKeys.household('u', 'h'), 'overview'],
+    ];
+    const otherFinancialKeys = [
+        refunds.itemRefundKeys.credits('other', 'h', 'account'),
+        [...reimbursements.reimbursementKeys.household('other', 'h'), 'destination-recovery'],
+        [...moneyBack.moneyBackQueryKeys.household('other', 'h'), 'overview'],
+        refunds.itemRefundKeys.credits('u', 'other', 'account'),
+        [...reimbursements.reimbursementKeys.household('u', 'other'), 'destination-recovery'],
+        [...moneyBack.moneyBackQueryKeys.household('u', 'other'), 'overview'],
+    ];
     try {
         const mutations = useAccountMutations('u', 'h');
         for (const operation of ['create', 'update', 'archive', 'restore']) {
-            for (const key of [totals, timeline, other]) client.setQueryData(key, ['previously visible']);
+            for (const key of [totals, timeline, other, ...financialKeys, ...otherFinancialKeys]) client.setQueryData(key, ['previously visible']);
             await mutations[operation].onSuccess();
             assert.equal(client.getQueryState(totals).isInvalidated, true, operation);
             assert.equal(client.getQueryState(timeline).isInvalidated, true, operation);
             assert.equal(client.getQueryState(other).isInvalidated, false, operation);
+            for (const key of financialKeys) assert.equal(client.getQueryState(key).isInvalidated, true, operation);
+            for (const key of otherFinancialKeys) assert.equal(client.getQueryState(key).isInvalidated, false, operation);
             let requests = 0;
             for (const key of [totals, timeline]) {
                 const data = await client.fetchQuery({ queryKey: key, queryFn: async () => { requests++; return []; } });

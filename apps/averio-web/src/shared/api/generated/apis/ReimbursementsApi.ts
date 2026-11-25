@@ -81,15 +81,15 @@ import {
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequest {
     /**
-     *
+     * 
      */
     householdId: string;
     /**
-     *
+     * 
      */
     claimId: string;
     /**
-     *
+     * 
      */
     reassignReimbursementDestinationRequest: ReassignReimbursementDestinationRequest;
 }
@@ -179,7 +179,7 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPutRequest
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequest {
     /**
-     *
+     * 
      */
     householdId: string;
 }
