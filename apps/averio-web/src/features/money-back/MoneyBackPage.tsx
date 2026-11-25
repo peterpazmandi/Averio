@@ -9,6 +9,7 @@ import { AverioCard } from '../../shared/components/ui/AverioCard';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { ConceptIcon } from '../../shared/components/concept/ConceptIcon';
+import { moneyBackQueryKeys } from './moneyBackQueryKeys';
 const moneyBackApi = new MoneyBackApi(generatedApiConfiguration);
 const statuses = ['all', 'NeedsSubmission', 'Submitted', 'PartiallyReceived', 'Received', 'Rejected', 'Cancelled'] as const;
 const statusTone = (status: string) => {
@@ -18,7 +19,7 @@ const statusTone = (status: string) => {
  return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300';
 };
 export function MoneyBackPage({ userId, householdId }: { userId: string; householdId: string }) { const { t, i18n } = useTranslation(); const [status, setStatus] = useState<(typeof statuses)[number]>('all'); const [offset, setOffset] = useState(0);
- const query = useQuery({ queryKey: ['money-back', userId, householdId, status, offset], queryFn: ({ signal }) => moneyBackApi.apiV1HouseholdsHouseholdIdMoneyBackGet({ householdId, offset, limit: 25, status: status === 'all' ? undefined : status }, { signal }) });
+ const query = useQuery({ queryKey: [...moneyBackQueryKeys.household(userId, householdId), status, offset], queryFn: ({ signal }) => moneyBackApi.apiV1HouseholdsHouseholdIdMoneyBackGet({ householdId, offset, limit: 25, status: status === 'all' ? undefined : status }, { signal }) });
  const date = (v: string) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(v + 'T00:00:00Z'));
  const money = (value: string, currency: string) => formatDecimalAmount(value, currency, i18n.resolvedLanguage ?? i18n.language);
  return <section className="grid min-w-0 gap-5"><header className="flex items-start justify-between gap-4"><h2 id="money-back-title" className="m-0 text-2xl font-bold tracking-tight" aria-label={t('moneyBack.title')}>{t('moneyBack.title')} <InfoPopover label={t('moneyBack.title')}>{t('moneyBack.description')}</InfoPopover></h2></header>

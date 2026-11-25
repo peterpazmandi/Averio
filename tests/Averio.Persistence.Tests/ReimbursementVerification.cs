@@ -35,6 +35,22 @@ internal static class ReimbursementVerification
         await Throws<BusinessRuleException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Reimbursement = Config(viewOnlyId) }, ct)));
         await Throws<BusinessRuleException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Kind = TransactionKind.Income }, ct)));
         await Throws<NotFoundException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Reimbursement = Config(Guid.NewGuid()) }, ct)));
+        await SetDestinationOwner(f.OwnerMemberId);
+        var accessInput = input with { Reimbursement = Config(viewOnlyId) };
+        var accessId = await Rule(h => h.SaveAsync(f.HouseholdId, null, null, accessInput, ct));
+        var accessAutoId = await Rule(h => h.SaveAsync(f.HouseholdId, null, null, accessInput with { Automatic = true }, ct));
+        var accessSkipId = await Rule(h => h.SaveAsync(f.HouseholdId, null, null, accessInput, ct));
+        var accessRule = await ReadRule(accessId);
+        var accessAuto = await ReadRule(accessAutoId);
+        var accessSkip = await ReadRule(accessSkipId);
+        await SetDestinationOwner(f.MemberId);
+        var beforeAccessLoss = await Totals();
+        await Throws<BusinessRuleException>(() => Rule(h => h.ResolveAsync(f.HouseholdId, accessId, accessRule.Version, day, false, null, ct)));
+        await Throws<BusinessRuleException>(() => Rule(h => h.AutomaticAsync(new(accessAutoId, f.HouseholdId, f.OwnerUserId, accessAuto.Version), ct)));
+        Check(await Totals() == beforeAccessLoss && (await Claims()).Count == 0, "Ineligible destination recorded an occurrence");
+        await Rule(h => h.ResolveAsync(f.HouseholdId, accessSkipId, accessSkip.Version, day, true, null, ct));
+        await Rule(h => h.SaveAsync(f.HouseholdId, accessId, accessRule.Version, accessInput with { IsPaused = true }, ct));
+        Check((await ReadRule(accessId)).IsPaused, "Schedule could not be paused after destination access loss");
         var id = await Rule(h => h.SaveAsync(f.HouseholdId, null, null, input, ct));
         Check((await Claims()).Count == 0, "Saving a rule created a claim");
         var rule = await ReadRule(id);
@@ -103,6 +119,14 @@ internal static class ReimbursementVerification
         Console.WriteLine("PASS reimbursement persistence, consent, snapshots, privacy, skips, concurrent workers, voiding and no automatic income");
 
         async Task<T> Rule<T>(Func<RecurringHandler,Task<T>> action) { await using var scope = provider.CreateAsyncScope(); return await action(scope.ServiceProvider.GetRequiredService<RecurringHandler>()); }
+        async Task SetDestinationOwner(Guid memberId)
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var account = await db.Accounts.Include(a => a.Owners).SingleAsync(a => a.Id == viewOnlyId, ct);
+            account.Update(account.Name, account.Type, [memberId], AccountVisibility.Household, true, clock.GetUtcNow());
+            await db.SaveChangesAsync(ct);
+        }
         async Task<RecurringRule> ReadRule(Guid rid) => (await Rule(h => h.ListAsync(f.HouseholdId, ct))).Single(x => x.Rule.Id == rid).Rule;
         async Task<IReadOnlyList<ReimbursementResult>> Claims() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ListAsync(f.HouseholdId, null, ct); }
         async Task Change(bool consent, DateOnly? date, Guid version, ReimbursementStatus status = ReimbursementStatus.Submitted) { await using var scope = provider.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ChangeAsync(f.HouseholdId, claim.Id, version, consent, date, "ref", status, ct); }

@@ -1,9 +1,9 @@
-using System.Data.Common;
-using Averio.Application.Recurring;
+using Averio.Domain.Recurring;
+using Averio.Domain.Transactions;
 using Averio.Infrastructure;
 using Averio.Infrastructure.Persistence;
+using Averio.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,25 +17,31 @@ internal static class MoneyBackQueryChecks
         {
             ["ConnectionStrings:AverioDatabase"] = "Host=127.0.0.1;Port=1;Database=unused;Username=unused",
         }).Build());
-        services.ConfigureDbContext<AverioDbContext>(options => options.AddInterceptors(new StopBeforeConnect()), ServiceLifetime.Singleton);
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IMoneyBackRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+        var household = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        var visible = db.VisibleTransactions(household, member).AsNoTracking();
+        var allClaims = ReimbursementRepository.Visible(db, household, member).AsNoTracking();
+        var allRefunds = db.Set<ItemRefund>().AsNoTracking().Where(r => r.HouseholdId == household);
         foreach (var status in new string?[] { null, "Received", "Cancelled", "Submitted" })
         {
-            try
+            var claims = allClaims;
+            var refunds = allRefunds;
+            if (status is not null)
             {
-                await repository.ListAsync(Guid.NewGuid(), Guid.NewGuid(), 25, 26, status, CancellationToken.None);
-                throw new Exception("Expected the connection interceptor.");
+                var parsed = Enum.Parse<ReimbursementStatus>(status);
+                claims = claims.Where(c => c.Status == parsed);
+                refunds = parsed switch {
+                    ReimbursementStatus.Received => refunds.Where(r => r.CancelledAt == null),
+                    ReimbursementStatus.Cancelled => refunds.Where(r => r.CancelledAt != null),
+                    _ => refunds.Where(_ => false),
+                };
             }
-            catch (QueryTranslatedException) { }
+            _ = MoneyBackRepository.KeyQuery(claims, refunds, visible, 25, 26).ToQueryString();
+            _ = MoneyBackRepository.ClaimQuery(db, claims, visible, household, member, [Guid.NewGuid()]).ToQueryString();
+            _ = MoneyBackRepository.RefundQuery(db, refunds, visible, member, [Guid.NewGuid()]).ToQueryString();
         }
-    }
-
-    private sealed class QueryTranslatedException : Exception;
-    private sealed class StopBeforeConnect : DbConnectionInterceptor
-    {
-        public override ValueTask<InterceptionResult> ConnectionOpeningAsync(DbConnection connection, ConnectionEventData eventData,
-            InterceptionResult result, CancellationToken cancellationToken = default) => throw new QueryTranslatedException();
     }
 }

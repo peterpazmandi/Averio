@@ -12,6 +12,7 @@ import { AverioLogo } from '../../shared/components/branding/AverioLogo';
 import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementsApi } from './reimbursementQueries';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
+import { moneyBackQueryKeys } from '../money-back/moneyBackQueryKeys';
 
 const MetaSeparator = () => <span aria-hidden="true" className="mx-1">·</span>;
 
@@ -42,7 +43,8 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     const refresh = async () => {
         if (onChanged) await onChanged();
         else await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
-            client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]);
+            client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }),
+            client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) })]);
         onClose();
     };
     const link = useMutation({

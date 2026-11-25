@@ -27,6 +27,7 @@ internal static class ManualReimbursementVerification
         var overview = await MoneyBack("NeedsSubmission");
         var initialRow = overview.Items.Single(x => x.Id == initial.Id);
         Check(initialRow.Description == "Manual reimbursement source" && initialRow.Amount == 30 && initialRow.Outstanding == 0, "Overview must show the potential estimate, not expected amount");
+        await MoneyBackSnapshotVerification.RunAsync(provider, f, initial.Id);
         Check((await MoneyBack("Submitted")).Items.All(x => x.Id != initial.Id), "Overview status filter included an unsubmitted claim");
         var before = await Totals();
         await Throws<BusinessRuleException>(() => Post(Input(config, TransactionKind.Income)));
@@ -104,6 +105,29 @@ internal static class ManualReimbursementVerification
             await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ChangeAsync(f.HouseholdId, claim.Id, edited.Version, false, null, null, ReimbursementStatus.Cancelled, ct);
         var cancelled = (await List(expense)).Single().Claim;
         await Throws<BusinessRuleException>(() => Edit(claim.Id, cancelled.Version, config));
+        var retryExpense = await Post(Input());
+        var retryPayment = await Payment(retryExpense);
+        var retryId = await Create(retryExpense, retryPayment.UpdatedAt, viewOnly);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var account = await db.Accounts.Include(a => a.Owners).SingleAsync(a => a.Id == viewOnlyId, ct);
+            account.Update(account.Name, account.Type, [f.MemberId], AccountVisibility.Household, true, clock.GetUtcNow());
+            await db.SaveChangesAsync(ct);
+        }
+        Check(await Create(retryExpense, retryPayment.UpdatedAt, viewOnly) == retryId, "Identical retry failed after destination ownership changed");
+        var newExpense = await Post(Input());
+        var newPayment = await Payment(newExpense);
+        await Throws<BusinessRuleException>(() => Create(newExpense, newPayment.UpdatedAt, viewOnly));
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var account = await db.Accounts.Include(a => a.Owners).SingleAsync(a => a.Id == viewOnlyId, ct);
+            account.Update(account.Name, account.Type, [f.MemberId], AccountVisibility.Private, false, clock.GetUtcNow());
+            await db.SaveChangesAsync(ct);
+        }
+        Check(await Create(retryExpense, retryPayment.UpdatedAt, viewOnly) == retryId, "Identical retry failed after destination visibility was lost");
+        await Throws<NotFoundException>(() => Create(newExpense, newPayment.UpdatedAt, viewOnly));
         Console.WriteLine("PASS manual reimbursement: atomic expense+claim, rollback, concurrent retries, no schedule, consent, snapshots, privacy and unchanged financial totals");
 
         async Task Edit(Guid id, Guid version, RecurringReimbursementRule configuration) { await using var scope = provider.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().UpdateAsync(f.HouseholdId, id, version, configuration, ct); }

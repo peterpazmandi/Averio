@@ -8,6 +8,7 @@ import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 import { reimbursementKeys, reimbursementsApi } from './reimbursementQueries';
+import { moneyBackQueryKeys } from '../money-back/moneyBackQueryKeys';
 
 export function EditClaimDialog({ userId, householdId, claim, onClose }: { userId: string; householdId: string; claim: ReimbursementClaimResponse; onClose: () => void }) {
     const { t } = useTranslation();
@@ -17,7 +18,7 @@ export function EditClaimDialog({ userId, householdId, claim, onClose }: { userI
         destinationAccountId: claim.destinationAccountId, paymentDelayDays: claim.paymentDelayDays, submissionReminderDays: claim.submissionReminderDays });
     const mutation = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPut({ householdId, claimId: claim.id,
         updateReimbursementClaimRequest: { expectedVersion: claim.version, _configuration: configuration } }),
-        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]); onClose(); } });
+        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }), client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) })]); onClose(); } });
     return <AverioDialog open wide title={t('reimbursements.edit.title')} closeLabel={t('common.actions.close')} onDismiss={onClose} busy={mutation.isPending}
         actions={<><AverioButton onClick={onClose} disabled={mutation.isPending}>{t('common.actions.cancel')}</AverioButton><AverioButton type="submit" form="edit-claim" variant="primary" disabled={mutation.isPending || !accounts.isSuccess}>{t('common.actions.save')}</AverioButton></>}>
         <form id="edit-claim" className="grid gap-4" onSubmit={e => { e.preventDefault(); if (!mutation.isPending && accounts.isSuccess) mutation.mutate(); }}>

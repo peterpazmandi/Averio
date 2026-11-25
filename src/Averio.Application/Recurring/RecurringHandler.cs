@@ -149,7 +149,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         }
         if (rule.Version != expected) throw Changed();
         if (itemAmounts is not null && itemAmounts.Count != rule.Items.Count) throw Invalid();
-        var result = await ResolveLocked(rule, UserId, dueOn, skip, amount, ct, itemAmounts);
+        var result = await ResolveLocked(rule, member, UserId, dueOn, skip, amount, ct, itemAmounts);
         await tx.CommitAsync(ct); return result;
     }
     public async Task<bool> AutomaticAsync(RecurringCandidate candidate, CancellationToken ct)
@@ -159,7 +159,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         var rule = await rules.GetAsync(candidate.HouseholdId, member.Id, candidate.RuleId, ct);
         if (rule is null || rule.Version != candidate.Version || !rule.Automatic || rule.IsPaused || rule.IsStopped
             || rule.IsBlocked || rule.NextDueOn is not DateOnly due || due > Today) return false;
-        await ResolveLocked(rule, candidate.UserId, due, false, null, ct);
+        await ResolveLocked(rule, member, candidate.UserId, due, false, null, ct);
         await tx.CommitAsync(ct); return true;
     }
     public async Task BlockAsync(RecurringCandidate candidate, CancellationToken ct)
@@ -170,7 +170,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         if (rule is null || rule.Version != candidate.Version) return;
         rule.Block(clock.GetUtcNow()); await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
     }
-    private async Task<Guid?> ResolveLocked(RecurringRule rule, Guid userId, DateOnly dueOn, bool skip, decimal? amount, CancellationToken ct, IReadOnlyList<decimal>? itemAmounts = null)
+    private async Task<Guid?> ResolveLocked(RecurringRule rule, HouseholdMember member, Guid userId, DateOnly dueOn, bool skip, decimal? amount, CancellationToken ct, IReadOnlyList<decimal>? itemAmounts = null)
     {
         if (rule.IsPaused || rule.IsStopped || rule.NextDueOn != dueOn || dueOn > Today) throw Changed();
         Guid? transactionId = null;
@@ -181,6 +181,13 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
         {
             try { if (reimbursement.Estimate(items.Sum(i => i.Amount)) <= 0) throw new ArgumentException(); }
             catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }
+            var source = await accounts.GetVisibleByIdAsync(rule.HouseholdId, member.Id, rule.AccountId, ct)
+                ?? throw new NotFoundException("account", rule.AccountId);
+            var destination = await accounts.GetVisibleByIdAsync(rule.HouseholdId, member.Id, reimbursement.DestinationAccountId, ct)
+                ?? throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
+            if (destination.Status != AccountStatus.Active || !TransactionAccess.CanModify(destination, member)
+                || source.Currency != destination.Currency)
+                throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
         }
         if (!skip)
             transactionId = await posting.CreateWithinTransactionAsync(new CreateTransactionCommand(rule.HouseholdId,

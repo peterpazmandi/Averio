@@ -26,10 +26,11 @@ function estimate(payment: string, config: RecurringReimbursementConfiguration):
     return result > 0n ? `${result / 10000n}.${(result % 10000n).toString().padStart(4, '0')}` : null;
 }
 
-export function ReimbursementFields({ userId, householdId, value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true }: {
+export function ReimbursementFields({ userId, householdId, value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true, allowUnavailableDestination = false }: {
     userId: string; householdId: string;
     allowDisable?: boolean;
     limitToPayment?: boolean;
+    allowUnavailableDestination?: boolean;
     value: RecurringReimbursementConfiguration | null;
     onChange: (value: RecurringReimbursementConfiguration | null) => void;
     accounts: AccountResponse[];
@@ -71,7 +72,7 @@ export function ReimbursementFields({ userId, householdId, value, onChange, acco
                         <AverioInput id={id + '-provider'} aria-describedby={id + '-provider-help'} required maxLength={160} value={value.provider} disabled={busy} onChange={e => patch({ provider: e.target.value })} />
                     </div>
                     <div className="grid content-start gap-[7px]"><AverioField className="min-h-11 content-center" htmlFor={id + '-destination'}>{t('reimbursements.destination')}</AverioField><AverioSelect id={id + '-destination'} required value={destination} disabled={busy} aria-invalid={!!destination && !eligible.some(a => a.id === destination) || owners.isError || undefined}
-                        ref={select => { select?.setCustomValidity(owners.isError || !eligible.some(a => a.id === destination) ? t('reimbursements.unavailableAccount') : ''); }}
+                        ref={select => { select?.setCustomValidity(!allowUnavailableDestination && (owners.isError || !eligible.some(a => a.id === destination)) ? t('reimbursements.unavailableAccount') : ''); }}
                         onChange={e => patch({ destinationAccountId: e.target.value })}>
                         <option value="">{t('reimbursements.chooseAccount')}</option>
                         {!eligible.some(a => a.id === destination) && destination && <option value={destination} disabled>{t('reimbursements.unavailableAccount')}</option>}

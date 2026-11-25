@@ -762,7 +762,7 @@ export function TransactionEditor({
                         </>}
                     </AverioDisclosure>}
 
-            {(recurring || (!transaction && !receiptDraft && !receiptEvidence)) && kind === 'Expense' && <ReimbursementFields userId={userId} householdId={householdId} limitToPayment={!recurring} value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} paymentAmount={total} sourceAccountId={resolvedAccountId} busy={busy} />}
+            {(recurring || (!transaction && !receiptDraft && !receiptEvidence)) && kind === 'Expense' && <ReimbursementFields userId={userId} householdId={householdId} limitToPayment={!recurring} allowUnavailableDestination={!!rule && (paused || stopped) && reimbursement?.destinationAccountId === rule.reimbursement?.destinationAccountId} value={reimbursement} onChange={setReimbursement} accounts={accounts.data ?? []} currency={currency} paymentAmount={total} sourceAccountId={resolvedAccountId} busy={busy} />}
             <AverioDisclosure title={t('activities.activity')} defaultOpen={!!activityId} summary={activityId ? t('personalMoney.extraConfigured') : t('activities.none')}>
                 <ActivitySelect userId={userId} householdId={householdId} value={activityId} onChange={setActivityId} disabled={busy} />
                 <p className="text-xs">{t('activities.privateHelp')}</p>

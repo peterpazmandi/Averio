@@ -17,6 +17,7 @@ import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormControls';
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
+import { moneyBackQueryKeys } from '../money-back/moneyBackQueryKeys';
 
 function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, onChanged, hasUnsavedChanges = false, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; onChanged?: () => Promise<void>; hasUnsavedChanges?: boolean; className?: string }) {
     const { t, i18n } = useTranslation();
@@ -93,7 +94,7 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
     const submitting = status === 'Submitted';
     const mutation = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPut({ householdId, claimId: claim.id,
         changeReimbursementRequest: { expectedVersion: claim.version, status, receiptSubmitted: confirmed, submittedOn: submitting ? submittedOn : null, reference: submitting ? reference.trim() || null : null } }),
-        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]); onClose(); },
+        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }), client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) })]); onClose(); },
     });
     return <AverioDialog open title={t(submitting ? 'reimbursements.markSubmitted' : status === 'Rejected' ? 'reimbursements.reject' : 'reimbursements.cancel')}
         closeLabel={t('common.actions.close')} onDismiss={onClose} busy={mutation.isPending}

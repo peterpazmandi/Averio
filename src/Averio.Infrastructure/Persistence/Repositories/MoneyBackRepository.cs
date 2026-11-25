@@ -1,3 +1,4 @@
+using System.Data;
 using Averio.Application.Recurring;
 using Averio.Domain.Accounts;
 using Averio.Domain.Recurring;
@@ -26,16 +27,35 @@ internal sealed class MoneyBackRepository(AverioDbContext db) : IMoneyBackReposi
             };
         }
 
-        var claimKeys = claims.Select(c => new { c.Id, Date = c.PaymentOn, Kind = 0 });
-        var refundKeys = refunds.Where(r => visibleTransactions.Any(t => t.Id == r.TransactionId)
-                && visibleTransactions.Any(t => t.Id == r.CreditTransactionId))
-            .Select(r => new { r.Id, Date = r.ReceivedOn, Kind = 1 });
-        var keys = await claimKeys.Concat(refundKeys).OrderByDescending(x => x.Date).ThenByDescending(x => x.Id).ThenBy(x => x.Kind)
-            .Skip(offset).Take(take).ToArrayAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
+        var keys = await KeyQuery(claims, refunds, visibleTransactions, offset, take).ToArrayAsync(ct);
         var claimIds = keys.Where(x => x.Kind == 0).Select(x => x.Id).ToArray();
         var refundIds = keys.Where(x => x.Kind == 1).Select(x => x.Id).ToArray();
 
-        var claimRows = from claim in claims.Where(c => claimIds.Contains(c.Id))
+        var claimDetails = await ClaimQuery(db, claims, visibleTransactions, householdId, memberId, claimIds).ToArrayAsync(ct);
+        var refundDetails = await RefundQuery(db, refunds, visibleTransactions, memberId, refundIds).ToArrayAsync(ct);
+        var details = claimDetails.Concat(refundDetails).ToDictionary(x => (x.Kind, x.Id));
+        var rows = keys.Select(k => details[(k.Kind == 0 ? "Reimbursement" : "Refund", k.Id)])
+            .Select(x => new MoneyBackRow(x.Kind, x.Id, x.Description, x.Provider, x.Merchant, x.Currency,
+                x.Amount, x.Outstanding, x.Date, x.Status, x.SourceId, x.CreditId, x.CanModify)).ToArray();
+        await transaction.CommitAsync(ct);
+        return rows;
+    }
+
+    internal static IQueryable<Key> KeyQuery(IQueryable<ReimbursementClaim> claims, IQueryable<ItemRefund> refunds,
+        IQueryable<Transaction> visibleTransactions, int offset, int take)
+    {
+        var claimKeys = claims.Select(c => new Key { Id = c.Id, Date = c.PaymentOn, Kind = 0 });
+        var refundKeys = refunds.Where(r => visibleTransactions.Any(t => t.Id == r.TransactionId)
+                && visibleTransactions.Any(t => t.Id == r.CreditTransactionId))
+            .Select(r => new Key { Id = r.Id, Date = r.ReceivedOn, Kind = 1 });
+        return claimKeys.Concat(refundKeys).OrderByDescending(x => x.Date).ThenByDescending(x => x.Id).ThenBy(x => x.Kind)
+            .Skip(offset).Take(take);
+    }
+
+    internal static IQueryable<Projection> ClaimQuery(AverioDbContext db, IQueryable<ReimbursementClaim> claims,
+        IQueryable<Transaction> visibleTransactions, Guid householdId, Guid memberId, Guid[] claimIds)
+        => from claim in claims.Where(c => claimIds.Contains(c.Id))
             join source in visibleTransactions on claim.TransactionId equals source.Id
             join account in db.Accounts.AsNoTracking() on source.AccountId equals account.Id
             let received = db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == householdId && p.ClaimId == claim.Id && p.UnlinkedAt == null)
@@ -50,7 +70,10 @@ internal sealed class MoneyBackRepository(AverioDbContext db) : IMoneyBackReposi
                 Date = claim.PaymentOn, Status = claim.Status.ToString(), SourceId = claim.TransactionId, CreditId = null,
                 CanModify = account.CutoverAtUtc == null && (account.Scope == AccountScope.Household || account.Owners.Any(o => o.HouseholdMemberId == memberId)),
             };
-        var refundRows = from refund in refunds.Where(r => refundIds.Contains(r.Id))
+
+    internal static IQueryable<Projection> RefundQuery(AverioDbContext db, IQueryable<ItemRefund> refunds,
+        IQueryable<Transaction> visibleTransactions, Guid memberId, Guid[] refundIds)
+        => from refund in refunds.Where(r => refundIds.Contains(r.Id))
             join source in visibleTransactions on refund.TransactionId equals source.Id
             join credit in visibleTransactions on refund.CreditTransactionId equals credit.Id
             join account in db.Accounts.AsNoTracking() on source.AccountId equals account.Id
@@ -63,16 +86,15 @@ internal sealed class MoneyBackRepository(AverioDbContext db) : IMoneyBackReposi
                 CanModify = refund.CancelledAt == null && account.CutoverAtUtc == null
                     && (account.Scope == AccountScope.Household || account.Owners.Any(o => o.HouseholdMemberId == memberId)),
             };
-        var claimDetails = await claimRows.ToArrayAsync(ct);
-        var refundDetails = await refundRows.ToArrayAsync(ct);
-        var details = claimDetails.Concat(refundDetails).ToDictionary(x => (x.Kind, x.Id));
-        return keys.Select(k => details.GetValueOrDefault((k.Kind == 0 ? "Reimbursement" : "Refund", k.Id)))
-            .Where(x => x is not null)
-            .Select(x => new MoneyBackRow(x!.Kind, x.Id, x.Description, x.Provider, x.Merchant, x.Currency,
-                x.Amount, x.Outstanding, x.Date, x.Status, x.SourceId, x.CreditId, x.CanModify)).ToArray();
+
+    internal sealed class Key
+    {
+        public Guid Id { get; init; }
+        public DateOnly Date { get; init; }
+        public int Kind { get; init; }
     }
 
-    private sealed class Projection
+    internal sealed class Projection
     {
         public string Kind { get; init; } = null!;
         public Guid Id { get; init; }
