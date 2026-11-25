@@ -27,7 +27,7 @@ export function ManualClaimDialog({ userId, householdId, transaction, onClose }:
                 <p className="text-sm">{t('reimbursements.manual.savedExpense')}</p></div>
             {accounts.isPending && <p role="status">{t('common.status.loading')}</p>}
             {accounts.isError && <div role="alert"><p>{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void accounts.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
-            {accounts.isSuccess && <ReimbursementFields value={configuration} onChange={setConfiguration} accounts={accounts.data} currency={transaction.currency} paymentAmount={transaction.amount} sourceAccountId={transaction.accountId} busy={mutation.isPending} />}
+            {accounts.isSuccess && <ReimbursementFields userId={userId} householdId={householdId} value={configuration} onChange={setConfiguration} accounts={accounts.data} currency={transaction.currency} paymentAmount={transaction.amount} sourceAccountId={transaction.accountId} busy={mutation.isPending} />}
             {mutation.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{mutation.error.message}</p>}
         </form>
     </AverioDialog>;

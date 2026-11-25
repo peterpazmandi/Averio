@@ -16,7 +16,7 @@ internal static class ReimbursementVerification
         var ct = CancellationToken.None;
         var day = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         user.UserId = f.OwnerUserId;
-        Guid accountId, usdId;
+        Guid accountId, usdId, viewOnlyId;
         await using (var scope = provider.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
@@ -24,12 +24,15 @@ internal static class ReimbursementVerification
                 AccountScope.Personal, AccountVisibility.Private, false, CurrencyCode.Eur, 0, day, clock.GetUtcNow());
             var usd = Account.Create(f.HouseholdId, [f.OwnerMemberId], "USD destination", AccountType.Checking,
                 AccountScope.Personal, AccountVisibility.Private, false, CurrencyCode.Usd, 0, day, clock.GetUtcNow());
-            db.AddRange(account, usd); await db.SaveChangesAsync(); accountId = account.Id; usdId = usd.Id;
+            var viewOnly = Account.Create(f.HouseholdId, [f.MemberId], "View-only destination", AccountType.Checking,
+                AccountScope.Personal, AccountVisibility.Household, true, CurrencyCode.Eur, 0, day, clock.GetUtcNow());
+            db.AddRange(account, usd, viewOnly); await db.SaveChangesAsync(); accountId = account.Id; usdId = usd.Id; viewOnlyId = viewOnly.Id;
         }
         RecurringReimbursementRule Config(Guid destination, decimal amount = 30) => RecurringReimbursementRule.Create("Health fund", ReimbursementCalculation.Fixed, amount, null, destination, 7, 0);
         var input = new RecurringInput(accountId, TestIds.Groceries, "Mortgage", 150, TransactionKind.Expense,
             TransactionVisibility.Private, RecurringFrequency.Monthly, day, null, false, Reimbursement: Config(accountId));
         await Throws<BusinessRuleException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Reimbursement = Config(usdId) }, ct)));
+        await Throws<BusinessRuleException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Reimbursement = Config(viewOnlyId) }, ct)));
         await Throws<BusinessRuleException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Kind = TransactionKind.Income }, ct)));
         await Throws<NotFoundException>(() => Rule(h => h.SaveAsync(f.HouseholdId, null, null, input with { Reimbursement = Config(Guid.NewGuid()) }, ct)));
         var id = await Rule(h => h.SaveAsync(f.HouseholdId, null, null, input, ct));

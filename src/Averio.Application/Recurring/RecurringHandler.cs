@@ -94,7 +94,7 @@ public sealed class RecurringHandler(ICurrentUser currentUser, IHouseholdReposit
                     ?? throw new NotFoundException("account", input.AccountId);
                 var destination = await accounts.GetVisibleByIdAsync(householdId, member.Id, reimbursement.DestinationAccountId, ct)
                     ?? throw new NotFoundException("account", reimbursement.DestinationAccountId);
-                if (destination.Status != AccountStatus.Active || destination.CutoverAtUtc is not null
+                if (destination.Status != AccountStatus.Active || !TransactionAccess.CanModify(destination, member)
                     || source.Currency != destination.Currency) throw Invalid();
             }
             else if (existing.Reimbursement is not { } prior || reimbursement.DestinationAccountId != prior.DestinationAccountId) throw Invalid();

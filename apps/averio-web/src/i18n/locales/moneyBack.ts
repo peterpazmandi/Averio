@@ -1,4 +1,4 @@
-const common = { status: 'Status', show: 'Show', unknownProvider: 'Unknown provider', loading: 'Loading money back…', error: 'Money back could not be loaded.', retry: 'Try again', empty: 'Nothing to track yet', emptyHelp: 'Merchant refunds and reimbursement claims will appear here.', noMatches: 'No matching entries', noMatchesHelp: 'Nothing matches this status. Choose another status or clear the filter.', resetFilter: 'Show all', viewSource: 'View original payment', receivedOn: 'Received', originalPaymentOn: 'Original payment', outstanding: 'Outstanding', refundAmount: 'Refund amount', claimAmount: 'Claim amount', previous: 'Previous', next: 'Next', filters: { all: 'All', NeedsSubmission: 'Needs submission', Submitted: 'Submitted', PartiallyReceived: 'Partially received', Received: 'Received', Rejected: 'Rejected', Cancelled: 'Cancelled' }, statuses: { Received: 'Received', Cancelled: 'Cancelled', NeedsSubmission: 'Needs submission', Submitted: 'Submitted', PartiallyReceived: 'Partially received', Rejected: 'Rejected' } };
+const common = { status: 'Status', show: 'Show', unknownProvider: 'Unknown provider', loading: 'Loading money back…', error: 'Money back could not be loaded.', retry: 'Try again', empty: 'Nothing to track yet', emptyHelp: 'Merchant refunds and reimbursement claims will appear here.', noMatches: 'No matching entries', noMatchesHelp: 'Nothing matches this status. Choose another status or clear the filter.', resetFilter: 'Show all', viewSource: 'View original payment', receivedOn: 'Received', originalPaymentOn: 'Original payment', outstanding: 'Outstanding', refundAmount: 'Refund amount', claimAmount: 'Claim estimate', previous: 'Previous', next: 'Next', filters: { all: 'All', NeedsSubmission: 'Needs submission', Submitted: 'Submitted', PartiallyReceived: 'Partially received', Received: 'Received', Rejected: 'Rejected', Cancelled: 'Cancelled' }, statuses: { Received: 'Received', Cancelled: 'Cancelled', NeedsSubmission: 'Needs submission', Submitted: 'Submitted', PartiallyReceived: 'Partially received', Rejected: 'Rejected' } };
 export const moneyBackEN = { title: 'Money back', intro: 'Track merchant refunds separately from reimbursement claims.', description: 'Refunds are money returned by a merchant. Reimbursement claims are money you expect back for an expense. They stay separate from ordinary income and expenses.', refund: 'Merchant refund', reimbursement: 'Reimbursement claim', ...common };
 export const moneyBackDE = {
     title: 'Geld zurück',
@@ -22,7 +22,7 @@ export const moneyBackDE = {
     originalPaymentOn: 'Ursprüngliche Zahlung',
     outstanding: 'Offener Betrag',
     refundAmount: 'Rückzahlungsbetrag',
-    claimAmount: 'Anspruchsbetrag',
+    claimAmount: 'Geschätzter Anspruch',
     previous: 'Zurück',
     next: 'Weiter',
     filters: {
@@ -65,7 +65,7 @@ export const moneyBackHU = {
     originalPaymentOn: 'Eredeti fizetés',
     outstanding: 'Hátralévő összeg',
     refundAmount: 'Visszatérítés összege',
-    claimAmount: 'Igény összege',
+    claimAmount: 'Becsült igény',
     previous: 'Előző',
     next: 'Következő',
     filters: {

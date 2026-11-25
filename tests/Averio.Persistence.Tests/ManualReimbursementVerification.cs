@@ -2,6 +2,8 @@ using Averio.Application.Common.Exceptions;
 using Averio.Application.Recurring;
 using Averio.Application.Transactions.CreateTransaction;
 using Averio.Application.Transactions.Common;
+using Averio.Domain.Accounts;
+using Averio.Domain.Common;
 using Averio.Domain.Recurring;
 using Averio.Domain.Transactions;
 using Averio.Infrastructure.Persistence;
@@ -22,6 +24,10 @@ internal static class ManualReimbursementVerification
         var atomic = await Post(Input(config));
         var initial = (await List(atomic)).Single().Claim;
         Check(initial.RuleId == null && initial.Status == ReimbursementStatus.NeedsSubmission && initial.ExpectedAmount == 0 && initial.PotentialAmount == 30, "Manual claim snapshot");
+        var overview = await MoneyBack("NeedsSubmission");
+        var initialRow = overview.Items.Single(x => x.Id == initial.Id);
+        Check(initialRow.Description == "Manual reimbursement source" && initialRow.Amount == 30 && initialRow.Outstanding == 0, "Overview must show the potential estimate, not expected amount");
+        Check((await MoneyBack("Submitted")).Items.All(x => x.Id != initial.Id), "Overview status filter included an unsubmitted claim");
         var before = await Totals();
         await Throws<BusinessRuleException>(() => Post(Input(config, TransactionKind.Income)));
         Check(await Totals() == before, "Invalid income claim left a transaction behind");
@@ -41,6 +47,17 @@ internal static class ManualReimbursementVerification
         var hidden = RecurringReimbursementRule.Create("Private destination", ReimbursementCalculation.Fixed, 30, null, f.PrivateAccountId, 7, 0);
         user.UserId = f.MemberUserId;
         await Throws<NotFoundException>(() => Create(expense, payment.UpdatedAt, hidden));
+        Guid viewOnlyId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var account = Account.Create(f.HouseholdId, [f.OwnerMemberId], "Visible personal destination", AccountType.Checking,
+                AccountScope.Personal, AccountVisibility.Household, true, CurrencyCode.Eur, 0, day, clock.GetUtcNow());
+            db.Accounts.Add(account); await db.SaveChangesAsync(ct); viewOnlyId = account.Id;
+        }
+        var viewOnly = RecurringReimbursementRule.Create("View only", ReimbursementCalculation.Fixed, 30, null, viewOnlyId, 7, 0);
+        await Throws<BusinessRuleException>(() => Create(expense, payment.UpdatedAt, viewOnly));
+        await Throws<BusinessRuleException>(() => Post(Input(viewOnly)));
         user.UserId = f.OwnerUserId;
         var ids = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Create(expense, payment.UpdatedAt, config)));
         Check(ids.Distinct().Count() == 1, "Retry duplicated manual claim");
@@ -52,14 +69,21 @@ internal static class ManualReimbursementVerification
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt, different));
         user.UserId = f.MemberUserId;
         Check((await List(expense)).Count == 0, "Shared expense leaked private claim");
+        Check((await MoneyBack(null)).Items.All(x => x.Id != claim.Id && x.Id != initial.Id), "Money-back overview leaked another member's claim");
         Check(await DetailStatus(expense) == null && await OverviewStatus(expense) == null, "Shared expense badge leaked private claim");
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt, config));
         await Throws<NotFoundException>(() => Create(Guid.NewGuid(), payment.UpdatedAt, config));
+        var memberExpense = await Post(Input(config));
+        var memberClaim = (await List(memberExpense)).Single().Claim;
+        await Throws<BusinessRuleException>(() => Edit(memberClaim.Id, memberClaim.Version, viewOnly));
+        before = await Totals();
         user.UserId = f.OwnerUserId;
         await using (var scope = provider.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ChangeAsync(f.HouseholdId, claim.Id, claim.Version, true, day, "MANUAL", ReimbursementStatus.Submitted, ct);
         var submitted = (await List(expense)).Single().Claim;
         Check(submitted.ExpectedAmount == 30 && submitted.SubmittedOn == day, "Manual submission does not reuse lifecycle");
+        var submittedRow = (await MoneyBack("Submitted")).Items.Single(x => x.Id == claim.Id);
+        Check(submittedRow.Amount == 30 && submittedRow.Outstanding == 30, "Submitted overview amounts are incorrect");
         Check(await Create(expense, payment.UpdatedAt, config) == claim.Id, "Retry after submission lost idempotency");
         Check(await Totals() == before, "Submission created actual income");
         Check(await OverviewStatus(expense) == "Submitted", "Submitted badge stale");
@@ -88,6 +112,16 @@ internal static class ManualReimbursementVerification
         async Task<Guid> Post(CreateTransactionCommand command) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(command, ct); }
         async Task<Guid> Create(Guid id, DateTimeOffset version, RecurringReimbursementRule configuration) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().CreateAsync(f.HouseholdId, id, version, configuration, ct); }
         async Task<IReadOnlyList<ReimbursementResult>> List(Guid id) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ListAsync(f.HouseholdId, id, ct); }
+        async Task<(IReadOnlyList<MoneyBackRow> Items, bool HasMore)> MoneyBack(string? status)
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var handler = scope.ServiceProvider.GetRequiredService<MoneyBackHandler>();
+            var items = new List<MoneyBackRow>();
+            (IReadOnlyList<MoneyBackRow> Items, bool HasMore) page;
+            do { page = await handler.ListAsync(f.HouseholdId, items.Count, 100, status, ct); items.AddRange(page.Items); }
+            while (page.HasMore);
+            return (items, false);
+        }
         async Task<Transaction> Payment(Guid id) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<AverioDbContext>().Transactions.AsNoTracking().SingleAsync(t => t.Id == id); }
         async Task<(int, decimal, decimal)> Totals() { await using var scope = provider.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>(); return (await db.Transactions.CountAsync(), await db.Transactions.SumAsync(t => t.Amount), await db.TransactionAggregates.SumAsync(a => a.IncomeAmount)); }
     }

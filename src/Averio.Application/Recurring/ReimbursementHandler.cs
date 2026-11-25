@@ -49,7 +49,7 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
         var destination = await accounts.GetVisibleByIdAsync(payment.HouseholdId, member.Id, configuration.DestinationAccountId, ct)
             ?? throw new NotFoundException("account", configuration.DestinationAccountId);
         if (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense || payment.IsArchived
-            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || destination.CutoverAtUtc is not null
+            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || !TransactionAccess.CanModify(destination, member)
             || destination.Currency != payment.Currency)
             throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
         var identity = System.Text.Json.JsonSerializer.Serialize(new { UpdatedAt = expectedUpdatedAt.ToUniversalTime(),
@@ -79,7 +79,7 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
         if (claim.Version != expectedVersion) throw new ConflictException("reimbursement_changed", "Error_ReimbursementChanged");
         var destination = await accounts.GetVisibleByIdAsync(householdId, member.Id, configuration.DestinationAccountId, ct) ?? throw new NotFoundException("account", configuration.DestinationAccountId);
         if (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense || payment.IsArchived
-            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || destination.CutoverAtUtc is not null || destination.Currency.Value != claim.Currency)
+            || destination.Status != Averio.Domain.Accounts.AccountStatus.Active || !TransactionAccess.CanModify(destination, member) || destination.Currency.Value != claim.Currency)
             throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement");
         try { claim.Update(configuration, member.Id, clock.GetUtcNow()); }
         catch (ArgumentException) { throw new BusinessRuleException("reimbursement_invalid", "Validation_Reimbursement"); }

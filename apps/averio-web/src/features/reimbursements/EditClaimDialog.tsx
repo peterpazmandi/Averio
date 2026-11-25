@@ -24,7 +24,7 @@ export function EditClaimDialog({ userId, householdId, claim, onClose }: { userI
             <p className="font-semibold">{claim.description}</p><p className="text-sm">{t('reimbursements.edit.help')}</p>
             {accounts.isPending && <p role="status">{t('common.status.loading')}</p>}
             {accounts.isError && <div role="alert"><p>{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void accounts.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
-            {accounts.isSuccess && <ReimbursementFields allowDisable={false} value={configuration} onChange={value => { if (value) setConfiguration(value); }} accounts={accounts.data} currency={claim.currency} paymentAmount={claim.originalPaymentAmount} sourceAccountId={claim.destinationAccountId} busy={mutation.isPending} />}
+            {accounts.isSuccess && <ReimbursementFields userId={userId} householdId={householdId} allowDisable={false} value={configuration} onChange={value => { if (value) setConfiguration(value); }} accounts={accounts.data} currency={claim.currency} paymentAmount={claim.originalPaymentAmount} sourceAccountId={claim.destinationAccountId} busy={mutation.isPending} />}
             {mutation.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{mutation.error.message}</p>}
         </form>
     </AverioDialog>;

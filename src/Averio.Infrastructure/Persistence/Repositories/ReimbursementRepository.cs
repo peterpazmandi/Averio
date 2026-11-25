@@ -6,12 +6,13 @@ namespace Averio.Infrastructure.Persistence.Repositories;
 internal sealed class ReimbursementRepository(AverioDbContext db) : IReimbursementRepository
 {
     // Claims are personal to the recurring-rule creator and additionally respect both accounts' visibility.
-    private IQueryable<ReimbursementClaim> Visible(Guid householdId, Guid memberId) => db.Set<ReimbursementClaim>()
+    internal static IQueryable<ReimbursementClaim> Visible(AverioDbContext db, Guid householdId, Guid memberId) => db.Set<ReimbursementClaim>()
         .Where(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId
             && db.VisibleTransactions(householdId, memberId).Any(t => t.Id == c.TransactionId)
             && !c.Payments.Any(p => !db.VisibleTransactions(householdId, memberId).Any(t => t.Id == p.CreditTransactionId))
             && db.Accounts.Any(a => a.HouseholdId == householdId && a.Id == c.DestinationAccountId
                 && (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId))));
+    private IQueryable<ReimbursementClaim> Visible(Guid householdId, Guid memberId) => Visible(db, householdId, memberId);
     public async Task<IReadOnlyList<ReimbursementClaim>> ListAsync(Guid householdId, Guid memberId, Guid? transactionId, CancellationToken ct, bool includeCancelled = false)
         => await Visible(householdId, memberId).AsNoTracking().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
             .Where(c => transactionId == null

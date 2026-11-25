@@ -102,7 +102,7 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
             <AverioCard className="space-y-2"><p className="font-semibold">{claim.provider} · {claim.description}</p>
                 <p>{t('reimbursements.originalPayment')} {formatDecimalAmount(claim.originalPaymentAmount, claim.currency, i18n.resolvedLanguage ?? i18n.language)}</p>
                 <p>{t('reimbursements.estimate')} {formatDecimalAmount(claim.potentialAmount, claim.currency, i18n.resolvedLanguage ?? i18n.language)}</p></AverioCard>
-            <p className="text-sm">{t('reimbursements.balanceHelp')}</p>
+            <div className="flex items-center gap-2 text-sm"><span>{t('reimbursements.title')}</span><InfoPopover label={t('reimbursements.title')}>{t('reimbursements.balanceHelp')}</InfoPopover></div>
             {submitting ? <>
                 <p className="text-sm">{t('reimbursements.externalHelp')}</p>
                 <AverioField>{t('reimbursements.submittedOn')}<AverioInput type="date" required min={claim.paymentOn} max={today} value={submittedOn} disabled={mutation.isPending} onChange={e => setSubmittedOn(e.target.value)} /></AverioField>

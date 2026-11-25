@@ -1,8 +1,10 @@
 # ADR-055 - Allocate one received credit to several reimbursement claims
 
-Status: Proposed
+Status: Accepted
 
 Date: 2026-11-23
+
+Supersedes ADR-052's exclusive-credit and whole-credit allocation restrictions. Its other accounting, privacy and lifecycle rules remain in force.
 
 ## Decision
 

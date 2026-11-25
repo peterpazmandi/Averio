@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useId } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { accountsQueries } from '../accounts/api/accountsQueries';
+import type { AccountResponse } from '../../shared/api/generated';
 import type { RecurringReimbursementConfiguration } from '../../shared/api/generated';
 import { AverioCard } from '../../shared/components/ui/AverioCard';
+import { AverioButton } from '../../shared/components/ui/AverioButton';
 import { AverioDisclosure } from '../../shared/components/ui/AverioDisclosure';
 import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import { AverioField, AverioInput, AverioSelect } from '../../shared/components/ui/AverioFormControls';
@@ -22,17 +26,20 @@ function estimate(payment: string, config: RecurringReimbursementConfiguration):
     return result > 0n ? `${result / 10000n}.${(result % 10000n).toString().padStart(4, '0')}` : null;
 }
 
-export function ReimbursementFields({ value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true }: {
+export function ReimbursementFields({ userId, householdId, value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true }: {
+    userId: string; householdId: string;
     allowDisable?: boolean;
     limitToPayment?: boolean;
     value: RecurringReimbursementConfiguration | null;
     onChange: (value: RecurringReimbursementConfiguration | null) => void;
-    accounts: { id: string; name: string; currency: string; status: string; cutoverAtUtc?: string | null }[];
+    accounts: AccountResponse[];
     currency: string; paymentAmount: string; sourceAccountId: string; busy: boolean;
 }) {
     const { t, i18n } = useTranslation();
     const id = useId();
-    const eligible = accounts.filter(a => a.currency === currency && a.status === 'Active' && !a.cutoverAtUtc);
+    const owners = useQuery({ ...accountsQueries.ownerOptions(userId, householdId), enabled: !!value });
+    const eligible = accounts.filter(a => a.currency === currency && a.status === 'Active' && !a.cutoverAtUtc
+        && !!owners.data?.currentMemberId && (a.scope === 'Household' || a.owners.some(o => o.householdMemberId === owners.data.currentMemberId)));
     const patch = (change: Partial<RecurringReimbursementConfiguration>) => value && onChange({ ...value, ...change });
     const destination = value?.destinationAccountId || (eligible.some(a => a.id === sourceAccountId) ? sourceAccountId : '');
     const preview = value ? estimate(paymentAmount, value) : null;
@@ -63,12 +70,16 @@ export function ReimbursementFields({ value, onChange, accounts, currency, payme
                             <InfoPopover label={t('reimbursements.provider')} id={id + '-provider-help'}>{t('reimbursements.providerHelp')}</InfoPopover></div>
                         <AverioInput id={id + '-provider'} aria-describedby={id + '-provider-help'} required maxLength={160} value={value.provider} disabled={busy} onChange={e => patch({ provider: e.target.value })} />
                     </div>
-                    <div className="grid content-start gap-[7px]"><AverioField className="min-h-11 content-center" htmlFor={id + '-destination'}>{t('reimbursements.destination')}</AverioField><AverioSelect id={id + '-destination'} required value={destination} disabled={busy} onChange={e => patch({ destinationAccountId: e.target.value })}>
+                    <div className="grid content-start gap-[7px]"><AverioField className="min-h-11 content-center" htmlFor={id + '-destination'}>{t('reimbursements.destination')}</AverioField><AverioSelect id={id + '-destination'} required value={destination} disabled={busy} aria-invalid={!!destination && !eligible.some(a => a.id === destination) || owners.isError || undefined}
+                        ref={select => { select?.setCustomValidity(owners.isError || !eligible.some(a => a.id === destination) ? t('reimbursements.unavailableAccount') : ''); }}
+                        onChange={e => patch({ destinationAccountId: e.target.value })}>
                         <option value="">{t('reimbursements.chooseAccount')}</option>
                         {!eligible.some(a => a.id === destination) && destination && <option value={destination} disabled>{t('reimbursements.unavailableAccount')}</option>}
                         {eligible.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
                     </AverioSelect></div>
                 </div>
+                {owners.isPending && <p role="status">{t('common.status.loading')}</p>}
+                {owners.isError && <div role="alert"><p>{t('reimbursements.loadError')}</p><AverioButton onClick={() => { void owners.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
             </div>
             <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
                 {heading('reimbursements.design.howMuch', 'reimbursements.estimateHelp')}
