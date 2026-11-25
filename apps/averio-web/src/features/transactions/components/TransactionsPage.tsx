@@ -13,6 +13,9 @@ import { SavedViews } from './SavedViews';
 import { LabelFilters } from './LabelFilters';
 import { ReimbursementBadge } from '../../reimbursements/ReimbursementBadge';
 import { TransactionLinkDetail } from './TransactionLinkDetail';
+import { itemRefundKeys } from '../refunds/itemRefundQueries';
+import { reimbursementKeys } from '../../reimbursements/reimbursementQueries';
+import { moneyBackQueryKeys } from '../../money-back/moneyBackQueryKeys';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { useMemo, useRef, useState } from 'react';
@@ -219,7 +222,12 @@ export function TransactionsPage({
     async function archiveCurrent(archived: boolean, expectedUpdatedAt: string) {
         if (!activeEditor || activeEditor === 'new') return;
         await archiveTransaction(householdId, activeEditor.id, archived, expectedUpdatedAt);
-        await queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) });
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }),
+            queryClient.invalidateQueries({ queryKey: itemRefundKeys.all(userId, householdId) }),
+            queryClient.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
+            queryClient.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) }),
+        ]);
         setNotice(t(archived ? 'transactionManagement.archivedNotice' : 'transactionManagement.restoredNotice'));
         closeEditor();
     }

@@ -5,6 +5,9 @@ import type { CreateAccountRequest, UpdateAccountRequest } from '../../../shared
 import { ApiError } from '../../../shared/api/ApiError';
 import { accountsQueryKeys } from './accountsQueryKeys';
 import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
+import { itemRefundKeys } from '../../transactions/refunds/itemRefundQueries';
+import { reimbursementKeys } from '../../reimbursements/reimbursementQueries';
+import { moneyBackQueryKeys } from '../../money-back/moneyBackQueryKeys';
 import { archiveAccount, createAccount, restoreAccount, updateAccount } from './accountsApi';
 
 export function useAccountMutations(userId: string, householdId: string) {
@@ -16,6 +19,9 @@ export function useAccountMutations(userId: string, householdId: string) {
             client.invalidateQueries({ queryKey: transferKeys.all(userId, householdId) }),
             client.invalidateQueries({ queryKey: accountsQueryKeys.household(userId, householdId) }),
             client.invalidateQueries({ queryKey: dashboardQueryKeys.household(userId, householdId) }),
+            client.invalidateQueries({ queryKey: itemRefundKeys.all(userId, householdId) }),
+            client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
+            client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) }),
         ]);
     }
     const create = useMutation({

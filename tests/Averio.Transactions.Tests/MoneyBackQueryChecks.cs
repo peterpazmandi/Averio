@@ -22,6 +22,8 @@ internal static class MoneyBackQueryChecks
         var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
         var household = Guid.NewGuid();
         var member = Guid.NewGuid();
+        _ = ItemRefundRepository.VisibleForTransaction(db, household, member, Guid.NewGuid()).ToQueryString();
+        _ = ReimbursementRepository.DestinationRecoveryQuery(db, household, member).ToQueryString();
         var visible = db.VisibleTransactions(household, member).AsNoTracking();
         var allClaims = ReimbursementRepository.Visible(db, household, member).AsNoTracking();
         var allRefunds = db.Set<ItemRefund>().AsNoTracking().Where(r => r.HouseholdId == household);

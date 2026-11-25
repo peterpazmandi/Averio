@@ -94,6 +94,31 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
         }
         assert.equal((await ok(page, base + '/transactions/' + second.id)).kind, 'Income');
     }
+    const netSource = await post('Expense', '100', 'Net limit source');
+    const netCredit = await post('Income', '30', 'Net limit payment');
+    const netRecord = await ok(page, base + '/transactions/' + netSource.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: netSource.id, expectedUpdatedAt: netRecord.updatedAt,
+        configuration: { provider: 'Net limit provider', calculation: 'Fixed', value: '30', destinationAccountId: account.id, paymentDelayDays: 0 } } });
+    await ok(page, base + '/transactions/' + netSource.id + '/refunds', { method: 'POST', body: { transactionItemId: netRecord.items[0].id,
+        amount: '80', receivedOn: f.date, operationId: crypto.randomUUID(), expectedUpdatedAt: netRecord.updatedAt, moneyReceived: true } });
+    let netClaim = await claimFor(netSource.id);
+    await ok(page, base + '/reimbursements/' + netClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: netClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    await open(netSource.id);
+    await page.getByRole('region', { name: 'Reimbursements', exact: true }).getByRole('button', { name: 'Link received payment' }).click();
+    const netDialog = page.getByRole('dialog', { name: 'Link received payment' });
+    await netDialog.getByLabel('Search received payments').fill('Net limit payment');
+    await netDialog.getByRole('radio').check();
+    assert.equal(await netDialog.getByLabel('Amount to allocate to this claim').inputValue(), '20');
+    await netDialog.getByLabel('Amount to allocate to this claim').fill('20.0001');
+    await netDialog.getByText('Enter a positive amount no greater than the maximum for this claim.').waitFor();
+    await netDialog.getByLabel('Amount to allocate to this claim').fill('20');
+    await netDialog.getByRole('checkbox').check();
+    await netDialog.getByRole('button', { name: 'Link received payment' }).click();
+    await netDialog.waitFor({ state: 'hidden' });
+    netClaim = await claimFor(netSource.id);
+    assert.equal(netClaim.receivedAmount, '20');
+    assert.equal((await ok(page, base + '/transactions/' + netCredit.id)).amount, '30');
     const pooled = await post('Income', '31', 'Pooled provider payment');
     const sources = await Promise.all([post('Expense', '100', 'Pooled claim A'), post('Expense', '100', 'Pooled claim B')]);
     const claims = [];

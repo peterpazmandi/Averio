@@ -7,6 +7,7 @@ import { transactionQueryKeys } from './transactionQueries';
 import { dashboardQueryKeys } from '../../dashboard/api/dashboardQueryKeys';
 import { accountsQueryKeys } from '../../accounts/api/accountsQueryKeys';
 import { moneyBackQueryKeys } from '../../money-back/moneyBackQueryKeys';
+import { itemRefundKeys } from '../refunds/itemRefundQueries';
 
 export function useTransactionMutations(userId: string, householdId: string) {
     const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ export function useTransactionMutations(userId: string, householdId: string) {
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
             queryClient.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) }),
+            queryClient.invalidateQueries({ queryKey: itemRefundKeys.all(userId, householdId) }),
             queryClient.invalidateQueries({ queryKey: ['personal-money', userId, householdId] }),
             queryClient.invalidateQueries({ queryKey: activityKeys.all(userId, householdId) }),
             queryClient.invalidateQueries({

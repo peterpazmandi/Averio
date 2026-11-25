@@ -195,11 +195,67 @@ internal static class ReimbursementPaymentVerification
         await Throws<NotFoundException>(() => Recover([new(memberClaim.Id, memberLink)]));
         await VerifySafeEdits();
         await VerifyVisibilityTransition();
+        await VerifyNetExpenseLimit();
+        await VerifyDestinationRecovery();
         Console.WriteLine("PASS refund candidate filtering and privacy-safe recovery, atomicity, concurrent retries, history and relinking");
         Console.WriteLine("PASS reimbursement payment settlement, retries, dependencies, privacy and unchanged finances");
         async Task<IReadOnlyList<ReimbursementRecoveryLink>> Recovery() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().RecoveryLinksAsync(f.HouseholdId, ct); }
         Task Recover(IReadOnlyList<ReimbursementRecoveryLink> links) => Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, links, ct));
         async Task<TransactionReadPage> RefundCandidates() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId, new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 100, null, null, null, RefundEligibleOnly: true), ct); }
+
+        async Task VerifyNetExpenseLimit() {
+            var sourceId = await Post(TransactionKind.Expense, 100, true);
+            var sourceRecord = await Transaction(sourceId);
+            await Use<ItemRefundHandler>(async h => { await h.RecordAsync(f.HouseholdId, sourceId,
+                new(sourceRecord.Items.Single().Id, 80, today, Guid.NewGuid(), sourceRecord.UpdatedAt, true), ct); });
+            var c = await Claim(sourceId);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, c.Id, c.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+            c = await Claim(sourceId);
+            var creditId = await Post(TransactionKind.Income, 30);
+            var creditRecord = await Transaction(creditId);
+            var candidate = (await Candidates(c.Id)).Single(x => x.Credit.Id == creditId);
+            Check(candidate.AvailableAmount == 30 && candidate.MaximumAllocation == 20, "Candidate omitted the net expense limit");
+            await Throws<BusinessRuleException>(() => Link(c.Id, new(creditId, Guid.NewGuid(), c.Version, creditRecord.UpdatedAt, true, 20.0001m)));
+            await Link(c.Id, new(creditId, Guid.NewGuid(), c.Version, creditRecord.UpdatedAt, true, candidate.MaximumAllocation));
+        }
+
+        async Task VerifyDestinationRecovery() {
+            var destination = Averio.Domain.Accounts.Account.Create(f.HouseholdId, [f.OwnerMemberId, f.MemberId], "Recovery destination",
+                Averio.Domain.Accounts.AccountType.Cash, Averio.Domain.Accounts.AccountScope.Personal,
+                Averio.Domain.Accounts.AccountVisibility.Household, true, Averio.Domain.Common.CurrencyCode.Eur, 0, today, clock.GetUtcNow());
+            await using (var scope = provider.CreateAsyncScope()) { var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>(); db.Add(destination); await db.SaveChangesAsync(ct); }
+            var sourceId = await Post(TransactionKind.Expense, 100);
+            var sourceRecord = await Transaction(sourceId);
+            var destinationConfig = RecurringReimbursementRule.Create("Private destination", ReimbursementCalculation.Fixed, 10, null, destination.Id, 0, null);
+            await Use<ReimbursementHandler>(async h => { await h.CreateAsync(f.HouseholdId, sourceId, sourceRecord.UpdatedAt, destinationConfig, ct); });
+            var c = await Claim(sourceId);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, c.Id, c.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+            c = await Claim(sourceId);
+            Guid creditId;
+            await using (var scope = provider.CreateAsyncScope()) creditId = await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(
+                new(f.HouseholdId, destination.Id, TransactionKind.Income, TransactionVisibility.Household, "Recovery credit", null, today,
+                    [new("Recovery credit", TestIds.Salary, 10)], []), ct);
+            var paymentId = await Link(c.Id, new(creditId, Guid.NewGuid(), c.Version, (await Transaction(creditId)).UpdatedAt, true));
+            c = await Claim(sourceId);
+            await using (var scope = provider.CreateAsyncScope()) {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                var account = await db.Accounts.Include(a => a.Owners).SingleAsync(a => a.Id == destination.Id, ct);
+                account.Update(account.Name, account.Type, [f.MemberId], Averio.Domain.Accounts.AccountVisibility.Private, false, clock.GetUtcNow());
+                await db.SaveChangesAsync(ct);
+            }
+            await using (var scope = provider.CreateAsyncScope()) {
+                var handler = scope.ServiceProvider.GetRequiredService<ReimbursementHandler>();
+                Check((await handler.DestinationRecoveryAsync(f.HouseholdId, ct)).All(x => x.ClaimId != c.Id), "Active link appeared in destination recovery");
+                await Throws<BusinessRuleException>(() => handler.ReassignDestinationAsync(f.HouseholdId, c.Id, c.Version, f.HouseholdAccountId, ct));
+            }
+            await Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, [new(c.Id, paymentId)], ct));
+            await using (var scope = provider.CreateAsyncScope()) {
+                var handler = scope.ServiceProvider.GetRequiredService<ReimbursementHandler>();
+                var recovery = (await handler.DestinationRecoveryAsync(f.HouseholdId, ct)).Single(x => x.ClaimId == c.Id);
+                await handler.ReassignDestinationAsync(f.HouseholdId, c.Id, recovery.Version, f.HouseholdAccountId, ct);
+            }
+            Check((await List(sourceId)).Count == 0, "Destination recovery exposed an inaccessible historical credit");
+        }
 
         async Task VerifyVisibilityTransition() {
             var account = Averio.Domain.Accounts.Account.Create(f.HouseholdId, [f.OwnerMemberId], "Visibility transition", Averio.Domain.Accounts.AccountType.Cash,

@@ -86,6 +86,15 @@ public sealed class ReimbursementClaim
         RefreshReceivedStatus();
         Record(actor, now, "Updated");
     }
+    public void ReassignDestination(Guid destinationId, Guid actor, DateTimeOffset now)
+    {
+        if (actor != HouseholdMemberId || destinationId == Guid.Empty || Status == ReimbursementStatus.Cancelled
+            || _payments.Any(p => p.UnlinkedAt is null))
+            throw new ArgumentException("Cannot reassign destination.");
+        Record(actor, now, "BeforeUpdate");
+        DestinationAccountId = destinationId;
+        Record(actor, now, "Updated");
+    }
     public void Submit(bool confirmed, DateOnly submittedOn, string? reference, Guid actor, DateTimeOffset now)
     {
         if (!confirmed || Status is not (ReimbursementStatus.NeedsSubmission or ReimbursementStatus.Rejected)

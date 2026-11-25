@@ -66,8 +66,21 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
             .Skip(offset).Take(21).Select(t => new { Credit = t,
                 Allocated = db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)
                     .Sum(p => (decimal?)p.Amount) ?? 0m }).ToArrayAsync(ct);
-        return rows.Select(r => new ReimbursementCreditCandidate(r.Credit, r.Credit.Amount - r.Allocated)).ToArray();
+        return rows.Select(r => new ReimbursementCreditCandidate(r.Credit, r.Credit.Amount - r.Allocated,
+            Math.Min(available, r.Credit.Amount - r.Allocated))).ToArray();
     }
+    public async Task<IReadOnlyList<ReimbursementDestinationRecovery>> DestinationRecoveryAsync(Guid h, Guid member, CancellationToken ct)
+        => await DestinationRecoveryQuery(db, h, member).ToArrayAsync(ct);
+    internal static IQueryable<ReimbursementDestinationRecovery> DestinationRecoveryQuery(AverioDbContext db, Guid h, Guid member)
+        => db.Set<ReimbursementClaim>().AsNoTracking()
+            .Where(c => c.HouseholdId == h && c.HouseholdMemberId == member && c.Status != ReimbursementStatus.Cancelled
+                && !c.Payments.Any(p => p.UnlinkedAt == null)
+                && !db.Accounts.Any(a => a.HouseholdId == h && a.Id == c.DestinationAccountId
+                    && (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == member)))
+                && db.VisibleTransactions(h, member).Any(t => t.Id == c.TransactionId
+                    && db.Accounts.Any(a => a.HouseholdId == h && a.Id == t.AccountId && a.CutoverAtUtc == null
+                        && (a.Scope == AccountScope.Household || a.Owners.Any(o => o.HouseholdMemberId == member)))))
+            .OrderBy(c => c.Id).Take(100).Select(c => new ReimbursementDestinationRecovery(c.Id, c.Version));
     public Task<ReimbursementClaim?> GetOwnedAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
         => db.Set<ReimbursementClaim>().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
             .SingleOrDefaultAsync(c => c.HouseholdId == householdId && c.HouseholdMemberId == memberId && c.Id == id, ct);

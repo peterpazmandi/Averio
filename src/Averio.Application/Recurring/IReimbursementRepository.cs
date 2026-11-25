@@ -8,6 +8,7 @@ public interface IReimbursementRepository
     Task<bool> HasActivePaymentAsync(Guid householdId, Guid transactionId, CancellationToken ct);
     Task<IReadOnlyList<ReimbursementCreditCandidate>> PaymentCandidatesAsync(Guid householdId, Guid memberId, ReimbursementClaim claim, decimal available, string? search, int offset, DateOnly today, CancellationToken ct);
     Task<IReadOnlyList<ReimbursementRecoveryLink>> RecoveryLinksAsync(Guid householdId, Guid memberId, CancellationToken ct);
+    Task<IReadOnlyList<ReimbursementDestinationRecovery>> DestinationRecoveryAsync(Guid householdId, Guid memberId, CancellationToken ct);
     Task<ReimbursementClaim?> GetOwnedAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct);
     void Add(ReimbursementClaim claim);
     Task<IReadOnlyDictionary<Guid, string>> StatusesAsync(Guid householdId, Guid memberId, IReadOnlyList<Guid> transactionIds, CancellationToken ct);
@@ -17,5 +18,6 @@ public interface IReimbursementRepository
 }
 
 public sealed record ReimbursementRecoveryLink(Guid ClaimId, Guid PaymentId);
-public sealed record ReimbursementCreditCandidate(Averio.Domain.Transactions.Transaction Credit, decimal AvailableAmount);
+public sealed record ReimbursementDestinationRecovery(Guid ClaimId, Guid Version);
+public sealed record ReimbursementCreditCandidate(Averio.Domain.Transactions.Transaction Credit, decimal AvailableAmount, decimal MaximumAllocation);
 

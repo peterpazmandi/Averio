@@ -38,11 +38,15 @@ public sealed record LinkReimbursementPaymentRequest(Guid CreditTransactionId, G
 public sealed record LinkReimbursementPaymentResponse(Guid Id);
 public sealed record UnlinkReimbursementPaymentRequest(Guid ExpectedVersion);
 public sealed record ReimbursementPaymentResponse(Guid Id, Guid CreditTransactionId, string Amount, DateOnly ReceivedOn, DateTimeOffset LinkedAt, DateTimeOffset? UnlinkedAt);
-public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt, string AvailableAmount);
+public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt, string AvailableAmount, string MaximumAllocation);
 public sealed record ReimbursementPaymentCandidatesResponse(IReadOnlyList<ReimbursementPaymentCandidateResponse> Items, bool HasMore);
 
 // Opaque references only: never expose inaccessible financial details through recovery.
 public sealed record ReimbursementRecoveryLinkResponse(Guid ClaimId, Guid PaymentId);
 public sealed record RecoverReimbursementPaymentsRequest(IReadOnlyList<ReimbursementRecoveryLinkResponse> Links);
+/// <summary>Opaque claim reference and revision for destination recovery.</summary>
+public sealed record ReimbursementDestinationRecoveryResponse(Guid ClaimId, Guid Version);
+/// <summary>Replacement destination and the reviewed claim revision.</summary>
+public sealed record ReassignReimbursementDestinationRequest(Guid ExpectedVersion, Guid DestinationAccountId);
 public sealed record MoneyBackItemResponse(string Kind, Guid Id, string Description, string? Provider, string? Merchant, string Currency, string Amount, string? OutstandingAmount, DateOnly Date, string Status, Guid? SourceTransactionId, Guid? CreditTransactionId, bool CanModify);
 public sealed record MoneyBackPageResponse(IReadOnlyList<MoneyBackItemResponse> Items, bool HasMore, int Offset, int Limit);

@@ -9,6 +9,17 @@ namespace Averio.Api.Controllers;
 [Authorize, ApiController, Route("api/v1/households/{householdId:guid}/reimbursements")]
 public sealed class ReimbursementsController(ReimbursementHandler handler, ReimbursementPaymentHandler payments, TimeProvider clock) : ControllerBase
 {
+    /// <summary>Lists opaque references to claims eligible for blind destination recovery.</summary>
+    [HttpGet("destination-recovery")]
+    public async Task<ActionResult<IReadOnlyList<ReimbursementDestinationRecoveryResponse>>> DestinationRecovery(Guid householdId, CancellationToken ct)
+        => Ok((await handler.DestinationRecoveryAsync(householdId, ct)).Select(c => new ReimbursementDestinationRecoveryResponse(c.ClaimId, c.Version)).ToArray());
+    /// <summary>Reassigns an inaccessible destination without exposing its details.</summary>
+    [HttpPut("{claimId:guid}/destination-recovery")]
+    public async Task<IActionResult> ReassignDestination(Guid householdId, Guid claimId, ReassignReimbursementDestinationRequest request, CancellationToken ct)
+    {
+        await handler.ReassignDestinationAsync(householdId, claimId, request.ExpectedVersion, request.DestinationAccountId, ct);
+        return NoContent();
+    }
     [HttpGet("payment-recovery")]
     public async Task<ActionResult<IReadOnlyList<ReimbursementRecoveryLinkResponse>>> RecoveryLinks(Guid householdId, CancellationToken ct)
         => Ok((await payments.RecoveryLinksAsync(householdId, ct)).Select(p => new ReimbursementRecoveryLinkResponse(p.ClaimId, p.PaymentId)).ToArray());
@@ -47,7 +58,8 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, Reimb
                 !x.PaymentUnavailable && c.Status == ReimbursementStatus.NeedsSubmission && c.SubmissionReminderOn <= today,
                 !x.PaymentUnavailable && c.Status is (ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived) && c.OutstandingAmount > 0 && c.ExpectedOn < today,
                 c.Events.OrderBy(e => e.RecordedAt).ThenBy(e => e.Sequence).Select(e => new ReimbursementEventResponse(e.Status.ToString(), e.SubmittedOn, e.Reference, e.RecordedAt,
-                    e.ChangeKind, e.Provider, e.PotentialAmount is decimal amount ? DecimalAmountMapper.Format(amount) : null, e.DestinationAccountId,
+                    e.ChangeKind, e.Provider, e.PotentialAmount is decimal amount ? DecimalAmountMapper.Format(amount) : null,
+                    e.DestinationAccountId is Guid accountId && x.VisibleAccountIds.Contains(accountId) ? accountId : null,
                     e.PaymentDelayDays, e.SubmissionReminderOn, e.ExpectedOn)).ToArray(), c.PaymentDelayDays,
                 c.SubmissionReminderOn is DateOnly reminder ? reminder.DayNumber - DateOnly.FromDateTime(c.CreatedAt.UtcDateTime).DayNumber : null,
                 c.Payments.OrderBy(p => p.LinkedAt).ThenBy(p => p.Id).Select(p => new ReimbursementPaymentResponse(p.Id, p.CreditTransactionId, DecimalAmountMapper.Format(p.Amount), p.ReceivedOn, p.LinkedAt, p.UnlinkedAt)).ToArray());
@@ -58,7 +70,7 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, Reimb
     {
         var rows = await payments.CandidatesAsync(householdId, claimId, search, offset, ct);
         return Ok(new ReimbursementPaymentCandidatesResponse(rows.Take(20).Select(c => new ReimbursementPaymentCandidateResponse(c.Credit.Id, c.Credit.Description,
-            DecimalAmountMapper.Format(c.Credit.Amount), c.Credit.OccurredOn, c.Credit.UpdatedAt, DecimalAmountMapper.Format(c.AvailableAmount))).ToArray(), rows.Count > 20));
+            DecimalAmountMapper.Format(c.Credit.Amount), c.Credit.OccurredOn, c.Credit.UpdatedAt, DecimalAmountMapper.Format(c.AvailableAmount), DecimalAmountMapper.Format(c.MaximumAllocation))).ToArray(), rows.Count > 20));
     }
     [HttpPost("{claimId:guid}/payments")]
     public async Task<ActionResult<LinkReimbursementPaymentResponse>> LinkPayment(Guid householdId, Guid claimId, LinkReimbursementPaymentRequest request, CancellationToken ct)

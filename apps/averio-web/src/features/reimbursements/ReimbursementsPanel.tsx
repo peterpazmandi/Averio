@@ -1,4 +1,5 @@
 import { ReimbursementRecoveryPanel } from './ReimbursementRecoveryPanel';
+import { DestinationRecoveryPanel } from './DestinationRecoveryPanel';
 import { PaymentDialog } from './PaymentDialog';
 import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import type { ReimbursementPaymentResponse } from '../../shared/api/generated';
@@ -116,5 +117,5 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
 }
 
 export function ReimbursementsPanel(props: Parameters<typeof VisibleReimbursementsPanel>[0]) {
-    return <>{!props.transactionId && <ReimbursementRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} />}<VisibleReimbursementsPanel {...props} /></>;
+    return <>{!props.transactionId && <><ReimbursementRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} /><DestinationRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} /></>}<VisibleReimbursementsPanel {...props} /></>;
 }

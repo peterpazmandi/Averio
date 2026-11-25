@@ -13,6 +13,7 @@ import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } fr
 import { reimbursementKeys, reimbursementsApi } from './reimbursementQueries';
 import { transactionQueryKeys } from '../transactions/api/transactionQueries';
 import { moneyBackQueryKeys } from '../money-back/moneyBackQueryKeys';
+import { itemRefundKeys } from '../transactions/refunds/itemRefundQueries';
 
 const MetaSeparator = () => <span aria-hidden="true" className="mx-1">·</span>;
 
@@ -38,13 +39,13 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     const credit = rows.find(c => c.id === creditId);
     const allocation = normalizeBalanceInput(amount);
     const validAmount = !!credit && !!allocation && allocation !== '0' && !allocation.startsWith('-')
-        && !subtractDecimalAmounts(credit.availableAmount, allocation).startsWith('-')
-        && !subtractDecimalAmounts(claim.outstandingAmount, allocation).startsWith('-');
+        && !subtractDecimalAmounts(credit.maximumAllocation, allocation).startsWith('-');
     const refresh = async () => {
         if (onChanged) await onChanged();
         else await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
             client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }),
-            client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) })]);
+            client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) }),
+            client.invalidateQueries({ queryKey: itemRefundKeys.all(userId, householdId) })]);
         onClose();
     };
     const link = useMutation({
@@ -94,13 +95,14 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
                     {candidates.isSuccess && rows.length === 0 && <div className="grid justify-items-center gap-3 py-5 text-center"><span aria-hidden="true"><AverioLogo /></span><h4 className="font-semibold">{t('reimbursements.payments.empty')}</h4><p>{t('reimbursements.payments.emptyHelp')}</p>
                         {search && <AverioButton onClick={() => { setSearch(''); setCreditId(''); setAmount(''); setConfirmed(false); }}>{t('reimbursements.payments.reset')}</AverioButton>}</div>}
                     {rows.map(row => <label key={row.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                        <input type="radio" name={form + '-credit'} className="size-4 shrink-0 accent-emerald-500" value={row.id} checked={creditId === row.id} disabled={locked} onChange={() => { setCreditId(row.id); setAmount(subtractDecimalAmounts(row.availableAmount, claim.outstandingAmount).startsWith('-') ? row.availableAmount : claim.outstandingAmount); setConfirmed(false); }} />
+                        <input type="radio" name={form + '-credit'} className="size-4 shrink-0 accent-emerald-500" value={row.id} checked={creditId === row.id} disabled={locked} onChange={() => { setCreditId(row.id); setAmount(row.maximumAllocation); setConfirmed(false); }} />
                         <span className="min-w-0 break-words">{row.description}<MetaSeparator />{row.receivedOn}<MetaSeparator /><strong>{money(row.amount)}</strong></span>
                     </label>)}
                     {(candidates.hasNextPage || candidates.isError) && <AverioButton disabled={locked || candidates.isFetching} onClick={() => { void (candidates.isError ? candidates.refetch() : candidates.fetchNextPage()); }}>{t(candidates.isError ? 'common.actions.retry' : 'reimbursements.payments.more')}</AverioButton>}
                 </AverioCard>
                 {credit && <AverioField>{t('reimbursements.payments.allocate')}<AverioInput inputMode="decimal" value={amount} disabled={locked} onChange={e => { setAmount(e.target.value); setConfirmed(false); }} /></AverioField>}
                 {credit && <p>{t('reimbursements.payments.creditAvailable')} <strong>{money(credit.availableAmount)}</strong></p>}
+                {credit && <p>{t('reimbursements.payments.maximumAllocation')} <strong>{money(credit.maximumAllocation)}</strong></p>}
                 {credit && !validAmount && <p role="alert" className="text-red-700 dark:text-red-300">{t('reimbursements.payments.amountInvalid')}</p>}
                 {credit && validAmount && <p>{t('reimbursements.payments.remaining')} <strong>{money(subtractDecimalAmounts(claim.outstandingAmount, allocation!))}</strong><MetaSeparator />{t('reimbursements.payments.creditAfter')}: <strong>{money(subtractDecimalAmounts(credit.availableAmount, allocation!))}</strong></p>}
                 <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="size-4 shrink-0 accent-emerald-500" checked={confirmed} disabled={locked} onChange={e => setConfirmed(e.target.checked)} />{t('reimbursements.payments.confirm')}</label>

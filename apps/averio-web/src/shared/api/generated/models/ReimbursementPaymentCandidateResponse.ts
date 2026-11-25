@@ -43,6 +43,10 @@ export interface ReimbursementPaymentCandidateResponse {
      * 
      */
     availableAmount: string;
+    /**
+     *
+     */
+    maximumAllocation: string;
 }
 
 /**
@@ -55,6 +59,7 @@ export function instanceOfReimbursementPaymentCandidateResponse(value: object): 
     if (!('receivedOn' in value) || value['receivedOn'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
     if (!('availableAmount' in value) || value['availableAmount'] === undefined) return false;
+    if (!('maximumAllocation' in value) || value['maximumAllocation'] === undefined) return false;
     return true;
 }
 
@@ -74,6 +79,7 @@ export function ReimbursementPaymentCandidateResponseFromJSONTyped(json: any, ig
         'receivedOn': json['receivedOn'],
         'updatedAt': json['updatedAt'],
         'availableAmount': json['availableAmount'],
+        'maximumAllocation': json['maximumAllocation'],
     };
 }
 
@@ -94,6 +100,7 @@ export function ReimbursementPaymentCandidateResponseToJSONTyped(value?: Reimbur
         'receivedOn': value['receivedOn'],
         'updatedAt': value['updatedAt'],
         'availableAmount': value['availableAmount'],
+        'maximumAllocation': value['maximumAllocation'],
     };
 }
 

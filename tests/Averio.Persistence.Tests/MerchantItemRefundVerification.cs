@@ -116,6 +116,23 @@ internal static class MerchantItemRefundVerification
         await Throws<NotFoundException>(()=>Refunds(privateId));
         await Throws<NotFoundException>(()=>Record(privateId,new(privatePurchase.Items.Single().Id,1,day,Guid.NewGuid(),privatePurchase.UpdatedAt,true)));
         user.UserId=f.OwnerUserId;
+        var sharedPurchaseId = await Post(TransactionKind.Expense, [new("Shared return", TestIds.Groceries, 20)], day);
+        var movableCreditId = await Post(TransactionKind.Income, [new("Returned credit", TestIds.Salary, 10)], day);
+        var sharedPurchase = await Read(sharedPurchaseId);
+        var movableCredit = await Read(movableCreditId);
+        await Record(sharedPurchaseId, new(sharedPurchase.Items.Single().Id, 10, day, Guid.NewGuid(), sharedPurchase.UpdatedAt, true, movableCreditId, movableCredit.UpdatedAt));
+        var returned = (await Refunds(sharedPurchaseId)).Single();
+        sharedPurchase = await Read(sharedPurchaseId);
+        await Cancel(sharedPurchaseId, returned, sharedPurchase.UpdatedAt);
+        movableCredit = await Read(movableCreditId);
+        await using (var scope = services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(new(f.HouseholdId, movableCreditId, f.PrivateAccountId,
+                movableCredit.Kind, TransactionVisibility.Private, movableCredit.Merchant, movableCredit.Note, movableCredit.OccurredOn,
+                movableCredit.Items.Select(i => new TransactionItemInput(i.Description, i.CategoryId, i.Amount, i.Id)).ToArray(), [], movableCredit.UpdatedAt), ct);
+        Check((await Refunds(sharedPurchaseId)).Any(x => x.Id == returned.Id), "Owner lost visible refund history");
+        user.UserId=f.MemberUserId;
+        Check((await Refunds(sharedPurchaseId)).All(x => x.Id != returned.Id), "Refund history exposed an inaccessible historical credit");
+        user.UserId=f.OwnerUserId;
         // A partially attributed item restores only the same share of allowance.
         var available=await Allowance();
         var allocatedId=await Post(TransactionKind.Expense,[new("Allocated",TestIds.Groceries,100,PersonalMoneyAmount:40)],day);

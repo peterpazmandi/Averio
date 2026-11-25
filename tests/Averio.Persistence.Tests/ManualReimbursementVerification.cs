@@ -128,9 +128,34 @@ internal static class ManualReimbursementVerification
         }
         Check(await Create(retryExpense, retryPayment.UpdatedAt, viewOnly) == retryId, "Identical retry failed after destination visibility was lost");
         await Throws<NotFoundException>(() => Create(newExpense, newPayment.UpdatedAt, viewOnly));
+        var recovery = (await RecoverableDestinations()).Single(r => r.ClaimId == retryId);
+        user.UserId = f.MemberUserId;
+        Check((await RecoverableDestinations()).All(r => r.ClaimId != retryId), "Destination recovery leaked another creator's claim");
+        await Throws<NotFoundException>(() => Reassign(retryId, recovery.Version, f.HouseholdAccountId));
+        user.UserId = f.OwnerUserId;
+        await Throws<ConflictException>(() => Reassign(retryId, Guid.NewGuid(), f.HouseholdAccountId));
+        await Throws<NotFoundException>(() => Reassign(retryId, recovery.Version, viewOnlyId));
+        Guid differentCurrencyId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var account = Account.Create(f.HouseholdId, [], "Wrong currency recovery", AccountType.Cash,
+                AccountScope.Household, AccountVisibility.Household, true, CurrencyCode.Huf, 0, day, clock.GetUtcNow());
+            db.Accounts.Add(account); await db.SaveChangesAsync(ct); differentCurrencyId = account.Id;
+        }
+        await Throws<BusinessRuleException>(() => Reassign(retryId, recovery.Version, differentCurrencyId));
+        var financesBeforeRecovery = await Totals();
+        await Reassign(retryId, recovery.Version, f.HouseholdAccountId);
+        var recovered = (await List(retryExpense)).Single();
+        Check(recovered.Claim.DestinationAccountId == f.HouseholdAccountId && !recovered.VisibleAccountIds.Contains(viewOnlyId)
+            && recovered.Claim.Events.Any(e => e.ChangeKind == "BeforeUpdate" && e.DestinationAccountId == viewOnlyId)
+            && await Totals() == financesBeforeRecovery, "Destination recovery changed finances or lost its audit snapshot");
+        Check((await RecoverableDestinations()).All(r => r.ClaimId != retryId), "Recovered destination still listed");
         Console.WriteLine("PASS manual reimbursement: atomic expense+claim, rollback, concurrent retries, no schedule, consent, snapshots, privacy and unchanged financial totals");
 
         async Task Edit(Guid id, Guid version, RecurringReimbursementRule configuration) { await using var scope = provider.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().UpdateAsync(f.HouseholdId, id, version, configuration, ct); }
+        async Task<IReadOnlyList<ReimbursementDestinationRecovery>> RecoverableDestinations() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().DestinationRecoveryAsync(f.HouseholdId, ct); }
+        async Task Reassign(Guid id, Guid version, Guid destination) { await using var scope = provider.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ReassignDestinationAsync(f.HouseholdId, id, version, destination, ct); }
         async Task<string?> DetailStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransaction.GetTransactionHandler>().HandleAsync(f.HouseholdId, id, ct)).ReimbursementStatus; }
         async Task<string?> OverviewStatus(Guid id) { await using var scope = provider.CreateAsyncScope(); return (await scope.ServiceProvider.GetRequiredService<Averio.Application.Transactions.GetTransactions.GetTransactionsHandler>().HandleAsync(f.HouseholdId, null, null, null, null, null, 100, null, null, null, ct)).Items.Single(t => t.Id == id).ReimbursementStatus; }
         async Task<Guid> Post(CreateTransactionCommand command) { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<CreateTransactionHandler>().HandleAsync(command, ct); }

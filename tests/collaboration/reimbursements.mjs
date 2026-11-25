@@ -122,14 +122,15 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
         }
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
-    const destination = await ok(page, base + '/accounts', { method: 'POST', body: { name: 'Reimbursement access loss', type: 'Cash',
-        scope: 'Personal', ownerHouseholdMemberIds: [f.memberId], visibility: 'Household', includeInHouseholdReports: true,
+    const peer = await session(f.peerEmail, password);
+    const destination = await ok(peer, base + '/accounts', { method: 'POST', body: { name: 'Reimbursement access loss', type: 'Cash',
+        scope: 'Personal', ownerHouseholdMemberIds: [f.memberId, f.peerMemberId], visibility: 'Household', includeInHouseholdReports: true,
         currency: 'EUR', balanceAnchorAmount: '0', balanceAnchorDate: f.date } });
     const pauseName = name + ' access loss';
     const created = await ok(page, base + '/recurring', { method: 'POST', body: { ...rule, name: pauseName, expectedVersion: null,
         reimbursement: { ...rule.reimbursement, destinationAccountId: destination.id } } });
-    const account = await ok(page, base + '/accounts/' + destination.id);
-    await ok(page, base + '/accounts/' + destination.id, { method: 'PUT', body: { name: account.name, type: account.type,
+    const account = await ok(peer, base + '/accounts/' + destination.id);
+    await ok(peer, base + '/accounts/' + destination.id, { method: 'PUT', body: { name: account.name, type: account.type,
         ownerHouseholdMemberIds: [f.peerMemberId], visibility: 'Household', includeInHouseholdReports: true, expectedUpdatedAt: account.updatedAt } });
     await page.goto('http://localhost:5173/app/recurring');
     await page.getByRole('article', { name: pauseName, exact: true }).getByRole('button', { name: 'Edit schedule', exact: true }).click();

@@ -60,6 +60,7 @@ internal static class ReimbursementChecks
         Throws(() => settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now));
         settled.Submit(true, day, null, member, now);
         var match = settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now);
+        Throws(() => settled.ReassignDestination(Guid.NewGuid(), member, now));
         Check(settled.Status == ReimbursementStatus.PartiallyReceived && settled.ReceivedAmount == 10000 && settled.OutstandingAmount == 20000, "Partial settlement");
         Throws(() => settled.Close(ReimbursementStatus.Cancelled, member, now));
         Throws(() => settled.LinkPayment(first, Guid.NewGuid(), new string('E',64), member, now));
@@ -75,6 +76,12 @@ internal static class ReimbursementChecks
         settled.LinkPayment(first, Guid.NewGuid(), new string('F',64), member, now);
         settled.UnlinkPayment(match.Id, member, now);
         Check(settled.Status == ReimbursementStatus.Received && settled.Payments.Count == 3, "Old unlink affected new match");
+        var newDestination = Guid.NewGuid();
+        Throws(() => manual.ReassignDestination(newDestination, Guid.NewGuid(), now));
+        manual.ReassignDestination(newDestination, member, now);
+        Check(manual.DestinationAccountId == newDestination && manual.Events.Count == 3 && manual.Events.Any(e => e.ChangeKind == "BeforeUpdate"),
+            "Destination recovery lost audit history");
+        Throws(() => claim.ReassignDestination(newDestination, member, now));
         using var db = new AverioDbContext(new DbContextOptionsBuilder<AverioDbContext>().UseNpgsql("Host=localhost;Database=unused").Options);
         var entity = db.Model.FindEntityType(typeof(ReimbursementClaim))!;
         Check(entity.GetIndexes().Any(i => i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == nameof(ReimbursementClaim.TransactionId)), "Missing idempotency index");

@@ -33,7 +33,7 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
     {
         var member = await Member(h, ct);
         await Source(h, id, member, false, ct);
-        return await refunds.ListAsync(h, id, ct);
+        return await refunds.ListAsync(h, member.Id, id, ct);
     }
     public async Task<ItemRefund> OriginAsync(Guid h, Guid creditId, CancellationToken ct)
     {

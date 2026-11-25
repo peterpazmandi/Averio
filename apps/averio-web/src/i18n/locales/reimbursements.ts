@@ -1,4 +1,13 @@
 export const reimbursementsEN = {
+    destinationRecovery: {
+        title: "Recover inaccessible destinations",
+        warning: "Some of your claims have an inaccessible destination. Claims with active payment links must first be recovered above.",
+        review: "Review hidden claim {{number}}",
+        loadError: "Destination recovery could not be loaded.",
+        explanation: "Claim and old account details are hidden. Choose an active account you can modify in the claim's currency. The claim may remain hidden if historical payments are inaccessible.",
+        confirm: "I understand this changes the destination of this hidden claim.",
+        error: "The result could not be confirmed. Close this dialog to refresh before trying again; the account must use the claim's currency."
+    },
     recovery: {
         "title": "Recover inaccessible payment links",
         "warning": "Some of your reimbursement payment links can no longer be managed with your current access. Their financial details remain private.",
@@ -101,8 +110,9 @@ export const reimbursementsEN = {
         "link": "Link received payment",
         "allocate": "Amount to allocate to this claim",
         "creditAvailable": "Credit available",
+        "maximumAllocation": "Maximum for this claim, including the current net expense limit:",
         "creditAfter": "Credit left unallocated",
-        "amountInvalid": "Enter a positive amount within both the available credit and the outstanding claim.",
+        "amountInvalid": "Enter a positive amount no greater than the maximum for this claim.",
         "unlink": "Unlink payment",
         "choose": "Choose a recorded payment",
         "search": "Search received payments",
@@ -124,6 +134,15 @@ export const reimbursementsEN = {
     }
 };
 export const reimbursementsDE = {
+    destinationRecovery: {
+        title: "Nicht zugängliche Zielkonten wiederherstellen",
+        warning: "Einige deiner Anträge haben ein nicht zugängliches Zielkonto. Aktive Zahlungsverknüpfungen müssen zuerst oben gelöst werden.",
+        review: "Verborgenen Antrag {{number}} prüfen",
+        loadError: "Die Wiederherstellung des Zielkontos konnte nicht geladen werden.",
+        explanation: "Details zum Antrag und zum alten Konto bleiben verborgen. Wähle ein aktives Konto, das du bearbeiten kannst und das die Währung des Antrags hat. Der Antrag kann verborgen bleiben, wenn frühere Zahlungen nicht zugänglich sind.",
+        confirm: "Ich verstehe, dass dies das Zielkonto dieses verborgenen Antrags ändert.",
+        error: "Das Ergebnis konnte nicht bestätigt werden. Schließe diesen Dialog zum Aktualisieren, bevor du es erneut versuchst; das Konto muss die Währung des Antrags haben."
+    },
     recovery: {
         "title": "Nicht zugängliche Zahlungsverknüpfungen lösen",
         "warning": "Einige deiner Kostenerstattungszahlungen lassen sich mit deinen aktuellen Zugriffsrechten nicht mehr verwalten. Ihre Finanzdetails bleiben privat.",
@@ -225,8 +244,9 @@ export const reimbursementsDE = {
     "payments": {
         "allocate": "Betrag für diesen Anspruch",
         "creditAvailable": "Verfügbarer Gutschriftbetrag",
+        "maximumAllocation": "Höchstbetrag für diesen Antrag einschließlich der aktuellen Nettoausgabe:",
         "creditAfter": "Nicht zugeordneter Restbetrag",
-        "amountInvalid": "Gib einen positiven Betrag ein, der höchstens der verfügbaren Gutschrift und dem offenen Anspruch entspricht.",
+        "amountInvalid": "Gib einen positiven Betrag ein, der den Höchstbetrag für diesen Antrag nicht überschreitet.",
         "link": "Eingegangene Zahlung zuordnen",
         "unlink": "Zahlungszuordnung aufheben",
         "choose": "Erfasste Zahlung auswählen",
@@ -249,6 +269,15 @@ export const reimbursementsDE = {
     }
 };
 export const reimbursementsHU = {
+    destinationRecovery: {
+        title: "Nem elérhető fogadó számlák helyreállítása",
+        warning: "Néhány igényed fogadó számlája nem érhető el. Az aktív fizetési kapcsolatokat előbb fent kell feloldani.",
+        review: "{{number}}. rejtett igény áttekintése",
+        loadError: "A fogadó számla helyreállítása nem tölthető be.",
+        explanation: "Az igény és a régi számla részletei rejtve maradnak. Válassz az igény pénznemében egy aktív, általad módosítható számlát. Az igény rejtve maradhat, ha a korábbi fizetések nem érhetők el.",
+        confirm: "Megértettem, hogy ez megváltoztatja a rejtett igény fogadó számláját.",
+        error: "Az eredmény nem erősíthető meg. Újrapróbálás előtt zárd be az ablakot a frissítéshez; a számlának az igény pénznemében kell lennie."
+    },
     recovery: {
         "title": "Nem elérhető fizetési kapcsolatok feloldása",
         "warning": "Néhány költségtérítési fizetési kapcsolatodat a jelenlegi hozzáféréseddel már nem tudod kezelni. A pénzügyi részleteik továbbra is privátak.",
@@ -350,8 +379,9 @@ export const reimbursementsHU = {
     "payments": {
         "allocate": "Ehhez az igényhez rendelt összeg",
         "creditAvailable": "Felhasználható jóváírás",
+        "maximumAllocation": "Az igényhez rendelhető maximum, az aktuális nettó kiadás figyelembevételével:",
         "creditAfter": "Fel nem osztott jóváírás",
-        "amountInvalid": "Pozitív összeget adj meg, amely nem haladja meg a felhasználható jóváírást és a fennmaradó igényt.",
+        "amountInvalid": "Pozitív összeget adj meg, amely nem haladja meg az igényhez rendelhető maximumot.",
         "link": "Beérkezett kifizetés összekapcsolása",
         "unlink": "Kifizetés leválasztása",
         "choose": "Rögzített kifizetés kiválasztása",
