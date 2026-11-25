@@ -12,9 +12,11 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
             && !c.Payments.Any(p => !db.VisibleTransactions(householdId, memberId).Any(t => t.Id == p.CreditTransactionId))
             && db.Accounts.Any(a => a.HouseholdId == householdId && a.Id == c.DestinationAccountId
                 && (a.Visibility == AccountVisibility.Household || a.Owners.Any(o => o.HouseholdMemberId == memberId))));
-    public async Task<IReadOnlyList<ReimbursementClaim>> ListAsync(Guid householdId, Guid memberId, Guid? transactionId, CancellationToken ct)
+    public async Task<IReadOnlyList<ReimbursementClaim>> ListAsync(Guid householdId, Guid memberId, Guid? transactionId, CancellationToken ct, bool includeCancelled = false)
         => await Visible(householdId, memberId).AsNoTracking().Include(c => c.Events).Include(c => c.Payments).AsSingleQuery()
-            .Where(c => transactionId == null ? c.Status != ReimbursementStatus.Cancelled : c.TransactionId == transactionId)
+            .Where(c => transactionId == null
+                ? includeCancelled || c.Status != ReimbursementStatus.Cancelled
+                : c.TransactionId == transactionId)
             .OrderBy(c => c.CreatedAt).ToArrayAsync(ct);
     public Task<ReimbursementClaim?> GetAsync(Guid householdId, Guid memberId, Guid id, CancellationToken ct)
         => Visible(householdId, memberId).Include(c => c.Events).Include(c => c.Payments).AsSingleQuery().SingleOrDefaultAsync(c => c.Id == id, ct);
