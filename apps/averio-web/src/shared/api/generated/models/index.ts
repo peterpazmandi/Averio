@@ -109,6 +109,8 @@ export * from './LinkReimbursementPaymentResponse';
 export * from './LoginResponse';
 export * from './LoginTwoFactorRequest';
 export * from './LoginUserRequest';
+export * from './MoneyBackItemResponse';
+export * from './MoneyBackPageResponse';
 export * from './OnboardingStatusResponse';
 export * from './PasskeyCreationOptionsRequest';
 export * from './PasskeyResponse';

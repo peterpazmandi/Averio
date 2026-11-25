@@ -34,18 +34,15 @@ public sealed record UpdateReimbursementClaimRequest(Guid ExpectedVersion, Recur
 public sealed record CreateReimbursementClaimRequest(Guid TransactionId, DateTimeOffset ExpectedUpdatedAt, RecurringReimbursementConfiguration Configuration);
 public sealed record CreateReimbursementClaimResponse(Guid Id);
 
-public sealed record LinkReimbursementPaymentRequest(Guid CreditTransactionId, Guid OperationId, Guid ExpectedVersion, DateTimeOffset ExpectedCreditUpdatedAt, bool MoneyReceived,
-    /// <summary>Optional allocation amount in the credit currency. Omit to allocate the whole remaining credit for backward compatibility.</summary>
-    string? Amount = null);
+public sealed record LinkReimbursementPaymentRequest(Guid CreditTransactionId, Guid OperationId, Guid ExpectedVersion, DateTimeOffset ExpectedCreditUpdatedAt, bool MoneyReceived, string? Amount = null);
 public sealed record LinkReimbursementPaymentResponse(Guid Id);
 public sealed record UnlinkReimbursementPaymentRequest(Guid ExpectedVersion);
 public sealed record ReimbursementPaymentResponse(Guid Id, Guid CreditTransactionId, string Amount, DateOnly ReceivedOn, DateTimeOffset LinkedAt, DateTimeOffset? UnlinkedAt);
-public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt,
-    /// <summary>Amount of this credit that is still available to allocate across claims.</summary>
-    string AvailableAmount);
+public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt, string AvailableAmount);
 public sealed record ReimbursementPaymentCandidatesResponse(IReadOnlyList<ReimbursementPaymentCandidateResponse> Items, bool HasMore);
 
 // Opaque references only: never expose inaccessible financial details through recovery.
 public sealed record ReimbursementRecoveryLinkResponse(Guid ClaimId, Guid PaymentId);
 public sealed record RecoverReimbursementPaymentsRequest(IReadOnlyList<ReimbursementRecoveryLinkResponse> Links);
-
+public sealed record MoneyBackItemResponse(string Kind, Guid Id, string Description, string? Provider, string? Merchant, string Currency, string Amount, string? OutstandingAmount, DateOnly Date, string Status, Guid? SourceTransactionId, Guid? CreditTransactionId, bool CanModify);
+public sealed record MoneyBackPageResponse(IReadOnlyList<MoneyBackItemResponse> Items, bool HasMore, int Offset, int Limit);

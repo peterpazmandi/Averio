@@ -29,6 +29,7 @@ import { Route as AuthenticatedAppCategoriesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppHouseholdRouteImport } from './routes/_authenticated.app.household'
 import { Route as AuthenticatedAppImportHistoryRouteImport } from './routes/_authenticated.app.import-history'
 import { Route as AuthenticatedAppImportsRouteImport } from './routes/_authenticated.app.imports'
+import { Route as AuthenticatedAppMoneyBackRouteImport } from './routes/_authenticated.app.money-back'
 import { Route as AuthenticatedAppProfileRouteImport } from './routes/_authenticated.app.profile'
 import { Route as AuthenticatedAppReceiptsRouteImport } from './routes/_authenticated.app.receipts'
 import { Route as AuthenticatedAppRecurringRouteImport } from './routes/_authenticated.app.recurring'
@@ -142,6 +143,12 @@ const AuthenticatedAppImportsRoute = AuthenticatedAppImportsRouteImport.update({
   path: '/imports',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppMoneyBackRoute =
+  AuthenticatedAppMoneyBackRouteImport.update({
+    id: '/money-back',
+    path: '/money-back',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppProfileRoute = AuthenticatedAppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -214,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/app/household': typeof AuthenticatedAppHouseholdRoute
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
+  '/app/money-back': typeof AuthenticatedAppMoneyBackRoute
   '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -241,6 +249,7 @@ export interface FileRoutesByTo {
   '/app/household': typeof AuthenticatedAppHouseholdRoute
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
+  '/app/money-back': typeof AuthenticatedAppMoneyBackRoute
   '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -273,6 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/app/household': typeof AuthenticatedAppHouseholdRoute
   '/_authenticated/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/_authenticated/app/imports': typeof AuthenticatedAppImportsRoute
+  '/_authenticated/app/money-back': typeof AuthenticatedAppMoneyBackRoute
   '/_authenticated/app/profile': typeof AuthenticatedAppProfileRoute
   '/_authenticated/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/_authenticated/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/app/household'
     | '/app/import-history'
     | '/app/imports'
+    | '/app/money-back'
     | '/app/profile'
     | '/app/receipts'
     | '/app/recurring'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/app/household'
     | '/app/import-history'
     | '/app/imports'
+    | '/app/money-back'
     | '/app/profile'
     | '/app/receipts'
     | '/app/recurring'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/household'
     | '/_authenticated/app/import-history'
     | '/_authenticated/app/imports'
+    | '/_authenticated/app/money-back'
     | '/_authenticated/app/profile'
     | '/_authenticated/app/receipts'
     | '/_authenticated/app/recurring'
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppImportsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/money-back': {
+      id: '/_authenticated/app/money-back'
+      path: '/money-back'
+      fullPath: '/app/money-back'
+      preLoaderRoute: typeof AuthenticatedAppMoneyBackRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/profile': {
       id: '/_authenticated/app/profile'
       path: '/profile'
@@ -615,6 +635,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppHouseholdRoute: typeof AuthenticatedAppHouseholdRoute
   AuthenticatedAppImportHistoryRoute: typeof AuthenticatedAppImportHistoryRoute
   AuthenticatedAppImportsRoute: typeof AuthenticatedAppImportsRoute
+  AuthenticatedAppMoneyBackRoute: typeof AuthenticatedAppMoneyBackRoute
   AuthenticatedAppProfileRoute: typeof AuthenticatedAppProfileRoute
   AuthenticatedAppReceiptsRoute: typeof AuthenticatedAppReceiptsRoute
   AuthenticatedAppRecurringRoute: typeof AuthenticatedAppRecurringRoute
@@ -631,6 +652,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppHouseholdRoute: AuthenticatedAppHouseholdRoute,
   AuthenticatedAppImportHistoryRoute: AuthenticatedAppImportHistoryRoute,
   AuthenticatedAppImportsRoute: AuthenticatedAppImportsRoute,
+  AuthenticatedAppMoneyBackRoute: AuthenticatedAppMoneyBackRoute,
   AuthenticatedAppProfileRoute: AuthenticatedAppProfileRoute,
   AuthenticatedAppReceiptsRoute: AuthenticatedAppReceiptsRoute,
   AuthenticatedAppRecurringRoute: AuthenticatedAppRecurringRoute,

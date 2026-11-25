@@ -13,6 +13,7 @@ export * from './ImportsApi';
 export * from './InvitationsApi';
 export * from './ItemRefundsApi';
 export * from './LabelsApi';
+export * from './MoneyBackApi';
 export * from './OnboardingApi';
 export * from './PasskeysApi';
 export * from './PersonalMoneyApi';
