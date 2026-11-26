@@ -8,7 +8,7 @@ export function AverioDisclosure({ title, summary, help, defaultOpen = false, ch
     const [open, setOpen] = useState(defaultOpen);
     const id = useId();
     return <AverioCard className="py-2!">
-        <div className={help ? 'grid grid-cols-[minmax(0,max-content)_44px_minmax(44px,1fr)] items-start' : ''}>
+        <div className={help ? 'grid grid-cols-[minmax(0,max-content)_44px_minmax(16px,1fr)] items-start' : ''}>
             {help && <span aria-hidden="true" className="invisible col-start-1 row-start-1 overflow-hidden px-0 pt-3 font-semibold whitespace-nowrap">{title}</span>}
             <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}
                 className={'flex min-h-11 w-full justify-between gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-emerald-500 ' + (help ? 'col-span-3 col-start-1 row-start-1 items-start py-3' : 'items-center')}>

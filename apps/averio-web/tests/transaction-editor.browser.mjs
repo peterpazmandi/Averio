@@ -59,9 +59,22 @@ try {
         const reimbursement = disclosures.filter({ hasText: reimbursementCopy.settings });
         const notesHelp = notes.locator('..').locator('[popovertarget]');
         const heading = notes.locator('span.font-semibold');
-        const headingBox = await heading.boundingBox(), helpBox = await notesHelp.boundingBox();
-        assert.ok(helpBox.x >= headingBox.x + headingBox.width && helpBox.x - (headingBox.x + headingBox.width) <= 8,
-            'Help is a separate control beside the disclosure label.');
+        const checkHelpPlacement = async () => {
+            const gap = await heading.evaluate(element => {
+                const text = document.createRange();
+                text.selectNodeContents(element);
+                const help = element.closest('button').parentElement.querySelector('button[popovertarget]');
+                return help.getBoundingClientRect().left - text.getBoundingClientRect().right;
+            });
+            assert.ok(gap >= -0.5 && gap <= 8,
+                `Help must be beside the disclosure label without overlapping it (${language}/${width}, gap ${gap}px).`);
+        };
+        await checkHelpPlacement();
+        if (language === 'hu' && width === 320) {
+            const font = await page.addStyleTag({ content: 'body { font-family: Georgia, serif !important; }' });
+            await checkHelpPlacement();
+            await font.evaluate(element => element.remove());
+        }
         await notesHelp.click();
         assert.equal(await notes.getAttribute('aria-expanded'), 'false', 'Opening help does not open the disclosure.');
         await page.keyboard.press('Escape');
