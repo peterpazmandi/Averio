@@ -11,6 +11,8 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     await editor.getByLabel('Account', { exact: true }).selectOption(f.sharedAccountId);
     await editor.getByLabel('Description', { exact: true }).fill('Manual pharmacy');
     await editor.getByLabel(/^Amount/).first().fill('100');
+    const settings = editor.locator('button[aria-expanded][aria-controls]:not([popovertarget])').filter({ hasText: 'Reimbursement settings' });
+    await settings.locator('span.font-semibold').first().click();
     await editor.getByLabel('Track reimbursement for this payment', { exact: true }).check();
     await editor.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Manual health fund');
     const estimate = editor.getByLabel(/^Reimbursement estimate/);
@@ -22,7 +24,7 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     await estimate.fill('100');
     assert.equal(await estimate.evaluate(input => input.checkValidity()), true, 'An estimate equal to the expense must be valid');
     await estimate.fill('25');
-    assert.equal(await editor.getByRole('heading', { name: 'Reimbursement settings', exact: true }).evaluate(el => getComputedStyle(el).fontWeight), '600');
+    assert.equal(await settings.locator('span.font-semibold').first().evaluate(el => getComputedStyle(el).fontWeight), '600');
     await editor.getByRole('button', { name: 'Reimbursement cap (optional)', exact: true }).click();
     await editor.getByRole('button', { name: 'About Reimbursement cap (optional)', exact: true }).click();
     await page.getByRole('dialog', { name: 'Reimbursement cap (optional)', exact: true }).getByText(/upper limit for each claim/).waitFor();

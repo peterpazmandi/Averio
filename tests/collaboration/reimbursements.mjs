@@ -104,7 +104,8 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
             await page.getByRole('article', { name: rule.name, exact: true }).getByRole('button', { name: editName, exact: true }).click();
             const editing = page.getByRole('dialog', { name: editName, exact: true });
             const settingsName = copy.settings;
-            const settings = editing.getByRole('heading', { name: settingsName, exact: true }).locator('../..');
+            const settings = editing.locator('button[aria-expanded][aria-controls]:not([popovertarget])')
+                .filter({ hasText: settingsName }).locator('../..');
             const about = localeFile(language)[language].common.infoAbout;
             for (const [subject, explanation] of [[copy.provider, copy.providerHelp], [copy.edit.paymentTiming, copy.edit.paymentTimingHelp]]) {
                 await editing.getByRole('button', { name: about.replace('{{subject}}', subject), exact: true }).click();
