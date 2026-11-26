@@ -21,6 +21,7 @@ export async function verifyPaymentAccessRecovery({ fixture: f, password, sessio
         await ok(page, base + '/reimbursements/' + claim.id + '/status', { method: 'PUT', body: { expectedVersion: claim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
         claim = await claimFor();
         const bankCredit = await ok(page, base + '/transactions/' + credit.id);
+        const peerBankCredit = await ok(peer, base + '/transactions/' + credit.id);
         await ok(page, base + '/reimbursements/' + claim.id + '/payments', { method: 'POST', body: { creditTransactionId: credit.id, operationId: crypto.randomUUID(), expectedVersion: claim.version, expectedCreditUpdatedAt: bankCredit.updatedAt, moneyReceived: true } });
         await page.goto('http://localhost:5173/app/transactions?transaction=' + other.id);
         await page.getByRole('region', { name: 'Item refunds', exact: true }).getByRole('button', { name: 'Add refund', exact: true }).click();
@@ -78,7 +79,7 @@ export async function verifyPaymentAccessRecovery({ fixture: f, password, sessio
         await poll(async () => (await ok(page, base + '/reimbursements/payment-recovery')).length === 0, 'recovery completed');
         const after = (await ok(peer, base + '/accounts')).find(a => a.id === account.id);
         assert.equal(after.currentBalanceAmount, accountRecord.currentBalanceAmount);
-        assert.deepEqual(await ok(peer, base + '/transactions/' + credit.id), bankCredit);
+        assert.deepEqual(await ok(peer, base + '/transactions/' + credit.id), peerBankCredit);
         await changeAccess(false);
         claim = await claimFor();
         assert.equal(claim.receivedAmount, '0'); assert.equal(claim.payments.length, 1); assert.ok(claim.payments[0].unlinkedAt);
