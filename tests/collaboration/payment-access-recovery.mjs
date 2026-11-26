@@ -107,7 +107,7 @@ export async function verifyPaymentAccessRecovery({ fixture: f, password, sessio
     const recoveryDialog = page.getByRole('dialog', { name: 'Recover inaccessible destinations', exact: true });
     assert.equal(await recoveryDialog.getByText('SECRET recovery provider').count(), 0);
     assert.equal(await recoveryDialog.getByText('SECRET recovery destination').count(), 0);
-    await recoveryDialog.getByLabel('Destination account', { exact: true }).selectOption(f.sharedAccountId);
+    await recoveryDialog.getByRole('combobox', { name: 'Destination account', exact: true }).selectOption(f.sharedAccountId);
     await recoveryDialog.getByRole('checkbox').check();
     await recoveryDialog.getByRole('button', { name: 'Confirm', exact: true }).click();
     await recoveryDialog.waitFor({ state: 'hidden' });
