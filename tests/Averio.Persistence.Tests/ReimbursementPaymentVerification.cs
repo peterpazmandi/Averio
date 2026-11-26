@@ -190,9 +190,14 @@ internal static class ReimbursementPaymentVerification
         var memberSource = await Post(TransactionKind.Expense, 100, true); var memberClaim = await Claim(memberSource);
         await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, memberClaim.Id, memberClaim.Version, true, today, null, ReimbursementStatus.Submitted, ct));
         memberClaim = await Claim(memberSource);
-        var memberLink = await Link(memberClaim.Id, new(c2, Guid.NewGuid(), memberClaim.Version, (await Transaction(c2)).UpdatedAt, true));
+        Check((await Candidates(memberClaim.Id)).All(x => x.Credit.Id != c2), "Another member's pooled credit was exposed");
+        var otherCreditVersion = (await Transaction(c2)).UpdatedAt;
+        await Throws<BusinessRuleException>(() => Link(memberClaim.Id, new(c2, Guid.NewGuid(), memberClaim.Version, otherCreditVersion, true)));
+        var memberCredit = await Post(TransactionKind.Income, 20);
+        var memberLink = await Link(memberClaim.Id, new(memberCredit, Guid.NewGuid(), memberClaim.Version, (await Transaction(memberCredit)).UpdatedAt, true));
         user.UserId = f.OwnerUserId;
         await Throws<NotFoundException>(() => Recover([new(memberClaim.Id, memberLink)]));
+        await VerifyLegacyPrivacy();
         await VerifySafeEdits();
         await VerifyVisibilityTransition();
         await VerifyNetExpenseLimit();
@@ -200,6 +205,34 @@ internal static class ReimbursementPaymentVerification
         Console.WriteLine("PASS refund candidate filtering and privacy-safe recovery, atomicity, concurrent retries, history and relinking");
         Console.WriteLine("PASS reimbursement payment settlement, retries, dependencies, privacy and unchanged finances");
         async Task<IReadOnlyList<ReimbursementRecoveryLink>> Recovery() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ReimbursementPaymentHandler>().RecoveryLinksAsync(f.HouseholdId, ct); }
+        async Task VerifyLegacyPrivacy() {
+            var sourceId = await Post(TransactionKind.Expense, 100, true);
+            var c = await Claim(sourceId);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, c.Id, c.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+            c = await Claim(sourceId);
+            var creditId = await Post(TransactionKind.Income, 20);
+            var request = new LinkReimbursementPayment(creditId, Guid.NewGuid(), c.Version, (await Transaction(creditId)).UpdatedAt, true, 10);
+            var linkId = await Link(c.Id, request);
+            await using (var scope = provider.CreateAsyncScope()) {
+                var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+                foreach (var row in await db.Transactions.Where(t => t.Id == sourceId || t.Id == creditId).ToArrayAsync())
+                    db.Entry(row).Property(t => t.ReimbursementPrivacyEligible).CurrentValue = false;
+                await db.SaveChangesAsync();
+            }
+            Check((await Claim(sourceId)).Payments.Single().Id == linkId, "Legacy payment history disappeared");
+            Check(!(await List(sourceId)).Single().CanMatchPayments, "Legacy source offered new matches");
+            Check(await Link(c.Id, request) == linkId, "Legacy payment retry lost its result");
+            await Throws<BusinessRuleException>(() => Candidates(c.Id));
+            var current = await Claim(sourceId);
+            await Throws<BusinessRuleException>(() => Link(c.Id, request with { OperationId = Guid.NewGuid(), ExpectedVersion = current.Version }));
+            await Unlink(c.Id, linkId, current.Version);
+            var freshSource = await Post(TransactionKind.Expense, 100, true);
+            var fresh = await Claim(freshSource);
+            await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, fresh.Id, fresh.Version, true, today, null, ReimbursementStatus.Submitted, ct));
+            fresh = await Claim(freshSource);
+            Check((await Candidates(fresh.Id)).All(x => x.Credit.Id != creditId), "Legacy credit appeared as a candidate");
+            await Throws<BusinessRuleException>(() => Link(fresh.Id, new(creditId, Guid.NewGuid(), fresh.Version, request.ExpectedCreditUpdatedAt, true, 1)));
+        }
         Task Recover(IReadOnlyList<ReimbursementRecoveryLink> links) => Use<ReimbursementPaymentHandler>(h => h.RecoverAsync(f.HouseholdId, links, ct));
         async Task<TransactionReadPage> RefundCandidates() { await using var scope = provider.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>().GetVisiblePageAsync(f.HouseholdId, f.OwnerMemberId, new(null, null, f.HouseholdAccountId, TransactionKind.Income, null, 100, null, null, null, RefundEligibleOnly: true), ct); }
 

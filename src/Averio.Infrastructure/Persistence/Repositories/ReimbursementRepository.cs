@@ -49,6 +49,7 @@ internal sealed class ReimbursementRepository(AverioDbContext db) : IReimburseme
     public async Task<IReadOnlyList<ReimbursementCreditCandidate>> PaymentCandidatesAsync(Guid h, Guid member, ReimbursementClaim claim, decimal available, string? search, int offset, DateOnly today, CancellationToken ct)
     {
         var q = db.VisibleTransactions(h, member).AsNoTracking().Where(t => t.AccountId == claim.DestinationAccountId
+            && t.ReimbursementPrivacyEligible && t.CreatedByHouseholdMemberId == member
             && t.Kind == Averio.Domain.Transactions.TransactionKind.Income && t.Status == Averio.Domain.Transactions.TransactionStatus.Posted
             && !t.IsArchived && t.OccurredOn >= claim.PaymentOn && t.OccurredOn <= today && available > 0
             && t.Amount > (db.Set<ReimbursementPayment>().Where(p => p.HouseholdId == h && p.CreditTransactionId == t.Id && p.UnlinkedAt == null)

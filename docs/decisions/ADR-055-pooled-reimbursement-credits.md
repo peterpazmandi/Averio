@@ -6,6 +6,8 @@ Date: 2026-11-23
 
 Supersedes ADR-052's exclusive-credit and whole-credit allocation restrictions. Its other accounting, privacy and lifecycle rules remain in force.
 
+The eligible credit and source scope is superseded by [ADR-057](ADR-057-reimbursement-privacy-boundary.md); pooling remains available within that boundary.
+
 ## Decision
 
 An existing posted Income transaction remains one bank movement. The claim creator explicitly assigns a positive amount, precise to four decimal places, to a submitted claim. Several claims may reference the same credit, provided the sum of their active allocations does not exceed its original amount. Each allocation also fits the claim's outstanding amount and source expense limit. One claim may have at most one active allocation from the same credit; unlink that allocation before replacing it.

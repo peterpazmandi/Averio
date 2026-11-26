@@ -79,4 +79,5 @@ public sealed record TransactionReadModel(
     IReadOnlyList<TransactionItemReadModel> Items,
     IReadOnlyList<TransactionLabelReadModel> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null);
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null,
+    bool ReimbursementPrivacyEligibleForMember = false);

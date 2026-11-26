@@ -29,6 +29,7 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
     {
         var (member, claim, source) = await Context(h, id, true, ct);
         if (offset < 0 || offset > 100000 || search?.Length > 160) throw Invalid();
+        if (!source.CanUseForPrivateReimbursement(member.Id)) throw PrivacyRestricted();
         await Destination(h, member, claim, ct);
         if (claim.Status is not (ReimbursementStatus.Submitted or ReimbursementStatus.PartiallyReceived)
             || source.Status != TransactionStatus.Posted || source.Kind != TransactionKind.Expense || source.IsArchived) return [];
@@ -52,9 +53,11 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
             if (previous.ClaimId != id || previous.LinkedByMemberId != member.Id || previous.RequestFingerprint != fingerprint) throw Changed();
             return previous.Id; // Includes historical/unlinked attempts; never relink on retry.
         }
+        if (!source.CanUseForPrivateReimbursement(member.Id)) throw PrivacyRestricted();
         if (claim.Version != request.ExpectedVersion) throw Changed();
         await Destination(h, member, claim, ct);
         var credit = await transactions.GetVisibleByIdAsync(h, member.Id, request.CreditTransactionId, ct) ?? throw new NotFoundException("transaction", request.CreditTransactionId);
+        if (!credit.CanUseForPrivateReimbursement(member.Id)) throw PrivacyRestricted();
         if (credit.UpdatedAt != request.ExpectedCreditUpdatedAt) throw Changed();
         if (!request.MoneyReceived || source.Status != TransactionStatus.Posted || source.Kind != TransactionKind.Expense || source.IsArchived
             || claim.ReceivedAmount + (request.Amount ?? credit.Amount) > source.Amount) throw Invalid();
@@ -112,6 +115,7 @@ public sealed class ReimbursementPaymentHandler(ICurrentUser user, IHouseholdRep
         await uow.SaveChangesAsync(ct); await tx.CommitAsync(ct);
     }
     private static BusinessRuleException Invalid() => new("reimbursement_payment_invalid", "Validation_ReimbursementPayment");
+    private static BusinessRuleException PrivacyRestricted() => new("reimbursement_privacy_restricted", "Error_ReimbursementPrivacyRestricted");
     private static ConflictException Changed() => new("reimbursement_changed", "Error_ReimbursementChanged");
 }
 

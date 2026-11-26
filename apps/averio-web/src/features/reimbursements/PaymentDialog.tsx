@@ -17,7 +17,7 @@ import { itemRefundKeys } from '../transactions/refunds/itemRefundQueries';
 
 const MetaSeparator = () => <span aria-hidden="true" className="mx-1">·</span>;
 
-type Props = { userId: string; householdId: string; claim: ReimbursementClaimResponse; payment?: ReimbursementPaymentResponse; onClose: () => void; onChanged?: () => Promise<void> };
+type Props = { userId: string; householdId: string; claim: ReimbursementClaimResponse; payment?: ReimbursementPaymentResponse; onClose: () => void; onChanged?: (outcomeUnknown?: boolean) => Promise<void> };
 export function PaymentDialog({ userId, householdId, claim, payment, onClose, onChanged }: Props) {
     const { t, i18n } = useTranslation();
     const client = useQueryClient();
@@ -26,6 +26,7 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     const [creditId, setCreditId] = useState('');
     const [amount, setAmount] = useState('');
     const [confirmed, setConfirmed] = useState(false);
+    const [dismissing, setDismissing] = useState(false);
     const [submission, setSubmission] = useState<{ request: LinkReimbursementPaymentRequest; unknown: boolean } | null>(null);
     const money = (amount: string) => formatDecimalAmount(amount, claim.currency, i18n.resolvedLanguage ?? i18n.language);
     const candidates = useInfiniteQuery({
@@ -40,8 +41,8 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     const allocation = normalizeBalanceInput(amount);
     const validAmount = !!credit && !!allocation && allocation !== '0' && !allocation.startsWith('-')
         && !subtractDecimalAmounts(credit.maximumAllocation, allocation).startsWith('-');
-    const refresh = async () => {
-        if (onChanged) await onChanged();
+    const refresh = async (outcomeUnknown = false) => {
+        if (onChanged) await onChanged(outcomeUnknown);
         else await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }),
             client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }),
             client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) }),
@@ -50,7 +51,7 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     };
     const link = useMutation({
         mutationFn: (request: LinkReimbursementPaymentRequest) => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPost({ householdId, claimId: claim.id, linkReimbursementPaymentRequest: request }),
-        onSuccess: refresh,
+        onSuccess: () => refresh(),
         onError: error => {
             if (!submission?.unknown && error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
                 setSubmission(null); setConfirmed(false);
@@ -60,12 +61,14 @@ export function PaymentDialog({ userId, householdId, claim, payment, onClose, on
     // Keep the selected link and its original claim version stable on every retry.
     const unlink = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentsPaymentIdUnlinkPost({
         householdId, claimId: claim.id, paymentId: payment!.id, unlinkReimbursementPaymentRequest: { expectedVersion: claim.version },
-    }), onSuccess: refresh });
+    }), onSuccess: () => refresh() });
     const dismiss = async () => {
-        if (onChanged && (submission?.unknown || unlink.isError)) await onChanged();
-        onClose();
+        if (submission?.unknown || unlink.isError) {
+            setDismissing(true);
+            await refresh(true);
+        } else onClose();
     };
-    const pending = link.isPending || unlink.isPending;
+    const pending = link.isPending || unlink.isPending || dismissing;
     const locked = pending || submission !== null;
     const error = payment ? unlink.error : link.error;
     return <AverioDialog open title={t(payment ? 'reimbursements.payments.unlink' : 'reimbursements.payments.link')} closeLabel={t('common.actions.close')}

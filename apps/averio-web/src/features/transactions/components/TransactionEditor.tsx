@@ -149,6 +149,7 @@ export function TransactionEditor({
     const [transaction, setTransaction] = useState(initialTransaction);
     const [refundRefresh, setRefundRefresh] = useState<'idle' | 'pending' | 'failed'>('idle');
     const [refreshKind, setRefreshKind] = useState<'refund' | 'payment'>('refund');
+    const [refreshUnknown, setRefreshUnknown] = useState(false);
     const refundLocked = refundRefresh !== 'idle';
     const paymentProtected = transaction?.paymentDetailsLocked ?? false;
     const [rule] = useState(initialRule);
@@ -379,9 +380,10 @@ export function TransactionEditor({
 
     const editSnapshot = editorSnapshot({ accountId, kind, merchant, note, activityId, occurredOn, items, selectedLabelIds, visibility, receiptCurrency, reviewedTotal });
     const [initialSnapshot, setInitialSnapshot] = useState(editSnapshot);
-    async function refreshAfterRefund(origin: 'refund' | 'payment' = 'refund') {
+    async function refreshAfterRefund(origin: 'refund' | 'payment' = 'refund', outcomeUnknown = false) {
         if (!transaction) return;
         setRefreshKind(origin);
+        setRefreshUnknown(outcomeUnknown);
         setRefundRefresh('pending');
         const detailKey = transactionQueryKeys.detail(userId, householdId, transaction.id);
         const walletQuery = personalMoneyQueries.mine(userId, householdId);
@@ -584,11 +586,11 @@ export function TransactionEditor({
             <p className="text-sm">{t('transactionManagement.paymentProtection.locked')}</p>
             <p className="text-sm">{t('transactionManagement.paymentProtection.allowed')}</p>
         </AverioCard>}
-        {transaction && <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} disabled={busy || refundLocked} hasUnsavedChanges={editSnapshot !== initialSnapshot} onChanged={refreshAfterRefund} />}
-        {transaction && <div inert={refundLocked}><ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} hasUnsavedChanges={editSnapshot !== initialSnapshot} onChanged={() => refreshAfterRefund('payment')} /></div>}
+        {transaction && <ItemRefundsPanel userId={userId} householdId={householdId} transaction={transaction} disabled={busy || refundLocked} hasUnsavedChanges={editSnapshot !== initialSnapshot} onChanged={unknown => refreshAfterRefund('refund', unknown)} />}
+        {transaction && <div inert={refundLocked}><ReimbursementsPanel className="mb-4" userId={userId} householdId={householdId} transactionId={transaction.id} sourceTransaction={transaction} hasUnsavedChanges={editSnapshot !== initialSnapshot} onChanged={unknown => refreshAfterRefund('payment', unknown)} /></div>}
         {refundLocked && <div role={refundRefresh === 'failed' ? 'alert' : 'status'} className="mb-4 grid gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            <p>{t((refreshKind === 'payment' ? 'transactionManagement.paymentProtection.' : 'itemRefunds.') + (refundRefresh === 'failed' ? 'refreshFailed' : 'refreshing'))}</p>
-            {refundRefresh === 'failed' && <div><AverioButton onClick={() => void refreshAfterRefund(refreshKind)}>{t('itemRefunds.retryRefresh')}</AverioButton></div>}
+            <p>{t((refreshKind === 'payment' ? 'transactionManagement.paymentProtection.' : 'itemRefunds.') + (refreshUnknown ? (refundRefresh === 'failed' ? 'unknownRefreshFailed' : 'unknownRefreshing') : (refundRefresh === 'failed' ? 'refreshFailed' : 'refreshing')))}</p>
+            {refundRefresh === 'failed' && <div><AverioButton onClick={() => void refreshAfterRefund(refreshKind, refreshUnknown)}>{t('itemRefunds.retryRefresh')}</AverioButton></div>}
         </div>}
         <form id="transaction-editor" inert={refundLocked} className="grid gap-4" onSubmit={submit}
             onChangeCapture={event => {

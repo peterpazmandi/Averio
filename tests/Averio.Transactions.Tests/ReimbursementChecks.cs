@@ -39,6 +39,9 @@ internal static class ReimbursementChecks
         Check(config.Estimate(10000) == 2000 && config.Estimate(200000) == 30000, "Percentage or cap");
         Check(RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, 20000, null, rule.AccountId, 0, null).Estimate(10000) == 10000, "Estimate exceeds source payment");
         var fullAmount = RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, payment.Amount, null, rule.AccountId, 0, null);
+        var otherMember = Guid.NewGuid();
+        Check(payment.CanUseForPrivateReimbursement(member) && !payment.CanUseForPrivateReimbursement(otherMember), "Source eligibility must follow its creator");
+        Throws(() => ReimbursementClaim.CreateManual(payment, otherMember, fullAmount, new string('A', 64), now));
         var manual = ReimbursementClaim.CreateManual(payment, member, fullAmount, new string('A', 64), now);
         Check(manual.PotentialAmount == payment.Amount, "A full-expense reimbursement must be allowed");
         var tooMuch = RecurringReimbursementRule.Create("Fund", ReimbursementCalculation.Fixed, payment.Amount + 0.0001m, 1, rule.AccountId, 0, null);
@@ -59,6 +62,10 @@ internal static class ReimbursementChecks
         var first = Credit(10000); var second = Credit(20000);
         Throws(() => settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now));
         settled.Submit(true, day, null, member, now);
+        var otherCredit = Transaction.Create(payment.HouseholdId, payment.AccountId, otherMember, TransactionKind.Income,
+            TransactionVisibility.Household, payment.Currency, "Provider", null, day,
+            [new("Received", rule.CategoryId, "Income", "money", 10000)], [], now);
+        Throws(() => settled.LinkPayment(otherCredit, Guid.NewGuid(), new string('D',64), member, now));
         var match = settled.LinkPayment(first, Guid.NewGuid(), new string('D',64), member, now);
         Throws(() => settled.ReassignDestination(Guid.NewGuid(), member, now));
         Check(settled.Status == ReimbursementStatus.PartiallyReceived && settled.ReceivedAmount == 10000 && settled.OutstandingAmount == 20000, "Partial settlement");

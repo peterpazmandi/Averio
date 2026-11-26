@@ -22,6 +22,7 @@ public sealed class Transaction
     public Guid HouseholdId { get; private set; }
     public Guid AccountId { get; private set; }
     public Guid CreatedByHouseholdMemberId { get; private set; }
+    public bool ReimbursementPrivacyEligible { get; private set; }
     public TransactionKind Kind { get; private set; }
     public TransactionVisibility Visibility { get; private set; }
     public decimal Amount { get; private set; }
@@ -40,6 +41,8 @@ public sealed class Transaction
     public decimal RefundedAmount => _items.Sum(x => x.RefundedAmount);
     public decimal OriginalAmount => Amount + RefundedAmount;
     public bool HasRefundHistory => _items.Any(x => x.HasRefundHistory);
+    public bool CanUseForPrivateReimbursement(Guid memberId)
+        => ReimbursementPrivacyEligible && CreatedByHouseholdMemberId == memberId;
 
     public void ApplyItemRefund(Guid itemId, decimal change, DateTimeOffset now)
     {
@@ -109,6 +112,7 @@ public sealed class Transaction
             HouseholdId = householdId,
             AccountId = accountId,
             CreatedByHouseholdMemberId = createdByHouseholdMemberId,
+            ReimbursementPrivacyEligible = true,
             Kind = kind,
             Visibility = visibility,
             Currency = currency,

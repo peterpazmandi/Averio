@@ -98,7 +98,8 @@ public sealed record TransactionResult(
     IReadOnlyList<TransactionItemResult> Items,
     IReadOnlyList<TransactionLabelResult> Labels,
     Guid? ActivityId = null, string? ActivityName = null, Guid ActivityAssignmentVersion = default,
-    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null, bool PaymentDetailsLocked = false)
+    bool IsArchived = false, bool IsImported = false, Guid? ImportBatchId = null, string? ReimbursementStatus = null, bool PaymentDetailsLocked = false,
+    bool CanStartReimbursement = false)
 {
     public static TransactionResult From(TransactionReadModel model) => new(
         model.Id,
@@ -129,5 +130,6 @@ public sealed record TransactionResult(
             label.Name,
             label.Scope)).ToArray(),
         model.ActivityId, model.ActivityName, model.ActivityAssignmentVersion,
-        model.IsArchived, model.IsImported, model.ImportBatchId);
+        model.IsArchived, model.IsImported, model.ImportBatchId,
+        CanStartReimbursement: model.CanModify && model.ReimbursementPrivacyEligibleForMember);
 }

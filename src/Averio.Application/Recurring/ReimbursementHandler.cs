@@ -5,7 +5,7 @@ using Averio.Domain.Recurring;
 using Averio.Domain.Transactions;
 namespace Averio.Application.Recurring;
 
-public sealed record ReimbursementResult(ReimbursementClaim Claim, string Description, bool CanModify, bool PaymentUnavailable, bool PaymentChanged,
+public sealed record ReimbursementResult(ReimbursementClaim Claim, string Description, bool CanModify, bool PaymentUnavailable, bool PaymentChanged, bool CanMatchPayments,
     IReadOnlySet<Guid> VisibleAccountIds);
 public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRepository households,
     IAccountRepository accounts, ITransactionRepository transactions, IReimbursementRepository claims, IUnitOfWork uow, TimeProvider clock)
@@ -29,6 +29,7 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
             var account = await accounts.GetVisibleByIdAsync(householdId, member.Id, payment.AccountId, ct);
             results.Add(new(claim, payment.Description, account is not null && TransactionAccess.CanModify(account, member),
                 (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense), payment.Amount != claim.OriginalPaymentAmount || payment.OccurredOn != claim.PaymentOn,
+                payment.CanUseForPrivateReimbursement(member.Id),
                 visibleAccountIds));
         }
         return results;
@@ -56,6 +57,8 @@ public sealed class ReimbursementHandler(ICurrentUser currentUser, IHouseholdRep
         var previous = await claims.FindForTransactionAsync(payment.HouseholdId, payment.Id, ct);
         if (previous is not null && previous.HouseholdMemberId == member.Id && previous.CreationFingerprint == fingerprint)
             return previous.Id;
+        if (!payment.CanUseForPrivateReimbursement(member.Id))
+            throw new BusinessRuleException("reimbursement_privacy_restricted", "Error_ReimbursementPrivacyRestricted");
         var destination = await accounts.GetVisibleByIdAsync(payment.HouseholdId, member.Id, configuration.DestinationAccountId, ct)
             ?? throw new NotFoundException("account", configuration.DestinationAccountId);
         if (payment.Status != TransactionStatus.Posted || payment.Kind != TransactionKind.Expense || payment.IsArchived

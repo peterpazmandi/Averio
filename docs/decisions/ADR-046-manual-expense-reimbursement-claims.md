@@ -4,6 +4,8 @@ Status: Accepted
 
 Date: 2026-11-18
 
+The source-creator and legacy-transaction restrictions in [ADR-057](ADR-057-reimbursement-privacy-boundary.md) supersede the claim-creation eligibility described below.
+
 ## Decision
 
 Allow reimbursement claims for ordinary recorded expenses without requiring a recurring rule. Reuse the existing claim snapshots, submission confirmation, status history, privacy checks and reminders. The recurring-rule reference becomes optional; existing recurring claims remain intact.

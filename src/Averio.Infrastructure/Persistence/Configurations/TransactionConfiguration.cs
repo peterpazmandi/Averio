@@ -36,6 +36,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(x => x.HouseholdId).HasColumnName("household_id");
         builder.Property(x => x.AccountId).HasColumnName("account_id");
         builder.Property(x => x.CreatedByHouseholdMemberId).HasColumnName("created_by_household_member_id");
+        builder.Property(x => x.ReimbursementPrivacyEligible).HasColumnName("reimbursement_privacy_eligible").HasDefaultValue(false);
         builder.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Visibility).HasColumnName("visibility").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Amount).HasColumnName("amount").HasPrecision(19, 4);

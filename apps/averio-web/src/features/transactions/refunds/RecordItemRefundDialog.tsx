@@ -15,7 +15,7 @@ import { ConceptIcon } from '../../../shared/components/concept/ConceptIcon';
 import { formatDecimalAmount, normalizeBalanceInput, subtractDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { itemRefundKeys, itemRefundsApi } from './itemRefundQueries';
 
-type Props = { userId: string; householdId: string; transaction: TransactionDto; onClose: () => void; onChanged?: () => Promise<void> };
+type Props = { userId: string; householdId: string; transaction: TransactionDto; onClose: () => void; onChanged?: (outcomeUnknown?: boolean) => Promise<void> };
 type RefundSubmission = { transaction: TransactionDto; credit?: TransactionDto; request: RecordItemRefundRequest; outcomeUnknown: boolean };
 const isPositive = (value: string) => subtractDecimalAmounts(value, '0') !== '0' && !value.startsWith('-');
 
@@ -26,6 +26,7 @@ export function RecordItemRefundDialog({ userId, householdId, transaction: saved
     const today = new Date().toISOString().slice(0, 10);
     // Keep an uncertain write's complete intent stable across reconnect refetches.
     const [submission, setSubmission] = useState<RefundSubmission | null>(null);
+    const [dismissing, setDismissing] = useState(false);
     const transaction = submission?.transaction ?? savedTransaction;
     const [mode, setMode] = useState<'new' | 'existing'>('new');
     const [itemId, setItemId] = useState(transaction.items.find(i => isPositive(i.amount))?.id ?? '');
@@ -80,11 +81,19 @@ export function RecordItemRefundDialog({ userId, householdId, transaction: saved
             setSubmission(null); setReceived(false); setOperationId(crypto.randomUUID());
         } else setSubmission(current => current ? { ...current, outcomeUnknown: true } : null);
     } });
-    const fieldsLocked = mutation.isPending || submission !== null;
+    const dismiss = async () => {
+        if (submission?.outcomeUnknown) {
+            setDismissing(true);
+            if (onChanged) await onChanged(true); else await client.invalidateQueries();
+        }
+        onClose();
+    };
+    const busy = mutation.isPending || dismissing;
+    const fieldsLocked = busy || submission !== null;
     const canSubmit = !!submission || (valid && received);
     function submit(event: React.FormEvent) {
         event.preventDefault();
-        if (mutation.isPending || !canSubmit) return;
+        if (busy || !canSubmit) return;
         const next = submission ?? { transaction, credit, outcomeUnknown: false, request: {
             transactionItemId: itemId, amount: value!, receivedOn: mode === 'existing' ? credit!.occurredOn : date,
             operationId, expectedUpdatedAt: transaction.updatedAt, moneyReceived: received,
@@ -98,8 +107,8 @@ export function RecordItemRefundDialog({ userId, householdId, transaction: saved
         <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{step}</span>
         <span><span className="sr-only">{t('itemRefunds.step', { number: step })} · </span>{title}</span>
     </h3>;
-    return <AverioDialog open wide title={t('itemRefunds.add')} closeLabel={t('common.actions.close')} busy={mutation.isPending} onDismiss={onClose}
-        actions={<><AverioButton disabled={mutation.isPending} onClick={onClose}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="primary" type="submit" form="item-refund" disabled={mutation.isPending || !canSubmit}>{t(submission && mutation.isError ? 'itemRefunds.retryRefund' : mode === 'existing' ? 'itemRefunds.link' : 'itemRefunds.record')}</AverioButton></>}>
+    return <AverioDialog open wide title={t('itemRefunds.add')} closeLabel={t('common.actions.close')} busy={busy} onDismiss={() => { void dismiss(); }}
+        actions={<><AverioButton disabled={busy} onClick={() => { void dismiss(); }}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="primary" type="submit" form="item-refund" disabled={busy || !canSubmit}>{t(submission && mutation.isError ? 'itemRefunds.retryRefund' : mode === 'existing' ? 'itemRefunds.link' : 'itemRefunds.record')}</AverioButton></>}>
         <form id="item-refund" className="grid gap-5" onSubmit={submit}>
             {submission && mutation.isError && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t('itemRefunds.uncertain')}</p>}
             <AverioCard role="group" aria-labelledby={`${id}-step-1`} className="grid gap-4">

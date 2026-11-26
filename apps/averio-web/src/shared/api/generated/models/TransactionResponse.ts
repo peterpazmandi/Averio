@@ -134,6 +134,10 @@ export interface TransactionResponse {
      * 
      */
     paymentDetailsLocked?: boolean;
+    /**
+     * 
+     */
+    canStartReimbursement?: boolean;
 }
 
 /**
@@ -198,6 +202,7 @@ export function TransactionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'importBatchId': json['importBatchId'] === undefined ? undefined : json['importBatchId'] === null ? null : json['importBatchId'],
         'reimbursementStatus': json['reimbursementStatus'] === undefined ? undefined : json['reimbursementStatus'] === null ? null : json['reimbursementStatus'],
         'paymentDetailsLocked': json['paymentDetailsLocked'] == null ? undefined : json['paymentDetailsLocked'],
+        'canStartReimbursement': json['canStartReimbursement'] == null ? undefined : json['canStartReimbursement'],
     };
 }
 
@@ -237,6 +242,7 @@ export function TransactionResponseToJSONTyped(value?: TransactionResponse | nul
         'importBatchId': value['importBatchId'],
         'reimbursementStatus': value['reimbursementStatus'],
         'paymentDetailsLocked': value['paymentDetailsLocked'],
+        'canStartReimbursement': value['canStartReimbursement'],
     };
 }
 

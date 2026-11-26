@@ -142,6 +142,10 @@ export interface ReimbursementClaimResponse {
      * 
      */
     payments: Array<ReimbursementPaymentResponse>;
+    /**
+     * 
+     */
+    canMatchPayments: boolean;
 }
 
 /**
@@ -175,6 +179,7 @@ export function instanceOfReimbursementClaimResponse(value: object): value is Re
     if (!('paymentDelayDays' in value) || value['paymentDelayDays'] === undefined) return false;
     if (!('submissionReminderDays' in value) || value['submissionReminderDays'] === undefined) return false;
     if (!('payments' in value) || value['payments'] === undefined) return false;
+    if (!('canMatchPayments' in value) || value['canMatchPayments'] === undefined) return false;
     return true;
 }
 
@@ -215,6 +220,7 @@ export function ReimbursementClaimResponseFromJSONTyped(json: any, ignoreDiscrim
         'paymentDelayDays': json['paymentDelayDays'],
         'submissionReminderDays': json['submissionReminderDays'],
         'payments': ((json['payments'] as Array<any>).map(ReimbursementPaymentResponseFromJSON)),
+        'canMatchPayments': json['canMatchPayments'],
     };
 }
 
@@ -256,6 +262,7 @@ export function ReimbursementClaimResponseToJSONTyped(value?: ReimbursementClaim
         'paymentDelayDays': value['paymentDelayDays'],
         'submissionReminderDays': value['submissionReminderDays'],
         'payments': ((value['payments'] as Array<any>).map(ReimbursementPaymentResponseToJSON)),
+        'canMatchPayments': value['canMatchPayments'],
     };
 }
 

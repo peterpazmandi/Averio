@@ -6,7 +6,9 @@ export const transactionManagementEN = {
         "allowed": "You can still edit the merchant, notes, item descriptions, categories, labels and activity. Payment links are saved immediately; no transaction save is needed just to keep a link.",
         "saveFirst": "Save or discard transaction edits before linking or unlinking payments.",
         "refreshing": "The link change is saved. Refreshing transaction details…",
-        "refreshFailed": "The link change is saved, but transaction details could not be refreshed. Retry refreshing before editing."
+        "refreshFailed": "The link change is saved, but transaction details could not be refreshed. Retry refreshing before editing.",
+        "unknownRefreshing": "The link outcome is unknown. Refreshing transaction details and history…",
+        "unknownRefreshFailed": "The link outcome is unknown and transaction details could not be refreshed. Retry refreshing before editing."
     },
     includeArchived: "Include archived transactions",
     archive: "Archive transaction",
@@ -119,7 +121,9 @@ export const transactionManagementDE = {
         "allowed": "Händler, Notizen, Positionsbeschreibungen, Kategorien, Labels und Aktivität bleiben bearbeitbar. Zahlungsverknüpfungen werden sofort gespeichert; dafür musst du die Buchung nicht zusätzlich speichern.",
         "saveFirst": "Speichere oder verwerfe Buchungsänderungen, bevor du Zahlungen verknüpfst oder Zuordnungen löst.",
         "refreshing": "Die Verknüpfungsänderung ist gespeichert. Buchungsdetails werden aktualisiert…",
-        "refreshFailed": "Die Verknüpfungsänderung ist gespeichert, aber die Buchungsdetails konnten nicht aktualisiert werden. Versuche die Aktualisierung vor dem Bearbeiten erneut."
+        "refreshFailed": "Die Verknüpfungsänderung ist gespeichert, aber die Buchungsdetails konnten nicht aktualisiert werden. Versuche die Aktualisierung vor dem Bearbeiten erneut.",
+        "unknownRefreshing": "Das Ergebnis der Verknüpfung ist unbekannt. Buchungsdetails und Verlauf werden aktualisiert…",
+        "unknownRefreshFailed": "Das Ergebnis der Verknüpfung ist unbekannt und die Buchungsdetails konnten nicht aktualisiert werden. Aktualisiere sie vor dem Bearbeiten erneut."
     },
     includeArchived: "Archivierte Buchungen anzeigen",
     archive: "Buchung archivieren",
@@ -232,7 +236,9 @@ export const transactionManagementHU = {
         "allowed": "A kereskedő, megjegyzések, tételleírások, kategóriák, címkék és tevékenység továbbra is szerkeszthetők. A fizetési kapcsolatok azonnal mentésre kerülnek; ehhez nem kell külön mentened a tranzakciót.",
         "saveFirst": "Fizetések kapcsolása vagy leválasztása előtt mentsd vagy vesd el a tranzakció módosításait.",
         "refreshing": "A kapcsolat módosítása mentve. A tranzakció adatainak frissítése…",
-        "refreshFailed": "A kapcsolat módosítása mentve, de a tranzakció adatait nem sikerült frissíteni. Szerkesztés előtt próbáld újra a frissítést."
+        "refreshFailed": "A kapcsolat módosítása mentve, de a tranzakció adatait nem sikerült frissíteni. Szerkesztés előtt próbáld újra a frissítést.",
+        "unknownRefreshing": "A kapcsolás eredménye nem ismert. A tranzakció adatainak és előzményeinek frissítése…",
+        "unknownRefreshFailed": "A kapcsolás eredménye nem ismert, és a tranzakció adatait nem sikerült frissíteni. Szerkesztés előtt próbáld újra a frissítést."
     },
     includeArchived: "Archivált tranzakciók megjelenítése",
     archive: "Tranzakció archiválása",

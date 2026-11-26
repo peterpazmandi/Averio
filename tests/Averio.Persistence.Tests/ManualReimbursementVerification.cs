@@ -47,7 +47,9 @@ internal static class ManualReimbursementVerification
         await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt.AddSeconds(-1), config));
         var hidden = RecurringReimbursementRule.Create("Private destination", ReimbursementCalculation.Fixed, 30, null, f.PrivateAccountId, 7, 0);
         user.UserId = f.MemberUserId;
-        await Throws<NotFoundException>(() => Create(expense, payment.UpdatedAt, hidden));
+        var memberUntracked = await Post(Input());
+        var memberPayment = await Payment(memberUntracked);
+        await Throws<NotFoundException>(() => Create(memberUntracked, memberPayment.UpdatedAt, hidden));
         Guid viewOnlyId;
         await using (var scope = provider.CreateAsyncScope())
         {
@@ -57,9 +59,12 @@ internal static class ManualReimbursementVerification
             db.Accounts.Add(account); await db.SaveChangesAsync(ct); viewOnlyId = account.Id;
         }
         var viewOnly = RecurringReimbursementRule.Create("View only", ReimbursementCalculation.Fixed, 30, null, viewOnlyId, 7, 0);
-        await Throws<BusinessRuleException>(() => Create(expense, payment.UpdatedAt, viewOnly));
+        await Throws<BusinessRuleException>(() => Create(memberUntracked, memberPayment.UpdatedAt, viewOnly));
         await Throws<BusinessRuleException>(() => Post(Input(viewOnly)));
         user.UserId = f.OwnerUserId;
+        var ownerUntracked = await Post(Input());
+        var ownerUntrackedPayment = await Payment(ownerUntracked);
+        before = await Totals();
         var ids = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Create(expense, payment.UpdatedAt, config)));
         Check(ids.Distinct().Count() == 1, "Retry duplicated manual claim");
         Check(await Totals() == before, "Manual claim changed actual money");
@@ -72,13 +77,25 @@ internal static class ManualReimbursementVerification
         Check((await List(expense)).Count == 0, "Shared expense leaked private claim");
         Check((await MoneyBack(null)).Items.All(x => x.Id != claim.Id && x.Id != initial.Id), "Money-back overview leaked another member's claim");
         Check(await DetailStatus(expense) == null && await OverviewStatus(expense) == null, "Shared expense badge leaked private claim");
-        await Throws<ConflictException>(() => Create(expense, payment.UpdatedAt, config));
+        Check(await PrivacyCode(() => Create(expense, payment.UpdatedAt, config)) == "reimbursement_privacy_restricted",
+            "Another member could probe the existing private claim");
+        Check(await PrivacyCode(() => Create(ownerUntracked, ownerUntrackedPayment.UpdatedAt, config)) == "reimbursement_privacy_restricted",
+            "Creation restriction depends on another member's claim");
         await Throws<NotFoundException>(() => Create(Guid.NewGuid(), payment.UpdatedAt, config));
         var memberExpense = await Post(Input(config));
         var memberClaim = (await List(memberExpense)).Single().Claim;
         await Throws<BusinessRuleException>(() => Edit(memberClaim.Id, memberClaim.Version, viewOnly));
         before = await Totals();
         user.UserId = f.OwnerUserId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
+            var legacy = await db.Transactions.SingleAsync(t => t.Id == atomic, ct);
+            db.Entry(legacy).Property(t => t.ReimbursementPrivacyEligible).CurrentValue = false;
+            await db.SaveChangesAsync(ct);
+        }
+        Check(!(await List(atomic)).Single().CanMatchPayments, "Legacy source still allows new payment matches");
+        Check(await Create(atomic, (await Payment(atomic)).UpdatedAt, config) == initial.Id, "Legacy identical retry lost its claim");
         await using (var scope = provider.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<ReimbursementHandler>().ChangeAsync(f.HouseholdId, claim.Id, claim.Version, true, day, "MANUAL", ReimbursementStatus.Submitted, ct);
         var submitted = (await List(expense)).Single().Claim;
@@ -175,6 +192,7 @@ internal static class ManualReimbursementVerification
         async Task<(int, decimal, decimal)> Totals() { await using var scope = provider.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>(); return (await db.Transactions.CountAsync(), await db.Transactions.SumAsync(t => t.Amount), await db.TransactionAggregates.SumAsync(a => a.IncomeAmount)); }
     }
     private static void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
+    private static async Task<string> PrivacyCode(Func<Task> action) { try { await action(); } catch (BusinessRuleException ex) { return ex.Code; } throw new Exception("Expected privacy restriction"); }
     private static async Task Throws<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
 }
 

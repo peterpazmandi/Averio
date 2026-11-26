@@ -55,7 +55,7 @@ public sealed class ReimbursementClaim
     }
     private static ReimbursementClaim Create(Transaction payment, Guid memberId, RecurringReimbursementRule config, DateTimeOffset now, Guid? ruleId)
     {
-        if (memberId == Guid.Empty || payment.Kind != TransactionKind.Expense || payment.Status != TransactionStatus.Posted || payment.IsArchived)
+        if (memberId == Guid.Empty || !payment.CanUseForPrivateReimbursement(memberId) || payment.Kind != TransactionKind.Expense || payment.Status != TransactionStatus.Posted || payment.IsArchived)
             throw new ArgumentException("A recorded expense is required.");
         var estimate = config.Estimate(payment.Amount);
         if (estimate <= 0) throw new ArgumentException("Estimate rounds to zero.");
@@ -120,6 +120,7 @@ public sealed class ReimbursementClaim
             || credit.Kind != TransactionKind.Income || credit.Status != TransactionStatus.Posted || credit.IsArchived
             || credit.OccurredOn < PaymentOn || credit.OccurredOn > DateOnly.FromDateTime(now.UtcDateTime)
             || amount <= 0 || decimal.Round(amount, 4) != amount || amount > credit.Amount || amount > OutstandingAmount || actor != HouseholdMemberId
+            || !credit.CanUseForPrivateReimbursement(actor)
             || _payments.Any(p => p.CreditTransactionId == credit.Id && p.UnlinkedAt is null))
             throw new ArgumentException("Invalid reimbursement payment.");
         var payment = ReimbursementPayment.Create(this, credit, operationId, fingerprint, actor, now, amount);

@@ -62,7 +62,7 @@ public sealed class ReimbursementsController(ReimbursementHandler handler, Reimb
                     e.DestinationAccountId is Guid accountId && x.VisibleAccountIds.Contains(accountId) ? accountId : null,
                     e.PaymentDelayDays, e.SubmissionReminderOn, e.ExpectedOn)).ToArray(), c.PaymentDelayDays,
                 c.SubmissionReminderOn is DateOnly reminder ? reminder.DayNumber - DateOnly.FromDateTime(c.CreatedAt.UtcDateTime).DayNumber : null,
-                c.Payments.OrderBy(p => p.LinkedAt).ThenBy(p => p.Id).Select(p => new ReimbursementPaymentResponse(p.Id, p.CreditTransactionId, DecimalAmountMapper.Format(p.Amount), p.ReceivedOn, p.LinkedAt, p.UnlinkedAt)).ToArray());
+                c.Payments.OrderBy(p => p.LinkedAt).ThenBy(p => p.Id).Select(p => new ReimbursementPaymentResponse(p.Id, p.CreditTransactionId, DecimalAmountMapper.Format(p.Amount), p.ReceivedOn, p.LinkedAt, p.UnlinkedAt)).ToArray(), x.CanMatchPayments);
         }).ToArray());
     }
     [HttpGet("{claimId:guid}/payment-candidates")]
