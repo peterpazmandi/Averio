@@ -2,6 +2,10 @@
 
 German UI: **Rückzahlungen**. Hungarian UI: **Pénzvisszatérítések**. These names distinguish returned expense payments from reimbursement claims; see [money-back terminology](ui/money-back-terminology.md).
 
+The Money Back page lists visible refunds alongside your private reimbursement claims, with status filters and links to the original expense. A refund represents money already received, not a claim awaiting external submission. See [reimbursements](mortgage-reimbursements.md) for the overview, access rules and claim workflow.
+
+Refund history on an expense includes only records whose credit is currently visible to the viewer. In particular, a reversed credit subsequently moved to a private account does not expose that credit through the shared expense history.
+
 Open an ordinary expense and choose **Add refund** in **Item refunds**. Choose exactly one receipt item and either record returned money or link an existing unlinked incoming transaction. Confirm the money was actually received. Use the original account and currency, an actual receipt date from the purchase date through today, and an amount no greater than the item's remaining cost.
 
 For an existing recorded credit, select it instead of creating another movement. Its whole amount is reclassified as Refund, removing its income/category contribution. A returned-money transaction belongs to one active item refund at a time. Income with active Personal Money, receipt, recurring or reimbursement dependencies cannot be reused; fully reversed allowance history does not prevent re-linking.
@@ -32,7 +36,7 @@ While an item's refunds are active, its allowance allocation is protected from a
 
 Unlinking an item retracts only that item's Personal Money refund attribution, even when other items on the receipt still have allocations or refunds. Their coverage and credits remain intact. Later refund reversals cannot retract that unlinked attribution a second time.
 
-If the response to a refund submission is lost, **Retry refund** repeats the original submitted request and its original versions. Editing stays locked while the outcome is unknown, including across reconnection and background updates. This also works for fully refunded items and existing credits that are no longer listed as income. Close and check the saved history before starting a different refund. An initial, definite rejection permits a new review and requires a fresh confirmation; a later rejection after a lost response does not erase the unresolved request.
+If the response to a refund submission is lost, **Retry refund** repeats the original submitted request and its original versions while the dialog remains open. Editing stays locked while the outcome is unknown, including across reconnection and background updates. This also works for fully refunded items and existing credits that are no longer listed as income. Dismissing an uncertain submission or reversal refreshes refund history and the source transaction; if the source refresh fails, editing remains locked until **Retry refresh** succeeds. Check saved history before starting a different refund. A read cannot prove that a still-running request has finished, so retry the original operation when possible and check again if its result remains unknown. An initial, definite rejection permits a new review and requires a fresh confirmation; a later rejection after a lost response does not erase the unresolved request.
 
 See [ADR-050](decisions/ADR-050-existing-refund-credit-reversal.md) for provenance storage, the safe historical-data policy, recovery evidence and rollout/rollback requirements. Existing historical cancellations are never automatically undone.
 

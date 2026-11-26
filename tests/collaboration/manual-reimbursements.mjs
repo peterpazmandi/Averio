@@ -48,6 +48,11 @@ export async function verifyManualReimbursements({ fixture: f, password, session
     const form = detail.locator('#transaction-editor');
     assert.ok((await track.boundingBox()).y < (await form.boundingBox()).y, 'Tracking action must be above the transaction form');
     await page.screenshot({ path: path.join(artifacts, 'reimbursement-action-top.png'), fullPage: true });
+    await detail.getByLabel('Merchant / Store', { exact: true }).fill('Unsaved dental edit');
+    assert.equal(await track.isDisabled(), true, 'An unsaved transaction must not create a claim from the old snapshot');
+    await detail.getByText('Save or discard transaction edits before creating a claim.', { exact: true }).waitFor();
+    await detail.getByLabel('Merchant / Store', { exact: true }).fill('Manual dental');
+    assert.equal(await track.isEnabled(), true);
     await track.click();
     const create = page.getByRole('dialog', { name: 'Track reimbursement', exact: true });
     await create.getByRole('textbox', { name: 'Reimbursement provider', exact: true }).fill('Manual insurer');

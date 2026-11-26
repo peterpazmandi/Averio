@@ -1,8 +1,12 @@
 # ADR-055 - Allocate one received credit to several reimbursement claims
 
-Status: Proposed
+Status: Accepted
 
 Date: 2026-11-23
+
+Supersedes ADR-052's exclusive-credit and whole-credit allocation restrictions. Its other accounting, privacy and lifecycle rules remain in force.
+
+The eligible credit and source scope is superseded by [ADR-057](ADR-057-reimbursement-privacy-boundary.md); pooling remains available within that boundary.
 
 ## Decision
 

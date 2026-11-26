@@ -14,7 +14,7 @@ import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { formatDecimalAmount, sumDecimalAmounts } from '../../../shared/money/decimalAmount';
 import { itemRefundKeys, itemRefundQueries, itemRefundsApi } from './itemRefundQueries';
 
-type Props = { userId: string; householdId: string; transaction: TransactionDto; onChanged?: () => Promise<void>; hasUnsavedChanges?: boolean; disabled?: boolean };
+type Props = { userId: string; householdId: string; transaction: TransactionDto; onChanged?: (outcomeUnknown?: boolean) => Promise<void>; hasUnsavedChanges?: boolean; disabled?: boolean };
 const linkClass = 'inline-flex min-h-11 items-center rounded-lg text-sm font-semibold text-emerald-700 underline underline-offset-4 focus-visible:outline-2 dark:text-emerald-400';
 
 export function ItemRefundsPanel(props: Props) {
@@ -30,6 +30,7 @@ function SavedItemRefundsPanel(props: Props) {
     const records = useQuery({ ...itemRefundQueries.receipt(userId, householdId, transaction.id), enabled: transaction.kind === 'Expense' });
     const [adding, setAdding] = useState(false);
     const [reversing, setReversing] = useState<ItemRefundResponse | null>(null);
+    const [dismissing, setDismissing] = useState(false);
     const money = (v: string) => formatDecimalAmount(v, transaction.currency, i18n.resolvedLanguage ?? i18n.language);
     const returned = sumDecimalAmounts(transaction.items.map(i => i.refundedAmount ?? '0'));
     const history = transaction.items.some(i => i.hasRefundHistory);
@@ -42,6 +43,14 @@ function SavedItemRefundsPanel(props: Props) {
         if (props.onChanged) await props.onChanged(); else await client.invalidateQueries();
         setReversing(null);
     } });
+    const dismissReversal = async () => {
+        if (reverse.isError) {
+            setDismissing(true);
+            if (props.onChanged) await props.onChanged(true); else await client.invalidateQueries();
+            setDismissing(false);
+        }
+        setReversing(null);
+    };
     if (transaction.kind === 'Refund') return <RefundOrigin {...props} />;
     if (transaction.kind !== 'Expense') return null;
     return <AverioCard className="mb-4 grid gap-3" role="region" aria-label={t('itemRefunds.title')}>
@@ -73,8 +82,8 @@ function SavedItemRefundsPanel(props: Props) {
             </div>
         </AverioDisclosure>}
         {adding && <RecordItemRefundDialog {...props} onClose={() => setAdding(false)} />}
-        {reversing && <AverioDialog open title={t('itemRefunds.reverseTitle')} closeLabel={t('common.actions.close')} busy={reverse.isPending} onDismiss={() => setReversing(null)}
-            actions={<><AverioButton disabled={reverse.isPending} onClick={() => setReversing(null)}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="danger" disabled={reverse.isPending || (reversing.creditOrigin !== 'Created' && reversing.creditOrigin !== 'ExistingIncome')} onClick={() => reverse.mutate()}>{t('itemRefunds.reverse')}</AverioButton></>}>
+        {reversing && <AverioDialog open title={t('itemRefunds.reverseTitle')} closeLabel={t('common.actions.close')} busy={reverse.isPending || dismissing} onDismiss={() => { void dismissReversal(); }}
+            actions={<><AverioButton disabled={reverse.isPending || dismissing} onClick={() => { void dismissReversal(); }}>{t('common.actions.cancel')}</AverioButton><AverioButton variant="danger" disabled={reverse.isPending || dismissing || (reversing.creditOrigin !== 'Created' && reversing.creditOrigin !== 'ExistingIncome')} onClick={() => reverse.mutate()}>{t('itemRefunds.reverse')}</AverioButton></>}>
             <p>{t(reversing.creditOrigin === 'ExistingIncome' ? 'itemRefunds.reverseExistingHelp' : reversing.creditOrigin === 'Created' ? 'itemRefunds.reverseHelp' : 'itemRefunds.reverseUnknownHelp')}</p>{reverse.isError && <p role="alert">{reverse.error.message}</p>}
         </AverioDialog>}
     </AverioCard>;

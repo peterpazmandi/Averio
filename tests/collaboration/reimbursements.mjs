@@ -59,6 +59,10 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     } });
     assert.equal(noConsent.status, 422);
     await page.goto('http://localhost:5173/app');
+    await page.getByRole('link', { name: 'Money back', exact: true }).click();
+    const overviewCard = () => page.locator('div.overflow-hidden').filter({ has: page.getByRole('heading', { name: 'Mortgage', exact: true }) });
+    await overviewCard().getByText('Needs submission', { exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
     const panel = page.getByRole('region', { name: 'Reimbursements', exact: true });
     await panel.getByText('Needs submission', { exact: true }).waitFor();
     await panel.getByRole('button', { name: 'Mark receipt as submitted', exact: true }).click();
@@ -69,6 +73,11 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
     await submission.getByRole('button', { name: 'Confirm', exact: true }).click();
     await submission.waitFor({ state: 'hidden' });
     await panel.getByText('Submitted', { exact: true }).waitFor();
+    const overviewReload = page.waitForResponse(r => r.request().method() === 'GET' && r.url().includes('/money-back?'));
+    await page.getByRole('link', { name: 'Money back', exact: true }).click();
+    assert.equal((await overviewReload).status(), 200);
+    await overviewCard().getByText('Submitted', { exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
     const submitted = (await ok(page, base + '/reimbursements'))[0];
     assert.equal(submitted.expectedAmount, '30'); assert.equal(submitted.receivedAmount, '0');
     assert.equal(submitted.reference, 'BROWSER-CLAIM'); assert.equal(submitted.events.length, 2);
@@ -113,5 +122,24 @@ export async function verifyReimbursements({ fixture: f, password, session, api,
         }
     }
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    const peer = await session(f.peerEmail, password);
+    const destination = await ok(peer, base + '/accounts', { method: 'POST', body: { name: 'Reimbursement access loss', type: 'Cash',
+        scope: 'Personal', ownerHouseholdMemberIds: [f.memberId, f.peerMemberId], visibility: 'Household', includeInHouseholdReports: true,
+        currency: 'EUR', balanceAnchorAmount: '0', balanceAnchorDate: f.date } });
+    const pauseName = name + ' access loss';
+    const created = await ok(page, base + '/recurring', { method: 'POST', body: { ...rule, name: pauseName, expectedVersion: null,
+        reimbursement: { ...rule.reimbursement, destinationAccountId: destination.id } } });
+    const account = await ok(peer, base + '/accounts/' + destination.id);
+    await ok(peer, base + '/accounts/' + destination.id, { method: 'PUT', body: { name: account.name, type: account.type,
+        ownerHouseholdMemberIds: [f.peerMemberId], visibility: 'Household', includeInHouseholdReports: true, expectedUpdatedAt: account.updatedAt } });
+    await page.goto('http://localhost:5173/app/recurring');
+    await page.getByRole('article', { name: pauseName, exact: true }).getByRole('button', { name: 'Edit schedule', exact: true }).click();
+    const pausedEditor = page.getByRole('dialog', { name: 'Edit schedule', exact: true });
+    assert.equal(await pausedEditor.getByLabel('Destination account', { exact: true }).evaluate(el => el.checkValidity()), false);
+    await pausedEditor.getByLabel('Pause schedule', { exact: true }).check();
+    assert.equal(await pausedEditor.getByLabel('Destination account', { exact: true }).evaluate(el => el.checkValidity()), true);
+    await pausedEditor.getByRole('button', { name: 'Save schedule', exact: true }).click();
+    await pausedEditor.waitFor({ state: 'hidden' });
+    assert.equal((await ok(page, base + '/recurring')).find(r => r.id === created.id).isPaused, true);
     console.log('PASS reimbursement editor, mandatory consent, concurrent occurrence retry, dashboard/details, no balance changes and EN/DE/HU mobile/desktop');
 }

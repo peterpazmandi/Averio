@@ -26,7 +26,8 @@ public sealed record ReimbursementClaimResponse(Guid Id, Guid TransactionId, str
     string OriginalPaymentAmount, DateOnly PaymentOn, Guid DestinationAccountId, string Status,
     DateOnly? SubmissionReminderOn, DateOnly? SubmittedOn, DateOnly? ExpectedOn, string? Reference, Guid Version,
     bool CanModify, bool PaymentUnavailable, bool PaymentChanged, bool SubmissionReminderDue, bool PaymentFollowUpDue,
-    IReadOnlyList<ReimbursementEventResponse> Events, int PaymentDelayDays, int? SubmissionReminderDays, IReadOnlyList<ReimbursementPaymentResponse> Payments);
+    IReadOnlyList<ReimbursementEventResponse> Events, int PaymentDelayDays, int? SubmissionReminderDays, IReadOnlyList<ReimbursementPaymentResponse> Payments,
+    bool CanMatchPayments);
 public sealed record ReimbursementEventResponse(string Status, DateOnly? SubmittedOn, string? Reference, DateTimeOffset RecordedAt,
     string? ChangeKind, string? Provider, string? PotentialAmount, Guid? DestinationAccountId, int? PaymentDelayDays, DateOnly? SubmissionReminderOn, DateOnly? ExpectedOn);
 public sealed record UpdateReimbursementClaimRequest(Guid ExpectedVersion, RecurringReimbursementConfiguration Configuration);
@@ -38,11 +39,15 @@ public sealed record LinkReimbursementPaymentRequest(Guid CreditTransactionId, G
 public sealed record LinkReimbursementPaymentResponse(Guid Id);
 public sealed record UnlinkReimbursementPaymentRequest(Guid ExpectedVersion);
 public sealed record ReimbursementPaymentResponse(Guid Id, Guid CreditTransactionId, string Amount, DateOnly ReceivedOn, DateTimeOffset LinkedAt, DateTimeOffset? UnlinkedAt);
-public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt, string AvailableAmount);
+public sealed record ReimbursementPaymentCandidateResponse(Guid Id, string Description, string Amount, DateOnly ReceivedOn, DateTimeOffset UpdatedAt, string AvailableAmount, string MaximumAllocation);
 public sealed record ReimbursementPaymentCandidatesResponse(IReadOnlyList<ReimbursementPaymentCandidateResponse> Items, bool HasMore);
 
 // Opaque references only: never expose inaccessible financial details through recovery.
 public sealed record ReimbursementRecoveryLinkResponse(Guid ClaimId, Guid PaymentId);
 public sealed record RecoverReimbursementPaymentsRequest(IReadOnlyList<ReimbursementRecoveryLinkResponse> Links);
+/// <summary>Opaque claim reference and revision for destination recovery.</summary>
+public sealed record ReimbursementDestinationRecoveryResponse(Guid ClaimId, Guid Version);
+/// <summary>Replacement destination and the reviewed claim revision.</summary>
+public sealed record ReassignReimbursementDestinationRequest(Guid ExpectedVersion, Guid DestinationAccountId);
 public sealed record MoneyBackItemResponse(string Kind, Guid Id, string Description, string? Provider, string? Merchant, string Currency, string Amount, string? OutstandingAmount, DateOnly Date, string Status, Guid? SourceTransactionId, Guid? CreditTransactionId, bool CanModify);
 public sealed record MoneyBackPageResponse(IReadOnlyList<MoneyBackItemResponse> Items, bool HasMore, int Offset, int Limit);

@@ -94,6 +94,31 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
         }
         assert.equal((await ok(page, base + '/transactions/' + second.id)).kind, 'Income');
     }
+    const netSource = await post('Expense', '100', 'Net limit source');
+    const netCredit = await post('Income', '30', 'Net limit payment');
+    const netRecord = await ok(page, base + '/transactions/' + netSource.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: netSource.id, expectedUpdatedAt: netRecord.updatedAt,
+        configuration: { provider: 'Net limit provider', calculation: 'Fixed', value: '30', destinationAccountId: account.id, paymentDelayDays: 0 } } });
+    await ok(page, base + '/transactions/' + netSource.id + '/refunds', { method: 'POST', body: { transactionItemId: netRecord.items[0].id,
+        amount: '80', receivedOn: f.date, operationId: crypto.randomUUID(), expectedUpdatedAt: netRecord.updatedAt, moneyReceived: true } });
+    let netClaim = await claimFor(netSource.id);
+    await ok(page, base + '/reimbursements/' + netClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: netClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    await open(netSource.id);
+    await page.getByRole('region', { name: 'Reimbursements', exact: true }).getByRole('button', { name: 'Link received payment' }).click();
+    const netDialog = page.getByRole('dialog', { name: 'Link received payment' });
+    await netDialog.getByLabel('Search received payments').fill('Net limit payment');
+    await netDialog.getByRole('radio').check();
+    assert.equal(await netDialog.getByLabel('Amount to allocate to this claim').inputValue(), '20');
+    await netDialog.getByLabel('Amount to allocate to this claim').fill('20.0001');
+    await netDialog.getByText('Enter a positive amount no greater than the maximum for this claim.').waitFor();
+    await netDialog.getByLabel('Amount to allocate to this claim').fill('20');
+    await netDialog.getByRole('checkbox').check();
+    await netDialog.getByRole('button', { name: 'Link received payment' }).click();
+    await netDialog.waitFor({ state: 'hidden' });
+    netClaim = await claimFor(netSource.id);
+    assert.equal(netClaim.receivedAmount, '20');
+    assert.equal((await ok(page, base + '/transactions/' + netCredit.id)).amount, '30');
     const pooled = await post('Income', '31', 'Pooled provider payment');
     const sources = await Promise.all([post('Expense', '100', 'Pooled claim A'), post('Expense', '100', 'Pooled claim B')]);
     const claims = [];
@@ -170,6 +195,52 @@ export async function verifyReimbursementPayments({ fixture: f, password, sessio
     assert.equal((await api(page, base + '/reimbursements/' + malformedClaim.id + '/payments', { method: 'POST',
         body: { ...malformedRequest, amount: 'not-a-number' } })).status, 400);
     await poll(async () => !(await page.getByRole('alert').count()), 'no lingering settlement errors');
+    // The dashboard has no editor callback: dismissing an uncertain link or unlink
+    // must independently refresh its claim, without a reconnect or polling delay.
+    const dashboardSource = await post('Expense', '100', 'Dashboard uncertain settlement');
+    await post('Income', '10', 'Dashboard uncertain credit');
+    const dashboardRecord = await ok(page, base + '/transactions/' + dashboardSource.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: dashboardSource.id, expectedUpdatedAt: dashboardRecord.updatedAt,
+        configuration: { provider: 'Dashboard fund', calculation: 'Fixed', value: '30', destinationAccountId: account.id, paymentDelayDays: 0 } } });
+    let dashboardClaim = await claimFor(dashboardSource.id);
+    await ok(page, base + '/reimbursements/' + dashboardClaim.id + '/status', { method: 'PUT',
+        body: { expectedVersion: dashboardClaim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
+    await page.goto('http://localhost:5173/app');
+    const dashboardCard = page.getByRole('heading', { name: 'Dashboard uncertain settlement', exact: true }).locator('xpath=../../..');
+    await dashboardCard.getByRole('button', { name: 'Link received payment', exact: true }).click();
+    const dashboardDialog = page.getByRole('dialog', { name: 'Link received payment', exact: true });
+    await dashboardDialog.getByLabel('Search received payments').fill('Dashboard uncertain credit');
+    await dashboardDialog.getByRole('radio').check();
+    await dashboardDialog.getByRole('checkbox').check();
+    const dashboardUrl = '**/reimbursements/' + dashboardClaim.id + '/payments';
+    const loseDashboard = async route => {
+        assert.equal((await route.fetch()).status(), 200);
+        await route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Unknown link outcome', status: 503 }) });
+    };
+    await page.route(dashboardUrl, loseDashboard);
+    await dashboardDialog.getByRole('button', { name: 'Link received payment', exact: true }).click();
+    await dashboardDialog.getByRole('status').filter({ hasText: 'The result is not yet known' }).waitFor();
+    await page.unroute(dashboardUrl, loseDashboard);
+    await dashboardDialog.getByRole('button', { name: 'Close', exact: true }).last().click();
+    await dashboardDialog.waitFor({ state: 'hidden' });
+    await dashboardCard.getByText('Partially received', { exact: true }).waitFor();
+    dashboardClaim = await claimFor(dashboardSource.id);
+    assert.equal(dashboardClaim.receivedAmount, '10');
+    await dashboardCard.getByRole('button', { name: 'Unlink payment', exact: true }).click();
+    const dashboardUnlink = page.getByRole('dialog', { name: 'Unlink payment', exact: true });
+    const unlinkUrl = dashboardUrl + '/*/unlink';
+    const loseDashboardUnlink = async route => {
+        assert.equal((await route.fetch()).status(), 204);
+        await route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Unknown unlink outcome', status: 503 }) });
+    };
+    await page.route(unlinkUrl, loseDashboardUnlink);
+    await dashboardUnlink.getByRole('button', { name: 'Unlink payment', exact: true }).click();
+    await dashboardUnlink.getByRole('alert').waitFor();
+    await page.unroute(unlinkUrl, loseDashboardUnlink);
+    await dashboardUnlink.getByRole('button', { name: 'Close', exact: true }).last().click();
+    await dashboardUnlink.waitFor({ state: 'hidden' });
+    await dashboardCard.getByText('Submitted', { exact: true }).waitFor();
+    assert.equal((await claimFor(dashboardSource.id)).receivedAmount, '0');
     console.log('PASS reimbursement payments: partial/full receipt, matching and unlink lost responses, unchanged cash/credits, relinking and EN/DE/HU responsive layouts');
 }
 

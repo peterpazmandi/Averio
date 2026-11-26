@@ -1,6 +1,25 @@
-@Averio.Api_HostAddress = http://localhost:5085
+@Averio.Api_HostAddress = http://localhost:5180
 
 GET {{Averio.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+@householdId = 00000000-0000-0000-0000-000000000001
+@claimId = 00000000-0000-0000-0000-000000000002
+@claimVersion = 00000000-0000-0000-0000-000000000003
+@destinationId = 00000000-0000-0000-0000-000000000004
+@csrfToken = replace-with-session-csrf-token
+
+### Requires an authenticated cookie
+GET {{Averio.Api_HostAddress}}/api/v1/households/{{householdId}}/reimbursements/destination-recovery
+
+### Requires an authenticated cookie and CSRF token
+PUT {{Averio.Api_HostAddress}}/api/v1/households/{{householdId}}/reimbursements/{{claimId}}/destination-recovery
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "expectedVersion": "{{claimVersion}}",
+  "destinationAccountId": "{{destinationId}}"
+}

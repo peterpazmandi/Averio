@@ -12,14 +12,12 @@ internal sealed class ItemRefundRepository(AverioDbContext db) : IItemRefundRepo
     public Task<ItemRefund?> ByCreditAsync(Guid h, Guid creditId, CancellationToken ct)
         => db.Set<ItemRefund>().Where(x => x.HouseholdId == h && x.CreditTransactionId == creditId)
             .OrderBy(x => x.CancelledAt != null).ThenByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
-    public async Task<IReadOnlyList<ItemRefund>> ListAsync(Guid h, Guid transaction, CancellationToken ct)
-        => await db.Set<ItemRefund>().Where(x => x.HouseholdId == h && x.TransactionId == transaction).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
-    public async Task<IReadOnlyList<ItemRefund>> ListVisibleAsync(Guid h, Guid member, int skip, int take, CancellationToken ct)
-        => await db.Set<ItemRefund>().AsNoTracking().Where(x => x.HouseholdId == h
-            && db.VisibleTransactions(h, member).Any(t => t.Id == x.TransactionId)
+    public async Task<IReadOnlyList<ItemRefund>> ListAsync(Guid h, Guid member, Guid transaction, CancellationToken ct)
+        => await VisibleForTransaction(db, h, member, transaction).ToListAsync(ct);
+    internal static IQueryable<ItemRefund> VisibleForTransaction(AverioDbContext db, Guid h, Guid member, Guid transaction)
+        => db.Set<ItemRefund>().Where(x => x.HouseholdId == h && x.TransactionId == transaction
             && db.VisibleTransactions(h, member).Any(t => t.Id == x.CreditTransactionId))
-            .OrderByDescending(x => x.ReceivedOn).ThenByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
-            .Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 100)).ToArrayAsync(ct);
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id);
     public Task<bool> CreditHasDependenciesAsync(Guid h, Guid transaction, CancellationToken ct)
         => RefundCreditEligibility.WithDependencies(db, h).AnyAsync(t => t.Id == transaction, ct);
 }

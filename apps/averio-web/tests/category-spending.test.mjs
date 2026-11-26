@@ -61,6 +61,9 @@ test('account changes invalidate household reporting as well as balances', async
         '../../../shared/api/ApiError': { ApiError: Error },
         './accountsQueryKeys': { accountsQueryKeys: { household: all } },
         '../../dashboard/api/dashboardQueryKeys': { dashboardQueryKeys: { household: all } },
+        '../../transactions/refunds/itemRefundQueries': { itemRefundKeys: { all } },
+        '../../reimbursements/reimbursementQueries': { reimbursementKeys: { household: all } },
+        '../../money-back/moneyBackQueryKeys': { moneyBackQueryKeys: { household: all } },
         './accountsApi': {},
     });
     await useAccountMutations('user', 'home').update.onSuccess();

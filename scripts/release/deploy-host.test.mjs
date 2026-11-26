@@ -166,11 +166,24 @@ for (const missing of ['overlay', 'image']) {
   });
 }
 
-test('all shipped backend images declare the pooled reimbursement compatibility epoch', () => {
+test('all shipped backend images declare the reimbursement privacy compatibility epoch', () => {
   for (const component of ['api', 'worker', 'migrator']) {
     const dockerfile = readFileSync(new URL(`../../Dockerfile.${component}`, import.meta.url), 'utf8');
-    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="3"/);
+    assert.match(dockerfile.slice(dockerfile.lastIndexOf('\nFROM ')), /LABEL io\.averio\.schema-epoch="4"/);
   }
+});
+
+test('privacy epoch 4 upgrades epoch 3 and prevents older binary rollback', { skip: !linux }, () => {
+  const f = fixture('3');
+  try {
+    const upgraded = f.run('c', 'c', '', { b: '3', c: '4', d: '4' });
+    assert.equal(upgraded.status, 0, upgraded.stderr);
+    assert.equal(readFileSync(join(f.state, 'minimum-schema-epoch'), 'utf8'), '4\n');
+    assert.match(readFileSync(join(f.root, 'calls'), 'utf8'), / rm -f webapi worker\n[\s\S]*run --rm/);
+    writeFileSync(join(f.root, 'calls'), '');
+    assert.notEqual(f.run('b', 'b', '', { b: '3', d: '3' }).status, 0);
+    assert.doesNotMatch(readFileSync(join(f.root, 'calls'), 'utf8'), /run --rm| up /);
+  } finally { f.cleanup(); }
 });
 
 test('settlement epoch 2 upgrades epoch 1 and prevents refund-only binary rollback', { skip: !linux }, () => {

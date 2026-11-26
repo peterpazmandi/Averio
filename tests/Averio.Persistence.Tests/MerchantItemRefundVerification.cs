@@ -1,6 +1,7 @@
 using Averio.Application.Common.Abstractions;
 using Averio.Application.Common.Exceptions;
 using Averio.Application.PersonalMoney;
+using Averio.Application.Recurring;
 using Averio.Application.Transactions.Common;
 using Averio.Application.Transactions.CreateTransaction;
 using Averio.Application.Transactions.UpdateTransaction;
@@ -50,6 +51,19 @@ internal static class MerchantItemRefundVerification
         var balanceBeforeLink = await Balance(day);
         purchase=await Read(purchaseId); var credit=await Read(creditId);
         await Record(purchaseId,new(itemB,10,day,Guid.NewGuid(),purchase.UpdatedAt,true,creditId,credit.UpdatedAt));
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IMoneyBackRepository>();
+            var all = await repository.ListAsync(f.HouseholdId, f.OwnerMemberId, 0, 100, null, ct);
+            var page1 = await repository.ListAsync(f.HouseholdId, f.OwnerMemberId, 0, 2, null, ct);
+            var page2 = await repository.ListAsync(f.HouseholdId, f.OwnerMemberId, 2, 2, null, ct);
+            Check(all.Any(x => x.Kind == "Refund" && x.SourceId == purchaseId)
+                && all.Any(x => x.Kind == "Reimbursement")
+                && page1.Concat(page2).Select(x => (x.Kind, x.Id)).SequenceEqual(all.Take(4).Select(x => (x.Kind, x.Id))),
+                "Money-back mixed pagination lost or reordered rows");
+            Check((await repository.ListAsync(f.HouseholdId, f.OwnerMemberId, 0, 100, "Submitted", ct)).All(x => x.Kind != "Refund"),
+                "Submitted filter included refunds");
+        }
         Check(await Balance(day)==balanceBeforeLink,"Linking an existing credit counted cash twice");
         Check((await Read(creditId)).Kind==TransactionKind.Refund,"Linked credit remains income");
         purchase=await Read(purchaseId);
@@ -101,6 +115,23 @@ internal static class MerchantItemRefundVerification
         user.UserId=f.MemberUserId;
         await Throws<NotFoundException>(()=>Refunds(privateId));
         await Throws<NotFoundException>(()=>Record(privateId,new(privatePurchase.Items.Single().Id,1,day,Guid.NewGuid(),privatePurchase.UpdatedAt,true)));
+        user.UserId=f.OwnerUserId;
+        var sharedPurchaseId = await Post(TransactionKind.Expense, [new("Shared return", TestIds.Groceries, 20)], day);
+        var movableCreditId = await Post(TransactionKind.Income, [new("Returned credit", TestIds.Salary, 10)], day);
+        var sharedPurchase = await Read(sharedPurchaseId);
+        var movableCredit = await Read(movableCreditId);
+        await Record(sharedPurchaseId, new(sharedPurchase.Items.Single().Id, 10, day, Guid.NewGuid(), sharedPurchase.UpdatedAt, true, movableCreditId, movableCredit.UpdatedAt));
+        var returned = (await Refunds(sharedPurchaseId)).Single();
+        sharedPurchase = await Read(sharedPurchaseId);
+        await Cancel(sharedPurchaseId, returned, sharedPurchase.UpdatedAt);
+        movableCredit = await Read(movableCreditId);
+        await using (var scope = services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<UpdateTransactionHandler>().HandleAsync(new(f.HouseholdId, movableCreditId, f.PrivateAccountId,
+                movableCredit.Kind, TransactionVisibility.Private, movableCredit.Merchant, movableCredit.Note, movableCredit.OccurredOn,
+                movableCredit.Items.Select(i => new TransactionItemInput(i.Description, i.CategoryId, i.Amount, i.Id)).ToArray(), [], movableCredit.UpdatedAt), ct);
+        Check((await Refunds(sharedPurchaseId)).Any(x => x.Id == returned.Id), "Owner lost visible refund history");
+        user.UserId=f.MemberUserId;
+        Check((await Refunds(sharedPurchaseId)).All(x => x.Id != returned.Id), "Refund history exposed an inaccessible historical credit");
         user.UserId=f.OwnerUserId;
         // A partially attributed item restores only the same share of allowance.
         var available=await Allowance();

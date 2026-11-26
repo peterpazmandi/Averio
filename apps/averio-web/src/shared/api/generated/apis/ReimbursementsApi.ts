@@ -39,6 +39,11 @@ import {
     LinkReimbursementPaymentResponseToJSON,
 } from '../models/LinkReimbursementPaymentResponse';
 import {
+    type ReassignReimbursementDestinationRequest,
+    ReassignReimbursementDestinationRequestFromJSON,
+    ReassignReimbursementDestinationRequestToJSON,
+} from '../models/ReassignReimbursementDestinationRequest';
+import {
     type RecoverReimbursementPaymentsRequest,
     RecoverReimbursementPaymentsRequestFromJSON,
     RecoverReimbursementPaymentsRequestToJSON,
@@ -48,6 +53,11 @@ import {
     ReimbursementClaimResponseFromJSON,
     ReimbursementClaimResponseToJSON,
 } from '../models/ReimbursementClaimResponse';
+import {
+    type ReimbursementDestinationRecoveryResponse,
+    ReimbursementDestinationRecoveryResponseFromJSON,
+    ReimbursementDestinationRecoveryResponseToJSON,
+} from '../models/ReimbursementDestinationRecoveryResponse';
 import {
     type ReimbursementPaymentCandidatesResponse,
     ReimbursementPaymentCandidatesResponseFromJSON,
@@ -68,6 +78,21 @@ import {
     UpdateReimbursementClaimRequestFromJSON,
     UpdateReimbursementClaimRequestToJSON,
 } from '../models/UpdateReimbursementClaimRequest';
+
+export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequest {
+    /**
+     * 
+     */
+    householdId: string;
+    /**
+     * 
+     */
+    claimId: string;
+    /**
+     * 
+     */
+    reassignReimbursementDestinationRequest: ReassignReimbursementDestinationRequest;
+}
 
 export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGetRequest {
     /**
@@ -152,6 +177,13 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPutRequest
     changeReimbursementRequest: ChangeReimbursementRequest;
 }
 
+export interface ApiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequest {
+    /**
+     * 
+     */
+    householdId: string;
+}
+
 export interface ApiV1HouseholdsHouseholdIdReimbursementsGetRequest {
     /**
      * 
@@ -196,6 +228,66 @@ export interface ApiV1HouseholdsHouseholdIdReimbursementsPostRequest {
  * 
  */
 export class ReimbursementsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPut without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPut().'
+            );
+        }
+
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPut().'
+            );
+        }
+
+        if (requestParameters['reassignReimbursementDestinationRequest'] == null) {
+            throw new runtime.RequiredError(
+                'reassignReimbursementDestinationRequest',
+                'Required parameter "reassignReimbursementDestinationRequest" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/{claimId}/destination-recovery`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+        urlPath = urlPath.replace('{claimId}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ReassignReimbursementDestinationRequestToJSON(requestParameters['reassignReimbursementDestinationRequest']),
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPut(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdDestinationRecoveryPutRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsClaimIdPaymentCandidatesGet without sending the request
@@ -503,6 +595,49 @@ export class ReimbursementsApi extends runtime.BaseAPI {
      */
     async apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPut(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPutRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGet without sending the request
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequestOpts(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['householdId'] == null) {
+            throw new runtime.RequiredError(
+                'householdId',
+                'Required parameter "householdId" was null or undefined when calling apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/households/{householdId}/reimbursements/destination-recovery`;
+        urlPath = urlPath.replace('{householdId}', encodeURIComponent(String(requestParameters['householdId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRaw(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ReimbursementDestinationRecoveryResponse>>> {
+        const requestOptions = await this.apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ReimbursementDestinationRecoveryResponseFromJSON));
+    }
+
+    /**
+     */
+    async apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGet(requestParameters: ApiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ReimbursementDestinationRecoveryResponse>> {
+        const response = await this.apiV1HouseholdsHouseholdIdReimbursementsDestinationRecoveryGetRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

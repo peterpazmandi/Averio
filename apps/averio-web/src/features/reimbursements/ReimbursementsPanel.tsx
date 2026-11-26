@@ -1,4 +1,5 @@
 import { ReimbursementRecoveryPanel } from './ReimbursementRecoveryPanel';
+import { DestinationRecoveryPanel } from './DestinationRecoveryPanel';
 import { PaymentDialog } from './PaymentDialog';
 import { InfoPopover } from '../../shared/components/ui/InfoPopover';
 import type { ReimbursementPaymentResponse } from '../../shared/api/generated';
@@ -17,8 +18,9 @@ import { AverioDialog } from '../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput } from '../../shared/components/ui/AverioFormControls';
 import { formatDecimalAmount, sumDecimalAmounts } from '../../shared/money/decimalAmount';
 import { reimbursementKeys, reimbursementQueries, reimbursementsApi } from './reimbursementQueries';
+import { moneyBackQueryKeys } from '../money-back/moneyBackQueryKeys';
 
-function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, onChanged, hasUnsavedChanges = false, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; onChanged?: () => Promise<void>; hasUnsavedChanges?: boolean; className?: string }) {
+function VisibleReimbursementsPanel({ userId, householdId, transactionId, sourceTransaction, onChanged, hasUnsavedChanges = false, className = '' }: { userId: string; householdId: string; transactionId?: string; sourceTransaction?: TransactionDto; onChanged?: (outcomeUnknown?: boolean) => Promise<void>; hasUnsavedChanges?: boolean; className?: string }) {
     const { t, i18n } = useTranslation();
     const query = useQuery(reimbursementQueries.list(userId, householdId, transactionId));
     const [selected, setSelected] = useState<{ claim: ReimbursementClaimResponse; status: string } | null>(null);
@@ -33,7 +35,9 @@ function VisibleReimbursementsPanel({ userId, householdId, transactionId, source
         ? <AverioCard className={'flex flex-wrap items-center justify-between gap-3 ' + className}>
             <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">↻</span>
                 <div><h3 className="text-sm font-semibold">{t('reimbursements.title')}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t('reimbursements.manual.shortHelp')}</p></div></div>
-            <AverioButton variant="primary" onClick={() => setCreating(true)}>{t('reimbursements.manual.add')}</AverioButton>
+            {sourceTransaction.canStartReimbursement === false && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('reimbursements.privacyRestricted')}</p>}
+            {hasUnsavedChanges && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('reimbursements.manual.saveFirst')}</p>}
+            <AverioButton variant="primary" disabled={hasUnsavedChanges || sourceTransaction.canStartReimbursement === false} onClick={() => setCreating(true)}>{t('reimbursements.manual.add')}</AverioButton>
             {creating && <ManualClaimDialog userId={userId} householdId={householdId} transaction={sourceTransaction} onClose={() => setCreating(false)} />}</AverioCard> : null;
     const currencies = [...new Set(query.data.map(c => c.currency))];
     return <section className={'grid min-w-0 gap-3 ' + className} aria-label={t('reimbursements.title')}>
@@ -56,13 +60,14 @@ function VisibleReimbursementsPanel({ userId, householdId, transactionId, source
             </dl>
             {claim.paymentUnavailable && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('reimbursements.voided')}</p>}
             {claim.paymentChanged && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('reimbursements.paymentChanged')}</p>}
+            {claim.canMatchPayments === false && claim.status !== 'Cancelled' && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('reimbursements.privacyRestricted')}</p>}
             {claim.submissionReminderDue && <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t('reimbursements.submitReminder')}</p>}
             {claim.paymentFollowUpDue && <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t('reimbursements.followUp')}</p>}
             {claim.status === 'NeedsSubmission' && <p className="text-sm">{t('reimbursements.externalHelp')}</p>}
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
                 {!transactionId && <Link className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-emerald-700 underline focus-visible:outline-2 dark:text-emerald-300" to="/app/transactions" search={{ transaction: claim.transactionId }}>{t('reimbursements.viewPayment')}</Link>}
                 {claim.canModify && <>
-                    {!claim.paymentUnavailable && ['Submitted', 'PartiallyReceived'].includes(claim.status) && <AverioButton variant="primary" disabled={hasUnsavedChanges} onClick={() => setMatching({ claim })}>{t('reimbursements.payments.link')}</AverioButton>}
+                    {!claim.paymentUnavailable && ['Submitted', 'PartiallyReceived'].includes(claim.status) && <AverioButton variant="primary" disabled={hasUnsavedChanges || claim.canMatchPayments === false} onClick={() => setMatching({ claim })}>{t('reimbursements.payments.link')}</AverioButton>}
                     {!claim.paymentUnavailable && claim.status !== 'Cancelled' && <AverioButton onClick={() => setEditing(claim)}>{t('reimbursements.edit.title')}</AverioButton>}
                     {!claim.paymentUnavailable && ['NeedsSubmission', 'Rejected'].includes(claim.status) && <AverioButton variant="primary" onClick={() => setSelected({ claim, status: 'Submitted' })}>{t('reimbursements.markSubmitted')}</AverioButton>}
                     {claim.status === 'Submitted' && claim.receivedAmount === '0' && <AverioButton onClick={() => setSelected({ claim, status: 'Rejected' })}>{t('reimbursements.reject')}</AverioButton>}
@@ -93,7 +98,7 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
     const submitting = status === 'Submitted';
     const mutation = useMutation({ mutationFn: () => reimbursementsApi.apiV1HouseholdsHouseholdIdReimbursementsClaimIdStatusPut({ householdId, claimId: claim.id,
         changeReimbursementRequest: { expectedVersion: claim.version, status, receiptSubmitted: confirmed, submittedOn: submitting ? submittedOn : null, reference: submitting ? reference.trim() || null : null } }),
-        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) })]); onClose(); },
+        onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: reimbursementKeys.household(userId, householdId) }), client.invalidateQueries({ queryKey: transactionQueryKeys.all(userId, householdId) }), client.invalidateQueries({ queryKey: moneyBackQueryKeys.household(userId, householdId) })]); onClose(); },
     });
     return <AverioDialog open title={t(submitting ? 'reimbursements.markSubmitted' : status === 'Rejected' ? 'reimbursements.reject' : 'reimbursements.cancel')}
         closeLabel={t('common.actions.close')} onDismiss={onClose} busy={mutation.isPending}
@@ -102,7 +107,7 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
             <AverioCard className="space-y-2"><p className="font-semibold">{claim.provider} · {claim.description}</p>
                 <p>{t('reimbursements.originalPayment')} {formatDecimalAmount(claim.originalPaymentAmount, claim.currency, i18n.resolvedLanguage ?? i18n.language)}</p>
                 <p>{t('reimbursements.estimate')} {formatDecimalAmount(claim.potentialAmount, claim.currency, i18n.resolvedLanguage ?? i18n.language)}</p></AverioCard>
-            <p className="text-sm">{t('reimbursements.balanceHelp')}</p>
+            <div className="flex items-center gap-2 text-sm"><span>{t('reimbursements.title')}</span><InfoPopover label={t('reimbursements.title')}>{t('reimbursements.balanceHelp')}</InfoPopover></div>
             {submitting ? <>
                 <p className="text-sm">{t('reimbursements.externalHelp')}</p>
                 <AverioField>{t('reimbursements.submittedOn')}<AverioInput type="date" required min={claim.paymentOn} max={today} value={submittedOn} disabled={mutation.isPending} onChange={e => setSubmittedOn(e.target.value)} /></AverioField>
@@ -115,5 +120,5 @@ function ClaimStatusDialog({ userId, householdId, claim, status, onClose }: { us
 }
 
 export function ReimbursementsPanel(props: Parameters<typeof VisibleReimbursementsPanel>[0]) {
-    return <>{!props.transactionId && <ReimbursementRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} />}<VisibleReimbursementsPanel {...props} /></>;
+    return <>{!props.transactionId && <><ReimbursementRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} /><DestinationRecoveryPanel userId={props.userId} householdId={props.householdId} className={props.className} /></>}<VisibleReimbursementsPanel {...props} /></>;
 }

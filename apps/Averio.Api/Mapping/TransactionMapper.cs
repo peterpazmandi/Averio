@@ -79,7 +79,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus, result.PaymentDetailsLocked);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus, result.PaymentDetailsLocked, result.CanStartReimbursement);
 
     public static TransactionResponse From(TransactionDetailResult result) => new(
         result.Id,
@@ -109,7 +109,7 @@ internal static class TransactionMapper
             label.Id,
             label.Name,
             label.Scope.ToString())).ToArray(),
-        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus, result.PaymentDetailsLocked);
+        result.ActivityId, result.ActivityName, result.ActivityAssignmentVersion, result.IsArchived, result.IsImported, result.ImportBatchId, result.ReimbursementStatus, result.PaymentDetailsLocked, result.CanStartReimbursement);
 
     private static Averio.Application.Activities.ActivityAssignmentInput? MapAssignment(Averio.Contracts.Activities.ActivityAssignmentRequest? input)
         => input is null ? null : new(input.ActivityId, input.ExpectedVersion);

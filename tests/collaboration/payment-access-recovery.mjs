@@ -21,6 +21,7 @@ export async function verifyPaymentAccessRecovery({ fixture: f, password, sessio
         await ok(page, base + '/reimbursements/' + claim.id + '/status', { method: 'PUT', body: { expectedVersion: claim.version, status: 'Submitted', receiptSubmitted: true, submittedOn: f.date } });
         claim = await claimFor();
         const bankCredit = await ok(page, base + '/transactions/' + credit.id);
+        const peerBankCredit = await ok(peer, base + '/transactions/' + credit.id);
         await ok(page, base + '/reimbursements/' + claim.id + '/payments', { method: 'POST', body: { creditTransactionId: credit.id, operationId: crypto.randomUUID(), expectedVersion: claim.version, expectedCreditUpdatedAt: bankCredit.updatedAt, moneyReceived: true } });
         await page.goto('http://localhost:5173/app/transactions?transaction=' + other.id);
         await page.getByRole('region', { name: 'Item refunds', exact: true }).getByRole('button', { name: 'Add refund', exact: true }).click();
@@ -78,12 +79,41 @@ export async function verifyPaymentAccessRecovery({ fixture: f, password, sessio
         await poll(async () => (await ok(page, base + '/reimbursements/payment-recovery')).length === 0, 'recovery completed');
         const after = (await ok(peer, base + '/accounts')).find(a => a.id === account.id);
         assert.equal(after.currentBalanceAmount, accountRecord.currentBalanceAmount);
-        assert.deepEqual(await ok(peer, base + '/transactions/' + credit.id), bankCredit);
+        assert.deepEqual(await ok(peer, base + '/transactions/' + credit.id), peerBankCredit);
         await changeAccess(false);
         claim = await claimFor();
         assert.equal(claim.receivedAmount, '0'); assert.equal(claim.payments.length, 1); assert.ok(claim.payments[0].unlinkedAt);
         const candidates = await ok(page, base + '/transactions?accountId=' + account.id + '&refundEligibleOnly=true');
         assert.ok(candidates.items.some(t => t.id === credit.id));
     }
+    const hiddenDestination = await ok(peer, base + '/accounts', { method: 'POST', body: { name: 'SECRET recovery destination', type: 'Cash',
+        scope: 'Personal', ownerHouseholdMemberIds: [f.memberId, f.peerMemberId], visibility: 'Household', includeInHouseholdReports: true,
+        currency: 'EUR', balanceAnchorAmount: '0', balanceAnchorDate: f.date } });
+    const source = await ok(page, base + '/transactions', { method: 'POST', body: { accountId: f.sharedAccountId, kind: 'Expense', visibility: 'Household',
+        merchant: 'Hidden destination source', occurredOn: f.date, labelIds: [], items: [{ description: 'Hidden destination source', categoryId: expenseCategory, amount: '100' }] } });
+    const saved = await ok(page, base + '/transactions/' + source.id);
+    await ok(page, base + '/reimbursements', { method: 'POST', body: { transactionId: source.id, expectedUpdatedAt: saved.updatedAt,
+        configuration: { provider: 'SECRET recovery provider', calculation: 'Fixed', value: '10', destinationAccountId: hiddenDestination.id, paymentDelayDays: 0 } } });
+    const claim = (await ok(page, base + '/reimbursements?transactionId=' + source.id))[0];
+    const oldAccount = await ok(peer, base + '/accounts/' + hiddenDestination.id);
+    await ok(peer, base + '/accounts/' + hiddenDestination.id, { method: 'PUT', body: { name: oldAccount.name, type: oldAccount.type,
+        ownerHouseholdMemberIds: [f.peerMemberId], visibility: 'Private', includeInHouseholdReports: false, expectedUpdatedAt: oldAccount.updatedAt } });
+    const recoverable = await ok(page, base + '/reimbursements/destination-recovery');
+    const reference = recoverable.find(x => x.claimId === claim.id);
+    assert.deepEqual(Object.keys(reference).sort(), ['claimId', 'version']);
+    assert.equal((await api(peer, base + '/reimbursements/' + claim.id + '/destination-recovery', { method: 'PUT',
+        body: { expectedVersion: reference.version, destinationAccountId: f.sharedAccountId } })).status, 404);
+    await page.goto('http://localhost:5173/app');
+    await page.getByRole('button', { name: 'Review hidden claim 1', exact: true }).click();
+    const recoveryDialog = page.getByRole('dialog', { name: 'Recover inaccessible destinations', exact: true });
+    assert.equal(await recoveryDialog.getByText('SECRET recovery provider').count(), 0);
+    assert.equal(await recoveryDialog.getByText('SECRET recovery destination').count(), 0);
+    await recoveryDialog.getByRole('combobox', { name: 'Destination account', exact: true }).selectOption(f.sharedAccountId);
+    await recoveryDialog.getByRole('checkbox').check();
+    await recoveryDialog.getByRole('button', { name: 'Confirm', exact: true }).click();
+    await recoveryDialog.waitFor({ state: 'hidden' });
+    const recovered = (await ok(page, base + '/reimbursements?transactionId=' + source.id))[0];
+    assert.equal(recovered.destinationAccountId, f.sharedAccountId);
+    assert.ok(recovered.events.every(event => event.destinationAccountId !== hiddenDestination.id));
     console.log('PASS refund picker eligibility and access recovery: real ownership changes, privacy, lost responses, unchanged cash and EN/DE/HU layouts');
 }

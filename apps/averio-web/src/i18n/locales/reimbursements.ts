@@ -1,4 +1,13 @@
 export const reimbursementsEN = {
+    destinationRecovery: {
+        title: "Recover inaccessible destinations",
+        warning: "Some of your claims have an inaccessible destination. Claims with active payment links must first be recovered above.",
+        review: "Review hidden claim {{number}}",
+        loadError: "Destination recovery could not be loaded.",
+        explanation: "Claim and old account details are hidden. Choose an active account you can modify in the claim's currency. The claim may remain hidden if historical payments are inaccessible.",
+        confirm: "I understand this changes the destination of this hidden claim.",
+        error: "The result could not be confirmed. Close this dialog to refresh before trying again; the account must use the claim's currency."
+    },
     recovery: {
         "title": "Recover inaccessible payment links",
         "warning": "Some of your reimbursement payment links can no longer be managed with your current access. Their financial details remain private.",
@@ -38,6 +47,7 @@ export const reimbursementsEN = {
     "reference": "Claim reference (optional)",
     "voided": "The original payment is no longer a recorded expense. This claim is excluded from outstanding amounts and reminders. You can cancel it; its history is retained.",
     "paymentChanged": "The payment was edited. This claim keeps its original estimate; review it before submitting.",
+    "privacyRestricted": "To protect private claims, new claims and payment links require transactions you created after the privacy update. Existing claims and links remain available for review and unlinking.",
     "submitReminder": "Reminder: submit your receipt to the provider.",
     "followUp": "The estimated date has passed. Check with the provider; payment has not been confirmed in Averio.",
     "viewPayment": "View original payment",
@@ -72,7 +82,7 @@ export const reimbursementsEN = {
         "awaitStep": "Track reimbursement",
         "requiredSubmission": "Submit the receipt to your provider and confirm it in Averio before any reimbursement becomes expected. This never records money as received.",
         "who": "Who reimburses you?",
-        "whoHelp": "Enter the name of whoever will reimburse you. Choose where you expect the money to arrive; only active accounts in the expense currency are available.",
+        "whoHelp": "Enter the name of whoever will reimburse you. Choose where you expect the money to arrive; only active accounts you can modify in the expense currency are available.",
         "howMuch": "How much can you claim?",
         "preview": "Potential reimbursement per payment:",
         "when": "When should you follow up?",
@@ -84,6 +94,7 @@ export const reimbursementsEN = {
         "add": "Track reimbursement",
         "create": "Create claim",
         "savedExpense": "This claim uses the saved expense shown above. Save any transaction edits first. Creating a claim does not change the expense or record money received.",
+        "saveFirst": "Save or discard transaction edits before creating a claim.",
         "shortHelp": "Expect money back for this expense?"
     },
     "badge": "Reimbursement · {{status}}",
@@ -101,14 +112,15 @@ export const reimbursementsEN = {
         "link": "Link received payment",
         "allocate": "Amount to allocate to this claim",
         "creditAvailable": "Credit available",
+        "maximumAllocation": "Maximum for this claim, including the current net expense limit:",
         "creditAfter": "Credit left unallocated",
-        "amountInvalid": "Enter a positive amount within both the available credit and the outstanding claim.",
+        "amountInvalid": "Enter a positive amount no greater than the maximum for this claim.",
         "unlink": "Unlink payment",
         "choose": "Choose a recorded payment",
         "search": "Search received payments",
-        "help": "Choose an Income credit in the destination account and currency, dated from the original expense through today. Allocate up to its unallocated amount and this claim's outstanding balance. One credit can cover multiple claims without creating another bank movement.",
+        "help": "Choose an Income credit you created after the privacy update, in the destination account and currency, dated from the original expense through today. Allocate up to its unallocated amount and this claim's outstanding balance. One credit can cover multiple claims you created without creating another bank movement.",
         "empty": "No eligible payments found",
-        "emptyHelp": "Record the incoming payment in Transactions, or clear the search. Credits already linked elsewhere or exceeding the remaining claim are excluded.",
+        "emptyHelp": "Record the incoming payment in Transactions, or clear the search. Only credits you created after the privacy update with unallocated money are shown.",
         "reset": "Clear search",
         "more": "Load more payments",
         "confirm": "I confirm that this money was received for this reimbursement claim.",
@@ -124,6 +136,15 @@ export const reimbursementsEN = {
     }
 };
 export const reimbursementsDE = {
+    destinationRecovery: {
+        title: "Nicht zugängliche Zielkonten wiederherstellen",
+        warning: "Einige deiner Anträge haben ein nicht zugängliches Zielkonto. Aktive Zahlungsverknüpfungen müssen zuerst oben gelöst werden.",
+        review: "Verborgenen Antrag {{number}} prüfen",
+        loadError: "Die Wiederherstellung des Zielkontos konnte nicht geladen werden.",
+        explanation: "Details zum Antrag und zum alten Konto bleiben verborgen. Wähle ein aktives Konto, das du bearbeiten kannst und das die Währung des Antrags hat. Der Antrag kann verborgen bleiben, wenn frühere Zahlungen nicht zugänglich sind.",
+        confirm: "Ich verstehe, dass dies das Zielkonto dieses verborgenen Antrags ändert.",
+        error: "Das Ergebnis konnte nicht bestätigt werden. Schließe diesen Dialog zum Aktualisieren, bevor du es erneut versuchst; das Konto muss die Währung des Antrags haben."
+    },
     recovery: {
         "title": "Nicht zugängliche Zahlungsverknüpfungen lösen",
         "warning": "Einige deiner Kostenerstattungszahlungen lassen sich mit deinen aktuellen Zugriffsrechten nicht mehr verwalten. Ihre Finanzdetails bleiben privat.",
@@ -163,6 +184,7 @@ export const reimbursementsDE = {
     "reference": "Vorgangsnummer (optional)",
     "voided": "Die ursprüngliche Zahlung ist keine erfasste Ausgabe mehr. Dieser Anspruch wird bei ausstehenden Beträgen und Erinnerungen nicht berücksichtigt. Du kannst ihn stornieren; sein Verlauf bleibt erhalten.",
     "paymentChanged": "Die Zahlung wurde bearbeitet. Dieser Anspruch behält seine ursprüngliche Schätzung; prüfe ihn vor dem Einreichen.",
+    "privacyRestricted": "Zum Schutz privater Ansprüche benötigen neue Ansprüche und Zahlungsverknüpfungen Transaktionen, die du nach der Datenschutzaktualisierung erstellt hast. Bestehende Ansprüche und Verknüpfungen bleiben zur Prüfung und zum Lösen verfügbar.",
     "submitReminder": "Erinnerung: Reiche deinen Beleg beim Kostenträger ein.",
     "followUp": "Das geschätzte Datum ist verstrichen. Frage beim Kostenträger nach; der Zahlungseingang ist in Averio nicht bestätigt.",
     "viewPayment": "Ursprüngliche Zahlung ansehen",
@@ -197,7 +219,7 @@ export const reimbursementsDE = {
         "awaitStep": "Kostenerstattung verfolgen",
         "requiredSubmission": "Reiche den Beleg beim Kostenträger ein und bestätige dies in Averio, bevor eine Kostenerstattung als erwartet gilt. Dadurch wird kein Geldeingang erfasst.",
         "who": "Wer übernimmt die Kosten?",
-        "whoHelp": "Gib den Namen der Person oder Organisation ein, die deine Kosten übernimmt. Wähle das erwartete Empfangskonto; verfügbar sind aktive Konten in der Währung der Ausgabe.",
+        "whoHelp": "Gib den Namen der Person oder Organisation ein, die deine Kosten übernimmt. Wähle das erwartete Empfangskonto; verfügbar sind aktive Konten in der Währung der Ausgabe, die du bearbeiten darfst.",
         "howMuch": "Wie viel kannst du zurückfordern?",
         "preview": "Mögliche Kostenerstattung je Zahlung:",
         "when": "Wann möchtest du nachfassen?",
@@ -209,6 +231,7 @@ export const reimbursementsDE = {
         "add": "Kostenerstattung verfolgen",
         "create": "Anspruch erstellen",
         "savedExpense": "Dieser Anspruch verwendet die oben gezeigte gespeicherte Ausgabe. Speichere Änderungen an der Transaktion zuerst. Das Erstellen ändert die Ausgabe nicht und erfasst keinen Geldeingang.",
+        "saveFirst": "Speichere oder verwirf Buchungsänderungen, bevor du einen Anspruch erstellst.",
         "shortHelp": "Übernimmt jemand die Kosten dieser Ausgabe?"
     },
     "badge": "Kostenerstattung · {{status}}",
@@ -225,15 +248,16 @@ export const reimbursementsDE = {
     "payments": {
         "allocate": "Betrag für diesen Anspruch",
         "creditAvailable": "Verfügbarer Gutschriftbetrag",
+        "maximumAllocation": "Höchstbetrag für diesen Antrag einschließlich der aktuellen Nettoausgabe:",
         "creditAfter": "Nicht zugeordneter Restbetrag",
-        "amountInvalid": "Gib einen positiven Betrag ein, der höchstens der verfügbaren Gutschrift und dem offenen Anspruch entspricht.",
+        "amountInvalid": "Gib einen positiven Betrag ein, der den Höchstbetrag für diesen Antrag nicht überschreitet.",
         "link": "Eingegangene Zahlung zuordnen",
         "unlink": "Zahlungszuordnung aufheben",
         "choose": "Erfasste Zahlung auswählen",
         "search": "Eingegangene Zahlungen suchen",
-        "help": "Wähle eine freie Einnahme auf dem Zielkonto in derselben Währung, datiert ab der ursprünglichen Ausgabe bis heute. Der gesamte Betrag muss in den offenen Anspruch passen. Mehrere Zahlungen können einen Anspruch decken. Fehlende Einnahmen zuerst unter Buchungen erfassen.",
+        "help": "Wähle eine nach der Datenschutzaktualisierung von dir erstellte Einnahme auf dem Zielkonto in derselben Währung, datiert ab der ursprünglichen Ausgabe bis heute. Ordne höchstens den verfügbaren Betrag und den offenen Anspruch zu. Eine Gutschrift kann mehrere deiner Ansprüche decken, ohne eine weitere Buchung zu erzeugen.",
         "empty": "Keine geeigneten Zahlungen gefunden",
-        "emptyHelp": "Erfasse den Geldeingang unter Buchungen oder lösche die Suche. Bereits zugeordnete oder zu hohe Beträge sind ausgeschlossen.",
+        "emptyHelp": "Erfasse den Geldeingang unter Buchungen oder lösche die Suche. Angezeigt werden deine nach der Datenschutzaktualisierung erstellten Gutschriften mit noch nicht zugeordnetem Betrag.",
         "reset": "Suche löschen",
         "more": "Weitere Zahlungen laden",
         "confirm": "Ich bestätige, dass dieses Geld für diesen Erstattungsanspruch eingegangen ist.",
@@ -249,6 +273,15 @@ export const reimbursementsDE = {
     }
 };
 export const reimbursementsHU = {
+    destinationRecovery: {
+        title: "Nem elérhető fogadó számlák helyreállítása",
+        warning: "Néhány igényed fogadó számlája nem érhető el. Az aktív fizetési kapcsolatokat előbb fent kell feloldani.",
+        review: "{{number}}. rejtett igény áttekintése",
+        loadError: "A fogadó számla helyreállítása nem tölthető be.",
+        explanation: "Az igény és a régi számla részletei rejtve maradnak. Válassz az igény pénznemében egy aktív, általad módosítható számlát. Az igény rejtve maradhat, ha a korábbi fizetések nem érhetők el.",
+        confirm: "Megértettem, hogy ez megváltoztatja a rejtett igény fogadó számláját.",
+        error: "Az eredmény nem erősíthető meg. Újrapróbálás előtt zárd be az ablakot a frissítéshez; a számlának az igény pénznemében kell lennie."
+    },
     recovery: {
         "title": "Nem elérhető fizetési kapcsolatok feloldása",
         "warning": "Néhány költségtérítési fizetési kapcsolatodat a jelenlegi hozzáféréseddel már nem tudod kezelni. A pénzügyi részleteik továbbra is privátak.",
@@ -288,6 +321,7 @@ export const reimbursementsHU = {
     "reference": "Igényazonosító (nem kötelező)",
     "voided": "Az eredeti kifizetés már nem rögzített kiadás. Ez az igény nem szerepel a várt összegekben és emlékeztetőkben. Lezárhatod; az előzmények megmaradnak.",
     "paymentChanged": "A kifizetést módosították. Az igény megtartja az eredeti becslést; beküldés előtt ellenőrizd.",
+    "privacyRestricted": "A privát igények védelméhez új igény és fizetési kapcsolat csak az adatvédelmi frissítés után általad létrehozott tranzakcióval lehetséges. A meglévő igények és kapcsolatok továbbra is megtekinthetők, illetve leválaszthatók.",
     "submitReminder": "Emlékeztető: küldd be a bizonylatot a költségtérítés fizetőjének.",
     "followUp": "A becsült dátum elmúlt. Érdeklődj a költségtérítés fizetőjénél; az Averióban nincs megerősítve a kifizetés.",
     "viewPayment": "Eredeti kifizetés megtekintése",
@@ -322,7 +356,7 @@ export const reimbursementsHU = {
         "awaitStep": "Költségtérítés követése",
         "requiredSubmission": "Küldd be a bizonylatot a költségtérítés fizetőjének, és erősítsd meg az Averióban. Csak ezután lesz várt költségtérítés; ez nem rögzít beérkezett pénzt.",
         "who": "Ki téríti meg a költséget?",
-        "whoHelp": "Add meg annak a személynek vagy szervezetnek a nevét, aki megtéríti a költséget. Válaszd ki, melyik számlára várod a pénzt; a kiadás pénznemében vezetett aktív számlák választhatók.",
+        "whoHelp": "Add meg annak a személynek vagy szervezetnek a nevét, aki megtéríti a költséget. Válaszd ki, melyik számlára várod a pénzt; a kiadás pénznemében vezetett, általad szerkeszthető aktív számlák választhatók.",
         "howMuch": "Mekkora költségtérítést igényelhetsz?",
         "preview": "Lehetséges költségtérítés kifizetésenként:",
         "when": "Mikor szeretnél utánajárni?",
@@ -334,6 +368,7 @@ export const reimbursementsHU = {
         "add": "Költségtérítés követése",
         "create": "Igény létrehozása",
         "savedExpense": "Az igény a fent látható mentett kiadáshoz kapcsolódik. Előbb mentsd a tranzakció módosításait. Az igény létrehozása nem módosítja a kiadást, és nem rögzít beérkezett pénzt.",
+        "saveFirst": "Az igény létrehozása előtt mentsd vagy vesd el a tranzakció módosításait.",
         "shortHelp": "Valaki megtéríti ezt a kiadásodat?"
     },
     "badge": "Költségtérítés · {{status}}",
@@ -350,15 +385,16 @@ export const reimbursementsHU = {
     "payments": {
         "allocate": "Ehhez az igényhez rendelt összeg",
         "creditAvailable": "Felhasználható jóváírás",
+        "maximumAllocation": "Az igényhez rendelhető maximum, az aktuális nettó kiadás figyelembevételével:",
         "creditAfter": "Fel nem osztott jóváírás",
-        "amountInvalid": "Pozitív összeget adj meg, amely nem haladja meg a felhasználható jóváírást és a fennmaradó igényt.",
+        "amountInvalid": "Pozitív összeget adj meg, amely nem haladja meg az igényhez rendelhető maximumot.",
         "link": "Beérkezett kifizetés összekapcsolása",
         "unlink": "Kifizetés leválasztása",
         "choose": "Rögzített kifizetés kiválasztása",
         "search": "Beérkezett kifizetések keresése",
-        "help": "Válassz szabad bevételt a célszámlán, azonos pénznemben, az eredeti kiadás dátuma és a mai nap között. A teljes jóváírásnak bele kell férnie a fennmaradó összegbe. Egy igényt több kifizetés is fedezhet. A hiányzó bevételt előbb rögzítsd a Tranzakciók között.",
+        "help": "Válassz az adatvédelmi frissítés után általad létrehozott bevételt a célszámlán, azonos pénznemben, az eredeti kiadás dátuma és a mai nap között. Legfeljebb a jóváírás fel nem osztott részét és az igény fennmaradó összegét rendelheted hozzá. Egy jóváírás több saját igényt is fedezhet új pénzmozgás nélkül.",
         "empty": "Nincs megfelelő kifizetés",
-        "emptyHelp": "Rögzítsd a beérkező pénzt a Tranzakciók között, vagy töröld a keresést. A már kapcsolt és a fennmaradó összegnél nagyobb jóváírások nem választhatók.",
+        "emptyHelp": "Rögzítsd a beérkező pénzt a Tranzakciók között, vagy töröld a keresést. Csak az adatvédelmi frissítés után általad létrehozott, fel nem osztott összeggel rendelkező jóváírások jelennek meg.",
         "reset": "Keresés törlése",
         "more": "További kifizetések",
         "confirm": "Megerősítem, hogy ez a pénz ehhez a költségtérítési igényhez érkezett.",

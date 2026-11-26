@@ -135,6 +135,58 @@ export async function verifyRefundRecovery({ fixture: f, password, session, ok, 
         }
     }
 
+    // Closing an uncertain write must refresh history without requiring a reconnect event.
+    for (const committed of [true, false]) {
+        const purchase = await post('Expense');
+        const refund = await open(purchase.id);
+        await refund.getByLabel(/^Refund amount/).fill('20');
+        await refund.getByLabel('I confirm that this money was actually refunded.', { exact: true }).check();
+        const url = '**/api/v1/households/' + f.householdId + '/transactions/' + purchase.id + '/refunds';
+        const lose = async route => {
+            if (route.request().method() !== 'POST') return route.continue();
+            if (committed) assert.equal((await route.fetch()).status(), 200);
+            await route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Unknown outcome', status: 503 }) });
+        };
+        await page.route(url, lose);
+        await refund.getByRole('button', { name: 'Record refund', exact: true }).click();
+        await refund.getByRole('status').filter({ hasText: 'Averio could not confirm' }).waitFor();
+        await page.unroute(url, lose);
+        const detailUrl = '**/transactions/' + purchase.id;
+        const failRead = route => route.request().method() === 'GET'
+            ? route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Read failed', status: 503 }) })
+            : route.continue();
+        if (committed) await page.route(detailUrl, failRead);
+        await refund.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await refund.waitFor({ state: 'hidden' });
+        if (committed) {
+            const editor = page.getByRole('dialog', { name: 'Edit transaction', exact: true });
+            await editor.getByText('The refund outcome is unknown and transaction details could not be refreshed. Retry loading them before editing.', { exact: true }).waitFor();
+            assert.equal(await editor.getByRole('button', { name: 'Save transaction', exact: true }).isDisabled(), true);
+            await page.unroute(detailUrl, failRead);
+            await editor.getByRole('button', { name: 'Retry refresh', exact: true }).click();
+            await poll(async () => (await page.getByTestId('refund-net-expense').textContent()).replace(/\s/g, '') === '€80.00', 'uncertain refund refreshed');
+            const record = (await ok(page, base + '/transactions/' + purchase.id + '/refunds'))[0];
+            await page.locator('[data-refund-id="' + record.id + '"]').getByRole('button', { name: 'Reverse refund', exact: true }).click();
+            const reversal = page.getByRole('dialog', { name: 'Reverse this refund?', exact: true });
+            const loseReverse = async route => {
+                assert.equal((await route.fetch()).status(), 204);
+                await route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Unknown reversal', status: 503 }) });
+            };
+            const cancellation = url + '/' + record.id + '/cancellation';
+            await page.route(cancellation, loseReverse);
+            await reversal.getByRole('button', { name: 'Reverse refund', exact: true }).click();
+            await reversal.getByRole('alert').waitFor();
+            await page.unroute(cancellation, loseReverse);
+            await reversal.getByRole('button', { name: 'Cancel', exact: true }).click();
+            await reversal.waitFor({ state: 'hidden' });
+            await page.locator('[data-refund-id="' + record.id + '"]').getByText('Reversed', { exact: true }).waitFor();
+            await poll(async () => (await page.getByTestId('refund-net-expense').textContent()).replace(/\s/g, '') === '€100.00', 'uncertain reversal refreshed');
+        } else {
+            assert.equal((await ok(page, base + '/transactions/' + purchase.id + '/refunds')).length, 0);
+            assert.equal(await page.getByTestId('refund-net-expense').count(), 0);
+        }
+    }
+
     // A definitive 409 must release the snapshot and require a new confirmation.
     const rejected = await post('Expense');
     const dialog = await open(rejected.id);

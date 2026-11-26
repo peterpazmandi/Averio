@@ -6,7 +6,6 @@ public interface IItemRefundRepository
     Task<ItemRefund?> ByOperationAsync(Guid householdId, Guid operationId, CancellationToken ct);
     Task<ItemRefund?> GetAsync(Guid householdId, Guid id, CancellationToken ct);
     Task<ItemRefund?> ByCreditAsync(Guid householdId, Guid creditId, CancellationToken ct);
-    Task<IReadOnlyList<ItemRefund>> ListAsync(Guid householdId, Guid transactionId, CancellationToken ct);
-    Task<IReadOnlyList<ItemRefund>> ListVisibleAsync(Guid householdId, Guid householdMemberId, int skip, int take, CancellationToken ct);
+    Task<IReadOnlyList<ItemRefund>> ListAsync(Guid householdId, Guid memberId, Guid transactionId, CancellationToken ct);
     Task<bool> CreditHasDependenciesAsync(Guid householdId, Guid transactionId, CancellationToken ct);
 }

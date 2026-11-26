@@ -14,22 +14,6 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
     ITransactionRepository transactions, IItemRefundRepository refunds, TransactionAggregateWriter aggregates,
     PersonalMoneyHandler personalMoney, Averio.Application.Recurring.IReimbursementRepository reimbursementClaims, IUnitOfWork uow, TimeProvider clock)
 {
-    public sealed record OverviewRefund(Guid Id, Guid PurchaseId, Guid CreditId, decimal Amount, DateOnly ReceivedOn, string Description, string? Merchant, string Currency, bool Cancelled, bool CanModify);
-    public async Task<IReadOnlyList<OverviewRefund>> OverviewAsync(Guid h, int skip, int take, CancellationToken ct)
-    {
-        var member = await Member(h, ct);
-        var rows = await refunds.ListVisibleAsync(h, member.Id, skip, take, ct);
-        var result = new List<OverviewRefund>(rows.Count);
-        foreach (var refund in rows)
-        {
-            var purchase = await transactions.GetVisibleByIdAsync(h, member.Id, refund.TransactionId, ct);
-            var credit = await transactions.GetVisibleByIdAsync(h, member.Id, refund.CreditTransactionId, ct);
-            if (purchase is null || credit is null) continue;
-            var account = await accounts.GetVisibleByIdAsync(h, member.Id, purchase.AccountId, ct);
-            result.Add(new(refund.Id, refund.TransactionId, refund.CreditTransactionId, refund.Amount, refund.ReceivedOn, credit.Description, credit.Merchant, credit.Currency.Value, refund.CancelledAt is not null, account is not null && !refund.CancelledAt.HasValue && TransactionAccess.CanModify(account, member)));
-        }
-        return result;
-    }
     private async Task<HouseholdMember> Member(Guid householdId, CancellationToken ct)
     {
         var id = user.UserId ?? throw new AuthenticationFailedException();
@@ -49,7 +33,7 @@ public sealed class ItemRefundHandler(ICurrentUser user, IHouseholdRepository ho
     {
         var member = await Member(h, ct);
         await Source(h, id, member, false, ct);
-        return await refunds.ListAsync(h, id, ct);
+        return await refunds.ListAsync(h, member.Id, id, ct);
     }
     public async Task<ItemRefund> OriginAsync(Guid h, Guid creditId, CancellationToken ct)
     {
