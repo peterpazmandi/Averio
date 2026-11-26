@@ -9,5 +9,5 @@ createRoot(document.getElementById('root')!).render(<QueryClientProvider client=
     <TransactionEditor userId="user" householdId="home" transaction={window.editorFixture ?? null} busy={false} onCancel={() => {}}
         onArchive={async (archived, version) => { document.body.dataset.archived = JSON.stringify({ archived, version }); }}
         onVoid={async version => { document.body.dataset.voided = version; }}
-        onSave={async request => { document.body.dataset.saved = JSON.stringify(request); }} onSaveRecurring={async () => {}} />
+        onSave={async request => { document.body.dataset.saved = JSON.stringify(request); }} onSaveRecurring={async request => { document.body.dataset.savedRecurring = JSON.stringify(request); }} />
 </QueryClientProvider>);

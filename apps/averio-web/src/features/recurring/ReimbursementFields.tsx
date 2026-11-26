@@ -26,11 +26,12 @@ function estimate(payment: string, config: RecurringReimbursementConfiguration):
     return result > 0n ? `${result / 10000n}.${(result % 10000n).toString().padStart(4, '0')}` : null;
 }
 
-export function ReimbursementFields({ userId, householdId, value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true, allowUnavailableDestination = false }: {
+export function ReimbursementFields({ userId, householdId, value, onChange, accounts, currency, paymentAmount, sourceAccountId, busy, allowDisable = true, limitToPayment = true, allowUnavailableDestination = false, embedded = false }: {
     userId: string; householdId: string;
     allowDisable?: boolean;
     limitToPayment?: boolean;
     allowUnavailableDestination?: boolean;
+    embedded?: boolean;
     value: RecurringReimbursementConfiguration | null;
     onChange: (value: RecurringReimbursementConfiguration | null) => void;
     accounts: AccountResponse[];
@@ -49,9 +50,10 @@ export function ReimbursementFields({ userId, householdId, value, onChange, acco
     const paymentLimit = limitToPayment && payment !== null && payment > 0n
         ? t('reimbursements.estimateLimit', { amount: formatDecimalAmount(paymentAmount, currency, i18n.resolvedLanguage ?? i18n.language) }) : '';
     const heading = (key: string, help: string) => <h4 className="flex items-center justify-between gap-2 font-semibold" aria-label={t(key)}>{t(key)} <InfoPopover label={t(key)}>{t(help)}</InfoPopover></h4>;
-    return <AverioCard className="grid gap-4">
+    const Container = embedded ? 'div' : AverioCard;
+    return <Container className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-semibold" aria-label={t('reimbursements.settings')}>{t('reimbursements.settings')} <InfoPopover label={t('reimbursements.settings')}>{t('reimbursements.externalHelp')}</InfoPopover></h3>
+            {!embedded && <h3 className="font-semibold" aria-label={t('reimbursements.settings')}>{t('reimbursements.settings')} <InfoPopover label={t('reimbursements.settings')}>{t('reimbursements.externalHelp')}</InfoPopover></h3>}
             {allowDisable && <label className="flex min-h-11 items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-4 accent-emerald-500" checked={!!value} disabled={busy}
                 onChange={e => onChange(e.target.checked ? { provider: '', calculation: 'Fixed', value: '', maximumAmount: null,
                     destinationAccountId: eligible.some(a => a.id === sourceAccountId) ? sourceAccountId : '', paymentDelayDays: 7, submissionReminderDays: 2 } : null)} />{t('reimbursements.enable')}</label>}
@@ -126,5 +128,5 @@ export function ReimbursementFields({ userId, householdId, value, onChange, acco
                 </div>
             </div>
         </>}
-    </AverioCard>;
+    </Container>;
 }
