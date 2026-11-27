@@ -184,9 +184,10 @@ try {
     });
     await shell.goto('http://localhost:5286/app/transactions');
     await shell.getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
+    const wideTitleFont = await shell.addStyleTag({ content: '@media (max-width: 600px) { .av-ui .av-topbar h1 { font-family: Arial, sans-serif !important; font-size: 19px !important; } }' });
     assert.equal(await shell.getByRole('button', { name: 'Add transaction', exact: true }).count(), 1);
     assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Add transaction', exact: true }).count(), 0);
-    for (const width of [320, 360, 361, 375, 400, 480, 600, 601, 1440]) {
+    for (const width of [320, 359, 360, 361, 375, 400, 479, 480, 481, 600, 601, 1440]) {
         await shell.setViewportSize({ width, height: 900 });
         const heading = shell.locator('.av-topbar').getByRole('heading', { name: 'Transactions', exact: true });
         const help = shell.locator('.av-topbar').getByRole('button', { name: 'About Transactions', exact: true });
@@ -195,12 +196,15 @@ try {
         const titleBox = await heading.boundingBox(), helpBox = await help.boundingBox();
         assert.ok(helpBox.x >= titleBox.x + titleBox.width && helpBox.x - (titleBox.x + titleBox.width) < 10, 'Help is beside the page title');
         assert.ok(helpBox.width >= 44 && helpBox.height >= 44 && helpBox.x + helpBox.width <= width, 'Help remains a visible 44px target');
-        assert.equal(await heading.evaluate(element => element.scrollWidth <= element.clientWidth), true, 'Page title is not truncated');
+        assert.equal(await heading.evaluate(element => element.scrollWidth <= element.clientWidth), true, 'Page title is not truncated at ' + width);
         assert.equal(await shell.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Top bar does not overflow');
         if (width <= 600) {
             assert.ok((await shell.locator('.av-topbar').boundingBox()).height <= 68, 'Mobile top bar stays on one line');
             assert.equal(await shell.locator('.av-topbar').getByRole('combobox', { name: 'Language' }).count(), 0);
             assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Display and language' }).count(), 1);
+            const signOutBox = await shell.locator('.av-topbar').getByRole('button', { name: 'Sign out', exact: true }).boundingBox();
+            assert.ok(signOutBox.x >= helpBox.x + helpBox.width && signOutBox.x + signOutBox.width <= width, 'Sign out remains visible without overlapping help at ' + width);
+            if (width < 480) assert.ok(signOutBox.width >= 44 && signOutBox.height >= 44, 'Compact sign out has a 44px target');
         } else {
             assert.equal(await shell.locator('.av-topbar').getByRole('combobox', { name: 'Language' }).count(), 1);
             assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Display and language' }).count(), 0);
@@ -302,7 +306,7 @@ try {
         preferencesDialog = shell.getByRole('dialog');
         await shell.keyboard.press('Escape');
         await preferencesDialog.waitFor({ state: 'detached' });
-        for (const width of [320, 360, 361, 375, 400, 480, 600]) {
+        for (const width of [320, 359, 360, 361, 375, 400, 479, 480, 481, 600]) {
             await shell.setViewportSize({ width, height: 900 });
             const heading = shell.locator('.av-topbar').getByRole('heading', { name: title, exact: true });
             await heading.waitFor();
@@ -317,6 +321,7 @@ try {
         await shell.keyboard.press('Escape');
         await preferencesDialog.waitFor({ state: 'detached' });
     }
+    await wideTitleFont.evaluate(element => element.remove());
     await shell.goto('http://localhost:5286/app/transactions/');
     await shell.getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
     assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Add transaction', exact: true }).count(), 0);

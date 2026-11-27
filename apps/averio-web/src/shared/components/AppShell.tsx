@@ -136,7 +136,7 @@ export function AppShell({ children }: PropsWithChildren) {
             </dialog>
 
             <div className="av-shell">
-                <header className="av-topbar max-[360px]:gap-1! max-[360px]:px-2!">
+                <header className="av-topbar max-[360px]:gap-0! max-[360px]:px-1!">
                     <button type="button" className="av-icon-btn av-mobile-menu"
                         aria-label={t('concept.openMenu')} aria-expanded={menuOpen}
                         onClick={() => setMenuOpen(true)}>
@@ -173,13 +173,13 @@ export function AppShell({ children }: PropsWithChildren) {
                                 <small>{t('concept.household')}</small>
                             </div>
                         </div>
-                        <button type="button" className="av-btn max-[360px]:size-11 max-[360px]:p-0!"
+                        <button type="button" className="av-btn max-[480px]:size-11 max-[480px]:p-0!"
                             aria-label={t(logoutMutation.isPending ? 'common.actions.signingOut' : 'common.actions.signOut')}
                             disabled={logoutMutation.isPending}
                             onClick={() => logoutMutation.mutate()}>
-                            <span className="max-[360px]:hidden">{t(logoutMutation.isPending
+                            <span className="max-[480px]:hidden">{t(logoutMutation.isPending
                                 ? 'common.actions.signingOut' : 'common.actions.signOut')}</span>
-                            <span className="hidden max-[360px]:block"><ConceptIcon name="logout" /></span>
+                            <span className="hidden max-[480px]:block"><ConceptIcon name="logout" /></span>
                         </button>
                     </div>
                 </header>
