@@ -28,6 +28,8 @@ import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { createLabel, getTransaction } from '../api/transactionApi';
 import { transactionQueries, transactionQueryKeys } from '../api/transactionQueries';
 import { CategoryPicker } from './CategoryPicker';
+import { CategoryEditor } from '../../categories/CategoryEditor';
+import { useCategoryMutations } from '../../categories/categoryQueries';
 import { resolveItemCategory } from '../resolveItemCategory';
 import type {
     LabelScope,
@@ -214,6 +216,9 @@ export function TransactionEditor({
     const [newLabelOpen, setNewLabelOpen] = useState(false);
     const [error, setError] = useState('');
     const [allowanceItemKey, setAllowanceItemKey] = useState<string | null>(null);
+    const [categoryItemKey, setCategoryItemKey] = useState<string | null>(null);
+    const [categoryEditorRevision, setCategoryEditorRevision] = useState(0);
+    const categoryMutations = useCategoryMutations(userId, householdId);
 
     const resolvedAccountId = receiptDraft ? (writableAccounts.some(a => a.id === accountId) ? accountId : '') : accountId || writableAccounts[0]?.id || '';
     const account = writableAccounts.find(item => item.id === resolvedAccountId);
@@ -627,6 +632,10 @@ export function TransactionEditor({
                 <p role="alert" className="text-sm text-red-700 dark:text-red-300">{query.error.message}</p>
                 <div><AverioButton disabled={query.isFetching} onClick={() => void query.refetch()}>{t('receipts.retry')}</AverioButton></div>
             </AverioCard>)}
+            {!receiptDraft && categories.isError && <AverioCard className="grid gap-2">
+                <p role="alert" className="text-red-700 dark:text-red-300">{categories.error.message}</p>
+                <div><AverioButton disabled={categories.isFetching} onClick={() => void categories.refetch()}>{t('common.actions.retry')}</AverioButton></div>
+            </AverioCard>}
             {transaction && personalRelation && <div className="rounded-xl border border-emerald-400/30 bg-emerald-50 p-3 dark:bg-emerald-950/30">
                 <p className="mb-2 text-xs font-semibold">{t('personalMoney.relationDetails')}</p>
                 <PersonalMoneyRelationBadge relation={personalRelation} detail />
@@ -711,7 +720,8 @@ export function TransactionEditor({
                     <div className="col-span-2 min-w-0 sm:col-span-1"><span className={receiptDraft ? "mb-[7px] block h-5 text-[13px] font-semibold" : "mb-[7px] block text-[13px] font-semibold sm:hidden"}>{t('transactionManagement.category')}</span>
                         <CategoryPicker categories={categories.data ?? []} value={item.categoryId}
                             fallback={transaction?.items.find(old => old.id === item.key && old.categoryId === item.categoryId)}
-                            disabled={busy || categories.isPending} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })} />
+                            disabled={busy || categories.isPending || categories.isError} label={t('transactionManagement.category')} onChange={categoryId => updateItem(item.key, { categoryId })}
+                            onCreate={kind === 'Refund' ? undefined : () => setCategoryItemKey(item.key)} />
                         {receiptDraft && (() => {
                             const available = availableSuggestions;
                             const supplied = available.find(c => c.id === item.suggestedCategoryId);
@@ -858,6 +868,18 @@ export function TransactionEditor({
         </form>
         </div>
     </AverioDialog>
+    {categoryItemKey && kind !== 'Refund' && <CategoryEditor key={categoryEditorRevision} category={null} categories={categories.data ?? []}
+        transactionKind={kind} busy={categoryMutations.create.isPending} onClose={() => setCategoryItemKey(null)}
+        onSave={async request => {
+            const created = await categoryMutations.create.mutateAsync(request);
+            updateItem(categoryItemKey, { categoryId: created.id });
+            setCategoryItemKey(null);
+        }}
+        onReload={async () => {
+            const result = await categories.refetch();
+            if (result.isError) throw result.error;
+            setCategoryEditorRevision(value => value + 1);
+        }} />}
     {confirmClose && <AverioDialog open title={t('receipts.unsavedTitle')} closeLabel={t('common.actions.close')} onDismiss={() => setConfirmClose(false)}
         actions={<><AverioButton onClick={() => setConfirmClose(false)}>{t('receipts.keepEditing')}</AverioButton><AverioButton variant="danger" onClick={onCancel}>{t('receipts.discardEdits')}</AverioButton></>}>
         <p>{t('receipts.unsavedHelp')}</p>

@@ -38,6 +38,8 @@ separate owner, new partner and existing member browser contexts. It verifies:
 - Simultaneous repeated acceptances create no duplicate account copies.
 - EN/DE/HU household and balance states on desktop/light and mobile/dark, without
   overflow, and same-tab logout/login with a different identity.
+- Category creation from transaction create/edit, including draft preservation,
+  failure/retry, parent selection, and income/expense type defaults.
 
 The existing PostgreSQL suite additionally verifies concurrent first acceptance,
 stale departure/account versions, owner succession, preserved source cash flow,
