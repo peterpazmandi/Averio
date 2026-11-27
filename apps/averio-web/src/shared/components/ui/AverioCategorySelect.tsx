@@ -18,9 +18,10 @@ interface Props {
     label: string;
     noneLabel?: string;
     fallback?: { categoryName: string; categoryIcon: string };
+    onCreate?: () => void;
 }
 
-export function AverioCategorySelect({ categories, contextCategories = categories, value, onChange, disabled = false, label, noneLabel, fallback }: Props) {
+export function AverioCategorySelect({ categories, contextCategories = categories, value, onChange, disabled = false, label, noneLabel, fallback, onCreate }: Props) {
     const { t, i18n } = useTranslation();
     const language = i18n.resolvedLanguage ?? i18n.language;
     const id = useId();
@@ -69,7 +70,10 @@ export function AverioCategorySelect({ categories, contextCategories = categorie
         </AverioButton>
         {open && !disabled && <AverioDialog open title={label} closeLabel={t('categoryManagement.cancel')}
             initialFocusRef={searchRef} onDismiss={close}
-            actions={<AverioButton onClick={close}>{t('categoryManagement.cancel')}</AverioButton>}>
+            actions={<>
+                <AverioButton onClick={close}>{t('categoryManagement.cancel')}</AverioButton>
+                {onCreate && <AverioButton variant="primary" onClick={() => { close(); onCreate(); }}>{t('categoryManagement.create')}</AverioButton>}
+            </>}>
             <div className="grid gap-4">
                 <AverioInput ref={searchRef} type="search" aria-label={t('transactionManagement.categorySearch')}
                     value={search} onChange={e => setSearch(e.target.value)} placeholder={t('transactionManagement.categorySearchPlaceholder')} />
