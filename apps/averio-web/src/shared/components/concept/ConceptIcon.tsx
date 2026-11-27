@@ -20,6 +20,8 @@ const paths = {
     household: 'M3 11 12 4l9 7M5 10v10h14V10M9 20v-6h6v6',
     profile: 'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21a8 8 0 0 1 16 0',
     menu: 'M4 7h16M4 12h16M4 17h16',
+    more: 'M5 12h.01M12 12h.01M19 12h.01',
+    logout: 'M10 4H4v16h6M13 8l4 4-4 4M8 12h9',
     close: 'm6 6 12 12M6 18 18 6',
     plus: 'M12 5v14M5 12h14',
     theme: 'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1m12 12 1 1M19 5l-1 1M6 18l-1 1',

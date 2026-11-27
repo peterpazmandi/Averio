@@ -73,6 +73,7 @@ export const de = {
         },
     },
     preferences: {
+        title: 'Anzeige und Sprache',
         language: {
             label: 'Sprache',
         },

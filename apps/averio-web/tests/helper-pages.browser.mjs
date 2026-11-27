@@ -37,8 +37,10 @@ try {
             await page.goto(origin + '/app' + (slug ? '/' + slug : ''));
             const trigger = page.locator('button[popovertarget]').first();
             await trigger.waitFor();
-            const heading = trigger.locator('xpath=ancestor::*[self::h2 or self::h3 or self::h4][1]');
-            const headingName = await heading.getAttribute('aria-label');
+            const heading = slug === 'transactions'
+                ? page.locator('.av-topbar-title h1')
+                : trigger.locator('xpath=ancestor::*[self::h2 or self::h3 or self::h4][1]');
+            const headingName = slug === 'transactions' ? (await heading.textContent()).trim() : await heading.getAttribute('aria-label');
             const headingLevel = await heading.evaluate(element => Number(element.tagName.slice(1)));
             assert.ok(headingName, slug + ' keeps a dedicated heading name');
             await page.getByRole('heading', { name: headingName, level: headingLevel, exact: true }).waitFor();

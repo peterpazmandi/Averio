@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
 import { AverioDialog } from '../../../shared/components/ui/AverioDialog';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
+import { InfoPopover } from '../../../shared/components/ui/InfoPopover';
 import { ApiError } from '../../../shared/api/ApiError';
 import type { SavedTransactionViewResponse } from '../../../shared/api/generated';
 import { transactionSearch, type TransactionSearch } from '../transactionSearch';
@@ -11,8 +12,9 @@ import { savedFilters } from '../transactionDates';
 import { savedViewQueries, savedViewsApi } from '../api/savedViewQueries';
 
 type Action = 'save' | 'rename' | 'update' | 'delete';
-export function SavedViews({ userId, householdId, state, invalid, onApply }: {
+export function SavedViews({ userId, householdId, state, invalid, onApply, controlsVisible = true }: {
     userId: string; householdId: string; state: TransactionSearch; invalid: boolean;
+    controlsVisible?: boolean;
     onApply: (filters: Partial<TransactionSearch>) => Promise<void>;
 }) {
     const { t } = useTranslation();
@@ -63,22 +65,30 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
             await onApply({ ...transactionSearch({ ...view.filters }), dates: undefined, transaction: undefined, create: undefined, createKind: undefined });
         });
     };
-    return <section className="my-3 min-w-0" aria-label={t('savedViews.heading')}>
-        <div className="flex flex-wrap items-center gap-2">
+    return <section className={controlsVisible || query.isError || modified || (selected && !selected.available) || notice ? 'my-3 min-w-0' : 'min-w-0'} aria-label={t('savedViews.heading')}>
+        <div className={controlsVisible ? 'grid gap-2' : 'hidden'}>
+            <div className="flex items-center gap-1">
+                <span className="text-sm font-semibold">{t('savedViews.heading')}</span>
+                <InfoPopover label={t('savedViews.heading')}>{t('savedViews.help')}</InfoPopover>
+                <span className="text-xs text-slate-600 dark:text-slate-300">{t('savedViews.privateStatus')}</span>
+            </div>
             {query.isPending && <span role="status" className="text-xs">{t('common.status.loading')}</span>}
-            {query.data?.slice(0, 4).map(view => <button key={view.id} type="button" title={view.name}
-                aria-pressed={selectedId === view.id && !modified} onClick={() => apply(view.id)}
-                className="min-h-9 max-w-48 truncate rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:border-emerald-500 focus-visible:outline-2 focus-visible:outline-emerald-500 aria-pressed:border-emerald-500 aria-pressed:bg-emerald-50 aria-pressed:text-emerald-800 dark:border-slate-700 dark:text-slate-300 dark:aria-pressed:bg-emerald-950 dark:aria-pressed:text-emerald-200">{view.name}</button>)}
-            <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
-            {!!query.data?.length && <AverioButton disabled={isApplying} onClick={() => { setManagedId(selectedId); setManaging(true); }}>{t('savedViews.manage')}</AverioButton>}
-            {modified && <span role="status" className="text-xs text-amber-700 dark:text-amber-300">{selected?.name} · {t('savedViews.modified')}</span>}
+            <AverioSelect aria-label={t('savedViews.heading')} value={selectedId} disabled={query.isPending || query.isError || isApplying}
+                onChange={event => { if (event.target.value) apply(event.target.value); else setSelectedId(''); }}>
+                <option value="">{t('savedViews.choose')}</option>
+                {query.data?.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
+            </AverioSelect>
+            <div className="flex flex-wrap gap-2">
+                <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
+                {!!query.data?.length && <AverioButton disabled={isApplying} onClick={() => { setManagedId(selectedId); setManaging(true); }}>{t('savedViews.manage')}</AverioButton>}
+            </div>
         </div>
+        {modified && <span role="status" className="text-xs text-amber-700 dark:text-amber-300">{selected?.name} · {t('savedViews.modified')}</span>}
         {query.isError && <div role="alert">{t('savedViews.loadError')} <AverioButton onClick={() => { void query.refetch(); }}>{t('common.actions.retry')}</AverioButton></div>}
         {selected && !selected.available && <p role="alert" className="mt-2 text-sm text-amber-800 dark:text-amber-200">{t('savedViews.unavailable')}</p>}
         {notice && <p role="status" className="mt-2 text-xs">{notice}</p>}
         {managing && <AverioDialog open title={t('savedViews.manage')} closeLabel={t('common.actions.close')}
             onDismiss={() => setManaging(false)} actions={<AverioButton onClick={() => setManaging(false)}>{t('common.actions.done')}</AverioButton>}>
-            <p className="mb-4 text-sm">{t('savedViews.help')}</p>
             <AverioField>{t('savedViews.heading')}<AverioSelect aria-label={t('savedViews.heading')} value={managed?.id ?? ''} onChange={event => setManagedId(event.target.value)}>
                 <option value="">{t('savedViews.choose')}</option>
                 {query.data?.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
@@ -95,7 +105,6 @@ export function SavedViews({ userId, householdId, state, invalid, onApply }: {
                 <AverioButton disabled={mutation.isPending} onClick={() => setDialog(null)}>{t('common.actions.cancel')}</AverioButton>
                 <AverioButton form="saved-view-form" type="submit" variant={dialog.action === 'delete' ? 'danger' : 'primary'} disabled={mutation.isPending || (dialog.action !== 'delete' && !name.trim())}>{t('savedViews.' + dialog.action)}</AverioButton>
             </>}>
-            <p className="mb-4 text-xs">{t('savedViews.help')}</p>
             <form id="saved-view-form" onSubmit={event => { event.preventDefault(); if (!mutation.isPending) mutation.mutate(); }} className="space-y-4">
                 {dialog.action === 'delete' ? <p>{t('savedViews.confirmDelete', { name: dialog.view?.name })}</p> : dialog.action === 'update' ? <p>{t('savedViews.confirmUpdate')}</p> :
                     <AverioField>{t('savedViews.name')}<AverioInput autoFocus required maxLength={80} value={name} onChange={event => setName(event.target.value)} disabled={mutation.isPending} /></AverioField>}

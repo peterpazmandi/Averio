@@ -73,6 +73,7 @@ export const en = {
         },
     },
     preferences: {
+        title: 'Display and language',
         language: {
             label: 'Language',
         },

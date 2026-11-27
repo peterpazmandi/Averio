@@ -73,6 +73,7 @@ export const hu = {
         },
     },
     preferences: {
+        title: 'Nyelv és megjelenés',
         language: {
             label: 'Nyelv',
         },
