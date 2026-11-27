@@ -571,7 +571,7 @@ export function TransactionEditor({
                 <span className={difference === '0' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200'}>{t(difference === '0' ? 'receipts.reconciled' : 'receipts.ux.checkTotal')}</span>
                 {!resolvedAccountId && <span className="block">{t('receipts.ux.chooseAccount')}</span>}
             </div>}
-            {!receiptDraft && <div className="mr-auto min-w-0 text-sm" role="status">
+            {!receiptDraft && <div className="mr-auto hidden min-w-0 text-sm min-[601px]:block" role="status">
                 <span className="block">{t(refundProtected ? 'itemRefunds.net' : recurring ? 'recurring.amount' : 'transactionManagement.total')}</span>
                 <strong className="block text-lg">{currency ? formatDecimalAmount(subtractDecimalAmounts(total, refundedTotal), currency, language) : total}</strong>
             </div>}
@@ -692,6 +692,8 @@ export function TransactionEditor({
                         <div className="min-w-0">
                             <p id={item.key + '-heading'} className="break-words font-semibold"><span aria-hidden="true" className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{index + 1}</span>{item.description || t('transactionManagement.itemDescription')}</p>
                             <p className="text-xs">{item.categoryId === uncategorizedId ? t('receipts.ux.checkCategory') : getCategoryDisplayName((categories.data ?? []).find(c => c.id === item.categoryId) ?? { name: '', systemKey: null }, t) || t('receipts.ux.checkCategory')}</p>
+                            {!expanded && canManagePersonalMoney(item) && (amountToScaled(personalAmount(item)) ?? 0n) > 0n &&
+                                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">{t('personalMoney.itemChargeAmount')}: {formatDecimalAmount(scaledToAmount(amountToScaled(personalAmount(item)) ?? 0n), currency, language)}</p>}
                             {item.discountAmount && <p className="text-xs text-emerald-700 dark:text-emerald-300">{t('receipts.ux.netCalculation', { gross: item.originalAmount, discount: item.discountAmount.replace(/^-/, ''), net: sumDecimalAmounts([item.originalAmount || '0', item.discountAmount]) })}</p>}
                             {(!validReceiptAmount(item.amount) || !item.description.trim()) && <p className="text-sm text-amber-800 dark:text-amber-200">{t('receipts.ux.checkItem')}</p>}
                         </div>
@@ -736,13 +738,14 @@ export function TransactionEditor({
                                 onChange={e => updateItem(item.key, { amount: e.target.value })} placeholder="0.00" />
                             {canManagePersonalMoney(item) && <AverioButton size="icon" disabled={busy || paymentProtected} aria-haspopup="dialog"
                                 aria-label={t('personalMoney.itemCharge') + ' · ' + (item.description || index + 1)}
+                                aria-describedby={item.key + '-personal-amount'}
                                 className={(amountToScaled(personalAmount(item)) ?? 0n) > 0n
                                     ? 'shrink-0 border-emerald-500! bg-emerald-100! text-emerald-800! dark:bg-emerald-950! dark:text-emerald-200!'
                                     : 'shrink-0'}
                                 onClick={() => setAllowanceItemKey(item.key)}><ConceptIcon name="savings" /></AverioButton>}
                         </div>
-                        {!receiptDraft && canManagePersonalMoney(item) && (amountToScaled(personalAmount(item)) ?? 0n) > 0n &&
-                            <span className="mt-1 block text-xs font-semibold text-emerald-800 dark:text-emerald-200">{t('personalMoney.itemChargeAmount')}: {formatDecimalAmount(scaledToAmount(amountToScaled(personalAmount(item)) ?? 0n), currency, language)}</span>}
+                        {canManagePersonalMoney(item) &&
+                            <span id={item.key + '-personal-amount'} className={(amountToScaled(personalAmount(item)) ?? 0n) > 0n ? 'mt-1 block text-xs font-semibold text-emerald-800 dark:text-emerald-200' : 'sr-only'}>{t('personalMoney.itemChargeAmount')}: {formatDecimalAmount(scaledToAmount(amountToScaled(personalAmount(item)) ?? 0n), currency, language)}</span>}
                         {receiptDraft && !validReceiptAmount(item.amount) && <p id={item.key + '-amount-error'} className="mt-1 text-xs text-red-700 dark:text-red-300">{t('receipts.invalidItemAmount')}</p>}
                     </div>
                     <div className={receiptDraft ? "flex items-end justify-end sm:pt-[27px]" : "flex items-end justify-end"}><AverioButton size="icon" className="text-red-700! hover:bg-red-50! dark:text-red-400! dark:hover:bg-red-950/40!" title={t('transactionManagement.removeItem')} disabled={busy || paymentProtected || resolvedItems.length === 1 || !!transaction?.items.find(i => i.id === item.key)?.hasRefundHistory} onClick={() => removeItem(item.key)}

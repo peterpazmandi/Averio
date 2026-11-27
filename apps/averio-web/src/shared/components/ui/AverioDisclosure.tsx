@@ -13,7 +13,7 @@ export function AverioDisclosure({ title, summary, help, defaultOpen = false, ch
             <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}
                 className={'flex min-h-11 w-full justify-between gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-emerald-500 ' + (help ? 'col-span-3 col-start-1 row-start-1 items-start py-3' : 'items-center')}>
                 <span className={'min-w-0 ' + (help ? 'max-w-[calc(100%-60px)]' : '')}><span className="block font-semibold">{title}</span>
-                    {summary && <span className={'block text-xs break-words text-slate-600 dark:text-slate-300 ' + (help ? 'mt-4' : 'truncate')}>{summary}</span>}</span>
+                    {summary && <span className={'text-xs break-words text-slate-600 dark:text-slate-300 ' + (help ? 'mt-4 line-clamp-2' : 'block truncate')}>{summary}</span>}</span>
                 <span aria-hidden="true">{open ? '−' : '+'}</span>
             </button>
             {help && <span className="z-1 col-start-2 row-start-1">{help}</span>}

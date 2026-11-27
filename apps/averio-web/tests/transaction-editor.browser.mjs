@@ -85,6 +85,8 @@ try {
         await page.locator('input[inputmode="decimal"]').first().fill('12.50');
         const checkbox = page.getByRole('checkbox', { name: copy.itemCharge, exact: true });
         const allowanceButton = page.getByRole('button', { name: copy.itemCharge + ' · Mixed receipt', exact: true });
+        const allocationDescription = () => allowanceButton.evaluate(button => document.getElementById(button.getAttribute('aria-describedby')).textContent);
+        assert.ok((await allocationDescription()).includes(copy.itemChargeAmount), 'Unallocated items expose their current amount.');
         assert.equal(await checkbox.count(), 0, 'Allowance options take no extra form row while closed.');
         await allowanceButton.click();
         await checkbox.waitFor();
@@ -94,6 +96,7 @@ try {
         await page.screenshot({ path: path.join(artifacts, 'allowance-popup-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await page.keyboard.press('Escape');
         assert.equal(await allowanceButton.evaluate(button => button === document.activeElement), true, 'Closing allowance settings restores keyboard focus.');
+        assert.ok((await allocationDescription()).includes('5'), 'The accessible description follows the allocation.');
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
         await page.waitForFunction(() => !!document.body.dataset.saved);
         const saved = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
@@ -115,12 +118,34 @@ try {
         await heading.click();
         await page.locator('textarea').fill('Keep my note');
         await page.getByRole('button', { name: 'Travel', exact: true }).click();
+        if (language === 'en' && !dark && width === 320) {
+            const longNote = 'long notes '.repeat(45).trimEnd();
+            await page.locator('textarea').fill(longNote);
+            await heading.click({ position: { x: 5, y: 8 } });
+            const summary = notes.locator('.line-clamp-2');
+            assert.ok((await summary.boundingBox()).height <= 40, 'Long notes must not dominate the collapsed section.');
+            await page.locator('button[type="submit"][form="transaction-editor"]').click();
+            await page.waitForFunction(expected => JSON.parse(document.body.dataset.saved).note === expected, longNote);
+            await heading.click({ position: { x: 5, y: 8 } });
+            assert.equal(await page.locator('textarea').inputValue(), longNote, 'The full note remains editable.');
+            await page.locator('textarea').fill('Keep my note');
+        }
         await heading.click();
         assert.ok((await notes.textContent()).includes('Keep my note'));
         assert.ok((await notes.textContent()).includes('Travel'));
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
         await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).note === 'Keep my note');
         assert.deepEqual((await page.evaluate(() => JSON.parse(document.body.dataset.saved))).labelIds, ['label']);
+        if (language === 'hu' && !dark && width === 320) {
+            await page.setViewportSize({ width: 320, height: 480 });
+            const editor = page.getByRole('dialog');
+            assert.equal(await editor.locator('footer [role="status"]').isVisible(), false);
+            assert.equal(await editor.locator('header + div').getByText(transactionCopy.total, { exact: true }).isVisible(), true,
+                'The item total remains available in the form.');
+            const saveBox = await editor.locator('footer button[type="submit"]').boundingBox();
+            assert.ok(saveBox.y + saveBox.height <= 480, 'Create action remains visible on a short screen.');
+            await page.setViewportSize({ width, height: 900 });
+        }
         await page.screenshot({ path: path.join(artifacts, 'editor-compact-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await recurrence.locator('span.font-semibold').first().click();
         // Recurrence and reimbursement are independent; select by label, never display order.
@@ -163,6 +188,19 @@ try {
                     categoryName: 'Other', categoryIcon: 'receipt', amount: '12.50' }] };
         });
         await page.reload();
+        if (language === 'hu' && !dark && width === 320) {
+            await page.setViewportSize({ width: 320, height: 480 });
+            const editor = page.getByRole('dialog', { name: transactionCopy.edit, exact: true });
+            const footer = editor.locator('footer');
+            assert.equal(await footer.locator('[role="status"]').isVisible(), false, 'The duplicate total must not take mobile footer space.');
+            assert.ok((await editor.locator('header + div').boundingBox()).height >= 180, 'The form remains usable on a short mobile screen.');
+            const saveBox = await footer.locator('button[type="submit"]').boundingBox();
+            assert.ok(saveBox.y + saveBox.height <= 480, `Save remains visible (bottom ${saveBox.y + saveBox.height}).`);
+            await page.setViewportSize({ width, height: 900 });
+        }
+        if (width === 1440) {
+            assert.equal(await page.locator('footer [role="status"]').isVisible(), true, 'Desktop keeps its footer total.');
+        }
         const existingAllowanceButton = page.getByRole('button', { name: copy.itemCharge + ' · Existing item', exact: true });
         await existingAllowanceButton.click();
         await page.waitForFunction(() => [...document.querySelectorAll('input[inputmode="decimal"]')].some(i => i.value === '0.2'));
