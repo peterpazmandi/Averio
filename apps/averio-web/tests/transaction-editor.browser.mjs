@@ -47,18 +47,46 @@ try {
                 entries: editing ? ['-0.3', '0.1'].map((amount, i) => ({ id: 'entry-' + i, amount,
                     kind: 'SharedCharge', transactionId: 'receipt', transactionItemId: legacy ? null : 'stable-item' })) : [], charges: [] });
             if (pathname.endsWith('/categories')) return json([{ id: 'category', name: 'Other', systemKey: 'uncategorized', kind: 'Expense', isArchived: false, children: [] }]);
+            if (pathname.endsWith('/labels')) return json([{ id: 'label', name: 'Travel', scope: 'Household' }]);
             return json([]);
         });
         await page.goto(url);
         const disclosures = page.locator('button[aria-controls][aria-expanded]:not([popovertarget])');
-        assert.equal(await disclosures.count(), 3);
+        assert.equal(await disclosures.count(), 4);
         for (const d of await disclosures.all()) assert.equal(await d.getAttribute('aria-expanded'), 'false');
+        const notes = disclosures.filter({ hasText: transactionCopy.notesAndLabels });
+        const recurrence = disclosures.filter({ hasText: recurringCopy.makeRecurring });
+        const reimbursement = disclosures.filter({ hasText: reimbursementCopy.settings });
+        const notesHelp = notes.locator('..').locator('[popovertarget]');
+        const heading = notes.locator('span.font-semibold');
+        const checkHelpPlacement = async () => {
+            const gap = await heading.evaluate(element => {
+                const text = document.createRange();
+                text.selectNodeContents(element);
+                const help = element.closest('button').parentElement.querySelector('button[popovertarget]');
+                return help.getBoundingClientRect().left - text.getBoundingClientRect().right;
+            });
+            assert.ok(gap >= -0.5 && gap <= 8,
+                `Help must be beside the disclosure label without overlapping it (${language}/${width}, gap ${gap}px).`);
+        };
+        await checkHelpPlacement();
+        if (language === 'hu' && width === 320) {
+            const font = await page.addStyleTag({ content: 'body { font-family: Georgia, serif !important; }' });
+            await checkHelpPlacement();
+            await font.evaluate(element => element.remove());
+        }
+        await notesHelp.click();
+        assert.equal(await notes.getAttribute('aria-expanded'), 'false', 'Opening help does not open the disclosure.');
+        await page.keyboard.press('Escape');
+        assert.equal(await notesHelp.evaluate(button => button === document.activeElement), true);
         const account = page.locator('select').filter({ has: page.locator('option[value="shared"]') });
         await account.selectOption('shared');
         await page.locator('input[required][maxlength="160"]').fill('Mixed receipt');
         await page.locator('input[inputmode="decimal"]').first().fill('12.50');
         const checkbox = page.getByRole('checkbox', { name: copy.itemCharge, exact: true });
         const allowanceButton = page.getByRole('button', { name: copy.itemCharge + ' · Mixed receipt', exact: true });
+        const allocationDescription = () => allowanceButton.evaluate(button => document.getElementById(button.getAttribute('aria-describedby')).textContent);
+        assert.ok((await allocationDescription()).includes(copy.itemChargeAmount), 'Unallocated items expose their current amount.');
         assert.equal(await checkbox.count(), 0, 'Allowance options take no extra form row while closed.');
         await allowanceButton.click();
         await checkbox.waitFor();
@@ -68,6 +96,7 @@ try {
         await page.screenshot({ path: path.join(artifacts, 'allowance-popup-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         await page.keyboard.press('Escape');
         assert.equal(await allowanceButton.evaluate(button => button === document.activeElement), true, 'Closing allowance settings restores keyboard focus.');
+        assert.ok((await allocationDescription()).includes('5'), 'The accessible description follows the allocation.');
         await page.locator('button[type="submit"][form="transaction-editor"]').click();
         await page.waitForFunction(() => !!document.body.dataset.saved);
         const saved = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
@@ -86,18 +115,66 @@ try {
         const privateCharge = await page.evaluate(() => JSON.parse(document.body.dataset.saved));
         assert.equal(privateCharge.items[0].personalMoneyAmount, '2.00');
         assert.equal(privateCharge.visibility, 'Private');
-        await disclosures.nth(2).click();
+        await heading.click();
         await page.locator('textarea').fill('Keep my note');
-        await disclosures.nth(2).click();
-        assert.ok((await disclosures.nth(2).textContent()).includes('Keep my note'));
+        await page.getByRole('button', { name: 'Travel', exact: true }).click();
+        if (language === 'en' && !dark && width === 320) {
+            const longNote = 'long notes '.repeat(45).trimEnd();
+            await page.locator('textarea').fill(longNote);
+            await heading.click({ position: { x: 5, y: 8 } });
+            const summary = notes.locator('.line-clamp-2');
+            assert.ok((await summary.boundingBox()).height <= 40, 'Long notes must not dominate the collapsed section.');
+            await page.locator('button[type="submit"][form="transaction-editor"]').click();
+            await page.waitForFunction(expected => JSON.parse(document.body.dataset.saved).note === expected, longNote);
+            await heading.click({ position: { x: 5, y: 8 } });
+            assert.equal(await page.locator('textarea').inputValue(), longNote, 'The full note remains editable.');
+            await page.locator('textarea').fill('Keep my note');
+        }
+        await heading.click();
+        assert.ok((await notes.textContent()).includes('Keep my note'));
+        assert.ok((await notes.textContent()).includes('Travel'));
+        await page.locator('button[type="submit"][form="transaction-editor"]').click();
+        await page.waitForFunction(() => JSON.parse(document.body.dataset.saved).note === 'Keep my note');
+        assert.deepEqual((await page.evaluate(() => JSON.parse(document.body.dataset.saved))).labelIds, ['label']);
+        if (language === 'hu' && !dark && width === 320) {
+            await page.setViewportSize({ width: 320, height: 480 });
+            const editor = page.getByRole('dialog');
+            assert.equal(await editor.locator('footer [role="status"]').isVisible(), false);
+            assert.equal(await editor.locator('header + div').getByText(transactionCopy.total, { exact: true }).isVisible(), true,
+                'The item total remains available in the form.');
+            const saveBox = await editor.locator('footer button[type="submit"]').boundingBox();
+            assert.ok(saveBox.y + saveBox.height <= 480, 'Create action remains visible on a short screen.');
+            await page.setViewportSize({ width, height: 900 });
+        }
         await page.screenshot({ path: path.join(artifacts, 'editor-compact-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
-        await disclosures.nth(0).click();
+        await recurrence.locator('span.font-semibold').first().click();
         // Recurrence and reimbursement are independent; select by label, never display order.
         await page.getByRole('checkbox', { name: recurringCopy.makeRecurring, exact: true }).check();
         await allowanceButton.waitFor({ state: 'hidden' });
+        await reimbursement.locator('span.font-semibold').first().click();
         assert.equal(await page.getByRole('checkbox', { name: reimbursementCopy.enable, exact: true }).isChecked(), false, 'Choosing recurrence must not enable reimbursement tracking.');
         assert.equal(await checkbox.count(), 0, 'Recurring templates must not offer posted-item wallet charges.');
         assert.equal(await allowanceButton.count(), 0);
+        if (language === 'en' && !dark && width === 320) {
+            await page.getByRole('checkbox', { name: reimbursementCopy.enable, exact: true }).check();
+            await recurrence.locator('span.font-semibold').first().click();
+            await reimbursement.locator('span.font-semibold').first().click();
+            await page.locator('button[type="submit"][form="transaction-editor"]').click();
+            assert.equal(await recurrence.getAttribute('aria-expanded'), 'true', 'Invalid collapsed schedule reopens.');
+            assert.equal(await reimbursement.getAttribute('aria-expanded'), 'true', 'Invalid collapsed reimbursement reopens.');
+            assert.equal(await page.getByRole('textbox', { name: recurringCopy.name, exact: true }).evaluate(input => input === document.activeElement), true, 'Validation focuses the first invalid field.');
+            await page.getByLabel(recurringCopy.name, { exact: true }).fill('Monthly purchase');
+            await page.getByRole('textbox', { name: reimbursementCopy.provider, exact: true }).fill('Employer');
+            await page.getByLabel(reimbursementCopy.estimate + ' · EUR', { exact: true }).fill('5');
+            await recurrence.locator('span.font-semibold').first().click();
+            await reimbursement.locator('span.font-semibold').first().click();
+            await page.locator('button[type="submit"][form="transaction-editor"]').click();
+            await page.waitForFunction(() => !!document.body.dataset.savedRecurring);
+            const schedule = await page.evaluate(() => JSON.parse(document.body.dataset.savedRecurring));
+            assert.equal(schedule.name, 'Monthly purchase');
+            assert.equal(schedule.reimbursement.provider, 'Employer');
+            assert.equal(schedule.reimbursement.value, '5');
+        }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.screenshot({ path: path.join(artifacts, 'editor-' + language + '-' + dark + '-' + width + '.png'), fullPage: true });
         editing = true;
@@ -111,6 +188,19 @@ try {
                     categoryName: 'Other', categoryIcon: 'receipt', amount: '12.50' }] };
         });
         await page.reload();
+        if (language === 'hu' && !dark && width === 320) {
+            await page.setViewportSize({ width: 320, height: 480 });
+            const editor = page.getByRole('dialog', { name: transactionCopy.edit, exact: true });
+            const footer = editor.locator('footer');
+            assert.equal(await footer.locator('[role="status"]').isVisible(), false, 'The duplicate total must not take mobile footer space.');
+            assert.ok((await editor.locator('header + div').boundingBox()).height >= 180, 'The form remains usable on a short mobile screen.');
+            const saveBox = await footer.locator('button[type="submit"]').boundingBox();
+            assert.ok(saveBox.y + saveBox.height <= 480, `Save remains visible (bottom ${saveBox.y + saveBox.height}).`);
+            await page.setViewportSize({ width, height: 900 });
+        }
+        if (width === 1440) {
+            assert.equal(await page.locator('footer [role="status"]').isVisible(), true, 'Desktop keeps its footer total.');
+        }
         const existingAllowanceButton = page.getByRole('button', { name: copy.itemCharge + ' · Existing item', exact: true });
         await existingAllowanceButton.click();
         await page.waitForFunction(() => [...document.querySelectorAll('input[inputmode="decimal"]')].some(i => i.value === '0.2'));

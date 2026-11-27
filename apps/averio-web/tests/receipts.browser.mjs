@@ -183,11 +183,21 @@ try {
         await account.selectOption('eur');
         await page.getByText(copy.labelsChooseAccount, { exact: true }).waitFor({ state: 'hidden' });
         if (hasWallet) {
-            await page.getByRole('button', { name: moneyCopy.itemCharge + ' · Food Apples', exact: true }).click();
+            const itemButton = page.getByRole('button', { name: moneyCopy.itemCharge + ' · Food Apples', exact: true });
+            const item = page.locator('[data-receipt-item]').first();
+            const description = async () => itemButton.evaluate(button => document.getElementById(button.getAttribute('aria-describedby')).textContent);
+            assert.equal(await description(), moneyCopy.itemChargeAmount + ': €0.00');
+            await itemButton.click();
             const allocation = page.getByRole('dialog', { name: moneyCopy.itemAllocationTitle, exact: true });
             await allocation.getByRole('checkbox', { name: moneyCopy.itemCharge, exact: true }).check();
             await allocation.locator('input[inputmode="decimal"]').fill('0000,5000');
             await page.keyboard.press('Escape');
+            assert.equal(await description(), moneyCopy.itemChargeAmount + ': €0.50');
+            assert.equal(await item.getByText(moneyCopy.itemChargeAmount + ': €0.50', { exact: true }).isVisible(), true);
+            await item.getByRole('button', { name: copy.ux.done, exact: true }).click();
+            assert.equal(await item.getByText(moneyCopy.itemChargeAmount + ': €0.50', { exact: true }).isVisible(), true,
+                'The allocation remains visible when receipt item details are collapsed.');
+            await item.getByRole('button', { name: copy.ux.edit, exact: true }).click();
         }
         await page.getByRole('heading', { name: copy.confirmStep, exact: true }).scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(artifacts, `confirm-${language}-${dark}-${width}.png`), fullPage: true });

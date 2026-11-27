@@ -104,7 +104,9 @@ The transaction slice includes:
 - synchronous Account and Category aggregates at Day, Month, and Year grain
 - currency-separated cash-flow and category-statistics read models
 - account and dashboard balances derived from posted requester-visible entries
-- shared transaction editor entry points from the header, dashboard, and list
+- shared transaction editor entry points from the header, dashboard, and list,
+  with compact item-level Personal Money controls, visible privacy selection,
+  and expandable notes, labels, activity, recurrence and reimbursement details
 - a searchable category picker with parent context and responsive statistics UI
 
 Aggregate writes participate in the same PostgreSQL transaction as ledger
