@@ -2,6 +2,18 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 
 export async function verifySavedViews({ fixture: f, outsider, password, session, api, ok, poll, artifacts, localeFile }) {
+    const filterButton = page => page.getByRole('button', { name: /^Filters,/ });
+    const openFilters = async page => {
+        const button = filterButton(page);
+        if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
+    };
+    const viewSelector = page => page.getByRole('combobox', { name: 'Saved views', exact: true });
+    const selectView = async (page, name) => {
+        const selector = viewSelector(page);
+        await poll(async () => await selector.isEnabled() && await selector.locator('option').evaluateAll(
+            (options, label) => options.some(option => option.textContent === label), name), `saved view ${name} loaded`);
+        await selector.selectOption({ label: name });
+    };
     const page = await session(f.email, password);
     await page.clock.setFixedTime(new Date(f.date + 'T12:00:00Z'));
     const prefix = `/households/${f.householdId}`;
@@ -22,11 +34,12 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     assert.equal(both.items.length, 1); assert.equal(both.items[0].id, target.id); assert.equal(both.hasMore, false);
     const link = 'http://localhost:5173/app/transactions?period=this-month&kind=Expense';
     await page.goto(link);
-    const filterButton = page.locator('button.av-filter-toggle');
-    const toolbarTop = (await filterButton.boundingBox()).y;
-    await filterButton.click();
-    await page.getByRole('dialog', { name: 'Filters', exact: true }).waitFor();
-    assert.equal((await filterButton.boundingBox()).y, toolbarTop, 'opening filters must not move the page');
+    const toggle = filterButton(page);
+    const toolbarTop = (await toggle.boundingBox()).y;
+    await toggle.click();
+    await page.getByRole('combobox', { name: 'Date range', exact: true }).waitFor();
+    assert.equal((await toggle.boundingBox()).y, toolbarTop, 'opening filters must not move the page');
+    await page.getByText('More filters', { exact: true }).click();
     // URL navigation commits controlled checkbox state asynchronously.
     for (const name of ['Essentials', 'Reviewed']) {
         const checkbox = page.getByRole('checkbox', { name, exact: true });
@@ -34,10 +47,11 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
         await poll(() => checkbox.isChecked(), `${name} label selected`);
     }
     await poll(() => new URL(page.url()).searchParams.get('labels')?.includes(reviewed), 'labels in URL');
-    await page.getByRole('button', { name: 'Show results', exact: true }).click();
-    assert.equal(await filterButton.evaluate(el => el === document.activeElement), true, 'filter dialog restores focus');
+    await toggle.click();
+    assert.equal(await toggle.evaluate(el => el === document.activeElement), true, 'closing filters keeps focus on the toggle');
     await page.getByRole('button').filter({ hasText: 'Saved view target' }).waitFor();
     await page.getByRole('button').filter({ hasText: 'Only one label' }).waitFor({ state: 'hidden' });
+    await openFilters(page);
     await page.getByRole('button', { name: 'Save current view', exact: true }).click();
     let dialog = page.getByRole('dialog', { name: 'Save current view', exact: true });
     await dialog.getByLabel('View name', { exact: true }).fill('Monthly essentials');
@@ -45,12 +59,12 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await dialog.waitFor({ state: 'hidden' });
     let views = await ok(page, endpoint), view = views.find(x => x.name === 'Monthly essentials');
     assert.equal(view.filters.period, 'this-month'); assert.equal(view.filters.from, null); assert.deepEqual([...view.filters.labels].sort(), [essential, reviewed].sort());
-    await page.getByRole('button', { name: /^Filters/ }).click();
-    await page.getByLabel('Date range', { exact: true }).selectOption('previous-3-full-months');
-    assert.equal(new URL(page.url()).searchParams.get('period'), 'previous-3-full-months');
+    await page.getByRole('combobox', { name: 'Date range', exact: true }).selectOption('previous-3-full-months');
+    await poll(() => new URL(page.url()).searchParams.get('period') === 'previous-3-full-months', 'updated date preset in URL');
     assert.equal(new URL(page.url()).searchParams.has('from'), false);
-    await page.getByRole('button', { name: 'Show results', exact: true }).click();
+    await toggle.click();
     await page.getByRole('status').filter({ hasText: 'Modified' }).waitFor();
+    await openFilters(page);
     await page.getByRole('button', { name: 'Manage views', exact: true }).click();
     await page.getByRole('button', { name: 'Update view', exact: true }).click();
     await page.getByRole('dialog', { name: 'Update view', exact: true }).getByRole('button', { name: 'Update view', exact: true }).click();
@@ -73,24 +87,28 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     const second = await session(f.email, password);
     await second.clock.setFixedTime(new Date('2026-11-15T12:00:00Z'));
     await second.goto('http://localhost:5173/app/transactions');
-    await second.getByRole('button', { name: 'Quarter review', exact: true }).click();
+    await openFilters(second);
+    const relativeDates = second.waitForResponse(response => {
+        const url = new URL(response.url());
+        return response.request().method() === 'GET' && url.pathname === '/api/v1' + prefix + '/transactions'
+            && url.searchParams.get('from') === '2026-08-01' && url.searchParams.get('to') === '2026-10-31';
+    });
+    await selectView(second, 'Quarter review');
     await poll(() => new URL(second.url()).searchParams.get('period') === 'previous-3-full-months', 'saved date preset navigation committed');
-    await second.getByRole('button', { name: /^Filters/ }).click();
-    await poll(async () => await second.getByLabel('Date range', { exact: true }).inputValue() === 'previous-3-full-months', 'saved date preset rendered');
-    assert.equal(await second.getByLabel('From', { exact: true }).inputValue(), '2026-08-01');
-    assert.equal(await second.getByLabel('To', { exact: true }).inputValue(), '2026-10-31');
+    await poll(async () => await second.getByRole('combobox', { name: 'Date range', exact: true }).inputValue() === 'previous-3-full-months', 'saved date preset rendered');
+    assert.equal((await relativeDates).ok(), true, 'saved relative dates are sent to the transactions API');
     await second.reload();
-    await second.getByRole('button', { name: /^Filters/ }).click();
-    assert.equal(await second.getByLabel('Date range', { exact: true }).inputValue(), 'previous-3-full-months');
-    await second.getByLabel('Date range', { exact: true }).selectOption('last-year');
+    await openFilters(second);
+    assert.equal(await second.getByRole('combobox', { name: 'Date range', exact: true }).inputValue(), 'previous-3-full-months');
+    await second.getByRole('combobox', { name: 'Date range', exact: true }).selectOption('last-year');
     await poll(async () => new URL(second.url()).searchParams.get('period') === 'last-year'
-        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'last-year', 'last-year navigation committed');
+        && await second.getByRole('combobox', { name: 'Date range', exact: true }).inputValue() === 'last-year', 'last-year navigation committed');
     await second.goBack();
     await poll(async () => new URL(second.url()).searchParams.get('period') === 'previous-3-full-months'
-        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'previous-3-full-months', 'previous preset restored by Back');
+        && await second.getByRole('combobox', { name: 'Date range', exact: true }).inputValue() === 'previous-3-full-months', 'previous preset restored by Back');
     await second.goForward();
     await poll(async () => new URL(second.url()).searchParams.get('period') === 'last-year'
-        && await second.getByLabel('Date range', { exact: true }).inputValue() === 'last-year', 'last-year preset restored by Forward');
+        && await second.getByRole('combobox', { name: 'Date range', exact: true }).inputValue() === 'last-year', 'last-year preset restored by Forward');
 
     const peer = await session(f.peerEmail, password);
     assert.deepEqual(await ok(peer, endpoint), []);
@@ -112,7 +130,8 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     const unavailable = (await ok(peer, endpoint))[0]; assert.equal(unavailable.available, false);
     assert(!(await ok(peer, prefix + '/labels/filter-options')).some(x => x.id === personal));
     await peer.goto('http://localhost:5173/app/transactions');
-    await peer.getByRole('button', { name: 'Personal account review', exact: true }).click();
+    await openFilters(peer);
+    await selectView(peer, 'Personal account review');
     await peer.getByRole('alert').filter({ hasText: 'This view includes an unavailable' }).waitFor();
     assert.equal(new URL(peer.url()).searchParams.get('account'), f.personalAccountId);
     assert(new URL(peer.url()).searchParams.get('labels').includes(personal));
@@ -120,23 +139,23 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await ok(peer, endpoint + '/' + peerView + '?expectedVersion=' + unavailable.version, { method: 'DELETE' });
 
     // A custom range stays fixed, and deleting a view leaves its transactions intact.
-    await page.goto(link); await page.getByRole('button', { name: 'Quarter review', exact: true }).click();
+    await page.goto(link); await openFilters(page); await selectView(page, 'Quarter review');
     await page.getByRole('button', { name: 'Manage views', exact: true }).click();
     await page.getByRole('button', { name: 'Delete view', exact: true }).click();
     await page.getByRole('dialog', { name: 'Delete view', exact: true }).getByRole('button', { name: 'Delete view', exact: true }).click();
     await poll(async () => (await ok(page, endpoint)).length === 0, 'view deleted');
     assert.equal((await ok(page, prefix + '/transactions/' + target.id)).id, target.id);
     await ok(page, endpoint, { method: 'POST', body: { name: 'Fixed January', filters: { ...view.filters, period: 'custom', from: '2026-01-01', to: '2026-01-31', labels: [] } } });
-    await second.goto('http://localhost:5173/app/transactions'); await second.getByRole('button', { name: 'Fixed January', exact: true }).click();
+    await second.goto('http://localhost:5173/app/transactions'); await openFilters(second); await selectView(second, 'Fixed January');
     await poll(() => new URL(second.url()).searchParams.get('from') === '2026-01-01', 'custom saved date navigation committed');
-    await second.getByRole('button', { name: /^Filters/ }).click();
     await poll(async () => await second.getByLabel('From', { exact: true }).inputValue() === '2026-01-01', 'custom saved date rendered');
     assert.equal(await second.getByLabel('From', { exact: true }).inputValue(), '2026-01-01');
     assert.equal(await second.getByLabel('To', { exact: true }).inputValue(), '2026-01-31');
     // Observe every rendered status, including transient changes during URL navigation.
     await ok(page, endpoint, { method: 'POST', body: { name: 'Relative year', filters: { ...view.filters, period: 'last-year', labels: [] } } });
     await second.goto('http://localhost:5173/app/transactions');
-    await second.getByRole('button', { name: 'Fixed January', exact: true }).waitFor();
+    await openFilters(second);
+    await poll(async () => await viewSelector(second).isEnabled() && await viewSelector(second).locator('option').count() >= 3, 'saved views loaded');
     await second.evaluate(() => {
         window.modifiedFlashes = [];
         window.modifiedObserver = new MutationObserver(() => {
@@ -148,7 +167,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     });
     for (let i = 0; i < 6; i++) {
         const name = i % 2 ? 'Relative year' : 'Fixed January';
-        await second.getByRole('button', { name, exact: true }).click();
+        await selectView(second, name);
         await poll(() => new URL(second.url()).searchParams.get('period') === (i % 2 ? 'last-year' : 'custom'), 'view switch committed');
         await second.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
@@ -161,7 +180,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await manager.getByLabel('Saved views', { exact: true }).selectOption(fixedView.id);
     await second.keyboard.press('Escape');
     assert.equal(second.url(), appliedUrl);
-    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await viewSelector(second).inputValue(), (await ok(second, endpoint)).find(x => x.name === 'Relative year').id);
     assert.equal(await second.getByRole('status').filter({ hasText: 'Modified' }).count(), 0);
     await second.getByRole('button', { name: 'Manage views', exact: true }).click();
     manager = second.getByRole('dialog', { name: 'Manage views', exact: true });
@@ -172,7 +191,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await renameDialog.getByRole('button', { name: 'Rename view', exact: true }).click();
     await renameDialog.waitFor({ state: 'hidden' });
     assert.equal(second.url(), appliedUrl);
-    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await viewSelector(second).inputValue(), (await ok(second, endpoint)).find(x => x.name === 'Relative year').id);
     await second.getByRole('button', { name: 'Manage views', exact: true }).click();
     manager = second.getByRole('dialog', { name: 'Manage views', exact: true });
     await manager.getByLabel('Saved views', { exact: true }).selectOption(fixedView.id);
@@ -181,10 +200,9 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
     await deleteDialog.getByRole('button', { name: 'Delete view', exact: true }).click();
     await deleteDialog.waitFor({ state: 'hidden' });
     assert.equal(second.url(), appliedUrl);
-    assert.equal(await second.getByRole('button', { name: 'Relative year', exact: true }).getAttribute('aria-pressed'), 'true');
-    await second.getByRole('button', { name: /^Filters/ }).click();
-    await second.getByLabel('Date range', { exact: true }).selectOption('this-year');
-    await second.getByRole('button', { name: 'Show results', exact: true }).click();
+    assert.equal(await viewSelector(second).inputValue(), (await ok(second, endpoint)).find(x => x.name === 'Relative year').id);
+    await second.getByRole('combobox', { name: 'Date range', exact: true }).selectOption('this-year');
+    await filterButton(second).click();
     await second.getByRole('status').filter({ hasText: 'Modified' }).waitFor();
     const copies = localeFile('savedViews');
     for (const language of ['en', 'de', 'hu']) for (const theme of ['light', 'dark']) {
@@ -192,6 +210,7 @@ export async function verifySavedViews({ fixture: f, outsider, password, session
         await second.setViewportSize({ width: theme === 'dark' ? 390 : 1440, height: 1000 });
         await second.goto('http://localhost:5173/app/transactions?period=previous-3-full-months');
         const copy = copies['savedViews' + language.toUpperCase()];
+        await second.locator('button[aria-controls="transaction-filters"]').click();
         await second.getByRole('button', { name: copy.save, exact: true }).click();
         await second.getByRole('dialog', { name: copy.save, exact: true }).getByLabel(copy.name).fill('Review');
         assert.equal(await second.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);

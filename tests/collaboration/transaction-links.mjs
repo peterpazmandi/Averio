@@ -25,6 +25,7 @@ export async function verifyTransactionLinks({ fixture: f, outsider, password, s
     await page.getByRole('button', { name: /^Filters/ }).click();
     assert.equal(await page.getByLabel(/^Account/).inputValue(), f.sharedAccountId);
     assert.equal(await page.getByLabel('From', { exact: true }).inputValue(), f.date);
+    await page.getByText('More filters', { exact: true }).click();
     await page.getByRole('button', { name: 'Income', exact: true }).click();
     await poll(() => new URL(page.url()).searchParams.get('kind') === 'Income', 'kind written to URL');
     await targetRow().waitFor({ state: 'hidden' });
@@ -33,7 +34,7 @@ export async function verifyTransactionLinks({ fixture: f, outsider, password, s
     await page.getByLabel('From', { exact: true }).fill('2099-01-01');
     await page.getByRole('alert').waitFor();
     await page.goBack(); await targetRow().waitFor();
-    await page.getByRole('button', { name: 'Show results', exact: true }).click();
+    await page.getByRole('button', { name: /^Filters/ }).click();
     await targetRow().click(); await editor().waitFor();
     assert.equal(new URL(page.url()).searchParams.get('transaction'), target.id);
     await page.goBack(); await editor().waitFor({ state: 'hidden' }); await targetRow().waitFor();
