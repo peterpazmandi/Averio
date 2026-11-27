@@ -12,9 +12,9 @@ import { savedFilters } from '../transactionDates';
 import { savedViewQueries, savedViewsApi } from '../api/savedViewQueries';
 
 type Action = 'save' | 'rename' | 'update' | 'delete';
-export function SavedViews({ userId, householdId, state, invalid, onApply, controlsVisible = true }: {
+export function SavedViews({ userId, householdId, state, invalid, onApply, controlsVisible = true, unsavedFiltersActive = false }: {
     userId: string; householdId: string; state: TransactionSearch; invalid: boolean;
-    controlsVisible?: boolean;
+    controlsVisible?: boolean; unsavedFiltersActive?: boolean;
     onApply: (filters: Partial<TransactionSearch>) => Promise<void>;
 }) {
     const { t } = useTranslation();
@@ -78,6 +78,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply, contr
                 <option value="">{t('savedViews.choose')}</option>
                 {query.data?.map(view => <option key={view.id} value={view.id}>{view.name}</option>)}
             </AverioSelect>
+            {unsavedFiltersActive && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('savedViews.unsavedWarning')}</p>}
             <div className="flex flex-wrap gap-2">
                 <AverioButton disabled={invalid} onClick={() => open('save')}>{t('savedViews.save')}</AverioButton>
                 {!!query.data?.length && <AverioButton disabled={isApplying} onClick={() => { setManagedId(selectedId); setManaging(true); }}>{t('savedViews.manage')}</AverioButton>}
@@ -108,6 +109,7 @@ export function SavedViews({ userId, householdId, state, invalid, onApply, contr
             <form id="saved-view-form" onSubmit={event => { event.preventDefault(); if (!mutation.isPending) mutation.mutate(); }} className="space-y-4">
                 {dialog.action === 'delete' ? <p>{t('savedViews.confirmDelete', { name: dialog.view?.name })}</p> : dialog.action === 'update' ? <p>{t('savedViews.confirmUpdate')}</p> :
                     <AverioField>{t('savedViews.name')}<AverioInput autoFocus required maxLength={80} value={name} onChange={event => setName(event.target.value)} disabled={mutation.isPending} /></AverioField>}
+                {unsavedFiltersActive && (dialog.action === 'save' || dialog.action === 'update') && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{t('savedViews.unsavedWarning')}</p>}
                 {mutation.isError && <div role="alert"><p>{mutation.error instanceof ApiError ? mutation.error.message : t('savedViews.failed')}</p>
                     <AverioButton onClick={async () => { await query.refetch(); setDialog(null); }}>{t('common.actions.retry')}</AverioButton></div>}
             </form>

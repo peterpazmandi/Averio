@@ -96,9 +96,12 @@ The transaction slice includes:
 - Household and Private transaction visibility constrained by account rules
 - edit and non-destructive void workflows
 - searchable, cursor-paginated transaction history
-- a collapsible transaction filter panel with saved views and a count and
+- a collapsible transaction filter panel with saved views, a count and removable
   summary of active criteria, including the default current-month date range;
-  transaction selection remains available for activity assignment
+  empty states distinguish visible history from filtered results. Activity
+  assignment can select loaded eligible transactions up to 100 at a time.
+  Saved views exclude text search and the archived, imported and Personal
+  Money switches; applying a view clears search and leaves those switches unchanged
 - a hierarchical category model with exactly 100 seeded system categories
 - stable category localization keys with EN/DE/HU frontend names
 - category name/icon snapshots on transaction items

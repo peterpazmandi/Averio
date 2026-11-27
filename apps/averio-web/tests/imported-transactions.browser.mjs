@@ -56,6 +56,9 @@ try {
         assert.equal(await own.locator('button a').count(), 0, 'Badge is not nested in the editor button');
         const filterButton = page.getByRole('button', { name: /^Filters,/ });
         assert.match(await filterButton.getAttribute('aria-label'), /0 active filters/);
+        assert.equal(await filterButton.getByText('Filters', { exact: true }).isVisible(), width >= 640);
+        assert.equal(await more.getByText('More actions', { exact: true }).isVisible(), width >= 640);
+        assert.equal(await page.getByRole('button', { name: 'Select transactions', exact: true }).getByText('Select transactions', { exact: true }).isVisible(), width >= 640);
         assert.equal(await own.getByRole('checkbox').count(), 0);
         await page.getByRole('button', { name: 'Select transactions', exact: true }).click();
         const expenseCheckbox = own.getByRole('checkbox', { name: 'Select: Imported purchase' });
@@ -96,6 +99,11 @@ try {
         await page.keyboard.press('Space');
         assert.equal(await incomeCheckbox.isChecked(), false);
         assert.equal(await page.getByText('Selected transactions: 1 / 100').isVisible(), true);
+        await page.getByRole('button', { name: 'Select loaded eligible transactions', exact: true }).click();
+        assert.equal(await page.getByText('Selected transactions: 3 / 100').isVisible(), true);
+        assert.equal(await incomeCheckbox.isChecked(), true);
+        assert.equal(await page.locator('[data-transaction-id="manual"]').getByRole('checkbox').isChecked(), true);
+        assert.equal(await page.getByRole('button', { name: 'Select loaded eligible transactions', exact: true }).isDisabled(), true);
         await filterButton.click();
         await page.getByText('More filters', { exact: true }).click();
         await page.getByRole('checkbox', { name: 'Imported only', exact: true }).check();
@@ -113,9 +121,19 @@ try {
         await page.getByRole('searchbox', { name: 'Search transactions' }).fill('purchase');
         assert.match(await filterButton.getAttribute('aria-label'), /2 active filters/);
         assert.equal(await page.getByLabel('Active transaction filters').getByText('Search: purchase').isVisible(), true);
+        const warning = 'Search and the archived, imported and Personal Money filters are not saved.';
+        assert.equal(await page.getByRole('status').filter({ hasText: warning }).isVisible(), true);
+        await page.getByRole('button', { name: 'Save current view', exact: true }).click();
+        const saveDialog = page.getByRole('dialog', { name: 'Save current view', exact: true });
+        assert.equal(await saveDialog.getByRole('status').filter({ hasText: warning }).isVisible(), true);
+        await page.keyboard.press('Escape');
+        await saveDialog.waitFor({ state: 'detached' });
+        await page.getByRole('checkbox', { name: 'Imported only', exact: true }).check();
         await page.getByRole('combobox', { name: 'Saved views' }).selectOption(viewId);
         await page.waitForFunction(() => document.querySelector('#transaction-search')?.value === '');
         assert.equal(await page.getByRole('searchbox', { name: 'Search transactions' }).inputValue(), '');
+        assert.equal(await page.getByRole('checkbox', { name: 'Imported only', exact: true }).isChecked(), true);
+        await page.getByRole('checkbox', { name: 'Imported only', exact: true }).uncheck();
         await page.getByRole('combobox', { name: 'Date range' }).selectOption('last-month');
         assert.equal(await page.getByText('Monthly view · Modified').isVisible(), true);
         assert.equal(await page.getByLabel('Active transaction filters').getByText('Last month').isVisible(), true);
@@ -128,7 +146,16 @@ try {
         for (const value of ['Last month', 'Labels: Family', 'Labels: Work', 'Type: Refund', 'Include archived transactions']) {
             assert.equal(await summary.getByText(value, { exact: true }).isVisible(), true, value);
         }
-            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Expanded filters do not overflow');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Expanded filters do not overflow');
+        await filterButton.click();
+        assert.equal(await summary.getByText('Labels: Work').isVisible(), true, 'Filters remain visible when collapsed');
+        await summary.getByRole('button', { name: 'Remove filter: Labels: Work', exact: true }).click();
+        assert.equal(await summary.getByText('Labels: Work').count(), 0);
+        assert.equal(await filterButton.evaluate(el => el === document.activeElement), true, 'Removing a chip returns focus to filters');
+        await summary.getByRole('button', { name: 'Remove filter: Last month', exact: true }).click();
+        await filterButton.click();
+        assert.equal(await page.getByRole('combobox', { name: 'Date range' }).inputValue(), 'all');
+        assert.equal(await page.getByRole('checkbox', { name: 'Work', exact: true }).isChecked(), false);
         await page.getByRole('combobox', { name: 'Date range' }).selectOption('custom');
         await page.getByLabel('From', { exact: true }).fill('2026-12-10');
         await page.getByLabel('To', { exact: true }).fill('2026-12-01');
@@ -149,9 +176,9 @@ try {
         console.log('PASS transaction header, selection, saved-view warnings and imported filtering at ' + width);
         await page.close();
     }
-    for (const [language, filterName, resetName, monthName] of [
-        ['de', 'Filter, 0 aktive Filter', 'Filter zurücksetzen', 'Dieser Monat'],
-        ['hu', 'Szűrők, 0 aktív szűrő', 'Szűrők törlése', 'Ez a hónap'],
+    for (const [language, filterName, resetName, monthName, warning] of [
+        ['de', 'Filter, 0 aktive Filter', 'Filter zurücksetzen', 'Dieser Monat', 'werden nicht gespeichert'],
+        ['hu', 'Szűrők, 0 aktív szűrő', 'Szűrők törlése', 'Ez a hónap', 'szűrőket nem mentjük'],
     ]) {
         const page = await browser.newPage({ viewport: { width: 320, height: 900 } });
         await page.addInitScript(lang => localStorage.setItem('i18nextLng', lang), language);
@@ -163,10 +190,97 @@ try {
         await page.goto(url);
         await page.getByRole('button', { name: filterName, exact: true }).click();
         await page.getByRole('button', { name: resetName, exact: true }).click();
-        assert.equal(await page.locator('#transaction-filters div[aria-label]').getByText(monthName, { exact: true }).isVisible(), true);
+        assert.equal(await page.getByRole('button').getByText(monthName, { exact: true }).isVisible(), true);
+        await page.locator('#transaction-search').fill('test');
+        assert.equal(await page.getByRole('status').filter({ hasText: warning }).isVisible(), true);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, language + ' header overflow');
         await page.close();
         console.log('PASS localized transaction filters at 320: ' + language);
+    }
+    {
+        const page = await browser.newPage({ viewport: { width: 375, height: 900 } });
+        await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+        const base = { accountId: 'account', accountName: 'Main', kind: 'Expense', visibility: 'Household', amount: '12', currency: 'EUR', occurredOn: '2026-11-04', status: 'Posted', createdAt: '2026-11-04T10:00:00Z', updatedAt: '2026-11-04T10:00:00Z', canModify: true, items: [], labels: [] };
+        const rows = Array.from({ length: 102 }, (_, i) => ({ ...base, id: `row-${i}`, description: `Purchase ${i}` }));
+        rows.push({ ...base, id: 'refund', description: 'Refund', kind: 'Refund' }, { ...base, id: 'voided', description: 'Voided', status: 'Voided' });
+        await page.route('**/api/v1/**', async route => {
+            const u = new URL(route.request().url());
+            if (u.pathname.includes('/personal-money/')) return route.fulfill({ status: 204 });
+            if (u.pathname.endsWith('/transactions')) {
+                const cursor = u.searchParams.get('cursorId');
+                const start = cursor ? rows.findIndex(row => row.id === cursor) + 1 : 0;
+                return route.fulfill({ json: { items: rows.slice(start, start + 40), hasMore: start + 40 < rows.length } });
+            }
+            return route.fulfill({ json: [] });
+        });
+        await page.goto(url);
+        await page.getByRole('button', { name: 'Select transactions', exact: true }).click();
+        await page.getByRole('button', { name: 'Select loaded eligible transactions', exact: true }).click();
+        assert.equal(await page.getByText('Selected transactions: 40 / 100').isVisible(), true);
+        assert.equal(await page.locator('[data-transaction-id]').count(), 40, 'Selecting loaded transactions does not fetch another page');
+        await page.getByRole('button', { name: 'Load older transactions', exact: true }).click();
+        await page.locator('[data-transaction-id="row-79"]').waitFor();
+        await page.getByRole('button', { name: 'Load older transactions', exact: true }).click();
+        await page.locator('[data-transaction-id="row-101"]').waitFor();
+        await page.getByRole('checkbox', { name: 'Select: Purchase 101', exact: true }).check();
+        await page.getByRole('button', { name: 'Select loaded eligible transactions', exact: true }).click();
+        assert.equal(await page.getByText('Selected transactions: 100 / 100').isVisible(), true);
+        assert.equal(await page.getByRole('checkbox', { name: 'Select: Purchase 101', exact: true }).isChecked(), true);
+        assert.equal(await page.locator('[data-transaction-id] input:checked').count(), 100);
+        assert.equal(await page.locator('[data-transaction-id="refund"] input, [data-transaction-id="voided"] input').count(), 0);
+        assert.equal(await page.getByRole('status').filter({ hasText: 'some loaded transactions remain unselected' }).isVisible(), true);
+        assert.equal(await page.getByRole('button', { name: 'Select loaded eligible transactions', exact: true }).isDisabled(), true);
+        await page.close();
+        console.log('PASS bulk selection eligibility and 100-item limit');
+    }
+    for (const existingHistory of [false, true]) {
+        const page = await browser.newPage({ viewport: { width: 375, height: 900 } });
+        await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+        let historyRequests = 0;
+        await page.route('**/api/v1/**', async route => {
+            const u = new URL(route.request().url());
+            if (u.pathname.includes('/personal-money/')) return route.fulfill({ status: 204 });
+            if (u.pathname.endsWith('/transactions')) {
+                if (u.searchParams.get('pageSize') === '1') {
+                    historyRequests++;
+                    return route.fulfill({ json: { items: existingHistory ? [{ id: 'older', items: [], labels: [] }] : [], hasMore: false } });
+                }
+                return route.fulfill({ json: { items: [], hasMore: false } });
+            }
+            return route.fulfill({ json: [] });
+        });
+        await page.goto(url);
+        await page.getByRole('button', { name: /^Filters,/ }).click();
+        await page.getByRole('combobox', { name: 'Date range' }).selectOption('this-month');
+        if (existingHistory) {
+            await page.getByRole('heading', { name: 'No matching transactions' }).waitFor();
+            await page.getByRole('button', { name: 'Clear all filters', exact: true }).click();
+            assert.equal(await page.getByRole('combobox', { name: 'Date range' }).inputValue(), 'all');
+        } else {
+            await page.getByRole('heading', { name: 'Start your transaction history' }).waitFor();
+            assert.equal(await page.getByRole('button', { name: 'Add transaction', exact: true }).count(), 2);
+        }
+        assert.ok(historyRequests > 0);
+        await page.close();
+        console.log('PASS transaction empty state: ' + (existingHistory ? 'older history' : 'first use'));
+    }
+    {
+        const page = await browser.newPage({ viewport: { width: 375, height: 900 } });
+        await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+        await page.route('**/api/v1/**', async route => {
+            const u = new URL(route.request().url());
+            if (u.pathname.includes('/personal-money/')) return route.fulfill({ status: 204 });
+            if (u.pathname.endsWith('/transactions') && u.searchParams.get('pageSize') === '1') {
+                return route.fulfill({ status: 500, json: { title: 'History unavailable', status: 500 } });
+            }
+            return route.fulfill({ json: u.pathname.endsWith('/transactions') ? { items: [], hasMore: false } : [] });
+        });
+        await page.goto(url);
+        await page.getByRole('alert').getByRole('button', { name: 'Try again' }).waitFor();
+        assert.equal(await page.getByRole('heading', { name: 'Start your transaction history' }).count(), 0);
+        assert.equal(await page.getByRole('heading', { name: 'No matching transactions' }).count(), 0);
+        await page.close();
+        console.log('PASS transaction history failure is not an empty state');
     }
     const shell = await browser.newPage({ viewport: { width: 1440, height: 900 }, hasTouch: true });
     await shell.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
@@ -183,9 +297,9 @@ try {
         return route.fulfill({ json: [] });
     });
     await shell.goto('http://localhost:5286/app/transactions');
-    await shell.getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
+    await shell.locator('.av-tx-page > header').getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
     const wideTitleFont = await shell.addStyleTag({ content: '@media (max-width: 600px) { .av-ui .av-topbar h1 { font-family: Arial, sans-serif !important; font-size: 19px !important; } }' });
-    assert.equal(await shell.getByRole('button', { name: 'Add transaction', exact: true }).count(), 1);
+    assert.equal(await shell.locator('.av-tx-page > header').getByRole('button', { name: 'Add transaction', exact: true }).count(), 1);
     assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Add transaction', exact: true }).count(), 0);
     for (const width of [320, 359, 360, 361, 375, 400, 479, 480, 481, 600, 601, 1440]) {
         await shell.setViewportSize({ width, height: 900 });
@@ -323,7 +437,7 @@ try {
     }
     await wideTitleFont.evaluate(element => element.remove());
     await shell.goto('http://localhost:5286/app/transactions/');
-    await shell.getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
+    await shell.locator('.av-tx-page > header').getByRole('button', { name: 'Add transaction', exact: true }).waitFor();
     assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'Add transaction', exact: true }).count(), 0);
     assert.equal(await shell.locator('.av-topbar').getByRole('button', { name: 'About Transactions', exact: true }).count(), 1);
     await shell.setViewportSize({ width: 1440, height: 900 });

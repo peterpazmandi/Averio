@@ -16,6 +16,7 @@ import { reimbursementKeys } from '../../reimbursements/reimbursementQueries';
 import { moneyBackQueryKeys } from '../../money-back/moneyBackQueryKeys';
 import { AverioField, AverioInput, AverioSelect } from '../../../shared/components/ui/AverioFormControls';
 import { AverioButton } from '../../../shared/components/ui/AverioButton';
+import { AverioLogo } from '../../../shared/components/branding/AverioLogo';
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -91,6 +92,7 @@ export function TransactionsPage({
     const [notice, setNotice] = useState('');
 
     const searchInput = useRef<HTMLInputElement>(null);
+    const filterToggle = useRef<HTMLButtonElement>(null);
     const accounts = useQuery(accountsQueries.list(userId, householdId, true));
     const activities = useQuery({ ...activityQueries.list(userId, householdId), enabled: !!activityId });
     const filterLabels = useQuery({ ...savedViewQueries.labels(userId, householdId), enabled: labelIds.length > 0 });
@@ -108,16 +110,13 @@ export function TransactionsPage({
         onUrlChange({ transaction: transaction.id, create: undefined, createKind: undefined });
     };
 
-    const selectedMonthLabel = t('savedViews.' + period);
-    const filterChipClass = 'max-w-full break-words rounded-full bg-slate-200 px-3 py-1 text-xs dark:bg-slate-800';
-
     const filterCount = Number(importedOnly) + Number(showArchived) + Number(personalMoneyOnly)
         + Number(accountId !== '')
         + Number(kind !== '')
         + Number(period !== 'all') + Number(activityId !== '') + labelIds.length + Number(!!search.trim());
 
-    const hasCriteria = search.trim().length > 0 || importedOnly || showArchived || personalMoneyOnly
-        || !!accountId || !!kind || period !== 'this-month' || !!activityId || labelIds.length > 0;
+    const hasOtherCriteria = !!(search.trim() || importedOnly || showArchived || personalMoneyOnly
+        || accountId || kind || activityId || labelIds.length);
 
     const filters = useMemo<TransactionFilters>(() => {
         const result: TransactionFilters = {
@@ -168,6 +167,16 @@ export function TransactionsPage({
 
     const items = invalidRange ? [] : transactions.data?.pages.flatMap(page => page.items) ?? [];
     const visibleItems = personalMoneyOnly ? items.filter(item => relations.transactions.has(item.id)) : items;
+    const eligibleItems = visibleItems.filter(item => item.status === 'Posted' && item.kind !== 'Refund');
+    const needsHistoryCheck = !invalidRange && transactions.isSuccess && items.length === 0
+        && !hasOtherCriteria && (period === 'this-month' || period === 'all');
+    const history = useQuery({
+        ...transactionQueries.list(userId, householdId, { pageSize: 1, includeArchived: true }),
+        enabled: needsHistoryCheck,
+    });
+    const firstUse = needsHistoryCheck && history.isSuccess && history.data.items.length === 0;
+    const selectedCount = Object.keys(selected).length;
+    const remainingEligible = eligibleItems.some(item => !(item.id in selected));
 
     const formatter = new Intl.DateTimeFormat(language, {
         weekday: 'short',
@@ -177,15 +186,30 @@ export function TransactionsPage({
         timeZone: 'UTC',
     });
 
-    function resetFilters() {
+    function resetFilters(allDates = false) {
         setImportedOnly(false);
         setSearch('');
         setPersonalMoneyOnly(false);
         setShowArchived(false);
         setSelected({});
-        onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: undefined, labels: undefined });
-        searchInput.current?.focus();
+        void onUrlChange({ account: undefined, kind: undefined, activity: undefined, dates: undefined, from: undefined, to: undefined, period: allDates ? 'all' : undefined, labels: undefined });
+        (filtersOpen ? searchInput.current : filterToggle.current)?.focus();
     }
+
+    const activeFilters: { key: string; label: string; remove: () => void }[] = [];
+    if (period !== 'all') activeFilters.push({
+        key: 'period',
+        label: t('savedViews.' + period) + (period === 'custom' && (from || to) ? `: ${from ?? '…'} – ${to ?? '…'}` : ''),
+        remove: () => { void setPeriod('all'); },
+    });
+    if (search.trim()) activeFilters.push({ key: 'search', label: t('transactionManagement.searchFilter', { value: search.trim() }), remove: () => setSearch('') });
+    if (accountId) activeFilters.push({ key: 'account', label: t('transactionManagement.filterValue', { label: t('transactionManagement.account'), value: accounts.data?.find(account => account.id === accountId)?.name ?? t(accounts.isPending ? 'common.status.loading' : 'transactionLinks.unavailableAccount') }), remove: () => { void setAccountId(''); } });
+    if (activityId) activeFilters.push({ key: 'activity', label: t('transactionManagement.filterValue', { label: t('activities.activity'), value: activities.data?.find(activity => activity.id === activityId)?.name ?? t(activities.isPending ? 'common.status.loading' : 'activities.unavailable') }), remove: () => { void setActivityId(''); } });
+    if (kind) activeFilters.push({ key: 'kind', label: t('transactionManagement.filterValue', { label: t('transactionManagement.type'), value: t(kind === 'Refund' ? 'itemRefunds.refund' : `transactionManagement.${kind.toLowerCase()}`) }), remove: () => { void setKind(''); } });
+    for (const id of labelIds) activeFilters.push({ key: id, label: t('transactionManagement.filterValue', { label: t('savedViews.labels'), value: filterLabels.data?.find(label => label.id === id)?.name ?? t(filterLabels.isPending ? 'common.status.loading' : 'savedViews.unavailableLabel') }), remove: () => { const labels = labelIds.filter(labelId => labelId !== id); void onUrlChange({ labels: labels.length ? labels : undefined }); } });
+    if (showArchived) activeFilters.push({ key: 'archived', label: t('transactionManagement.includeArchived'), remove: () => setShowArchived(false) });
+    if (importedOnly) activeFilters.push({ key: 'imported', label: t('importHistory.importedOnly'), remove: () => setImportedOnly(false) });
+    if (personalMoneyOnly) activeFilters.push({ key: 'personal', label: t('personalMoney.filterOnly'), remove: () => setPersonalMoneyOnly(false) });
 
     function closeEditor() {
         setEditor(null);
@@ -246,9 +270,9 @@ export function TransactionsPage({
             <h2 id="transactions-title" className="sr-only">{t('transactionManagement.title')}</h2>
             <header className="mb-4 flex flex-wrap items-center justify-end gap-2">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                    <AverioButton size="icon" className="relative" aria-label={t('transactionManagement.filterCount', { count: filterCount })}
+                    <AverioButton ref={filterToggle} size="icon" className="relative sm:w-auto sm:px-3" aria-label={t('transactionManagement.filterCount', { count: filterCount })}
                         aria-expanded={filtersOpen} aria-controls="transaction-filters" onClick={() => setFiltersOpen(open => !open)}>
-                        <ConceptIcon name="filters" />
+                        <ConceptIcon name="filters" /><span className="hidden sm:inline">{t('transactionManagement.filters')}</span>
                         {filterCount > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-primary-600 px-1 text-[10px] leading-5 text-white">{filterCount}</span>}
                     </AverioButton>
                     <details className="relative" onKeyDown={event => {
@@ -260,16 +284,16 @@ export function TransactionsPage({
                     }} onBlur={event => {
                         if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
                     }}>
-                        <summary aria-label={t('transactionManagement.moreActions')} className="flex size-11 cursor-pointer list-none items-center justify-center rounded-[11px] border border-[#E4E7EC] bg-white text-[#152033] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] [&::-webkit-details-marker]:hidden"><ConceptIcon name="more" /></summary>
+                        <summary aria-label={t('transactionManagement.moreActions')} className="flex size-11 cursor-pointer list-none items-center justify-center gap-2 rounded-[11px] border border-[#E4E7EC] bg-white text-xs font-semibold text-[#152033] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto sm:px-3 dark:border-[#233044] dark:bg-[#0D1726] dark:text-[#F3F6FA] [&::-webkit-details-marker]:hidden"><ConceptIcon name="more" /><span className="hidden sm:inline">{t('transactionManagement.moreActions')}</span></summary>
                         <div className="absolute -right-20 z-20 mt-2 grid w-52 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-lg sm:right-0 dark:border-slate-700 dark:bg-[#0D1726]">
                             {[{ to: '/app/imports', label: t('imports.button') }, { to: '/app/receipts', label: t('receipts.capture') }, { to: '/app/transfers', label: t('transfers.title') }].map(item =>
                                 <Link key={item.to} to={item.to} className="flex min-h-11 items-center rounded-lg px-3 font-semibold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-slate-800">{item.label}</Link>)}
                         </div>
                     </details>
-                    <AverioButton size="icon" aria-label={t('activities.selectTransactions')}
-                        aria-pressed={selecting} disabled={!selecting && (!transactions.isSuccess || items.length === 0)}
+                    <AverioButton size="icon" className="sm:w-auto sm:px-3" aria-label={t('activities.selectTransactions')}
+                        aria-pressed={selecting} disabled={!selecting && (!transactions.isSuccess || eligibleItems.length === 0)}
                         onClick={() => { setSelecting(!selecting); setSelected({}); }}>
-                        <ConceptIcon name="check" />
+                        <ConceptIcon name="check" /><span className="hidden sm:inline">{t('activities.selectTransactions')}</span>
                     </AverioButton>
                     <AverioButton variant="primary" aria-label={t('transactionManagement.add')} onClick={() => setEditor('new')}>
                         <ConceptIcon name="plus" />{t('transactionManagement.addShort')}
@@ -277,23 +301,19 @@ export function TransactionsPage({
                 </div>
             </header>
 
+            {activeFilters.length > 0 && <div role="group" className="mb-4 flex min-w-0 flex-wrap gap-2" aria-label={t('transactionManagement.filterSummary')}>
+                {activeFilters.map(filter => <button key={filter.key} type="button" aria-label={t('transactionManagement.removeFilter', { value: filter.label })}
+                    className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-emerald-100 px-3 text-left text-xs font-semibold text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:bg-emerald-950 dark:text-emerald-200"
+                    onClick={() => { filterToggle.current?.focus(); filter.remove(); setSelected({}); }}>
+                    <span className="min-w-0 break-all">{filter.label}</span><ConceptIcon name="close" />
+                </button>)}
+            </div>}
+
             <div id="transaction-filters" className={filtersOpen ? 'mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0D1726]' : ''}>
                 <SavedViews userId={userId} householdId={householdId} state={urlState} invalid={invalidRange} controlsVisible={filtersOpen}
+                    unsavedFiltersActive={!!search.trim() || importedOnly || showArchived || personalMoneyOnly}
                     onApply={filters => { setSearch(''); setSelected({}); return onUrlChange(filters); }} />
                 <div hidden={!filtersOpen}>
-                    <div role="group" className="mb-4 flex flex-wrap gap-2" aria-label={t('transactionManagement.filterSummary')}>
-                        {period !== 'all' && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                            {selectedMonthLabel}{period === 'custom' && (from || to) ? `: ${from ?? '…'} – ${to ?? '…'}` : ''}
-                        </span>}
-                        {search.trim() && <span className={filterChipClass}>{t('transactionManagement.searchFilter', { value: search.trim() })}</span>}
-                        {accountId && <span className={filterChipClass}>{t('transactionManagement.filterValue', { label: t('transactionManagement.account'), value: accounts.data?.find(account => account.id === accountId)?.name ?? t(accounts.isPending ? 'common.status.loading' : 'transactionLinks.unavailableAccount') })}</span>}
-                        {activityId && <span className={filterChipClass}>{t('transactionManagement.filterValue', { label: t('activities.activity'), value: activities.data?.find(activity => activity.id === activityId)?.name ?? t(activities.isPending ? 'common.status.loading' : 'activities.unavailable') })}</span>}
-                        {kind && <span className={filterChipClass}>{t('transactionManagement.filterValue', { label: t('transactionManagement.type'), value: t(kind === 'Refund' ? 'itemRefunds.refund' : `transactionManagement.${kind.toLowerCase()}`) })}</span>}
-                        {labelIds.map(id => <span key={id} className={filterChipClass}>{t('transactionManagement.filterValue', { label: t('savedViews.labels'), value: filterLabels.data?.find(label => label.id === id)?.name ?? t(filterLabels.isPending ? 'common.status.loading' : 'savedViews.unavailableLabel') })}</span>)}
-                        {showArchived && <span className={filterChipClass}>{t('transactionManagement.includeArchived')}</span>}
-                        {importedOnly && <span className={filterChipClass}>{t('importHistory.importedOnly')}</span>}
-                        {personalMoneyOnly && <span className={filterChipClass}>{t('personalMoney.filterOnly')}</span>}
-                    </div>
                     <div role="search" aria-label={t('transactionManagement.search')} className="mb-4 flex gap-2">
                         <AverioInput ref={searchInput} id="transaction-search" type="search" autoComplete="off" aria-label={t('transactionManagement.search')}
                             value={search} placeholder={t('transactionManagement.searchPlaceholder')}
@@ -347,7 +367,7 @@ export function TransactionsPage({
                                 onChange={labels => { setSelected({}); void onUrlChange({ labels: labels.length ? labels : undefined }); }} /></div>
                         </div>
                     </details>
-                    <div className="mt-4"><AverioButton onClick={resetFilters}>{t('transactionManagement.reset')}</AverioButton></div>
+                    <div className="mt-4"><AverioButton onClick={() => resetFilters()}>{t('transactionManagement.reset')}</AverioButton></div>
                 </div>
             </div>
             <span className="sr-only" role="status" aria-live="polite">{t('transactionManagement.filterCount', { count: filterCount })}</span>
@@ -382,30 +402,50 @@ export function TransactionsPage({
                 </div>
             )}
 
-            {!invalidRange && transactions.isSuccess && items.length === 0 && (
-                <div className="av-card av-tx-empty">
-                    <ConceptIcon name="transactions" />
-                    <p>
-                        {t(hasCriteria
-                            ? 'transactionManagement.noResults'
-                            : 'transactionManagement.empty')}
-                    </p>
+            {needsHistoryCheck && history.isPending && <p role="status">{t('common.status.loading')}</p>}
+            {needsHistoryCheck && history.isError && <div role="alert">{t('errors.genericDescription')} <AverioButton onClick={() => void history.refetch()}>{t('common.actions.retry')}</AverioButton></div>}
+            {personalMoneyOnly && personalMoney.isPending && <p role="status">{t('common.status.loading')}</p>}
+            {!invalidRange && transactions.isSuccess && items.length === 0 && (!personalMoneyOnly || personalMoney.isSuccess) && (!needsHistoryCheck || history.isSuccess) && (
+                <div className="grid min-w-0 justify-items-center gap-4 rounded-[18px] border border-[#E4E7EC] bg-white px-5 py-10 text-center dark:border-[#233044] dark:bg-[#0D1726] sm:py-14">
+                    <div aria-hidden="true" className="relative grid h-32 w-48 place-items-center rounded-full bg-primary-500/5 dark:bg-primary-500/10">
+                        <div className="grid size-20 place-items-center rounded-2xl border border-emerald-200 bg-white text-primary-600 shadow-sm dark:border-emerald-800 dark:bg-[#142234]"><ConceptIcon name="transactions" /></div>
+                        <span className="absolute right-8 bottom-2 grid size-9 place-items-center rounded-xl bg-[#142234]"><AverioLogo className="h-7 w-auto" /></span>
+                    </div>
+                    <div className="max-w-sm">
+                        <h3 className="m-0 text-xl font-bold tracking-tight">{t(firstUse ? 'transactionManagement.emptyTitle' : 'transactionManagement.noResultsTitle')}</h3>
+                        <p className="mt-2 text-sm leading-relaxed text-[#667085] dark:text-[#AAB4C4]">{t(firstUse ? 'transactionManagement.empty' : 'transactionManagement.noResults')}</p>
+                    </div>
+                    {firstUse
+                        ? <AverioButton variant="primary" onClick={() => setEditor('new')}><ConceptIcon name="plus" />{t('transactionManagement.add')}</AverioButton>
+                        : period === 'all' && !hasOtherCriteria
+                            ? <AverioButton onClick={() => setShowArchived(true)}>{t('transactionManagement.includeArchived')}</AverioButton>
+                            : <AverioButton onClick={() => resetFilters(true)}>{t('transactionManagement.clearAllFilters')}</AverioButton>}
                 </div>
             )}
 
             {selecting && <div className="mb-3 flex flex-wrap items-center gap-3">
                 <span role="status" aria-live="polite" className="text-sm">{t('activities.selected', { count: Object.keys(selected).length })}</span>
+                <AverioButton className="max-w-full" disabled={!remainingEligible || selectedCount >= 100} onClick={() => setSelected(current => {
+                    const next = { ...current };
+                    for (const item of eligibleItems) {
+                        if (Object.keys(next).length >= 100) break;
+                        if (!(item.id in next)) next[item.id] = item.activityAssignmentVersion ?? emptyAssignmentVersion;
+                    }
+                    return next;
+                })}>{t('activities.selectLoaded')}</AverioButton>
                 <AverioButton disabled={Object.keys(selected).length === 0} onClick={() => setAssigning(true)}>{t('activities.assign')}</AverioButton>
                 <AverioButton onClick={() => { setSelecting(false); setSelected({}); }}>{t('common.actions.cancel')}</AverioButton>
+                {selectedCount >= 100 && remainingEligible && <span role="status" className="text-sm text-amber-700 dark:text-amber-300">{t('activities.selectionLimit')}</span>}
             </div>}
             {assigning && <AssignActivityDialog userId={userId} householdId={householdId}
                 transactions={Object.entries(selected).map(([transactionId, expectedVersion]) => ({ transactionId, expectedVersion }))}
                 onClose={() => setAssigning(false)} onSaved={() => { setAssigning(false); setSelected({}); setSelecting(false); setNotice(t('activities.assigned')); }} />}
             {personalMoneyOnly && personalMoney.isError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{t('personalMoney.loadError')}</p>}
             {personalMoneyOnly && personalMoney.isSuccess && items.length > 0 && visibleItems.length === 0 && (
-                <p role="status" className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">
-                    {t('personalMoney.noLoadedRelations')}
-                </p>
+                <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">
+                    <span>{t('personalMoney.noLoadedRelations')}</span>
+                    <AverioButton onClick={() => { setPersonalMoneyOnly(false); setSelected({}); filterToggle.current?.focus(); }}>{t('transactionManagement.removeFilter', { value: t('personalMoney.filterOnly') })}</AverioButton>
+                </div>
             )}
             {personalMoneyOnly && <p className="text-xs text-slate-600 dark:text-slate-300">
                 {t('personalMoney.loadedFilterHelp')}
