@@ -96,6 +96,12 @@ The transaction slice includes:
 - Household and Private transaction visibility constrained by account rules
 - edit and non-destructive void workflows
 - searchable, cursor-paginated transaction history
+- a collapsible transaction filter panel with saved views, a count and removable
+  summary of active criteria, including the default current-month date range;
+  empty states distinguish visible history from filtered results. Activity
+  assignment can select loaded eligible transactions up to 100 at a time.
+  Saved views exclude text search and the archived, imported and Personal
+  Money switches; applying a view clears search and leaves those switches unchanged
 - a hierarchical category model with exactly 100 seeded system categories
 - stable category localization keys with EN/DE/HU frontend names
 - category name/icon snapshots on transaction items
@@ -167,6 +173,12 @@ GitHub Actions now verifies:
 `docs/ui/averio-ui-concept.html` remains the canonical design reference. It is
 a product/UI specification, not evidence that every illustrated feature has
 been implemented.
+
+The authenticated mobile header groups language and theme preferences in a
+bottom sheet; desktop retains the direct controls. On very narrow screens,
+sign-out remains directly accessible as an icon button. The preferences sheet
+animates in and out unless reduced motion is requested, and closes on backdrop
+click.
 
 ## Current boundaries
 

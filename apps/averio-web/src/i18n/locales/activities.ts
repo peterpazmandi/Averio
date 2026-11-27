@@ -44,6 +44,8 @@ export const activitiesEN = {
     "selected": "Selected transactions: {{count}} / 100",
     "assignmentHelp": "This replaces your activity assignment for every selected transaction. Choose “No activity” to remove it. Other members’ assignments are unchanged.",
     "selectTransactions": "Select transactions",
+    "selectLoaded": "Select loaded eligible transactions",
+    "selectionLimit": "The 100-transaction limit is reached; some loaded transactions remain unselected.",
     "selectTransaction": "Select: {{name}}",
     "assigned": "Activity assignments saved."
 };
@@ -94,6 +96,8 @@ export const activitiesDE = {
     "selected": "Ausgewählte Buchungen: {{count}} / 100",
     "assignmentHelp": "Dies ersetzt deine Aktivitätszuordnung für jede ausgewählte Buchung. Wähle „Keine Aktivität“, um sie zu entfernen. Zuordnungen anderer Mitglieder bleiben unverändert.",
     "selectTransactions": "Buchungen auswählen",
+    "selectLoaded": "Geladene geeignete Buchungen auswählen",
+    "selectionLimit": "Das Limit von 100 Buchungen ist erreicht; einige geladene Buchungen bleiben unausgewählt.",
     "selectTransaction": "Auswählen: {{name}}",
     "assigned": "Aktivitätszuordnungen gespeichert."
 };
@@ -144,6 +148,8 @@ export const activitiesHU = {
     "selected": "Kiválasztott tranzakciók: {{count}} / 100",
     "assignmentHelp": "Ez lecseréli a kiválasztott tranzakciókhoz tartozó saját hozzárendelésedet. Az eltávolításhoz válaszd a „Nincs tevékenység” lehetőséget. Más tagok hozzárendelése nem változik.",
     "selectTransactions": "Tranzakciók kiválasztása",
+    "selectLoaded": "Betöltött, kiválasztható tranzakciók kijelölése",
+    "selectionLimit": "Elérted a 100 tranzakciós korlátot; néhány betöltött tranzakció nincs kijelölve.",
     "selectTransaction": "Kiválasztás: {{name}}",
     "assigned": "A hozzárendelések mentve."
 };

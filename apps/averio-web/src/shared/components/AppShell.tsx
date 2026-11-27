@@ -11,6 +11,9 @@ import { onboardingQueries } from '../../features/onboarding/api/onboardingQueri
 import { AverioBrand } from './branding/AverioBrand';
 import { ConceptIcon } from './concept/ConceptIcon';
 import { ConceptPreferences } from './concept/ConceptPreferences';
+import { AverioButton } from './ui/AverioButton';
+import { AverioDialog } from './ui/AverioDialog';
+import { InfoPopover } from './ui/InfoPopover';
 import '../styles/concept.css';
 import { ProfileAvatar } from '../../features/profile/ProfileAvatar';
 
@@ -21,6 +24,8 @@ export function AppShell({ children }: PropsWithChildren) {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const dialogRef = useRef<HTMLDialogElement>(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [preferencesOpen, setPreferencesOpen] = useState(false);
+    const [preferencesClosing, setPreferencesClosing] = useState(false);
     const userId = auth.user?.userId ?? '';
     const statusQuery = useQuery({
         ...onboardingQueries.status(userId),
@@ -47,6 +52,17 @@ export function AppShell({ children }: PropsWithChildren) {
         };
     }, [menuOpen]);
 
+    useEffect(() => {
+        if (!preferencesClosing) return;
+        // A transition can be interrupted by a viewport or motion-preference change.
+        const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 400;
+        const timeout = window.setTimeout(() => {
+            setPreferencesOpen(false);
+            setPreferencesClosing(false);
+        }, delay);
+        return () => window.clearTimeout(timeout);
+    }, [preferencesClosing]);
+
     if (auth.status !== 'authenticated' || !auth.user) return null;
 
     const user = auth.user;
@@ -55,6 +71,7 @@ export function AppShell({ children }: PropsWithChildren) {
         .map((part) => part[0]).join('').toLocaleUpperCase();
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
+    const isTransactionsPage = pathname.replace(/\/+$/, '') === '/app/transactions';
     const title = pathname.startsWith('/app/profile') ? t('profile.title') : pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
         ? t('householdSettings.title')
         : pathname.startsWith('/app/accounts')
@@ -119,7 +136,7 @@ export function AppShell({ children }: PropsWithChildren) {
             </dialog>
 
             <div className="av-shell">
-                <header className="av-topbar">
+                <header className="av-topbar max-[360px]:gap-0! max-[360px]:px-1!">
                     <button type="button" className="av-icon-btn av-mobile-menu"
                         aria-label={t('concept.openMenu')} aria-expanded={menuOpen}
                         onClick={() => setMenuOpen(true)}>
@@ -127,10 +144,13 @@ export function AppShell({ children }: PropsWithChildren) {
                     </button>
                     <div className="av-topbar-title">
                         <div className="av-eyebrow">{householdName} · {month}</div>
-                        <h1>{title}</h1>
+                        <div className="flex min-w-0 items-center">
+                            <h1>{title}</h1>
+                            {isTransactionsPage && <InfoPopover label={t('transactionManagement.title')}>{t('transactionManagement.description')}</InfoPopover>}
+                        </div>
                     </div>
-                    <div className="av-top-actions">
-                        <button type="button" className="av-btn av-add-button"
+                    <div className="av-top-actions max-[360px]:gap-1!">
+                        {!isTransactionsPage && <button type="button" className="av-btn av-add-button"
                             onClick={() => {
                                 void navigate({
                                     to: '/app/transactions',
@@ -138,8 +158,14 @@ export function AppShell({ children }: PropsWithChildren) {
                                 });
                             }}>
                             <ConceptIcon name="plus" />{t('concept.addTransaction')}
-                        </button>
-                        <ConceptPreferences />
+                        </button>}
+                        <div className="max-[601px]:hidden"><ConceptPreferences /></div>
+                        <div className="hidden max-[601px]:block">
+                            <AverioButton size="icon" aria-label={t('preferences.title')} aria-haspopup="dialog"
+                                aria-expanded={preferencesOpen} onClick={() => setPreferencesOpen(true)}>
+                                <ConceptIcon name="more" />
+                            </AverioButton>
+                        </div>
                         <div className="av-profile">
                             <ProfileAvatar userId={userId} initials={initials} className="av-avatar" />
                             <div className="av-profile-copy">
@@ -147,14 +173,27 @@ export function AppShell({ children }: PropsWithChildren) {
                                 <small>{t('concept.household')}</small>
                             </div>
                         </div>
-                        <button type="button" className="av-btn"
+                        <button type="button" className="av-btn max-[480px]:size-11 max-[480px]:p-0!"
+                            aria-label={t(logoutMutation.isPending ? 'common.actions.signingOut' : 'common.actions.signOut')}
                             disabled={logoutMutation.isPending}
                             onClick={() => logoutMutation.mutate()}>
-                            {t(logoutMutation.isPending
-                                ? 'common.actions.signingOut' : 'common.actions.signOut')}
+                            <span className="max-[480px]:hidden">{t(logoutMutation.isPending
+                                ? 'common.actions.signingOut' : 'common.actions.signOut')}</span>
+                            <span className="hidden max-[480px]:block"><ConceptIcon name="logout" /></span>
                         </button>
                     </div>
                 </header>
+                {preferencesOpen && <AverioDialog open title={t('preferences.title')} closeLabel={t('common.actions.close')}
+                    dismissOnBackdrop onDismiss={() => setPreferencesClosing(true)}
+                    onTransitionEnd={event => {
+                        if (preferencesClosing && event.target === event.currentTarget && event.propertyName === 'translate') {
+                            setPreferencesOpen(false);
+                            setPreferencesClosing(false);
+                        }
+                    }}
+                    className={`motion-safe:transition-[translate,opacity] motion-safe:duration-200 motion-safe:ease-out motion-safe:starting:translate-y-full motion-safe:starting:opacity-0 motion-safe:backdrop:transition-opacity motion-safe:backdrop:duration-200 motion-safe:starting:backdrop:opacity-0 ${preferencesClosing ? 'motion-safe:translate-y-full motion-safe:opacity-0 motion-safe:backdrop:opacity-0' : ''}`}>
+                    <ConceptPreferences layout="sheet" />
+                </AverioDialog>}
                 <main id="main-content" tabIndex={-1} className="av-content">
                     {logoutMutation.isError && (
                         <p role="alert" className="av-error">{t('errors.genericDescription')}</p>
