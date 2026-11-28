@@ -1,4 +1,16 @@
 export const de = {
+    inbox: {
+        title: 'Mitteilungen', bell: 'Mitteilungen, {{count}} ungelesen', error: 'Mitteilungen konnten nicht geladen werden.',
+        empty: 'Alles erledigt', emptyHelp: 'Aufgaben, die deine Aufmerksamkeit brauchen, erscheinen hier.',
+        readAll: 'Alle als gelesen markieren', markRead: 'Als gelesen markieren', dismiss: 'Ausblenden', review: 'Prüfen',
+        unread: 'Ungelesen', generic: 'Ein Eintrag braucht deine Aufmerksamkeit',
+        types: {
+            ReimbursementSubmissionDue: 'Reiche deine Kostenerstattung ein',
+            ReimbursementPaymentOverdue: 'Prüfe eine überfällige Kostenerstattung',
+            RecurringConfirmationDue: 'Prüfe eine wiederkehrende Transaktion',
+            RecurringNeedsReview: 'Korrigiere eine wiederkehrende Regel',
+        },
+    },
     common: {
         infoAbout: "Informationen zu {{subject}}",
         appName: 'Averio',

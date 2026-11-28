@@ -30,6 +30,7 @@ import { Route as AuthenticatedAppHouseholdRouteImport } from './routes/_authent
 import { Route as AuthenticatedAppImportHistoryRouteImport } from './routes/_authenticated.app.import-history'
 import { Route as AuthenticatedAppImportsRouteImport } from './routes/_authenticated.app.imports'
 import { Route as AuthenticatedAppMoneyBackRouteImport } from './routes/_authenticated.app.money-back'
+import { Route as AuthenticatedAppNotificationsRouteImport } from './routes/_authenticated.app.notifications'
 import { Route as AuthenticatedAppProfileRouteImport } from './routes/_authenticated.app.profile'
 import { Route as AuthenticatedAppReceiptsRouteImport } from './routes/_authenticated.app.receipts'
 import { Route as AuthenticatedAppRecurringRouteImport } from './routes/_authenticated.app.recurring'
@@ -149,6 +150,12 @@ const AuthenticatedAppMoneyBackRoute =
     path: '/money-back',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppNotificationsRoute =
+  AuthenticatedAppNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppProfileRoute = AuthenticatedAppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -222,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
   '/app/money-back': typeof AuthenticatedAppMoneyBackRoute
+  '/app/notifications': typeof AuthenticatedAppNotificationsRoute
   '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -250,6 +258,7 @@ export interface FileRoutesByTo {
   '/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/app/imports': typeof AuthenticatedAppImportsRoute
   '/app/money-back': typeof AuthenticatedAppMoneyBackRoute
+  '/app/notifications': typeof AuthenticatedAppNotificationsRoute
   '/app/profile': typeof AuthenticatedAppProfileRoute
   '/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -283,6 +292,7 @@ export interface FileRoutesById {
   '/_authenticated/app/import-history': typeof AuthenticatedAppImportHistoryRoute
   '/_authenticated/app/imports': typeof AuthenticatedAppImportsRoute
   '/_authenticated/app/money-back': typeof AuthenticatedAppMoneyBackRoute
+  '/_authenticated/app/notifications': typeof AuthenticatedAppNotificationsRoute
   '/_authenticated/app/profile': typeof AuthenticatedAppProfileRoute
   '/_authenticated/app/receipts': typeof AuthenticatedAppReceiptsRoute
   '/_authenticated/app/recurring': typeof AuthenticatedAppRecurringRoute
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/app/import-history'
     | '/app/imports'
     | '/app/money-back'
+    | '/app/notifications'
     | '/app/profile'
     | '/app/receipts'
     | '/app/recurring'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/app/import-history'
     | '/app/imports'
     | '/app/money-back'
+    | '/app/notifications'
     | '/app/profile'
     | '/app/receipts'
     | '/app/recurring'
@@ -375,6 +387,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/import-history'
     | '/_authenticated/app/imports'
     | '/_authenticated/app/money-back'
+    | '/_authenticated/app/notifications'
     | '/_authenticated/app/profile'
     | '/_authenticated/app/receipts'
     | '/_authenticated/app/recurring'
@@ -543,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppMoneyBackRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/notifications': {
+      id: '/_authenticated/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AuthenticatedAppNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/profile': {
       id: '/_authenticated/app/profile'
       path: '/profile'
@@ -636,6 +656,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppImportHistoryRoute: typeof AuthenticatedAppImportHistoryRoute
   AuthenticatedAppImportsRoute: typeof AuthenticatedAppImportsRoute
   AuthenticatedAppMoneyBackRoute: typeof AuthenticatedAppMoneyBackRoute
+  AuthenticatedAppNotificationsRoute: typeof AuthenticatedAppNotificationsRoute
   AuthenticatedAppProfileRoute: typeof AuthenticatedAppProfileRoute
   AuthenticatedAppReceiptsRoute: typeof AuthenticatedAppReceiptsRoute
   AuthenticatedAppRecurringRoute: typeof AuthenticatedAppRecurringRoute
@@ -653,6 +674,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppImportHistoryRoute: AuthenticatedAppImportHistoryRoute,
   AuthenticatedAppImportsRoute: AuthenticatedAppImportsRoute,
   AuthenticatedAppMoneyBackRoute: AuthenticatedAppMoneyBackRoute,
+  AuthenticatedAppNotificationsRoute: AuthenticatedAppNotificationsRoute,
   AuthenticatedAppProfileRoute: AuthenticatedAppProfileRoute,
   AuthenticatedAppReceiptsRoute: AuthenticatedAppReceiptsRoute,
   AuthenticatedAppRecurringRoute: AuthenticatedAppRecurringRoute,

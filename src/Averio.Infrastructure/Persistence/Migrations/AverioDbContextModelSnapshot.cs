@@ -1881,6 +1881,27 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Averio.Domain.Notifications.UserNotification", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedNever().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<Guid>("RecipientUserId").HasColumnType("uuid").HasColumnName("recipient_user_id");
+                    b.Property<Guid>("HouseholdId").HasColumnType("uuid").HasColumnName("household_id");
+                    b.Property<Guid>("HouseholdMemberId").HasColumnType("uuid").HasColumnName("household_member_id");
+                    b.Property<string>("Type").IsRequired().HasMaxLength(48).HasColumnType("character varying(48)").HasColumnName("type");
+                    b.Property<Guid>("TargetId").HasColumnType("uuid").HasColumnName("target_id");
+                    b.Property<string>("OccurrenceKey").IsRequired().HasMaxLength(80).HasColumnType("character varying(80)").HasColumnName("occurrence_key");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.Property<DateTimeOffset?>("ReadAt").HasColumnType("timestamp with time zone").HasColumnName("read_at");
+                    b.Property<DateTimeOffset?>("DismissedAt").HasColumnType("timestamp with time zone").HasColumnName("dismissed_at");
+                    b.Property<DateTimeOffset?>("ResolvedAt").HasColumnType("timestamp with time zone").HasColumnName("resolved_at");
+                    b.HasKey("Id");
+                    b.HasIndex("HouseholdId", "HouseholdMemberId");
+                    b.HasIndex("RecipientUserId", "CreatedAt", "Id");
+                    b.HasIndex("RecipientUserId", "Type", "TargetId", "OccurrenceKey").IsUnique()
+                        .HasDatabaseName("ux_user_notifications_recipient_event");
+                    b.ToTable("user_notifications", (string)null);
+                });
+
             modelBuilder.Entity("Averio.Domain.Transactions.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3024,6 +3045,21 @@ namespace Averio.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HouseholdId", "HouseholdMemberId")
                         .HasPrincipalKey("HouseholdId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Averio.Domain.Notifications.UserNotification", b =>
+                {
+                    b.HasOne("Averio.Domain.Households.HouseholdMember", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId", "HouseholdMemberId")
+                        .HasPrincipalKey("HouseholdId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                    b.HasOne("Averio.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
