@@ -1,0 +1,56 @@
+# One-time branch bootstrap; remove after committing the generated client.
+name: Bootstrap notification client
+on:
+  push:
+    branches: [feat/notification-inbox]
+    paths: [.github/workflows/notification-client-bootstrap.yml]
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      ConnectionStrings__AverioDatabase: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5180
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: apps/averio-web/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: dotnet restore Averio.slnx
+      - run: dotnet build Averio.slnx -c Release --no-restore
+      - run: npm ci
+        working-directory: apps/averio-web
+      - name: Generate and commit client on this branch
+        working-directory: apps/averio-web
+        run: |
+          dotnet run --project ../../apps/Averio.Api -c Release --no-build --no-launch-profile > /tmp/api.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl --fail --silent http://localhost:5180/openapi/v1.json > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail http://localhost:5180/openapi/v1.json > /dev/null || { cat /tmp/api.log; exit 1; }
+          npm run api:generate
+          git add src/shared/api/generated
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(api): regenerate notification client'
+          git push origin HEAD:feat/notification-inbox

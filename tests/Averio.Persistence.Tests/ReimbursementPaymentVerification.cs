@@ -131,6 +131,8 @@ internal static class ReimbursementPaymentVerification
             var db = scope.ServiceProvider.GetRequiredService<AverioDbContext>();
             await Throws<Npgsql.PostgresException>(() => db.GetService<IMigrator>().MigrateAsync("20261120124723_PreserveRefundCreditOrigin"));
             Check(await db.Set<ReimbursementPayment>().AnyAsync(), "Downgrade discarded allocation history");
+            // Later reversible migrations may already have rolled back before the privacy safeguard rejects downgrade.
+            await db.Database.MigrateAsync();
         }
         var raceSource = await Post(TransactionKind.Expense, 100, true); var raceClaim = await Claim(raceSource);
         await Use<ReimbursementHandler>(h => h.ChangeAsync(f.HouseholdId, raceClaim.Id, raceClaim.Version, true, today, null, ReimbursementStatus.Submitted, ct));
