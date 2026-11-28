@@ -21,6 +21,7 @@ const paths = {
     profile: 'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21a8 8 0 0 1 16 0',
     menu: 'M4 7h16M4 12h16M4 17h16',
     more: 'M5 12h.01M12 12h.01M19 12h.01',
+    bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9ZM10 21h4',
     logout: 'M10 4H4v16h6M13 8l4 4-4 4M8 12h9',
     close: 'm6 6 12 12M6 18 18 6',
     plus: 'M12 5v14M5 12h14',

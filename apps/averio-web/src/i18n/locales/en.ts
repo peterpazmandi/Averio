@@ -1,4 +1,16 @@
 export const en = {
+    inbox: {
+        title: 'Notifications', bell: 'Notifications, {{count}} unread', error: 'Could not load notifications.',
+        empty: 'You’re all caught up', emptyHelp: 'Tasks that need your attention will appear here.',
+        readAll: 'Mark all as read', markRead: 'Mark as read', dismiss: 'Dismiss', review: 'Review',
+        unread: 'Unread', generic: 'An item needs your attention',
+        types: {
+            ReimbursementSubmissionDue: 'Submit your reimbursement claim',
+            ReimbursementPaymentOverdue: 'Check an overdue reimbursement',
+            RecurringConfirmationDue: 'Review a recurring transaction',
+            RecurringNeedsReview: 'Fix a recurring transaction rule',
+        },
+    },
     common: {
         infoAbout: "About {{subject}}",
         appName: 'Averio',

@@ -83,6 +83,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<Averio.Application.Notifications.INotificationInbox, NotificationInbox>();
         services.AddScoped<Averio.Application.PersonalMoney.IPersonalMoneyRepository, PersonalMoneyRepository>();
         services.AddScoped<Averio.Application.PersonalMoney.IRecurringAllowanceRepository, RecurringAllowanceRepository>();
         services.AddScoped<Averio.Application.Recurring.IRecurringRepository, RecurringRepository>();

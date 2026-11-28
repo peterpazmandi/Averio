@@ -4,6 +4,7 @@ using Averio.Domain.Categories;
 using Averio.Domain.Labels;
 using Averio.Domain.Transactions;
 using Averio.Domain.PersonalMoney;
+using Averio.Domain.Notifications;
 using Averio.Infrastructure.Identity;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -29,6 +30,7 @@ public sealed class AverioDbContext(
     public DbSet<PersonalMoneyWallet> PersonalMoneyWallets => Set<PersonalMoneyWallet>();
     public DbSet<PersonalMoneyEntry> PersonalMoneyEntries => Set<PersonalMoneyEntry>();
     public DbSet<RecurringAllowanceRule> RecurringAllowanceRules => Set<RecurringAllowanceRule>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<TransactionItem> TransactionItems => Set<TransactionItem>();
     public DbSet<TransactionLabel> TransactionLabels => Set<TransactionLabel>();

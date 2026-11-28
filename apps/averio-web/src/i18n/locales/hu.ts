@@ -1,4 +1,16 @@
 export const hu = {
+    inbox: {
+        title: 'Értesítések', bell: 'Értesítések, {{count}} olvasatlan', error: 'Nem sikerült betölteni az értesítéseket.',
+        empty: 'Minden rendben', emptyHelp: 'Itt látod majd a figyelmedet igénylő teendőket.',
+        readAll: 'Összes megjelölése olvasottként', markRead: 'Megjelölés olvasottként', dismiss: 'Eltüntetés', review: 'Megnézem',
+        unread: 'Olvasatlan', generic: 'Egy teendő vár rád',
+        types: {
+            ReimbursementSubmissionDue: 'Add be a költségtérítési igényedet',
+            ReimbursementPaymentOverdue: 'Nézz rá a késő költségtérítésre',
+            RecurringConfirmationDue: 'Nézd át az ismétlődő tranzakciót',
+            RecurringNeedsReview: 'Javítsd az ismétlődő szabályt',
+        },
+    },
     common: {
         infoAbout: "Tudnivalók: {{subject}}",
         appName: 'Averio',

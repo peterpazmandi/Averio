@@ -16,6 +16,7 @@ import { AverioDialog } from './ui/AverioDialog';
 import { InfoPopover } from './ui/InfoPopover';
 import '../styles/concept.css';
 import { ProfileAvatar } from '../../features/profile/ProfileAvatar';
+import { notificationsApi, notificationKeys } from '../../features/notifications/notificationsApi';
 
 export function AppShell({ children }: PropsWithChildren) {
     const auth = useAuth();
@@ -30,6 +31,12 @@ export function AppShell({ children }: PropsWithChildren) {
     const statusQuery = useQuery({
         ...onboardingQueries.status(userId),
         enabled: auth.status === 'authenticated' && !!userId,
+    });
+    const currentHouseholdId = auth.user?.household.householdId ?? '';
+    const notificationCount = useQuery({
+        queryKey: notificationKeys.count(userId, currentHouseholdId), queryFn: () => notificationsApi.count(currentHouseholdId),
+        enabled: auth.status === 'authenticated' && !!userId && !!currentHouseholdId,
+        refetchInterval: 60_000, refetchOnWindowFocus: true,
     });
 
     const logoutMutation = useMutation({
@@ -72,7 +79,7 @@ export function AppShell({ children }: PropsWithChildren) {
     const household = statusQuery.data?.household;
     const householdName = household?.name || t('concept.household');
     const isTransactionsPage = pathname.replace(/\/+$/, '') === '/app/transactions';
-    const title = pathname.startsWith('/app/profile') ? t('profile.title') : pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
+    const title = pathname.startsWith('/app/notifications') ? t('inbox.title') : pathname.startsWith('/app/profile') ? t('profile.title') : pathname.startsWith('/app/receipts') ? t('receipts.title') : pathname.startsWith('/app/recurring') ? t('recurring.title') : pathname.startsWith('/app/household')
         ? t('householdSettings.title')
         : pathname.startsWith('/app/accounts')
         ? t('app.navigation.accounts')
@@ -106,6 +113,11 @@ export function AppShell({ children }: PropsWithChildren) {
                     )}
                 </div>
                 <AppNavigation onNavigate={() => setMenuOpen(false)} />
+                <button type="button" className="mx-4 mt-2 hidden min-h-11 items-center gap-2 rounded-xl border border-emerald-500/30 px-3 text-sm font-semibold text-emerald-300 max-[601px]:flex"
+                    onClick={() => { setMenuOpen(false); void navigate({ to: '/app/notifications' }); }}>
+                    <ConceptIcon name="bell" />{t('inbox.title')}
+                    {!!notificationCount.data?.count && <span className="rounded-full bg-emerald-500 px-2 text-xs text-white">{notificationCount.data.count > 9 ? '9+' : notificationCount.data.count}</span>}
+                </button>
                 <div className="av-sidebar-bottom">
                     <div className="av-help-card">
                         <strong>{t('concept.receiptTitle')}</strong>
@@ -160,6 +172,11 @@ export function AppShell({ children }: PropsWithChildren) {
                             <ConceptIcon name="plus" />{t('concept.addTransaction')}
                         </button>}
                         <div className="max-[601px]:hidden"><ConceptPreferences /></div>
+                        <AverioButton size="icon" className="relative max-[601px]:hidden" aria-label={t('inbox.bell', { count: notificationCount.data?.count ?? 0 })}
+                            onClick={() => void navigate({ to: '/app/notifications' })}>
+                            <ConceptIcon name="bell" />
+                            {!!notificationCount.data?.count && <span aria-hidden="true" className="absolute -right-1 -top-1 rounded-full bg-emerald-600 px-1.5 text-xs font-bold text-white">{notificationCount.data.count > 9 ? '9+' : notificationCount.data.count}</span>}
+                        </AverioButton>
                         <div className="hidden max-[601px]:block">
                             <AverioButton size="icon" aria-label={t('preferences.title')} aria-haspopup="dialog"
                                 aria-expanded={preferencesOpen} onClick={() => setPreferencesOpen(true)}>
