@@ -223,6 +223,7 @@ static async Task RunVerificationAsync(string connectionString)
     await MerchantItemRefundVerification.RunAsync(provider, currentUser, fixture, clock);
     await ReimbursementPaymentVerification.RunAsync(provider, currentUser, fixture, clock);
     await RecurringVerification.RunAsync(provider, currentUser, fixture, clock);
+    await NotificationVerification.RunAsync(provider, currentUser, fixture, clock);
     await HouseholdVerification.RunAsync(provider, currentUser, fixture);
     await InvitationVerification.RunAsync(provider, fixture, clock);
     await DepartureVerification.RunAsync(provider, fixture, clock);

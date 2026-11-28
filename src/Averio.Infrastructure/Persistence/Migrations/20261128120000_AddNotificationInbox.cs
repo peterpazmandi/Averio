@@ -12,7 +12,7 @@ public sealed class AddNotificationInbox : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.CreateTable("user_notifications", table => new
+        migrationBuilder.CreateTable(name: "user_notifications", columns: table => new
         {
             id = table.Column<Guid>("uuid", nullable: false),
             recipient_user_id = table.Column<Guid>("uuid", nullable: false),
@@ -25,7 +25,7 @@ public sealed class AddNotificationInbox : Migration
             read_at = table.Column<DateTimeOffset>("timestamp with time zone", nullable: true),
             dismissed_at = table.Column<DateTimeOffset>("timestamp with time zone", nullable: true),
             resolved_at = table.Column<DateTimeOffset>("timestamp with time zone", nullable: true)
-        }, table =>
+        }, constraints: table =>
         {
             table.PrimaryKey("pk_user_notifications", x => x.id);
             table.ForeignKey("fk_user_notifications_users_recipient_user_id", x => x.recipient_user_id,
