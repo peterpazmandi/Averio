@@ -113,6 +113,11 @@ export function AppShell({ children }: PropsWithChildren) {
                     )}
                 </div>
                 <AppNavigation onNavigate={() => setMenuOpen(false)} />
+                <button type="button" className="mx-4 mt-2 hidden min-h-11 items-center gap-2 rounded-xl border border-emerald-500/30 px-3 text-sm font-semibold text-emerald-300 max-[601px]:flex"
+                    onClick={() => { setMenuOpen(false); void navigate({ to: '/app/notifications' }); }}>
+                    <ConceptIcon name="bell" />{t('inbox.title')}
+                    {!!notificationCount.data?.count && <span className="rounded-full bg-emerald-500 px-2 text-xs text-white">{notificationCount.data.count > 9 ? '9+' : notificationCount.data.count}</span>}
+                </button>
                 <div className="av-sidebar-bottom">
                     <div className="av-help-card">
                         <strong>{t('concept.receiptTitle')}</strong>
@@ -167,7 +172,7 @@ export function AppShell({ children }: PropsWithChildren) {
                             <ConceptIcon name="plus" />{t('concept.addTransaction')}
                         </button>}
                         <div className="max-[601px]:hidden"><ConceptPreferences /></div>
-                        <AverioButton size="icon" className="relative" aria-label={t('inbox.bell', { count: notificationCount.data?.count ?? 0 })}
+                        <AverioButton size="icon" className="relative max-[601px]:hidden" aria-label={t('inbox.bell', { count: notificationCount.data?.count ?? 0 })}
                             onClick={() => void navigate({ to: '/app/notifications' })}>
                             <ConceptIcon name="bell" />
                             {!!notificationCount.data?.count && <span aria-hidden="true" className="absolute -right-1 -top-1 rounded-full bg-emerald-600 px-1.5 text-xs font-bold text-white">{notificationCount.data.count > 9 ? '9+' : notificationCount.data.count}</span>}
